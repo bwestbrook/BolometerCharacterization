@@ -1,0 +1,188 @@
+function xout = FitBeamMap2DGauss(file,source_to_lens_inch,graphfile)
+%% --- User Input---------------------
+InterpolationMethod = 'nearest'; % 'nearest','linear','spline','cubic'
+% parameters are: [Amplitude, x0, sigmax, y0, sigmay, angel(in rad)]
+x0 = [1,0,10,0,10,0]; %Inital guess parameters
+x = x0;
+xin = x0 %store initial guess for later plotting
+
+%% --- Matlab Generic Stuff---------------------
+%set font settings
+set(0,'defaultAxesFontName', 'Arial');
+set(0,'defaultTextFontName', 'Arial');
+set(0,'defaultAxesFontSize', 14);
+set(0,'defaultTextFontSize', 14);
+
+%close previous graphs
+close all
+
+%% --- Get Data---------------------
+%load data
+data=load(file);
+
+%load data and re-scale with 1/cos(theta)
+Xdat = (180./pi).*atan((data(:,1)./100000)./source_to_lens_inch); %convert stepper motor count into inch then take angle
+Ydat = (180./pi).*atan((data(:,2)./100000)./source_to_lens_inch);
+Zdat = data(:,3)./cos(atan((((data(:,1).^2+data(:,2).^2).^(0.5))./100000)./source_to_lens_inch)); %re-scaling
+
+%find number of steps in x and y
+numX=sum(Ydat==Ydat(1));
+numY=sum(Xdat==Xdat(1));
+%find step size in x and y
+stepX=(max(Xdat)-min(Xdat))/(numX-1);
+stepY=(max(Ydat)-min(Ydat))/(numY-1);
+%find lower/upper boundary for x and y
+boundX = stepX*(numX-1)/2;
+boundY = stepY*(numY-1)/2;
+
+%put data in matrix shape
+MdataSize = numX-1; % Size of nxn data matrix
+%for x and y
+[X,Y] = meshgrid(-boundX:stepX:boundX);
+%for z, and then normalize to peak
+Power=reshape(Zdat,numX,numY);
+Power=Power/max(max(Power));
+%smoothing using 9 to 1 smoothing
+Power = medfilt2(Power);
+%store data into xdata and Z
+xdata = zeros(size(X,1),size(Y,2),2);
+xdata(:,:,1) = X;
+xdata(:,:,2) = Y;
+Z = Power;
+
+%% --- Fit---------------------
+% define lower and upper bounds [Amp,xo,wx,yo,wy,fi]
+lb = [0,-boundX,0,-boundY,0,-pi/4];
+ub = [2,boundX,boundX,boundY,boundY,pi/4];
+% Fit
+[x,resnorm,residual,exitflag] = lsqcurvefit(@D2GaussFunctionRot,x0,xdata,Z,lb,ub);
+xout = x;
+
+%% ---------Plot 3D Image-------------
+figure(1)
+C = del2(Z);
+mesh(X,Y,Z,C) %plot data
+hold on
+surface(X,Y,D2GaussFunctionRot(x,xdata),'EdgeColor','none') %plot fit
+axis([-boundX boundX -boundY boundY 0 1])
+alpha(0.2)  
+hold off
+colorbar;
+xlabel('Angle [Deg]');
+ylabel('Angle [Deg]');
+saveas(gcf,[graphfile,'3D'],'fig') 
+saveas(gcf,[graphfile,'3D'],'jpg') 
+saveas(gcf,[graphfile,'3D'],'eps') 
+
+%Subtract fitted gaussian
+figure(2)
+hold on
+imagesc(X(1,:),Y(:,1),Z-D2GaussFunctionRot(x,xdata))
+%imagesc(X(1,:),Y(:,1),Z)
+%set(gca,'YDir','reverse')
+axis([-boundX boundX -boundY boundY])
+hold off
+daspect([1 1 1]);
+colorbar;
+xlabel('Angle [Deg]');
+ylabel('Angle [Deg]');
+saveas(gcf,[graphfile,'Res'],'fig') 
+saveas(gcf,[graphfile,'Res'],'jpg') 
+saveas(gcf,[graphfile,'Res'],'eps') 
+
+%% -----Plot data----------------
+figure(3)
+hold on
+imagesc(X(1,:),Y(:,1),Z-D2GaussFunctionRot(x,xdata))
+%imagesc(X(1,:),Y(:,1),Z)
+%set(gca,'YDir','reverse')
+axis([-boundX boundX -boundY boundY])
+hold off
+daspect([1 1 1]);
+colorbar;
+xlabel('Angle [Deg]');
+ylabel('Angle [Deg]');
+saveas(gcf,[graphfile,'Res'],'fig') 
+saveas(gcf,[graphfile,'Res'],'jpg') 
+saveas(gcf,[graphfile,'Res'],'eps') 
+
+%% -----Plot profiles----------------
+hf2 = figure(4);
+set(hf2, 'Position', [20 20 950 900])
+alpha(0)
+subplot(4,4, [5,6,7,9,10,11,13,14,15])
+hold on
+imagesc(X(1,:),Y(:,1),Z)
+axis([-boundX boundX -boundY boundY])
+hold off
+daspect([1 1 1]);
+colorbar;
+xlabel('Angle [Deg]');
+ylabel('Angle [Deg]');
+hold off
+
+%% -----Calculate cross sections-------------
+% generate points along horizontal axis
+m = -tan(x(6));% Point slope formula
+b = (-m*x(2) + x(4));
+xvh = -boundX:boundX;
+yvh = xvh*m + b;
+hPoints = interp2(X,Y,Z,xvh,yvh,InterpolationMethod);
+% generate points along vertical axis
+mrot = -m;
+brot = (mrot*x(4) - x(2));
+yvv = -boundY:boundY;
+xvv = yvv*mrot - brot;
+vPoints = interp2(X,Y,Z,xvv,yvv,InterpolationMethod);
+
+hold on % Indicate major and minor axis on plot
+
+% plot lins 
+plot([xvh(1) xvh(size(xvh))],[yvh(1) yvh(size(yvh))],'r') 
+plot([xvv(1) xvv(size(xvv))],[yvv(1) yvv(size(yvv))],'g') 
+
+hold off
+axis([-boundX boundX -boundY boundY])
+%%
+ymin = -0.1;
+ymax = 1;
+xdatafit = linspace(-boundX,boundX,300);
+hdatafit = x(1)*exp(-(xdatafit-x(2)).^2/(2*x(3)^2));
+vdatafit = x(1)*exp(-(xdatafit-x(4)).^2/(2*x(5)^2));
+subplot(4,4, [1:3])
+xposh = (xvh-x(2))/cos(x(6))+x(2);% correct for the longer diagonal if fi~=0
+plot(xposh,hPoints,'r.',xdatafit,hdatafit,'black')
+axis([-boundX boundX ymin*1.1 ymax*1.1])
+subplot(4,4,[8,12,16])
+xposv = (yvv-x(4))/cos(x(6))+x(4);% correct for the longer diagonal if fi~=0
+plot(vPoints,xposv,'g.',vdatafit,xdatafit,'black')
+axis([ymin*1.1 ymax*1.1 -boundY boundY])
+%set(gca,'YDir','reverse')
+saveas(gcf,[graphfile,'Cut'],'fig') 
+saveas(gcf,[graphfile,'Cut'],'jpg') 
+saveas(gcf,[graphfile,'Cut'],'eps') 
+figure(gcf) % bring current figure to front
+
+%% -----Calculate Ellipticity etc.-------------
+%This is Planck's definition
+%if x(3) > x(5);
+%    ellipticity = (x(3)-x(5))/x(3)
+%else;
+%    ellipticity = (x(5)-x(3))/x(5)
+%end
+
+ellipticity = abs((x(3)-x(5)))/(x(3)+x(5))
+rot_angle = x(6)*180/pi
+width_x = x(3)
+width_y = x(5)
+    
+
+%% -----Save Fit Parameter-------------
+%save fitted parameter
+fid = fopen('beammap_log.txt','a');
+fprintf(fid,'%s \r\n Ellipticity %6.4f \r\n Amplitude %6.4f \r\n Center1 %6.4f \r\n Center2 %6.4f \r\n Sigma1 %6.4f \r\n Sigma2 %6.4f \r\n Rotation %6.4f \r\n \r\n',graphfile,ellipticity,x(1),x(2),x(4),x(3),x(5),rot_angle);
+fid = fclose('all');
+
+
+
+ 
