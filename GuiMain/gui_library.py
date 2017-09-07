@@ -11,18 +11,57 @@ from pprint import pprint
 from copy import copy
 from PyQt4 import QtCore, QtGui
 from libraries.gen_class import Class
+from ba_settings.all_settings import settings
 
 
 class GuiTemplate(QtGui.QWidget):
 
     def __init__(self, analysis_types):
         super(GuiTemplate, self).__init__()
-        self._create_main_window('main')
-        print analysis_types
-        self.main.show()
+        self.grid = QtGui.QGridLayout()
+        self.grid.setVerticalSpacing(0)
+        self.setLayout(self.grid)
+        self.__apply_settings__(settings)
+        self._create_main_window('main_panel_widget')
+        self.main_panel_widget.show()
+        self.data_folder = './data'
+
+    def __apply_settings__(self, settings):
+        for setting in dir(settings):
+            if '__' not in setting:
+                setattr(self, setting, getattr(settings, setting))
 
     def _create_main_window(self, name):
         self._create_popup_window(name)
+        self._build_panel(settings.main_panel_build_dict)
+
+    def _close_main(self):
+        self.main_panel_widget.close()
+        sys.exit()
+
+    def _select_analysis_type(self):
+        sender_name = str(self.sender().whatsThis())
+        print sender_name
+        checkboxes = ['_main_panel_ivcurve_checkbox', '_main_panel_rtcurve_checkbox']
+        for checkbox in checkboxes:
+            if sender_name == checkbox:
+                getattr(self, checkbox).setCheckState(True)
+                self.analysis_type = checkbox.split('_')[3]
+            else:
+                getattr(self, checkbox).setCheckState(False)
+
+    def _select_file(self):
+        self.data_path = str(QtGui.QFileDialog.getOpenFileName(self, 'Open file', self.data_folder))
+        getattr(self, '_main_panel_selected_file_label').setText(os.path.basename(self.data_path))
+
+    def _run_analysis(self):
+        if not hasattr(self, 'analysis_type'):
+            getattr(self, '_main_panel_selected_file_label').setText('Please Select a Analysis Type')
+        else:
+            print self.analysis_type
+
+    def _plot_rt_curve(self):
+        print 'plotting RT'
 
     #################################################
     # WIDGET GENERATORS AND FUNCTIONS
@@ -144,6 +183,7 @@ class GuiTemplate(QtGui.QWidget):
                                         getattr(QtCore.Qt, widget_alignment))
                 else:
                     self.grid.addWidget(widget, row, col, row_span, col_span)
+                    print widget
             else:
                 if 'panel' in unique_widget_name:
                     panel = '{0}_{1}'.format(unique_widget_name.split('_panel')[0][1:], 'panel_widget')
