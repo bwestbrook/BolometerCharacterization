@@ -10,20 +10,8 @@
 #from settings_files.settings_bt3_04_300C import *
 #from settings_files.settings_bt3_04_250C import *
 #from settings_files.settings_almn_only import *
-from settings_files.settings_bt3_04_350C import *
+#from settings_files.settings_bt3_04_350C import *
 
-
-class Class(object):
-    def __init__(self, **kwargs):
-        for key in kwargs:
-            setattr(self, key, kwargs[key])
-
-    def __repr__(self):
-        return "%s(%s)" % (self.__class__.__name__, str(self.__dict__))
-
-settings = Class()
-settings.list_of_input_dicts = list_of_input_dicts
-settings.xlim = xlim
-
-print settings
-
+#settings = Class()
+#settings.list_of_input_dicts = list_of_input_dicts
+#settings.xlim = xlim

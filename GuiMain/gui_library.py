@@ -12,6 +12,7 @@ from copy import copy
 from PyQt4 import QtCore, QtGui
 from libraries.gen_class import Class
 from ba_settings.all_settings import settings
+from RT_Curves.plot_rt_curves import RTCurve
 
 
 class GuiTemplate(QtGui.QWidget):
@@ -41,7 +42,6 @@ class GuiTemplate(QtGui.QWidget):
 
     def _select_analysis_type(self):
         sender_name = str(self.sender().whatsThis())
-        print sender_name
         checkboxes = ['_main_panel_ivcurve_checkbox', '_main_panel_rtcurve_checkbox']
         for checkbox in checkboxes:
             if sender_name == checkbox:
@@ -61,6 +61,8 @@ class GuiTemplate(QtGui.QWidget):
             print self.analysis_type
 
     def _plot_rt_curve(self):
+        rt = RtCurve()
+        rt.run()
         print 'plotting RT'
 
     #################################################
