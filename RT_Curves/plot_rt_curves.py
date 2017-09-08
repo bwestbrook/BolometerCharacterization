@@ -5,14 +5,18 @@ from grt_calibration import resistance_to_temp
 
 class RTCurve():
 
-    def __init__():
+    def __init__(self, selected_files, grt_serial):
+        print selected_files
+        self.selected_files = selected_files
+        self.grt_serial = grt_serial
         print 'hey'
 
     def run(self, plot=True):
         if plot:
             fig = None
-        for input_dict in settings.list_of_input_dicts:
-            grt_res_vector, sample_res_vector = load_data(input_dict)
+        for selected_file in self.selected_files:
+            grt_res_vector, sample_res_vector = load_data(selected_file)
+            print grt_res_vector, sample_res_vector
             grt_temperature_vector = resistance_to_temp_grt(grt_res_vector, input_dict['grt_serial_number'])
             sample_res_vector = normalize_squid_output(sample_res_vector, input_dict)
             fig = plot_rt_curves(grt_temperature_vector, sample_res_vector, fig, input_dict)
@@ -34,11 +38,10 @@ class RTCurve():
             sample_res_vector *= (input_dict['normal_res'] / np.max(sample_res_vector))
         return sample_res_vector
 
-    def load_data(self, input_dict, quick_plot=False):
+    def load_data(self, selected_file, quick_plot=False):
         grt_res_vector, sample_res_vector = [], []
-        data_path = input_dict['data_path']
         point = None
-        with open(data_path, 'r') as file_handle:
+        with open(selected_file, 'r') as file_handle:
             for i, file_line in enumerate(file_handle.readlines()):
                 grt_res = float(file_line.split('\t')[0].strip('\r\n')) * input_dict['grt_res_factor']
                 sample_res = float(file_line.split('\t')[1].strip('\r\n')) * input_dict['sample_res_factor']
