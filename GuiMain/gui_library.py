@@ -73,6 +73,8 @@ class GuiTemplate(QtGui.QWidget):
     def _run_analysis(self):
         if not hasattr(self, 'analysis_type'):
             getattr(self, '_main_panel_selected_file_label').setText('Please Select a Analysis Type')
+        else:
+            getattr(self, '_plot_{0}'.format(self.analysis_type))()
 
     #################################################
     # RT Curves 
@@ -104,12 +106,6 @@ class GuiTemplate(QtGui.QWidget):
                     getattr(self, checkbox).setCheckState(True)
                 else:
                     getattr(self, checkbox).setCheckState(False)
-        print
-        print sender
-        print
-        print
-        print checkboxes
-        print
 
     def _add_rt_checkboxes(self, popup_name, name, list_, row, col):
         for i, item_ in enumerate(list_):
@@ -120,6 +116,12 @@ class GuiTemplate(QtGui.QWidget):
                                'function': getattr(self, function),
                                'position': (row, col + i, 1, 1)}
             self._create_and_place_widget(unique_widget_name, **widget_settings)
+            if 'grt_res_factor_1000.' in unique_widget_name:
+                getattr(self, unique_widget_name).setCheckState(True)
+            if 'sample_res_factor_1.0' in unique_widget_name:
+                getattr(self, unique_widget_name).setCheckState(True)
+            if '29268' in unique_widget_name:
+                getattr(self, unique_widget_name).setCheckState(True)
         return i + 1
 
     def _build_rtcurve_settings_popup(self):
@@ -128,6 +130,7 @@ class GuiTemplate(QtGui.QWidget):
             self._create_popup_window(popup_name)
             self._build_panel(settings.rtcurve_popup_build_dict)
         col = 1
+        self.selected_files_row_dict = {}
         for i, selected_file in enumerate(self.selected_files):
             basename = os.path.basename(selected_file)
             unique_widget_name = '_{0}_{1}_label'.format(popup_name, basename)
@@ -135,18 +138,25 @@ class GuiTemplate(QtGui.QWidget):
                                'position': (i + 2, 0, 1, 1)}
             self._create_and_place_widget(unique_widget_name, **widget_settings)
             row = i + 2
+            self.selected_files_row_dict[selected_file] = row
             col += self._add_rt_checkboxes(popup_name, 'GRT Serial', self.grt_list, row, col)
             col += self._add_rt_checkboxes(popup_name, 'Sample Res Factor', self.sample_res_factors, row, col)
             col += self._add_rt_checkboxes(popup_name, 'GRT Res Factor', self.grt_res_factors, row, col)
-            unique_widget_name = '_{0}_{1}_sample_res_lineedit'.format(popup_name, i)
+            unique_widget_name = '_{0}_{1}_normal_res_lineedit'.format(popup_name, row)
             widget_settings = {'text': '',
                                'position': (row, col, 1, 1)}
             self._create_and_place_widget(unique_widget_name, **widget_settings)
             col += 1
-            unique_widget_name = '_{0}_{1}_plot_label_lineedit'.format(popup_name, i)
+            unique_widget_name = '_{0}_{1}_label_lineedit'.format(popup_name, row)
             widget_settings = {'text': '', 'width': 200,
                                'position': (row, col, 1, 1)}
             self._create_and_place_widget(unique_widget_name, **widget_settings)
+            col += 1
+            unique_widget_name = '_{0}_{1}_invert_checkbox'.format(popup_name, row)
+            widget_settings = {'text': 'Invert?',
+                               'position': (row, col, 1, 1)}
+            self._create_and_place_widget(unique_widget_name, **widget_settings)
+            getattr(self, unique_widget_name).setChecked(True)
             col = 1
         if not hasattr(self, popup_name):
             self._create_popup_window(popup_name)
@@ -156,22 +166,41 @@ class GuiTemplate(QtGui.QWidget):
     def _close_rt(self):
         self.rtcurve_settings_popup.close()
 
-    def _plot_rt_curve(self):
-        selected_files = list(set(self.selected_files))
-        rt = RtCurve(self.selected_files)
-        rt.run()
+    def _build_rt_input_dicts(self):
+        list_of_input_dicts = []
+        rt_settings = ['grt_serial', 'label', 'sample_res_factor',
+                       'normal_res', 'invert', 'grt_res_factor']
+        for selected_file, row in self.selected_files_row_dict.iteritems():
+            input_dict = {'data_path': selected_file}
+            for setting in rt_settings:
+                identity_string = '{0}_{1}'.format(row, setting)
+                for widget in [x for x in dir(self) if identity_string in x]:
+                    if 'checkbox' in widget and not 'invert' in widget:
+                        if getattr(self, widget).isChecked():
+                            setting_value = str(getattr(self, widget).text()).split(' ')[-1]
+                            input_dict[setting] = float(setting_value)
+                    elif 'checkbox' in widget and 'invert' in widget:
+                        invert_bool = getattr(self, widget).isChecked()
+                        input_dict['invert'] = invert_bool
+                    elif 'lineedit' in widget:
+                        widget_text = str(getattr(self, widget).text())
+                        if len(widget_text) == 0:
+                            widget_text = 'None'
+                            input_dict[setting] = widget_text
+                        else:
+                            input_dict[setting] = float(widget_text)
+                print
+                print
+                print
+            pprint(input_dict)
+            list_of_input_dicts.append(copy(input_dict))
+        return list_of_input_dicts
 
-    #def _select_grt(self):
-        #grt_sender = str(self.sender().text()).replace(' ', '').lower()
-        #all_checkboxes = [x for x in dir(self) if 'grt' in x and 'checkbox' in x]
-        #selected_checkbox = [x for x in dir(self) if grt_sender in x][0]
-        #for checkbox in all_checkboxes:
-            #if checkbox == selected_checkbox:
-                #getattr(self, checkbox).setCheckState(True)
-                #self.grt_serial = grt_sender.replace('grt', '')
-            #else:
-                #getattr(self, checkbox).setCheckState(False)
-        #print all_checkboxes, selected_checkbox
+    def _plot_rtcurve(self):
+        selected_files = list(set(self.selected_files))
+        list_of_input_dicts = self._build_rt_input_dicts()
+        rt = RTCurve(list_of_input_dicts)
+        rt.run()
 
     #################################################
     # IV Curves 

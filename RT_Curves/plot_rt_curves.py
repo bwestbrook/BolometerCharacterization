@@ -5,27 +5,24 @@ from grt_calibration import resistance_to_temp
 
 class RTCurve():
 
-    def __init__(self, selected_files, grt_serial):
-        print selected_files
-        self.selected_files = selected_files
-        self.grt_serial = grt_serial
-        print 'hey'
+    def __init__(self, list_of_input_dicts):
+        self.list_of_input_dicts = list_of_input_dicts
+        self.xlim = (200, 700)
 
     def run(self, plot=True):
         if plot:
             fig = None
-        for selected_file in self.selected_files:
-            grt_res_vector, sample_res_vector = load_data(selected_file)
+        for input_dict in self.list_of_input_dicts:
+            grt_res_vector, sample_res_vector = self.load_data(input_dict)
             print grt_res_vector, sample_res_vector
-            grt_temperature_vector = resistance_to_temp_grt(grt_res_vector, input_dict['grt_serial_number'])
-            sample_res_vector = normalize_squid_output(sample_res_vector, input_dict)
-            fig = plot_rt_curves(grt_temperature_vector, sample_res_vector, fig, input_dict)
+            grt_temperature_vector = self.resistance_to_temp_grt(grt_res_vector, input_dict['grt_serial'])
+            sample_res_vector = self.normalize_squid_output(sample_res_vector, input_dict)
+            fig = self.plot_rt_curves(grt_temperature_vector, sample_res_vector, fig, input_dict)
         if plot:
             fig.subplots_adjust(left=0.08, right=0.50)
             axis = fig.get_axes()[0]
             axis.legend(loc=2, bbox_to_anchor=(1.01, 1.0))
-            fig.show()
-            _ask_user_if_they_want_to_quit()
+            pl.show()
 
     def normalize_squid_output(self, sample_res_vector, input_dict):
         if input_dict['invert']:
@@ -38,10 +35,11 @@ class RTCurve():
             sample_res_vector *= (input_dict['normal_res'] / np.max(sample_res_vector))
         return sample_res_vector
 
-    def load_data(self, selected_file, quick_plot=False):
+    def load_data(self, input_dict, quick_plot=False):
+        data_path = input_dict['data_path']
         grt_res_vector, sample_res_vector = [], []
         point = None
-        with open(selected_file, 'r') as file_handle:
+        with open(data_path, 'r') as file_handle:
             for i, file_line in enumerate(file_handle.readlines()):
                 grt_res = float(file_line.split('\t')[0].strip('\r\n')) * input_dict['grt_res_factor']
                 sample_res = float(file_line.split('\t')[1].strip('\r\n')) * input_dict['sample_res_factor']
@@ -67,10 +65,10 @@ class RTCurve():
         axis.set_xlabel('Temperature (mK)')
         axis.set_ylabel('Sample Resistance ($\Omega$)')
         axis.set_title('Res vs. Temp')
-        axis.set_xlim(settings.xlim)
+        axis.set_xlim(self.xlim)
         return fig
 
-    def _ask_user_if_they_want_to_quit():
+    def _ask_user_if_they_want_to_quit(self):
         raw_input('Do you want to quit?\n')
 
 
