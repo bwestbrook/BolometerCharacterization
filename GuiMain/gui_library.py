@@ -13,6 +13,7 @@ from PyQt4 import QtCore, QtGui
 from libraries.gen_class import Class
 from ba_settings.all_settings import settings
 from RT_Curves.plot_rt_curves import RTCurve
+from IV_Curves.plot_iv_curves import IVCurve
 
 
 class GuiTemplate(QtGui.QWidget):
@@ -80,32 +81,6 @@ class GuiTemplate(QtGui.QWidget):
     # RT Curves 
     #################################################
 
-    def _select_sample_res_factor_checkbox(self):
-        sender = str(self.sender().whatsThis())
-        identity_string =  'sample_res_factor'
-        checkboxes = [x for x in dir(self) if identity_string in x and 'checkbox' in x]
-        self._select_unique_checkbox(sender, identity_string)
-
-    def _select_grt_res_factor_checkbox(self):
-        sender = str(self.sender().whatsThis())
-        identity_string =  'grt_res_factor'
-        self._select_unique_checkbox(sender, identity_string)
-
-    def _select_grt_serial_checkbox(self):
-        sender = str(self.sender().whatsThis())
-        identity_string = 'grt_serial'
-        self._select_unique_checkbox(sender, identity_string)
-
-    def _select_unique_checkbox(self, sender, identity_string):
-        checkboxes = [x for x in dir(self) if identity_string in x and 'checkbox' in x]
-        identity_string =  sender.split(identity_string)[0]
-        checkboxes = [x for x in checkboxes if identity_string in x and 'checkbox' in x]
-        for checkbox in checkboxes:
-            if 'select' not in checkbox:
-                if sender.replace(' ', '_').lower() in checkbox:
-                    getattr(self, checkbox).setCheckState(True)
-                else:
-                    getattr(self, checkbox).setCheckState(False)
 
     def _add_rt_checkboxes(self, popup_name, name, list_, row, col):
         for i, item_ in enumerate(list_):
@@ -163,6 +138,33 @@ class GuiTemplate(QtGui.QWidget):
             self._build_panel(rtcurve_build_dict)
         getattr(self, popup_name).show()
 
+    def _select_sample_res_factor_checkbox(self):
+        sender = str(self.sender().whatsThis())
+        identity_string =  'sample_res_factor'
+        checkboxes = [x for x in dir(self) if identity_string in x and 'checkbox' in x]
+        self._select_unique_checkbox(sender, identity_string)
+
+    def _select_grt_res_factor_checkbox(self):
+        sender = str(self.sender().whatsThis())
+        identity_string =  'grt_res_factor'
+        self._select_unique_checkbox(sender, identity_string)
+
+    def _select_grt_serial_checkbox(self):
+        sender = str(self.sender().whatsThis())
+        identity_string = 'grt_serial'
+        self._select_unique_checkbox(sender, identity_string)
+
+    def _select_unique_checkbox(self, sender, identity_string):
+        checkboxes = [x for x in dir(self) if identity_string in x and 'checkbox' in x]
+        identity_string =  sender.split(identity_string)[0]
+        checkboxes = [x for x in checkboxes if identity_string in x and 'checkbox' in x]
+        for checkbox in checkboxes:
+            if 'select' not in checkbox:
+                if sender.replace(' ', '_').lower() in checkbox:
+                    getattr(self, checkbox).setCheckState(True)
+                else:
+                    getattr(self, checkbox).setCheckState(False)
+
     def _close_rt(self):
         self.rtcurve_settings_popup.close()
 
@@ -189,10 +191,6 @@ class GuiTemplate(QtGui.QWidget):
                             input_dict[setting] = widget_text
                         else:
                             input_dict[setting] = float(widget_text)
-                print
-                print
-                print
-            pprint(input_dict)
             list_of_input_dicts.append(copy(input_dict))
         return list_of_input_dicts
 
@@ -208,11 +206,54 @@ class GuiTemplate(QtGui.QWidget):
 
     def _build_ivcurve_settings_popup(self):
         popup_name = '{0}_settings_popup'.format(self.analysis_type)
-        ivcurve_build_dict = {'_common_settings': {'font': 'large'}}
+        print
+        print
+        print popup_name
+        print
+        print
         if not hasattr(self, popup_name):
             self._create_popup_window(popup_name)
-            self._build_panel(ivcurve_build_dict)
-        print popup_name
+            self._build_panel(settings.ivcurve_popup_build_dict)
+        col = 1
+        self.selected_files_row_dict = {}
+        for i, selected_file in enumerate(self.selected_files):
+            basename = os.path.basename(selected_file)
+            unique_widget_name = '_{0}_{1}_label'.format(popup_name, basename)
+            widget_settings = {'text': '{0}'.format(basename),
+                               'position': (i + 2, 0, 1, 1)}
+            self._create_and_place_widget(unique_widget_name, **widget_settings)
+            row = i + 2
+            self.selected_files_row_dict[selected_file] = row
+            col += self._add_rt_checkboxes(popup_name, 'GRT Serial', self.grt_list, row, col)
+            col += self._add_rt_checkboxes(popup_name, 'Sample Res Factor', self.sample_res_factors, row, col)
+            col += self._add_rt_checkboxes(popup_name, 'GRT Res Factor', self.grt_res_factors, row, col)
+            unique_widget_name = '_{0}_{1}_normal_res_lineedit'.format(popup_name, row)
+            widget_settings = {'text': '',
+                               'position': (row, col, 1, 1)}
+            self._create_and_place_widget(unique_widget_name, **widget_settings)
+            col += 1
+            unique_widget_name = '_{0}_{1}_label_lineedit'.format(popup_name, row)
+            widget_settings = {'text': '', 'width': 200,
+                               'position': (row, col, 1, 1)}
+            self._create_and_place_widget(unique_widget_name, **widget_settings)
+            col += 1
+            unique_widget_name = '_{0}_{1}_invert_checkbox'.format(popup_name, row)
+            widget_settings = {'text': 'Invert?',
+                               'position': (row, col, 1, 1)}
+            self._create_and_place_widget(unique_widget_name, **widget_settings)
+            getattr(self, unique_widget_name).setChecked(True)
+            col = 1
+        if not hasattr(self, popup_name):
+            self._create_popup_window(popup_name)
+            self._build_panel(rtcurve_build_dict)
+        getattr(self, popup_name).show()
+
+
+    def _plot_ivcurve(self):
+        selected_files = list(set(self.selected_files))
+        list_of_input_dicts = self._build_rt_input_dicts()
+        rt = RTCurve(list_of_input_dicts)
+        rt.run()
 
     #################################################
     # WIDGET GENERATORS AND FUNCTIONS
