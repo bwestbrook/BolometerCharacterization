@@ -14,6 +14,7 @@ from libraries.gen_class import Class
 from ba_settings.all_settings import settings
 from RT_Curves.plot_rt_curves import RTCurve
 from IV_Curves.plot_iv_curves import IVCurve
+from FTS_Curves.plot_fts_curves import FTSCurve
 
 
 class GuiTemplate(QtGui.QWidget):
@@ -94,11 +95,12 @@ class GuiTemplate(QtGui.QWidget):
             text = '{0} {1}'.format(name, item_)
             if 'SQUID' in name:
                 text = 'SQ{0}'.format(item_)
+            if 'SQUID' in name:
+                text = 'SQ{0}'.format(item_)
             widget_settings = {'text': text,
                                'function': getattr(self, function),
                                'position': (row, col + i, 1, 1)}
             self._create_and_place_widget(unique_widget_name, **widget_settings)
-            print unique_widget_name
             if 'grt_res_factor_1000.' in unique_widget_name:
                 getattr(self, unique_widget_name).setCheckState(True)
             if 'sample_res_factor_1.0' in unique_widget_name:
@@ -291,7 +293,7 @@ class GuiTemplate(QtGui.QWidget):
     def _build_iv_input_dicts(self):
         list_of_input_dicts = []
         iv_settings = ['voltage_conversion', 'label', 'squid_conversion',
-                       'v_clip_low', 'v_clip_hi', 'calibration_resistance', 'calibrate']
+                       'v_clip_lo', 'v_clip_hi', 'calibration_resistance', 'calibrate']
         for selected_file, row in self.selected_files_row_dict.iteritems():
             input_dict = {'data_path': selected_file}
             for setting in iv_settings:
@@ -304,6 +306,9 @@ class GuiTemplate(QtGui.QWidget):
                     elif 'checkbox' in widget and 'calibrate' in widget:
                         invert_bool = getattr(self, widget).isChecked()
                         input_dict['calibrate'] = invert_bool
+                    elif 'lineedit' in widget and 'label' in widget:
+                        widget_text = str(getattr(self, widget).text())
+                        input_dict[setting] = widget_text
                     elif 'lineedit' in widget:
                         widget_text = str(getattr(self, widget).text())
                         if len(widget_text) == 0:
@@ -441,7 +446,6 @@ class GuiTemplate(QtGui.QWidget):
                                         getattr(QtCore.Qt, widget_alignment))
                 else:
                     self.grid.addWidget(widget, row, col, row_span, col_span)
-                    print widget
             else:
                 if 'panel' in unique_widget_name:
                     panel = '{0}_{1}'.format(unique_widget_name.split('_panel')[0][1:], 'panel_widget')

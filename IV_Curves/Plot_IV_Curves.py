@@ -152,7 +152,7 @@ class IVCurve():
             data_path = input_dict['data_path']
             label = input_dict['label']
             bias_voltage, squid_voltage = self.load_data(data_path)
-            voltage_clip = (0, 10)
+            voltage_clip = (input_dict['v_clip_lo'], input_dict['v_clip_hi'])
             if len(input_dict['label']) == 0:
                 label = os.path.basename(data_path)
             v_bias_real, i_bolo_real = self.convert_IV_to_real_units(bias_voltage, squid_voltage,
