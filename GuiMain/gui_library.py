@@ -25,8 +25,11 @@ class GuiTemplate(QtGui.QWidget):
         self.setLayout(self.grid)
         self.__apply_settings__(settings)
         self._create_main_window('main_panel_widget')
-        self.main_panel_widget.show()
+        self.main_panel_widget.showMaximized()
         self.data_folder = './data'
+        self.squid_channels = {'1': 25.2, '2': 27.3, '3': 30.0,
+                               '4': 30.1, '5': 25.9, '6': 25.0}
+        self.voltage_conversion_list = ['1e-4', '1e-5']
         self.grt_list = [25070, 25312, 29268]
         self.sample_res_factors = [0.1, 1.0, 10.0]
         self.grt_res_factors = [100.0, 1000.0]
@@ -81,21 +84,28 @@ class GuiTemplate(QtGui.QWidget):
     # RT Curves 
     #################################################
 
-
-    def _add_rt_checkboxes(self, popup_name, name, list_, row, col):
+    def _add_checkboxes(self, popup_name, name, list_, row, col):
+        if type(list_) is dict:
+            list_ = sorted(list_.keys())
         for i, item_ in enumerate(list_):
             reduced_name = name.replace(' ', '_').lower()
             unique_widget_name = '_{0}_{1}_{2}_{3}_checkbox'.format(popup_name, row, reduced_name, item_)
             function = '_select_{0}_checkbox'.format(name.replace(' ', '_')).lower()
-            widget_settings = {'text': '{0} {1}'.format(name, item_),
+            text = '{0} {1}'.format(name, item_)
+            if 'SQUID' in name:
+                text = 'SQ{0}'.format(item_)
+            widget_settings = {'text': text,
                                'function': getattr(self, function),
                                'position': (row, col + i, 1, 1)}
             self._create_and_place_widget(unique_widget_name, **widget_settings)
+            print unique_widget_name
             if 'grt_res_factor_1000.' in unique_widget_name:
                 getattr(self, unique_widget_name).setCheckState(True)
             if 'sample_res_factor_1.0' in unique_widget_name:
                 getattr(self, unique_widget_name).setCheckState(True)
             if '29268' in unique_widget_name:
+                getattr(self, unique_widget_name).setCheckState(True)
+            if 'voltage_conversion_1e-4' in unique_widget_name:
                 getattr(self, unique_widget_name).setCheckState(True)
         return i + 1
 
@@ -114,13 +124,14 @@ class GuiTemplate(QtGui.QWidget):
             self._create_and_place_widget(unique_widget_name, **widget_settings)
             row = i + 2
             self.selected_files_row_dict[selected_file] = row
-            col += self._add_rt_checkboxes(popup_name, 'GRT Serial', self.grt_list, row, col)
-            col += self._add_rt_checkboxes(popup_name, 'Sample Res Factor', self.sample_res_factors, row, col)
-            col += self._add_rt_checkboxes(popup_name, 'GRT Res Factor', self.grt_res_factors, row, col)
+            col += self._add_checkboxes(popup_name, 'GRT Serial', self.grt_list, row, col)
+            col += self._add_checkboxes(popup_name, 'Sample Res Factor', self.sample_res_factors, row, col)
+            col += self._add_checkboxes(popup_name, 'GRT Res Factor', self.grt_res_factors, row, col)
             unique_widget_name = '_{0}_{1}_normal_res_lineedit'.format(popup_name, row)
             widget_settings = {'text': '',
                                'position': (row, col, 1, 1)}
             self._create_and_place_widget(unique_widget_name, **widget_settings)
+            getattr(self, unique_widget_name).setText('2.0')
             col += 1
             unique_widget_name = '_{0}_{1}_label_lineedit'.format(popup_name, row)
             widget_settings = {'text': '', 'width': 200,
@@ -204,13 +215,25 @@ class GuiTemplate(QtGui.QWidget):
     # IV Curves 
     #################################################
 
+    def _close_iv(self):
+        self.ivcurve_settings_popup.close()
+
+    def _select_voltage_conversion_checkbox(self):
+        sender = str(self.sender().whatsThis())
+        identity_string =  'voltage_conversion'
+        self._select_unique_checkbox(sender, identity_string)
+
+    def _select_squid_channel_checkbox(self):
+        sender = str(self.sender().whatsThis())
+        identity_string =  'squid_channel'
+        squid = sender.split('_')[7]
+        lineedit_unique_name = '_'.join(sender.split('_')[0:6])
+        lineedit_unique_name += '_conversion_lineedit'
+        getattr(self, lineedit_unique_name).setText(str(self.squid_channels[squid]))
+        self._select_unique_checkbox(sender, identity_string)
+
     def _build_ivcurve_settings_popup(self):
         popup_name = '{0}_settings_popup'.format(self.analysis_type)
-        print
-        print
-        print popup_name
-        print
-        print
         if not hasattr(self, popup_name):
             self._create_popup_window(popup_name)
             self._build_panel(settings.ivcurve_popup_build_dict)
@@ -224,36 +247,79 @@ class GuiTemplate(QtGui.QWidget):
             self._create_and_place_widget(unique_widget_name, **widget_settings)
             row = i + 2
             self.selected_files_row_dict[selected_file] = row
-            col += self._add_rt_checkboxes(popup_name, 'GRT Serial', self.grt_list, row, col)
-            col += self._add_rt_checkboxes(popup_name, 'Sample Res Factor', self.sample_res_factors, row, col)
-            col += self._add_rt_checkboxes(popup_name, 'GRT Res Factor', self.grt_res_factors, row, col)
-            unique_widget_name = '_{0}_{1}_normal_res_lineedit'.format(popup_name, row)
+            col += self._add_checkboxes(popup_name, 'SQUID Channel', self.squid_channels, row, col)
+            unique_widget_name = '_{0}_{1}_squid_conversion_lineedit'.format(popup_name, row)
             widget_settings = {'text': '',
                                'position': (row, col, 1, 1)}
             self._create_and_place_widget(unique_widget_name, **widget_settings)
             col += 1
+            col += self._add_checkboxes(popup_name, 'Voltage Conversion', self.voltage_conversion_list, row, col)
             unique_widget_name = '_{0}_{1}_label_lineedit'.format(popup_name, row)
             widget_settings = {'text': '', 'width': 200,
                                'position': (row, col, 1, 1)}
             self._create_and_place_widget(unique_widget_name, **widget_settings)
             col += 1
-            unique_widget_name = '_{0}_{1}_invert_checkbox'.format(popup_name, row)
-            widget_settings = {'text': 'Invert?',
+            unique_widget_name = '_{0}_{1}_v_clip_lo_lineedit'.format(popup_name, row)
+            widget_settings = {'text': '', 'width': 200,
                                'position': (row, col, 1, 1)}
             self._create_and_place_widget(unique_widget_name, **widget_settings)
-            getattr(self, unique_widget_name).setChecked(True)
+            getattr(self, unique_widget_name).setText('1.0')
+            col += 1
+            unique_widget_name = '_{0}_{1}_v_clip_hi_lineedit'.format(popup_name, row)
+            widget_settings = {'text': '', 'width': 200,
+                               'position': (row, col, 1, 1)}
+            self._create_and_place_widget(unique_widget_name, **widget_settings)
+            getattr(self, unique_widget_name).setText('50.0')
+            col += 1
+            unique_widget_name = '_{0}_{1}_calibration_resistance_lineedit'.format(popup_name, row)
+            widget_settings = {'text': '', 'width': 200,
+                               'position': (row, col, 1, 1)}
+            self._create_and_place_widget(unique_widget_name, **widget_settings)
+            getattr(self, unique_widget_name).setText('0.5')
+            col += 1
+            unique_widget_name = '_{0}_{1}_calibrate_checkbox'.format(popup_name, row)
+            widget_settings = {'text': 'Calibrate?',
+                               'position': (row, col, 1, 1)}
+            self._create_and_place_widget(unique_widget_name, **widget_settings)
+            getattr(self, unique_widget_name).setChecked(False)
             col = 1
         if not hasattr(self, popup_name):
             self._create_popup_window(popup_name)
             self._build_panel(rtcurve_build_dict)
         getattr(self, popup_name).show()
 
+    def _build_iv_input_dicts(self):
+        list_of_input_dicts = []
+        iv_settings = ['voltage_conversion', 'label', 'squid_conversion',
+                       'v_clip_low', 'v_clip_hi', 'calibration_resistance', 'calibrate']
+        for selected_file, row in self.selected_files_row_dict.iteritems():
+            input_dict = {'data_path': selected_file}
+            for setting in iv_settings:
+                identity_string = '{0}_{1}'.format(row, setting)
+                for widget in [x for x in dir(self) if identity_string in x]:
+                    if 'checkbox' in widget and not 'calibrate' in widget:
+                        if getattr(self, widget).isChecked():
+                            setting_value = str(getattr(self, widget).text()).split(' ')[-1]
+                            input_dict[setting] = float(setting_value)
+                    elif 'checkbox' in widget and 'calibrate' in widget:
+                        invert_bool = getattr(self, widget).isChecked()
+                        input_dict['calibrate'] = invert_bool
+                    elif 'lineedit' in widget:
+                        widget_text = str(getattr(self, widget).text())
+                        if len(widget_text) == 0:
+                            widget_text = 'None'
+                            input_dict[setting] = widget_text
+                        else:
+                            input_dict[setting] = float(widget_text)
+            list_of_input_dicts.append(copy(input_dict))
+        return list_of_input_dicts
 
     def _plot_ivcurve(self):
         selected_files = list(set(self.selected_files))
-        list_of_input_dicts = self._build_rt_input_dicts()
-        rt = RTCurve(list_of_input_dicts)
-        rt.run()
+        list_of_input_dicts = self._build_iv_input_dicts()
+        pprint(list_of_input_dicts)
+        iv = IVCurve(list_of_input_dicts)
+        iv.run()
 
     #################################################
     # WIDGET GENERATORS AND FUNCTIONS
