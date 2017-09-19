@@ -5,9 +5,9 @@ ivcurve_settings_popup_settings = Class()
 ivcurve_settings_popup_settings.ivcurve_popup_build_dict = {
                                                             '_common_settings': {'font': 'med'},
                                                             '_ivcurve_settings_popup_close_pushbutton': {'text': 'Close', 'function': '_close_iv',
-                                                                                                         'position': (0, 0, 1, 17)},
+                                                                                                         'width': 200, 'height': 150, 'position': (0, 0, 1, 2)},
                                                             '_ivcurve_settings_popup_run_pushbutton': {'text': 'Run', 'function': '_run_analysis',
-                                                                                                       'position': (1, 0, 1, 17)},
+                                                                                                       'width': 200, 'height': 150, 'position': (0, 3, 1, 2)},
                                                             '_ivcurve_settings_popup_squid_channel_label': {'text': 'SQUID Channel',
                                                                                                             'alignment': 'Center', 'position': (4, 0, 1, 1)},
                                                             '_ivcurve_settings_popup_squid_transimpedance_label': {'text': 'SQ Conv (uA/V)',

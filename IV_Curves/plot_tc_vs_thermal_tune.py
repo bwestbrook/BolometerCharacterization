@@ -18,9 +18,11 @@ class TcThermalTune():
     def plot_data(self, thermal_tune_temps, tcs):
         fig = pl.figure()
         ax1 = fig.add_subplot(111)
-        ax1.set_xlabel('Thermal Tune Temp $C^{\circ}$', fontsize=16)
-        ax1.set_ylabel('$T_c$ ($mK$)', fontsize=16)
+        ax1.set_title("3000 ppm AlMn on OXSN (Dep'd 09/07/17)\nTc vs Thermal Tune", fontsize=14)
+        ax1.set_xlabel('Thermal Tune Temp ($C^{\circ}$)', fontsize=14)
+        ax1.set_ylabel('$T_c$ ($mK$)', fontsize=14)
         ax1.plot(thermal_tune_temps, tcs)
+        ax1.plot(thermal_tune_temps, tcs, 'g*')
         pl.show()
 
     def run(self, data_path):

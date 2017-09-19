@@ -118,36 +118,34 @@ class GuiTemplate(QtGui.QWidget):
         if not hasattr(self, popup_name):
             self._create_popup_window(popup_name)
             self._build_panel(settings.rtcurve_popup_build_dict)
-        col = 1
+        row = 2
         self.selected_files_col_dict = {}
         for i, selected_file in enumerate(self.selected_files):
+            col = 2 + i * 3
             basename = os.path.basename(selected_file)
             unique_widget_name = '_{0}_{1}_label'.format(popup_name, basename)
             widget_settings = {'text': '{0}'.format(basename),
-                               'position': (i + 2, 0, 1, 1)}
+                               'position': (row, col, 1, 1)}
             self._create_and_place_widget(unique_widget_name, **widget_settings)
-            row = i + 2
+            row += 1
             self.selected_files_col_dict[selected_file] = col
             row += self._add_checkboxes(popup_name, 'GRT Serial', self.grt_list, row, col)
             row += self._add_checkboxes(popup_name, 'Sample Res Factor', self.sample_res_factors, row, col)
             row += self._add_checkboxes(popup_name, 'GRT Res Factor', self.grt_res_factors, row, col)
-            unique_widget_name = '_{0}_{1}_normal_res_lineedit'.format(popup_name, row)
-            widget_settings = {'text': '',
-                               'position': (row, col, 1, 1)}
+            unique_widget_name = '_{0}_{1}_normal_res_lineedit'.format(popup_name, col)
+            widget_settings = {'text': '', 'position': (row, col, 1, 1)}
             self._create_and_place_widget(unique_widget_name, **widget_settings)
             getattr(self, unique_widget_name).setText('2.0')
-            col += 1
-            unique_widget_name = '_{0}_{1}_label_lineedit'.format(popup_name, row)
-            widget_settings = {'text': '', 'width': 200,
-                               'position': (row, col, 1, 1)}
+            row += 1
+            unique_widget_name = '_{0}_{1}_label_lineedit'.format(popup_name, col)
+            widget_settings = {'text': '', 'width': 200, 'position': (row, col, 1, 1)}
             self._create_and_place_widget(unique_widget_name, **widget_settings)
-            col += 1
-            unique_widget_name = '_{0}_{1}_invert_checkbox'.format(popup_name, row)
-            widget_settings = {'text': 'Invert?',
-                               'position': (row, col, 1, 1)}
+            row += 1
+            unique_widget_name = '_{0}_{1}_invert_checkbox'.format(popup_name, col)
+            widget_settings = {'text': 'Invert?', 'position': (row, col, 1, 1)}
             self._create_and_place_widget(unique_widget_name, **widget_settings)
             getattr(self, unique_widget_name).setChecked(True)
-            col = 1
+            row = 2
         if not hasattr(self, popup_name):
             self._create_popup_window(popup_name)
             self._build_panel(rtcurve_build_dict)
@@ -260,7 +258,7 @@ class GuiTemplate(QtGui.QWidget):
                                'position': (row, col, 1, 1)}
             row += 1
             self._create_and_place_widget(unique_widget_name, **widget_settings)
-            self.selected_files_col_dict[selected_file] = row
+            self.selected_files_col_dict[selected_file] = col
             row += self._add_checkboxes(popup_name, 'SQUID Channel', self.squid_channels, row, col)
             unique_widget_name = '_{0}_{1}_squid_conversion_lineedit'.format(popup_name, col)
             widget_settings = {'text': '',
@@ -268,44 +266,47 @@ class GuiTemplate(QtGui.QWidget):
             self._create_and_place_widget(unique_widget_name, **widget_settings)
             row += 1
             row += self._add_checkboxes(popup_name, 'Voltage Conversion', self.voltage_conversion_list, row, col)
-            unique_widget_name = '_{0}_{1}_label_lineedit'.format(popup_name, row)
+            unique_widget_name = '_{0}_{1}_label_lineedit'.format(popup_name, col)
             widget_settings = {'text': '', 'width': 200,
                                'position': (row, col, 1, 1)}
             self._create_and_place_widget(unique_widget_name, **widget_settings)
             row += 1
-            unique_widget_name = '_{0}_{1}_v_fit_lo_lineedit'.format(popup_name, row)
+            unique_widget_name = '_{0}_{1}_v_fit_lo_lineedit'.format(popup_name, col)
             widget_settings = {'text': '', 'width': 200,
                                'position': (row, col, 1, 1)}
             self._create_and_place_widget(unique_widget_name, **widget_settings)
             getattr(self, unique_widget_name).setText('10.0')
             row += 1
-            unique_widget_name = '_{0}_{1}_v_fit_hi_lineedit'.format(popup_name, row)
+            unique_widget_name = '_{0}_{1}_v_fit_hi_lineedit'.format(popup_name, col)
             widget_settings = {'text': '', 'width': 200,
                                'position': (row, col, 1, 1)}
             self._create_and_place_widget(unique_widget_name, **widget_settings)
             getattr(self, unique_widget_name).setText('30.0')
             row += 1
-            unique_widget_name = '_{0}_{1}_v_plot_lo_lineedit'.format(popup_name, row)
+            unique_widget_name = '_{0}_{1}_v_plot_lo_lineedit'.format(popup_name, col)
             widget_settings = {'text': '', 'width': 200,
                                'position': (row, col, 1, 1)}
             self._create_and_place_widget(unique_widget_name, **widget_settings)
             getattr(self, unique_widget_name).setText('1.0')
             row += 1
-            unique_widget_name = '_{0}_{1}_v_plot_hi_lineedit'.format(popup_name, row)
+            unique_widget_name = '_{0}_{1}_v_plot_hi_lineedit'.format(popup_name, col)
             widget_settings = {'text': '', 'width': 200,
                                'position': (row, col, 1, 1)}
             self._create_and_place_widget(unique_widget_name, **widget_settings)
+            print unique_widget_name
             getattr(self, unique_widget_name).setText('25.0')
             row += 1
-            unique_widget_name = '_{0}_{1}_calibration_resistance_lineedit'.format(popup_name, row)
+            unique_widget_name = '_{0}_{1}_calibration_resistance_lineedit'.format(popup_name, col)
             widget_settings = {'text': '', 'width': 200,
                                'position': (row, col, 1, 1)}
+            print unique_widget_name
             self._create_and_place_widget(unique_widget_name, **widget_settings)
             getattr(self, unique_widget_name).setText('0.5')
             row += 1
-            unique_widget_name = '_{0}_{1}_calibrate_checkbox'.format(popup_name, row)
+            unique_widget_name = '_{0}_{1}_calibrate_checkbox'.format(popup_name, col)
             widget_settings = {'text': 'Calibrate?',
                                'position': (row, col, 1, 1)}
+            print unique_widget_name
             self._create_and_place_widget(unique_widget_name, **widget_settings)
             getattr(self, unique_widget_name).setChecked(False)
             row = 3
@@ -319,10 +320,11 @@ class GuiTemplate(QtGui.QWidget):
         iv_settings = ['voltage_conversion', 'label', 'squid_conversion',
                        'v_fit_lo', 'v_fit_hi', 'v_plot_lo', 'v_plot_hi', 'v_plot_lo', 'v_plot_hi',
                        'calibration_resistance', 'calibrate']
-        for selected_file, col in self.selected_files_row_dict.iteritems():
+        for selected_file, col in self.selected_files_col_dict.iteritems():
             input_dict = {'data_path': selected_file}
             for setting in iv_settings:
                 identity_string = '{0}_{1}'.format(col, setting)
+                print identity_string
                 for widget in [x for x in dir(self) if identity_string in x]:
                     if 'checkbox' in widget and not 'calibrate' in widget:
                         if getattr(self, widget).isChecked():
