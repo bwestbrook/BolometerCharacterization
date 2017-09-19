@@ -2,6 +2,7 @@ import os
 import numpy as np
 import pylab as pl
 from pprint import pprint
+from copy import copy
 from settings import settings
 
 
@@ -32,10 +33,9 @@ class IVCurve():
                 squid_voltage.append(float(squid_voltage_val))
         return np.asarray(bias_voltage), np.asarray(squid_voltage)
 
-
     def convert_IV_to_real_units(self, bias_voltage, squid_voltage, squid_conv=30.0, v_bias_multiplier=1e-4,
                                  determine_calibration=False, calibration_resistor_val=1.0,
-                                 clip=None, quick_plot=False, label=''):
+                                 clip=None, quick_plot=True, label=''):
         '''
         This loads the data as two vectors of data representing the bias voltage and squid out voltage
         Inputs:
@@ -52,15 +52,59 @@ class IVCurve():
             v_bias_real: a vector of the bias voltage in Volts
             i_bolo_real: a vector of the bolo current in Amps
         '''
-        corrected_squid_voltage = self.fit_and_remove_offset(bias_voltage, squid_voltage, clip=clip, quick_plot=quick_plot)
+        corrected_squid_voltage = self.fit_and_remove_offset(bias_voltage, squid_voltage, v_bias_multiplier,
+                                                             clip=clip, quick_plot=quick_plot)
         v_bias_real = bias_voltage * v_bias_multiplier # in V
         v_bias_real *= 1e6  # in uV
         if determine_calibration:
-            squid_conv = self.determine_squid_transimpedance(v_bias_real, corrected_squid_voltage, calibration_resistor_val)
+            squid_conv = self.determine_squid_transimpedance(v_bias_real, corrected_squid_voltage,
+                                                             calibration_resistor_val)
         i_bolo_real = corrected_squid_voltage * squid_conv # in uA
-        self.plot_iv_curve(v_bias_real, i_bolo_real, clip=clip, label=label)
+        if quick_plot:
+            pl.plot(v_bias_real, i_bolo_real)
+            pl.show()
         return v_bias_real, i_bolo_real
 
+
+    def fit_and_remove_offset(self, x_vector, y_vector, v_bias_multiplier, n=1, clip=None, quick_plot=True, return_fit=False):
+        '''
+        This function is necessary to correct the arbitrary offset and sometime negative sign
+        which is naturally applied to the SQUID output.  It doesn't change the units, but ensures
+        that the data go through (0, 0) and have a slope consistent with a positive resistance.
+        It's worth noting that this fit is down with bias voltage as the x_axis, since that is
+        what is being modulated during the measurement and doesn't need correction
+        Inputs:
+            data: to remvoe polynomial
+            n: order of polynomial to remove (default n=1)
+        Outputs:
+            return_fit: Return fit values
+            data_with_first_order_poly_removed
+        '''
+        scaled_x_vector = copy(x_vector)
+        scaled_x_vector *= v_bias_multiplier
+        scaled_x_vector *= 1e6 # This is now in uV
+        print
+        print
+        print clip
+        print scaled_x_vector
+        print x_vector
+        print
+        print
+        if clip is not None:
+            selector = np.logical_and(clip[0] < scaled_x_vector, scaled_x_vector < clip[1])
+        fit_vals = np.polyfit(x_vector[selector], y_vector[selector], n)
+        poly_fit = np.polyval(fit_vals, x_vector[selector])
+        offset_removed = y_vector - fit_vals[1]
+        if fit_vals[0] < 0:
+            offset_removed = -1 * offset_removed
+        if quick_plot and False:
+            x_vector_2 = np.arange(-1, 3, 0.5)
+            poly_fit = np.polyval(fit_vals, x_vector_2)
+            pl.plot(x_vector, y_vector)
+            pl.plot(x_vector, offset_removed)
+            pl.plot(x_vector_2, poly_fit)
+            pl.show()
+        return offset_removed
 
     def determine_squid_transimpedance(self, v_bias_real, corrected_squid_voltage, calibration_resistor_val):
         '''
@@ -81,37 +125,7 @@ class IVCurve():
         return squid_conv
 
 
-    def fit_and_remove_offset(self, x_vector, y_vector, n=1, clip=None, quick_plot=False, return_fit=False):
-        '''
-        This function is necessary to correct the arbitrary offset and sometime negative sign
-        which is naturally applied to the SQUID output.  It doesn't change the units, but ensures
-        that the data go through (0, 0) and have a slope consistent with a positive resistance.
-        It's worth noting that this fit is down with bias voltage as the x_axis, since that is
-        what is being modulated during the measurement and doesn't need correction
-        Inputs:
-            data: to remvoe polynomial
-            n: order of polynomial to remove (default n=1)
-        Outputs:
-            return_fit: Return fit values
-            data_with_first_order_poly_removed
-        '''
-        if clip is not None:
-            selector = np.logical_and(clip[0] < x_vector, x_vector < clip[1])
-        fit_vals = np.polyfit(x_vector, y_vector, n)
-        poly_fit = np.polyval(fit_vals, x_vector)
-        offset_removed = y_vector - fit_vals[1]
-        if fit_vals[0] < 0:
-            offset_removed = -1 * offset_removed
-        if quick_plot:
-            x_vector_2 = np.arange(-1, 3, 0.5)
-            poly_fit = np.polyval(fit_vals, x_vector_2)
-            pl.plot(x_vector, y_vector)
-            pl.plot(x_vector_2, poly_fit)
-            pl.show()
-        return offset_removed
-
-
-    def plot_iv_curve(self, bolo_voltage_bias, bolo_current, label='', clip=None):
+    def plot_all_curves(self, bolo_voltage_bias, bolo_current, label='', fit_clip=None, plot_clip=None):
         '''
         This function creates an x-y scatter plot with V_bias on the x-axis and
         bolo curent on the y-axis.  The resistance value is reported as text annotation
@@ -121,20 +135,28 @@ class IVCurve():
         '''
         fig = pl.figure(figsize=(10, 5))
         fig.subplots_adjust(bottom=0.2)
-        selector = np.logical_and(clip[0] < bolo_voltage_bias,bolo_voltage_bias < clip[1])
-        fit_vals = np.polyfit(bolo_voltage_bias[selector], bolo_current[selector], 1)
-        v_fit_x_vector = np.arange(0, 50, 0.2)
-        selector_2 = np.logical_and(clip[0] < v_fit_x_vector, v_fit_x_vector < clip[1])
+        ax1 = fig.add_subplot(211)
+        ax2 = fig.add_subplot(212)
+        #ax3 = fig.add_subplot(313)
+        fit_selector = np.logical_and(fit_clip[0] < bolo_voltage_bias, bolo_voltage_bias < fit_clip[1])
+        plot_selector = np.logical_and(plot_clip[0] < bolo_voltage_bias, bolo_voltage_bias < plot_clip[1])
+        fit_vals = np.polyfit(bolo_voltage_bias[fit_selector], bolo_current[fit_selector], 1)
+        v_fit_x_vector = np.arange(fit_clip[0], fit_clip[1], 0.2)
+        selector_2 = np.logical_and(fit_clip[0] < v_fit_x_vector, v_fit_x_vector < fit_clip[1])
         poly_fit = np.polyval(fit_vals, v_fit_x_vector[selector_2])
-        ax1 = fig.add_subplot(111)
-        ax1.plot(bolo_voltage_bias, bolo_current, '.', label=label)
+        resistance_vector = bolo_voltage_bias / bolo_current
+        power_vector = bolo_voltage_bias * bolo_current
+        ax2.plot(bolo_voltage_bias[plot_selector], power_vector[plot_selector], 'g')
+        ax1.plot(bolo_voltage_bias[plot_selector], bolo_current[plot_selector], '.', label=label)
         ax1.plot(v_fit_x_vector[selector_2], poly_fit, label='Fit: {0:.2f}$\Omega$'.format(1.0 / fit_vals[0]))
-        ax1.set_xlabel("Voltage ($\mu$V)", fontsize=16)
         ax1.set_ylabel("Current ($\mu$A)", fontsize=16)
+        ax2.set_ylabel("Power ($pW$)", fontsize=16)
+        ax2.set_xlabel("Voltage ($\mu$V)", fontsize=16)
         ax1.legend(loc='best', numpoints=1)
+        ax2.set_ylim((0, 75))
+        ax1.set_xlim((0, 20))
+        ax2.set_xlim((0, 20))
         pl.show()
-        #self._ask_user_if_they_want_to_quit()
-
 
     def _ask_user_if_they_want_to_quit(self):
         '''
@@ -152,7 +174,8 @@ class IVCurve():
             data_path = input_dict['data_path']
             label = input_dict['label']
             bias_voltage, squid_voltage = self.load_data(data_path)
-            voltage_clip = (input_dict['v_clip_lo'], input_dict['v_clip_hi'])
+            fit_clip = (input_dict['v_fit_lo'], input_dict['v_fit_hi'])
+            plot_clip = (input_dict['v_plot_lo'], input_dict['v_plot_hi'])
             if len(input_dict['label']) == 0:
                 label = os.path.basename(data_path)
             v_bias_real, i_bolo_real = self.convert_IV_to_real_units(bias_voltage, squid_voltage,
@@ -160,8 +183,9 @@ class IVCurve():
                                                                      v_bias_multiplier=input_dict['voltage_conversion'],
                                                                      calibration_resistor_val=input_dict['calibration_resistance'],
                                                                      determine_calibration=input_dict['calibrate'],
-                                                                     clip=voltage_clip, label=label)
-
+                                                                     clip=fit_clip, label=label)
+            self.plot_all_curves(v_bias_real, i_bolo_real, label=label,
+                                 fit_clip=fit_clip, plot_clip=plot_clip)
 
 
 if __name__ == '__main__':

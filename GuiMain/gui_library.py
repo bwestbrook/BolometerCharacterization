@@ -95,8 +95,8 @@ class GuiTemplate(QtGui.QWidget):
             text = '{0} {1}'.format(name, item_)
             if 'SQUID' in name:
                 text = 'SQ{0}'.format(item_)
-            if 'SQUID' in name:
-                text = 'SQ{0}'.format(item_)
+                #if i == 3:
+                    #row += 1
             widget_settings = {'text': text,
                                'function': getattr(self, function),
                                'position': (row, col + i, 1, 1)}
@@ -202,10 +202,19 @@ class GuiTemplate(QtGui.QWidget):
                         if len(widget_text) == 0:
                             widget_text = 'None'
                             input_dict[setting] = widget_text
-                        else:
+                        elif self._isfloat(widget_text):
                             input_dict[setting] = float(widget_text)
+                        else:
+                            input_dict[setting] = widget_text
             list_of_input_dicts.append(copy(input_dict))
         return list_of_input_dicts
+
+    def _isfloat(self, test_val):
+        try:
+            float(test_val)
+            return True
+        except ValueError:
+            return False
 
     def _plot_rtcurve(self):
         selected_files = list(set(self.selected_files))
@@ -261,17 +270,29 @@ class GuiTemplate(QtGui.QWidget):
                                'position': (row, col, 1, 1)}
             self._create_and_place_widget(unique_widget_name, **widget_settings)
             col += 1
-            unique_widget_name = '_{0}_{1}_v_clip_lo_lineedit'.format(popup_name, row)
+            unique_widget_name = '_{0}_{1}_v_fit_lo_lineedit'.format(popup_name, row)
+            widget_settings = {'text': '', 'width': 200,
+                               'position': (row, col, 1, 1)}
+            self._create_and_place_widget(unique_widget_name, **widget_settings)
+            getattr(self, unique_widget_name).setText('10.0')
+            col += 1
+            unique_widget_name = '_{0}_{1}_v_fit_hi_lineedit'.format(popup_name, row)
+            widget_settings = {'text': '', 'width': 200,
+                               'position': (row, col, 1, 1)}
+            self._create_and_place_widget(unique_widget_name, **widget_settings)
+            getattr(self, unique_widget_name).setText('30.0')
+            col += 1
+            unique_widget_name = '_{0}_{1}_v_plot_lo_lineedit'.format(popup_name, row)
             widget_settings = {'text': '', 'width': 200,
                                'position': (row, col, 1, 1)}
             self._create_and_place_widget(unique_widget_name, **widget_settings)
             getattr(self, unique_widget_name).setText('1.0')
             col += 1
-            unique_widget_name = '_{0}_{1}_v_clip_hi_lineedit'.format(popup_name, row)
+            unique_widget_name = '_{0}_{1}_v_plot_hi_lineedit'.format(popup_name, row)
             widget_settings = {'text': '', 'width': 200,
                                'position': (row, col, 1, 1)}
             self._create_and_place_widget(unique_widget_name, **widget_settings)
-            getattr(self, unique_widget_name).setText('50.0')
+            getattr(self, unique_widget_name).setText('25.0')
             col += 1
             unique_widget_name = '_{0}_{1}_calibration_resistance_lineedit'.format(popup_name, row)
             widget_settings = {'text': '', 'width': 200,
@@ -293,7 +314,8 @@ class GuiTemplate(QtGui.QWidget):
     def _build_iv_input_dicts(self):
         list_of_input_dicts = []
         iv_settings = ['voltage_conversion', 'label', 'squid_conversion',
-                       'v_clip_lo', 'v_clip_hi', 'calibration_resistance', 'calibrate']
+                       'v_fit_lo', 'v_fit_hi', 'v_plot_lo', 'v_plot_hi', 'v_plot_lo', 'v_plot_hi',
+                       'calibration_resistance', 'calibrate']
         for selected_file, row in self.selected_files_row_dict.iteritems():
             input_dict = {'data_path': selected_file}
             for setting in iv_settings:

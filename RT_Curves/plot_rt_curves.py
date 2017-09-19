@@ -54,7 +54,6 @@ class RTCurve():
         grt_temperature_vector = resistance_to_temp(grt_res_vector, serial_number)
         return grt_temperature_vector
 
-
     def plot_rt_curves(self, grt_temperature_vector, sample_res_vector, fig, input_dict):
         if fig is None:
             fig = pl.figure(figsize=(10, 5))
