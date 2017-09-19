@@ -10,12 +10,14 @@ main_panel_settings.main_panel_build_dict = {
                                                                                      'position': (1, 0, 1, 2)},
                                              '_main_panel_selected_file_label': {'text': '',
                                                                                  'position': (2, 0, 1, 2)},
+                                             '_main_panel_clear_files_pushbutton': {'text': 'Clear Files', 'function': '_clear_files',
+                                                                                    'position': (3, 0, 1, 2)},
                                              '_main_panel_ivcurve_checkbox': {'text': 'IV_Curve', 'function': '_select_analysis_type',
-                                                                              'position': (3, 0, 1, 1)},
+                                                                              'position': (4, 0, 1, 1)},
                                              '_main_panel_rtcurve_checkbox': {'text': 'RT_Curve', 'function': '_select_analysis_type',
-                                                                              'position': (3, 1, 1, 1)},
+                                                                              'position': (4, 1, 1, 1)},
                                              '_main_panel_run_pushbutton': {'text': 'Run', 'function': '_run_analysis',
-                                                                            'position': (4, 0, 1, 2)},
+                                                                            'position': (5, 0, 1, 2)},
                                              '_main_panel_close_pushbutton': {'text': 'Close', 'function': '_close_main',
-                                                                              'position': (5, 0, 1, 2)}
+                                                                              'position': (6, 0, 1, 2)}
                                              }
