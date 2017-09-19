@@ -23,6 +23,8 @@ class TcThermalTune():
         ax1.set_ylabel('$T_c$ ($mK$)', fontsize=14)
         ax1.plot(thermal_tune_temps, tcs)
         ax1.plot(thermal_tune_temps, tcs, 'g*')
+        ax1.set_xlim([30, 250])
+        ax1.set_ylim([400, 650])
         pl.show()
 
     def run(self, data_path):
