@@ -94,7 +94,7 @@ class GuiTemplate(QtGui.QWidget):
             list_ = sorted(list_.keys())
         for i, item_ in enumerate(list_):
             reduced_name = name.replace(' ', '_').lower()
-            unique_widget_name = '_{0}_{1}_{2}_{3}_checkbox'.format(popup_name, row, reduced_name, item_)
+            unique_widget_name = '_{0}_{1}_{2}_{3}_checkbox'.format(popup_name, col, reduced_name, item_)
             function = '_select_{0}_checkbox'.format(name.replace(' ', '_')).lower()
             text = '{0} {1}'.format(name, item_)
             if 'SQUID' in name:
@@ -119,7 +119,7 @@ class GuiTemplate(QtGui.QWidget):
             self._create_popup_window(popup_name)
             self._build_panel(settings.rtcurve_popup_build_dict)
         col = 1
-        self.selected_files_row_dict = {}
+        self.selected_files_col_dict = {}
         for i, selected_file in enumerate(self.selected_files):
             basename = os.path.basename(selected_file)
             unique_widget_name = '_{0}_{1}_label'.format(popup_name, basename)
@@ -127,7 +127,7 @@ class GuiTemplate(QtGui.QWidget):
                                'position': (i + 2, 0, 1, 1)}
             self._create_and_place_widget(unique_widget_name, **widget_settings)
             row = i + 2
-            self.selected_files_row_dict[selected_file] = row
+            self.selected_files_col_dict[selected_file] = col
             row += self._add_checkboxes(popup_name, 'GRT Serial', self.grt_list, row, col)
             row += self._add_checkboxes(popup_name, 'Sample Res Factor', self.sample_res_factors, row, col)
             row += self._add_checkboxes(popup_name, 'GRT Res Factor', self.grt_res_factors, row, col)
@@ -187,7 +187,7 @@ class GuiTemplate(QtGui.QWidget):
         list_of_input_dicts = []
         rt_settings = ['grt_serial', 'label', 'sample_res_factor',
                        'normal_res', 'invert', 'grt_res_factor']
-        for selected_file, row in self.selected_files_row_dict.iteritems():
+        for selected_file, row in self.selected_files_col_dict.iteritems():
             input_dict = {'data_path': selected_file}
             for setting in rt_settings:
                 identity_string = '{0}_{1}'.format(row, setting)
@@ -250,18 +250,19 @@ class GuiTemplate(QtGui.QWidget):
         if not hasattr(self, popup_name):
             self._create_popup_window(popup_name)
             self._build_panel(settings.ivcurve_popup_build_dict)
-        row = 2
-        self.selected_files_row_dict = {}
+        row = 3
+        self.selected_files_col_dict = {}
         for i, selected_file in enumerate(self.selected_files):
+            col = 2 + i * 6
             basename = os.path.basename(selected_file)
             unique_widget_name = '_{0}_{1}_label'.format(popup_name, basename)
             widget_settings = {'text': '{0}'.format(basename),
-                               'position': (0, i + 2, 1, 1)}
+                               'position': (row, col, 1, 1)}
+            row += 1
             self._create_and_place_widget(unique_widget_name, **widget_settings)
-            col = i + 2
-            self.selected_files_row_dict[selected_file] = row
+            self.selected_files_col_dict[selected_file] = row
             row += self._add_checkboxes(popup_name, 'SQUID Channel', self.squid_channels, row, col)
-            unique_widget_name = '_{0}_{1}_squid_conversion_lineedit'.format(popup_name, row)
+            unique_widget_name = '_{0}_{1}_squid_conversion_lineedit'.format(popup_name, col)
             widget_settings = {'text': '',
                                'position': (row, col, 1, 1)}
             self._create_and_place_widget(unique_widget_name, **widget_settings)
@@ -307,7 +308,7 @@ class GuiTemplate(QtGui.QWidget):
                                'position': (row, col, 1, 1)}
             self._create_and_place_widget(unique_widget_name, **widget_settings)
             getattr(self, unique_widget_name).setChecked(False)
-            row = 1
+            row = 3
         if not hasattr(self, popup_name):
             self._create_popup_window(popup_name)
             self._build_panel(rtcurve_build_dict)
@@ -318,10 +319,10 @@ class GuiTemplate(QtGui.QWidget):
         iv_settings = ['voltage_conversion', 'label', 'squid_conversion',
                        'v_fit_lo', 'v_fit_hi', 'v_plot_lo', 'v_plot_hi', 'v_plot_lo', 'v_plot_hi',
                        'calibration_resistance', 'calibrate']
-        for selected_file, row in self.selected_files_row_dict.iteritems():
+        for selected_file, col in self.selected_files_row_dict.iteritems():
             input_dict = {'data_path': selected_file}
             for setting in iv_settings:
-                identity_string = '{0}_{1}'.format(row, setting)
+                identity_string = '{0}_{1}'.format(col, setting)
                 for widget in [x for x in dir(self) if identity_string in x]:
                     if 'checkbox' in widget and not 'calibrate' in widget:
                         if getattr(self, widget).isChecked():
