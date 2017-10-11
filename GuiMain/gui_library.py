@@ -115,7 +115,10 @@ class GuiTemplate(QtGui.QWidget):
 
     def _build_rtcurve_settings_popup(self):
         popup_name = '{0}_settings_popup'.format(self.analysis_type)
-        if not hasattr(self, popup_name):
+        if hasattr(self, popup_name):
+            self._initialize_panel(popup_name)
+            self._build_panel(settings.rtcurve_popup_build_dict)
+        else:
             self._create_popup_window(popup_name)
             self._build_panel(settings.rtcurve_popup_build_dict)
         row = 2
@@ -233,6 +236,26 @@ class GuiTemplate(QtGui.QWidget):
         sender = str(self.sender().whatsThis())
         identity_string =  'voltage_conversion'
         self._select_unique_checkbox(sender, identity_string)
+        popup_name = 'ivcurve_settings_popup'
+        col = sender.split('_')[4]
+        if '1e-5' in sender:
+            lo_limit = 1.0
+            hi_limit = 5.0
+        elif '1e-5' in sender:
+            lo_limit = 5.0
+            hi_limit = 30.0
+        # Fit Limits
+        unique_widget_name = '_{0}_{1}_v_fit_lo_lineedit'.format(popup_name, col)
+        #if hasattr(self, unique_widget_name):
+        getattr(self, unique_widget_name).setText(str(lo_limit))
+        unique_widget_name = '_{0}_{1}_v_fit_hi_lineedit'.format(popup_name, col)
+        getattr(self, unique_widget_name).setText(str(hi_limit))
+        # Plot Limits
+        unique_widget_name = '_{0}_{1}_v_plot_lo_lineedit'.format(popup_name, col)
+        getattr(self, unique_widget_name).setText(str(lo_limit - 0.5))
+        unique_widget_name = '_{0}_{1}_v_plot_hi_lineedit'.format(popup_name, col)
+        getattr(self, unique_widget_name).setText(str(hi_limit + 0.5))
+
 
     def _select_squid_channel_checkbox(self):
         sender = str(self.sender().whatsThis())
@@ -245,7 +268,10 @@ class GuiTemplate(QtGui.QWidget):
 
     def _build_ivcurve_settings_popup(self):
         popup_name = '{0}_settings_popup'.format(self.analysis_type)
-        if not hasattr(self, popup_name):
+        if hasattr(self, popup_name):
+            self._initialize_panel(popup_name)
+            self._build_panel(settings.ivcurve_popup_build_dict)
+        else:
             self._create_popup_window(popup_name)
             self._build_panel(settings.ivcurve_popup_build_dict)
         row = 3
@@ -275,7 +301,7 @@ class GuiTemplate(QtGui.QWidget):
             widget_settings = {'text': '', 'width': 200,
                                'position': (row, col, 1, 1)}
             self._create_and_place_widget(unique_widget_name, **widget_settings)
-            getattr(self, unique_widget_name).setText('10.0')
+            getattr(self, unique_widget_name).setText('5.0')
             row += 1
             unique_widget_name = '_{0}_{1}_v_fit_hi_lineedit'.format(popup_name, col)
             widget_settings = {'text': '', 'width': 200,
@@ -356,6 +382,12 @@ class GuiTemplate(QtGui.QWidget):
     #################################################
     # WIDGET GENERATORS AND FUNCTIONS
     #################################################
+
+    def _initialize_panel(self, panel=None):
+        panel = getattr(self, panel)
+        for index in reversed(range(panel.layout().count())):
+            widget = panel.layout().itemAt(index).widget()
+            widget.setParent(None)
 
     def _unpack_widget_function(self, function_text):
         if '.' in function_text:

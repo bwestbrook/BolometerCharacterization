@@ -148,7 +148,7 @@ class IVCurve():
         power_vector = bolo_voltage_bias * bolo_current
         ax1.plot(bolo_voltage_bias[plot_selector], bolo_current[plot_selector], '.', label=label)
         ax2.plot(bolo_voltage_bias[plot_selector], power_vector[plot_selector], 'g')
-        ax3.plot(power_vector[plot_selector], resistance_vector[plot_selector], 'g')
+        ax3.plot(bolo_voltage_bias[plot_selector], resistance_vector[plot_selector], 'g')
         ax1.plot(v_fit_x_vector[selector_2], poly_fit, label='Fit: {0:.2f}$\Omega$'.format(1.0 / fit_vals[0]))
         ax1.set_ylabel("Current ($\mu$A)", fontsize=12)
         ax1.set_xlabel("Voltage ($\mu$V)", fontsize=12)
@@ -158,8 +158,9 @@ class IVCurve():
         ax3.set_ylabel("Res ($\Omega$)", fontsize=12)
         ax1.legend(bbox_to_anchor=(0.66, 0.1, 1, 1), numpoints=1)
         ax2.set_ylim((0, 75))
-        ax1.set_xlim((0, 20))
-        ax2.set_xlim((0, 20))
+        ax1.set_xlim((plot_clip[0], plot_clip[1]))
+        ax2.set_xlim((plot_clip[0], plot_clip[1]))
+        ax3.set_xlim((plot_clip[0], plot_clip[1]))
         pl.show()
 
     def _ask_user_if_they_want_to_quit(self):
