@@ -89,8 +89,8 @@ class FTSCurve():
         for axis in fig.get_axes():
             handles, labels = axis.get_legend_handles_labels()
             axis.legend(handles, labels, numpoints=1, loc=2, bbox_to_anchor=(1.01, 1.0))
-        fig.show()
-        self._ask_user_if_they_want_to_quit()
+        pl.show()
+        fig.savefig('{0}.png'.format(label))
         return fig
 
 
@@ -100,17 +100,23 @@ class FTSCurve():
             exit()
 
 
-    def run(self):
+    def run(self, save_fft=False, run_open_comparison=False):
         for dict_ in self.list_of_input_dicts:
-            open_data_path = dict_['open_air']['data_path']
             data_path = dict_['measurements']['data_path']
             label = dict_['measurements']['label']
             color = dict_['measurements']['color']
-            open_frequency_vector, open_transmission_vector, open_normalized_transmission_vector = self.load_FFT_data(open_data_path)
             frequency_vector, transmission_vector, normalized_transmission_vector = self.load_FFT_data(data_path)
-            divided_transmission_vector = transmission_vector / open_transmission_vector
-            save_path = './Output/{0}_Filter_Transmission.fft'.format(dict_['filter_name'])
-            self.save_FFT_data(frequency_vector, divided_transmission_vector, save_path)
+            if run_open_comparison:
+                open_data_path = dict_['open_air']['data_path']
+                data_path = dict_['measurements']['data_path']
+                open_frequency_vector, open_transmission_vector, open_normalized_transmission_vector = self.load_FFT_data(open_data_path)
+                divided_transmission_vector = transmission_vector / open_transmission_vector
+            else:
+                divided_transmission_vector = normalized_transmission_vector
+            if save_fft:
+                save_path = './Output/{0}_Filter_Transmission.fft'.format(dict_['filter_name'])
+                save_path = 'out.fft'
+                self.save_FFT_data(frequency_vector, divided_transmission_vector, save_path)
             fig = self.plot_FFT_data(frequency_vector, divided_transmission_vector, color=color, label=label)
 
 
@@ -130,6 +136,6 @@ if __name__ == '__main__':
                                'label': 'Open Trans', 'color': 'k'},
                   'measurements': {'data_path': "2015_03_20\\011_576_18icm_High_Res.fft",
                                    'label': 'Raw Trans', 'color': 'm'}}
-    list_of_input_dicts = [dict_12icm, dict_14icm]
+    #list_of_input_dicts = [dict_12icm, dict_14icm]
     fts = FTSCurve(list_of_input_dicts)
     fts.run()

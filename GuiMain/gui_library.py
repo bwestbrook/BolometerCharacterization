@@ -56,7 +56,7 @@ class GuiTemplate(QtGui.QWidget):
 
     def _select_analysis_type(self):
         sender_name = str(self.sender().whatsThis())
-        checkboxes = ['_main_panel_ivcurve_checkbox', '_main_panel_rtcurve_checkbox']
+        checkboxes = ['_main_panel_ivcurve_checkbox', '_main_panel_rtcurve_checkbox', '_main_panel_ftscurve_checkbox']
         for checkbox in checkboxes:
             if sender_name == checkbox:
                 self.analysis_type = checkbox.split('_')[3]
@@ -85,10 +85,6 @@ class GuiTemplate(QtGui.QWidget):
         else:
             getattr(self, '_plot_{0}'.format(self.analysis_type))()
 
-    #################################################
-    # RT Curves 
-    #################################################
-
     def _add_checkboxes(self, popup_name, name, list_, row, col):
         if type(list_) is dict:
             list_ = sorted(list_.keys())
@@ -113,7 +109,12 @@ class GuiTemplate(QtGui.QWidget):
                 getattr(self, unique_widget_name).setCheckState(True)
         return 1
 
+    #################################################
+    # RT Curves 
+    #################################################
+
     def _build_rtcurve_settings_popup(self):
+        
         popup_name = '{0}_settings_popup'.format(self.analysis_type)
         if hasattr(self, popup_name):
             self._initialize_panel(popup_name)
@@ -228,6 +229,17 @@ class GuiTemplate(QtGui.QWidget):
     #################################################
     # IV Curves 
     #################################################
+
+    def _build_ivcurve_settings_popup(self):
+        popup_name = '{0}_settings_popup'.format(self.analysis_type)
+        if hasattr(self, popup_name):
+            self._initialize_panel(popup_name)
+            self._build_panel(settings.ivcurve_popup_build_dict)
+        else:
+            self._create_popup_window(popup_name)
+            self._build_panel(settings.ivcurve_popup_build_dict)
+        row = 3
+        self.selected_files_col_dict = {}
 
     def _close_iv(self):
         self.ivcurve_settings_popup.close()
@@ -378,6 +390,57 @@ class GuiTemplate(QtGui.QWidget):
         pprint(list_of_input_dicts)
         iv = IVCurve(list_of_input_dicts)
         iv.run()
+
+    #################################################
+    # FTS Curves 
+    #################################################
+
+    def _close_fts(self):
+        self.ftscurve_settings_popup.close()
+
+    def _build_ftscurve_settings_popup(self):
+        popup_name = '{0}_settings_popup'.format(self.analysis_type)
+        if hasattr(self, popup_name):
+            self._initialize_panel(popup_name)
+            self._build_panel(settings.ftscurve_popup_build_dict)
+        else:
+            self._create_popup_window(popup_name)
+            self._build_panel(settings.ftscurve_popup_build_dict)
+        row = 3
+        self.selected_files_col_dict = {}
+        for i, selected_file in enumerate(self.selected_files):
+            col = 2 + i * 6
+            basename = os.path.basename(selected_file)
+            unique_widget_name = '_{0}_{1}_label'.format(popup_name, basename)
+            widget_settings = {'text': '{0}'.format(basename),
+                               'position': (row, col, 1, 1)}
+            row += 1
+            self._create_and_place_widget(unique_widget_name, **widget_settings)
+            self.selected_files_col_dict[selected_file] = col
+            row += self._add_checkboxes(popup_name, 'SQUID Channel', self.squid_channels, row, col)
+            unique_widget_name = '_{0}_{1}_squid_conversion_lineedit'.format(popup_name, col)
+            widget_settings = {'text': '',
+                               'position': (row, col, 1, 1)}
+            self._create_and_place_widget(unique_widget_name, **widget_settings)
+        getattr(self, popup_name).show()
+
+    def _build_fts_input_dicts(self):
+        dict_12icm = {'filter_name': '12icm',
+                      'open_air': {'data_path': "FTS_Curves\\Data\\MMF\\2015_03_20\\003_OpenAir_High_Res.fft",
+                                   'label': 'Open Trans', 'color': 'r'},
+                      'measurements': {'data_path': "FTS_Curves\\Data\\MMF\\2015_03_20\\004_576_12icm_High_Res.fft",
+                                       'label': 'Raw Trans', 'color': 'b'}}
+        dict_12icm = {'measurements': {'data_path': "Data\\2017_10_13\\Spectra\\SQ2_Spectra_8.fft",
+                                       'label': 'PB2-13-07 Side2-Qa-150B',
+                                       'color': 'b'}}
+        return [dict_12icm]
+
+    def _plot_ftscurve(self):
+        selected_files = list(set(self.selected_files))
+        list_of_input_dicts = self._build_fts_input_dicts()
+        pprint(list_of_input_dicts)
+        fts = FTSCurve(list_of_input_dicts)
+        fts.run()
 
     #################################################
     # WIDGET GENERATORS AND FUNCTIONS

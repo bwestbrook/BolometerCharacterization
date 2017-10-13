@@ -3,6 +3,7 @@ from libraries.gen_class import Class
 from main_panel import main_panel_settings
 from RT_popup import rtcurve_settings_popup_settings
 from IV_popup import ivcurve_settings_popup_settings
+from FTS_popup import ftscurve_settings_popup_settings
 
 settings = Class()
 
@@ -32,7 +33,7 @@ settings.widget_to_object_dict = {
 # Individual files for various panels
 
 list_of_extra_settings = [main_panel_settings, rtcurve_settings_popup_settings,
-                          ivcurve_settings_popup_settings]
+                          ivcurve_settings_popup_settings, ftscurve_settings_popup_settings]
 
 for extra_settings in list_of_extra_settings:
     for attribute in dir(extra_settings):

@@ -8,13 +8,13 @@ class RTCurve():
     def __init__(self, list_of_input_dicts):
         self.list_of_input_dicts = list_of_input_dicts
         self.xlim = (200, 700)
+        self.ylim = (0, 2.5)
 
     def run(self, plot=True):
         if plot:
             fig = None
         for input_dict in self.list_of_input_dicts:
             grt_res_vector, sample_res_vector = self.load_data(input_dict)
-            print grt_res_vector, sample_res_vector
             grt_temperature_vector = self.resistance_to_temp_grt(grt_res_vector, input_dict['grt_serial'])
             sample_res_vector = self.normalize_squid_output(sample_res_vector, input_dict)
             fig = self.plot_rt_curves(grt_temperature_vector, sample_res_vector, fig, input_dict)
@@ -65,6 +65,12 @@ class RTCurve():
         axis.set_ylabel('Sample Resistance ($\Omega$)')
         axis.set_title('Res vs. Temp')
         axis.set_xlim(self.xlim)
+        if 'normal_res' in input_dict:
+            upper = input_dict['normal_res'] * 1.1
+            ylim = (0, upper)
+            axis.set_ylim(ylim)
+        else:
+            axis.set_ylim(self.ylim)
         return fig
 
     def _ask_user_if_they_want_to_quit(self):

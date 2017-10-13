@@ -157,7 +157,7 @@ class IVCurve():
         ax3.set_xlabel("Power ($pW$)", fontsize=12)
         ax3.set_ylabel("Res ($\Omega$)", fontsize=12)
         ax1.legend(bbox_to_anchor=(0.66, 0.1, 1, 1), numpoints=1)
-        ax2.set_ylim((0, 75))
+        ax2.set_ylim((0, 40))
         ax1.set_xlim((plot_clip[0], plot_clip[1]))
         ax2.set_xlim((plot_clip[0], plot_clip[1]))
         ax3.set_xlim((plot_clip[0], plot_clip[1]))
