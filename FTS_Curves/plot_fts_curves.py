@@ -79,16 +79,17 @@ class FTSCurve():
         '''
         fig = pl.figure()
         ax1 = fig.add_subplot(111)
-        ax1.plot(frequency_vector, transmission_vector, color, label=label, lw=5)
+        ax1.plot(frequency_vector, transmission_vector, color, label=label, lw=2)
         fig.subplots_adjust(bottom=0.12, top =0.96, left=0.16, right=0.84)
         ax1.tick_params(labelsize=20)
         ax1.set_xlabel('Frequency (GHz)', fontsize=28)
         ax1.set_ylabel('Normalized Transmission', fontsize=28)
-        ax1.set_xlim([100, 450])
+        ax1.set_xlim([0, 450])
         ax1.set_ylim([-0.05, 1.05])
         for axis in fig.get_axes():
             handles, labels = axis.get_legend_handles_labels()
-            axis.legend(handles, labels, numpoints=1, loc=2, bbox_to_anchor=(1.01, 1.0))
+            #axis.legend(handles, labels, numpoints=1, loc=2, bbox_to_anchor=(1.01, 1.0))
+            axis.legend(handles, labels, numpoints=1, loc=1)
         pl.show()
         fig.savefig('{0}.png'.format(label))
         return fig
@@ -103,7 +104,7 @@ class FTSCurve():
     def run(self, save_fft=False, run_open_comparison=False):
         for dict_ in self.list_of_input_dicts:
             data_path = dict_['measurements']['data_path']
-            label = dict_['measurements']['label']
+            label = dict_['measurements']['plot_label']
             color = dict_['measurements']['color']
             frequency_vector, transmission_vector, normalized_transmission_vector = self.load_FFT_data(data_path)
             if run_open_comparison:

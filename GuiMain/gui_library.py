@@ -409,31 +409,63 @@ class GuiTemplate(QtGui.QWidget):
         row = 3
         self.selected_files_col_dict = {}
         for i, selected_file in enumerate(self.selected_files):
+            # update dict with column file mapping
             col = 2 + i * 6
             basename = os.path.basename(selected_file)
+            self.selected_files_col_dict[selected_file] = col
+            # Add the file name for organization
             unique_widget_name = '_{0}_{1}_label'.format(popup_name, basename)
             widget_settings = {'text': '{0}'.format(basename),
                                'position': (row, col, 1, 1)}
-            row += 1
             self._create_and_place_widget(unique_widget_name, **widget_settings)
-            self.selected_files_col_dict[selected_file] = col
-            row += self._add_checkboxes(popup_name, 'SQUID Channel', self.squid_channels, row, col)
-            unique_widget_name = '_{0}_{1}_squid_conversion_lineedit'.format(popup_name, col)
+            row += 1
+            # Add a lineedit for plot labeling
+            unique_widget_name = '_{0}_{1}_plot_label_lineedit'.format(popup_name, col)
             widget_settings = {'text': '',
                                'position': (row, col, 1, 1)}
             self._create_and_place_widget(unique_widget_name, **widget_settings)
+            row += 1
+            # Add an "normalize" checkbox
+            unique_widget_name = '_{0}_{1}_normalize_checkbox'.format(popup_name, col)
+            widget_settings = {'text': '',
+                               'position': (row, col, 1, 1)}
+            self._create_and_place_widget(unique_widget_name, **widget_settings)
+            getattr(self, unique_widget_name).setChecked(True)
+            row += 1
+            # Add an "color" lineedit
+            unique_widget_name = '_{0}_{1}_color_lineedit'.format(popup_name, col)
+            widget_settings = {'text': 'b',
+                               'position': (row, col, 1, 1)}
+            self._create_and_place_widget(unique_widget_name, **widget_settings)
+            row += 1
         getattr(self, popup_name).show()
 
     def _build_fts_input_dicts(self):
-        dict_12icm = {'filter_name': '12icm',
-                      'open_air': {'data_path': "FTS_Curves\\Data\\MMF\\2015_03_20\\003_OpenAir_High_Res.fft",
-                                   'label': 'Open Trans', 'color': 'r'},
-                      'measurements': {'data_path': "FTS_Curves\\Data\\MMF\\2015_03_20\\004_576_12icm_High_Res.fft",
-                                       'label': 'Raw Trans', 'color': 'b'}}
-        dict_12icm = {'measurements': {'data_path': "Data\\2017_10_13\\Spectra\\SQ2_Spectra_8.fft",
-                                       'label': 'PB2-13-07 Side2-Qa-150B',
-                                       'color': 'b'}}
-        return [dict_12icm]
+        list_of_input_dicts = []
+        fts_settings = ['color', 'normalize', 'plot_label']
+        for selected_file, col in self.selected_files_col_dict.iteritems():
+            input_dict = {'measurements': {'data_path': selected_file}}
+            for setting in fts_settings:
+                identity_string = '{0}_{1}'.format(col, setting)
+                print identity_string
+                for widget in [x for x in dir(self) if identity_string in x]:
+                    if 'checkbox' in widget and 'normalize' in widget:
+                        normalize_bool = getattr(self, widget).isChecked()
+                        input_dict['measurements']['normalize'] = normalize_bool
+                    elif 'lineedit' in widget:
+                        widget_text = str(getattr(self, widget).text())
+                        input_dict['measurements'][setting] = widget_text
+            list_of_input_dicts.append(copy(input_dict))
+        pprint(list_of_input_dicts)
+        #dict_12icm = {'filter_name': '12icm',
+        #              'open_air': {'data_path': "FTS_Curves\\Data\\MMF\\2015_03_20\\003_OpenAir_High_Res.fft",
+        #                           'label': 'Open Trans', 'color': 'r'},
+        #              'measurements': {'data_path': "FTS_Curves\\Data\\MMF\\2015_03_20\\004_576_12icm_High_Res.fft",
+        #                               'label': 'Raw Trans', 'color': 'b'}}
+        #dict_12icm = {'measurements': {'data_path': "Data\\2017_10_13\\Spectra\\SQ2_Spectra_8.fft",
+                                       #'label': 'PB2-13-07_Side2-Qa-150B_Spectra_1',
+                                       #'color': 'b'}}
+        return list_of_input_dicts
 
     def _plot_ftscurve(self):
         selected_files = list(set(self.selected_files))
