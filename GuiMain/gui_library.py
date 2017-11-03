@@ -72,6 +72,7 @@ class GuiTemplate(QtGui.QWidget):
         for data_path in data_paths:
             if str(data_path) not in self.selected_files:
                 self.selected_files.append(str(data_path))
+                print str(data_path)
         selected_files_string = ',\n'.join(self.selected_files)
         getattr(self, '_main_panel_selected_file_label').setText(selected_files_string)
 
@@ -410,7 +411,7 @@ class GuiTemplate(QtGui.QWidget):
         self.selected_files_col_dict = {}
         for i, selected_file in enumerate(self.selected_files):
             # update dict with column file mapping
-            col = 2 + i * 6
+            col = 1 + i * 2
             basename = os.path.basename(selected_file)
             self.selected_files_col_dict[selected_file] = col
             # Add the file name for organization
@@ -438,11 +439,23 @@ class GuiTemplate(QtGui.QWidget):
                                'position': (row, col, 1, 1)}
             self._create_and_place_widget(unique_widget_name, **widget_settings)
             row += 1
+            # Add an "xlim" lineedit
+            unique_widget_name = '_{0}_{1}_xlim_lineedit'.format(popup_name, col)
+            widget_settings = {'text': '100:440',
+                               'position': (row, col, 1, 1)}
+            self._create_and_place_widget(unique_widget_name, **widget_settings)
+            row += 1
+            # Add an "Smoothing" lineedit
+            unique_widget_name = '_{0}_{1}_smoothing_factor_lineedit'.format(popup_name, col)
+            widget_settings = {'text': '0.0',
+                               'position': (row, col, 1, 1)}
+            self._create_and_place_widget(unique_widget_name, **widget_settings)
+            row = 3
         getattr(self, popup_name).show()
 
     def _build_fts_input_dicts(self):
         list_of_input_dicts = []
-        fts_settings = ['color', 'normalize', 'plot_label']
+        fts_settings = ['smoothing_factor', 'xlim', 'color', 'normalize', 'plot_label']
         for selected_file, col in self.selected_files_col_dict.iteritems():
             input_dict = {'measurements': {'data_path': selected_file}}
             for setting in fts_settings:
@@ -454,17 +467,11 @@ class GuiTemplate(QtGui.QWidget):
                         input_dict['measurements']['normalize'] = normalize_bool
                     elif 'lineedit' in widget:
                         widget_text = str(getattr(self, widget).text())
+                        if 'xlim' in widget:
+                            widget_text = (int(widget_text.split(':')[0]), int(widget_text.split(':')[1]))
                         input_dict['measurements'][setting] = widget_text
             list_of_input_dicts.append(copy(input_dict))
         pprint(list_of_input_dicts)
-        #dict_12icm = {'filter_name': '12icm',
-        #              'open_air': {'data_path': "FTS_Curves\\Data\\MMF\\2015_03_20\\003_OpenAir_High_Res.fft",
-        #                           'label': 'Open Trans', 'color': 'r'},
-        #              'measurements': {'data_path': "FTS_Curves\\Data\\MMF\\2015_03_20\\004_576_12icm_High_Res.fft",
-        #                               'label': 'Raw Trans', 'color': 'b'}}
-        #dict_12icm = {'measurements': {'data_path': "Data\\2017_10_13\\Spectra\\SQ2_Spectra_8.fft",
-                                       #'label': 'PB2-13-07_Side2-Qa-150B_Spectra_1',
-                                       #'color': 'b'}}
         return list_of_input_dicts
 
     def _plot_ftscurve(self):

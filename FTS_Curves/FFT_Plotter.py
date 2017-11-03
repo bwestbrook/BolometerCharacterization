@@ -4,7 +4,6 @@ from scipy.signal import blackman, hanning, medfilt
 from scipy import interpolate
 from settings import settings
 from numerical_processing import Fourier, BeamSplitter
-from foreground_plotter import syncAngPowSpec, dustAngPowSpec
 import matplotlib as mpl
 import pylab as pl
 import numpy as np
