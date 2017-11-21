@@ -1,4 +1,5 @@
 import os
+import bisect
 import numpy as np
 import pylab as pl
 from pprint import pprint
@@ -10,6 +11,7 @@ class IVCurve():
 
     def __init__(self, list_of_input_dicts):
         self.list_of_input_dicts = list_of_input_dicts
+        self.r_n_fraction = 0.75
 
     def load_data(self, data_path):
         '''
@@ -124,6 +126,39 @@ class IVCurve():
         print '\n\n Transimpedance Value: {0}\n\n'.format(squid_conv)
         return squid_conv
 
+    def plot_differenced_ivs(self, v_biases, i_bolos, labels):
+        fig = pl.figure(figsize=(10, 5))
+        #fig.subplots_adjust(right=0.64, bottom=0.11, hspace=0.66)
+        ax = fig.add_subplot(111)
+        ax.set_xlabel('Resistance ($\Omega$)', fontsize=16)
+        ax.set_ylabel('Power ($\mu$V)', fontsize=16)
+        p_at_same_rfracs = []
+        for i, v_bias in enumerate(v_biases):
+            i_bolo = i_bolos[i]
+            r_bolo = v_bias / i_bolo
+            p_bolo = v_bias * i_bolo
+            ax.plot(r_bolo, p_bolo, label=labels[i])
+            r_n = r_bolo[10] # some value near the start
+            nearest_r_bolo, nearest_r_bolo_index = self.find_nearest_r_bolo(r_bolo, r_n)
+            p_at_same_rfrac = p_bolo[nearest_r_bolo_index]
+            p_at_same_rfracs.append(p_at_same_rfrac)
+            ax.axvline(r_bolo[nearest_r_bolo_index], label=labels[i])
+        p_diff = np.abs(p_at_same_rfracs[1] - p_at_same_rfracs[0])
+        print
+        print
+        print
+        print 'Power diff {0} pW'.format(p_diff)
+        print
+        print
+        print
+        ax.legend(bbox_to_anchor=(0.66, 0.1, 1, 1), numpoints=1)
+        pl.show()
+
+    def find_nearest_r_bolo(self, r_bolo, r_n):
+        frac_r_n = self.r_n_fraction * r_n
+        nearest_r_bolo_index = np.abs(r_bolo - frac_r_n).argmin()
+        nearest_r_bolo = r_bolo[nearest_r_bolo_index]
+        return nearest_r_bolo, nearest_r_bolo_index
 
     def plot_all_curves(self, bolo_voltage_bias, bolo_current, label='', fit_clip=None, plot_clip=None):
         '''
@@ -176,22 +211,33 @@ class IVCurve():
         Cycles through the input dicts and plots them
         '''
         for input_dict in self.list_of_input_dicts:
+            difference = input_dict['difference']
+            if difference:
+                break
+        v_biases, i_bolos, label_strs = [], [], []
+        for input_dict in self.list_of_input_dicts:
             data_path = input_dict['data_path']
             label = input_dict['label']
             bias_voltage, squid_voltage = self.load_data(data_path)
             fit_clip = (input_dict['v_fit_lo'], input_dict['v_fit_hi'])
             plot_clip = (input_dict['v_plot_lo'], input_dict['v_plot_hi'])
             if len(input_dict['label']) == 0:
-                label = os.path.basename(data_path)
+                labels = os.path.basename(data_path)
             v_bias_real, i_bolo_real = self.convert_IV_to_real_units(bias_voltage, squid_voltage,
                                                                      squid_conv=input_dict['squid_conversion'],
                                                                      v_bias_multiplier=input_dict['voltage_conversion'],
                                                                      calibration_resistor_val=input_dict['calibration_resistance'],
                                                                      determine_calibration=input_dict['calibrate'],
                                                                      clip=fit_clip, label=label)
-            self.plot_all_curves(v_bias_real, i_bolo_real, label=label,
-                                 fit_clip=fit_clip, plot_clip=plot_clip)
+            v_biases.append(v_bias_real)
+            i_bolos.append(i_bolo_real)
+            label_strs.append(label)
+            if not difference:
+                self.plot_all_curves(v_bias_real, i_bolo_real, label=label,
+                                     fit_clip=fit_clip, plot_clip=plot_clip)
 
+        if difference:
+            self.plot_differenced_ivs(v_biases, i_bolos, labels)
 
 if __name__ == '__main__':
     ivc = IVCurve()

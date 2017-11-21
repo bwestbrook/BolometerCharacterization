@@ -25,5 +25,7 @@ ivcurve_settings_popup_settings.ivcurve_popup_build_dict = {
                                                             '_ivcurve_settings_popup_calibration_resistor_label': {'text': 'Cal Res',
                                                                                                                    'position': (12, 0, 1, 1)},
                                                             '_ivcurve_settings_popup_calibrate_squid_label': {'text': 'Calibrate?',
-                                                                                                              'position': (13, 0, 1, 1)}
+                                                                                                              'position': (13, 0, 1, 1)},
+                                                            '_ivcurve_settings_popup_difference_label': {'text': 'Difference?',
+                                                                                                         'position': (14, 0, 1, 1)}
                                                            }

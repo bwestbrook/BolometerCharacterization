@@ -255,12 +255,12 @@ class GuiTemplate(QtGui.QWidget):
         self._select_unique_checkbox(sender, identity_string)
         popup_name = 'ivcurve_settings_popup'
         col = sender.split('_')[4]
-        if '1e-5' in sender:
-            lo_limit = 1.0
-            hi_limit = 5.0
+        if '1e-4' in sender:
+            lo_limit = 5.0
+            hi_limit = 10.0
         elif '1e-5' in sender:
             lo_limit = 5.0
-            hi_limit = 30.0
+            hi_limit = 8.0
         # Fit Limits
         unique_widget_name = '_{0}_{1}_v_fit_lo_lineedit'.format(popup_name, col)
         #if hasattr(self, unique_widget_name):
@@ -272,7 +272,6 @@ class GuiTemplate(QtGui.QWidget):
         getattr(self, unique_widget_name).setText(str(lo_limit - 0.5))
         unique_widget_name = '_{0}_{1}_v_plot_hi_lineedit'.format(popup_name, col)
         getattr(self, unique_widget_name).setText(str(hi_limit + 0.5))
-
 
     def _select_squid_channel_checkbox(self):
         sender = str(self.sender().whatsThis())
@@ -352,6 +351,13 @@ class GuiTemplate(QtGui.QWidget):
             print unique_widget_name
             self._create_and_place_widget(unique_widget_name, **widget_settings)
             getattr(self, unique_widget_name).setChecked(False)
+            row += 1
+            unique_widget_name = '_{0}_{1}_difference_checkbox'.format(popup_name, col)
+            widget_settings = {'text': 'Difference?',
+                               'position': (row, col, 1, 1)}
+            print unique_widget_name
+            self._create_and_place_widget(unique_widget_name, **widget_settings)
+            getattr(self, unique_widget_name).setChecked(False)
             row = 3
         if not hasattr(self, popup_name):
             self._create_popup_window(popup_name)
@@ -362,14 +368,17 @@ class GuiTemplate(QtGui.QWidget):
         list_of_input_dicts = []
         iv_settings = ['voltage_conversion', 'label', 'squid_conversion',
                        'v_fit_lo', 'v_fit_hi', 'v_plot_lo', 'v_plot_hi', 'v_plot_lo', 'v_plot_hi',
-                       'calibration_resistance', 'calibrate']
+                       'calibration_resistance', 'calibrate', 'difference']
         for selected_file, col in self.selected_files_col_dict.iteritems():
             input_dict = {'data_path': selected_file}
             for setting in iv_settings:
                 identity_string = '{0}_{1}'.format(col, setting)
-                print identity_string
                 for widget in [x for x in dir(self) if identity_string in x]:
-                    if 'checkbox' in widget and not 'calibrate' in widget:
+                    if 'checkbox' in widget and 'difference' in widget:
+                        invert_bool = getattr(self, widget).isChecked()
+                        input_dict['difference'] = invert_bool
+                        pprint(input_dict)
+                    elif 'checkbox' in widget and not 'calibrate' in widget:
                         if getattr(self, widget).isChecked():
                             setting_value = str(getattr(self, widget).text()).split(' ')[-1]
                             input_dict[setting] = float(setting_value)
@@ -386,6 +395,7 @@ class GuiTemplate(QtGui.QWidget):
                             input_dict[setting] = widget_text
                         else:
                             input_dict[setting] = float(widget_text)
+            pprint(input_dict)
             list_of_input_dicts.append(copy(input_dict))
         return list_of_input_dicts
 
