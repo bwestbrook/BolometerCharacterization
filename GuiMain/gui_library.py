@@ -15,6 +15,7 @@ from ba_settings.all_settings import settings
 from RT_Curves.plot_rt_curves import RTCurve
 from IV_Curves.plot_iv_curves import IVCurve
 from FTS_Curves.plot_fts_curves import FTSCurve
+from POL_Curves.plot_pol_curves import POLCurve
 
 
 class GuiTemplate(QtGui.QWidget):
@@ -56,7 +57,6 @@ class GuiTemplate(QtGui.QWidget):
 
     def _select_analysis_type(self):
         sender_name = str(self.sender().whatsThis())
-        print sender_name
         checkboxes = ['_main_panel_polcurve_checkbox', '_main_panel_ivcurve_checkbox',
                       '_main_panel_rtcurve_checkbox', '_main_panel_ftscurve_checkbox']
         for checkbox in checkboxes:
@@ -401,7 +401,7 @@ class GuiTemplate(QtGui.QWidget):
     #################################################
 
     def _close_pol(self):
-        self.ftscurve_settings_popup.close()
+        self.polcurve_settings_popup.close()
 
     def _build_polcurve_settings_popup(self):
         popup_name = '{0}_settings_popup'.format(self.analysis_type)
@@ -430,13 +430,6 @@ class GuiTemplate(QtGui.QWidget):
                                'position': (row, col, 1, 1)}
             self._create_and_place_widget(unique_widget_name, **widget_settings)
             row += 1
-            # Add an "normalize" checkbox
-            unique_widget_name = '_{0}_{1}_normalize_checkbox'.format(popup_name, col)
-            widget_settings = {'text': '',
-                               'position': (row, col, 1, 1)}
-            self._create_and_place_widget(unique_widget_name, **widget_settings)
-            getattr(self, unique_widget_name).setChecked(True)
-            row += 1
             # Add an "color" lineedit
             unique_widget_name = '_{0}_{1}_color_lineedit'.format(popup_name, col)
             widget_settings = {'text': 'b',
@@ -445,17 +438,37 @@ class GuiTemplate(QtGui.QWidget):
             row += 1
             # Add an "xlim" lineedit
             unique_widget_name = '_{0}_{1}_xlim_lineedit'.format(popup_name, col)
-            widget_settings = {'text': '100:440',
-                               'position': (row, col, 1, 1)}
-            self._create_and_place_widget(unique_widget_name, **widget_settings)
-            row += 1
-            # Add an "Smoothing" lineedit
-            unique_widget_name = '_{0}_{1}_smoothing_factor_lineedit'.format(popup_name, col)
-            widget_settings = {'text': '0.0',
+            widget_settings = {'text': '-10:360',
                                'position': (row, col, 1, 1)}
             self._create_and_place_widget(unique_widget_name, **widget_settings)
             row = 3
         getattr(self, popup_name).show()
+
+    def _build_pol_input_dicts(self):
+        list_of_input_dicts = []
+        pol_settings = ['xlim', 'color', 'plot_label']
+        for selected_file, col in self.selected_files_col_dict.iteritems():
+            input_dict = {'measurements': {'data_path': selected_file}}
+            for setting in pol_settings:
+                identity_string = '{0}_{1}'.format(col, setting)
+                print identity_string
+                for widget in [x for x in dir(self) if identity_string in x]:
+                    if 'lineedit' in widget:
+                        widget_text = str(getattr(self, widget).text())
+                        if 'xlim' in widget:
+                            widget_text = (int(widget_text.split(':')[0]), int(widget_text.split(':')[1]))
+                        input_dict['measurements'][setting] = widget_text
+            list_of_input_dicts.append(copy(input_dict))
+        pprint(list_of_input_dicts)
+        return list_of_input_dicts
+
+    def _plot_polcurve(self):
+        selected_files = list(set(self.selected_files))
+        list_of_input_dicts = self._build_pol_input_dicts()
+        pprint(list_of_input_dicts)
+        pol = PolCurve(list_of_input_dicts)
+        pol.run()
+
     #################################################
     # FTS Curves 
     #################################################

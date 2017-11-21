@@ -193,6 +193,8 @@ if __name__ == '__main__':
 	run(data_path, 350, 'HF_Triplexer')
 	data_path = '../Data/2015_07_11/220/005_PolMod.dat' # 2.95% efficiency
 	run(data_path, 220, 'HF_Triplexer')
+	data_path = '../Data/2017_03_08/SQ1_Polarization3.dat' # 1.5% efficiency
+	run(data_path, 150, 'PB2_Pixel')
     if True:
 	data_path = '../Data/2017_03_08/SQ1_Polarization3.dat' # 1.5% efficiency
 	run(data_path, 150, 'PB2_Pixel')
