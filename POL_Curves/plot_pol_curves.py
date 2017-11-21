@@ -10,114 +10,114 @@ import matplotlib.mlab as mlab
 import matplotlib.pyplot as plt
 
 
-def load_pol_efficiency_data(data_path):
-    with open(data_path, 'r') as file_handle:
-        lines = file_handle.readlines()
-        x_position_vector = np.zeros(len(lines))
-        amplitude_vector = np.zeros(len(lines))
-        for i, line in enumerate(lines):
-            data_ = line.split('\t')
-            x_position = data_[0]
-            amplitude_value = data_[1]
-            np.put(x_position_vector, i, x_position)
-            np.put(amplitude_vector, i, amplitude_value)
-    data_dict = {'x_position': x_position_vector, 'amplitude': amplitude_vector}
-    return data_dict
+class POLCurve():
+    def __init__self(self):
+        self.hello = 'hi'
+
+    def load_pol_efficiency_data(self, data_path):
+        with open(data_path, 'r') as file_handle:
+            lines = file_handle.readlines()
+            x_position_vector = np.zeros(len(lines))
+            amplitude_vector = np.zeros(len(lines))
+            for i, line in enumerate(lines):
+                data_ = line.split('\t')
+                x_position = data_[0]
+                amplitude_value = data_[1]
+                np.put(x_position_vector, i, x_position)
+                np.put(amplitude_vector, i, amplitude_value)
+        data_dict = {'x_position': x_position_vector, 'amplitude': amplitude_vector}
+        return data_dict
 
 
-def parse_data(data_dict):
-    normalized_amplitude = data_dict['amplitude'] / np.max(data_dict['amplitude'])
-    x_position_raw = data_dict['x_position']
-    angle_vector = x_position_raw
-    initial_fit_params = moments(normalized_amplitude)
-    fit_params = fit_sine(x_position_raw, normalized_amplitude, initial_fit_params)
-    initial_fit = np.zeros(len(x_position_raw))
-    fit = np.zeros(len(x_position_raw))
-    angle_vector = np.zeros(len(x_position_raw))
-    for i, x_val in enumerate(x_position_raw):
-        fit_val = test_sine(x_val, fit_params[0], fit_params[1], fit_params[2], fit_params[3])
-        initial_fit_val = test_sine(x_val, initial_fit_params[0], initial_fit_params[1],
-                                    initial_fit_params[2], initial_fit_params[3])
-        angle_ = (x_val / fit_params[1]) * 2 * np.pi
-        np.put(fit, i, fit_val)
-        np.put(initial_fit, i, initial_fit_val)
-        np.put(angle_vector, i, angle_)
-    efficiency = (np.min(normalized_amplitude) / 1.0 ) * 100.0
-    processed_data_dict = {'x_position': x_position_raw,
-                           'angle_vector': np.rad2deg(angle_vector),
-                           'fit': fit,
-                           'initial_fit': initial_fit,
-                           'normalized_amplitude': normalized_amplitude,
-                           'efficiency': efficiency}
-    return processed_data_dict
+    def parse_data(self, data_dict):
+        normalized_amplitude = data_dict['amplitude'] / np.max(data_dict['amplitude'])
+        x_position_raw = data_dict['x_position']
+        angle_vector = x_position_raw
+        initial_fit_params = moments(normalized_amplitude)
+        fit_params = fit_sine(x_position_raw, normalized_amplitude, initial_fit_params)
+        initial_fit = np.zeros(len(x_position_raw))
+        fit = np.zeros(len(x_position_raw))
+        angle_vector = np.zeros(len(x_position_raw))
+        for i, x_val in enumerate(x_position_raw):
+            fit_val = test_sine(x_val, fit_params[0], fit_params[1], fit_params[2], fit_params[3])
+            initial_fit_val = test_sine(x_val, initial_fit_params[0], initial_fit_params[1],
+                                        initial_fit_params[2], initial_fit_params[3])
+            angle_ = (x_val / fit_params[1]) * 2 * np.pi
+            np.put(fit, i, fit_val)
+            np.put(initial_fit, i, initial_fit_val)
+            np.put(angle_vector, i, angle_)
+        efficiency = (np.min(normalized_amplitude) / 1.0 ) * 100.0
+        processed_data_dict = {'x_position': x_position_raw,
+                               'angle_vector': np.rad2deg(angle_vector),
+                               'fit': fit,
+                               'initial_fit': initial_fit,
+                               'normalized_amplitude': normalized_amplitude,
+                               'efficiency': efficiency}
+        return processed_data_dict
 
 
-def plot_polarization_efficiency(data_dict, frequency, pixel, fig=None):
-    # crete a figure if needed
-    if fig is None:
-            fig = plt.figure(figsize=(7.25,6))
-    ax = fig.add_subplot(111)
-    ax.tick_params(labelsize=18)
-    # Create the color map
-    ax.plot(data_dict['angle_vector'], data_dict['normalized_amplitude'], '-', ms=5.0, label='Data', lw=3)
-    ax.plot(data_dict['angle_vector'], data_dict['fit'], label='Fit', lw=2)
-    # Basic Plotting Options 
-    ax.set_xlabel('Polarizing Grid Position ($^{\circ}$)', fontsize=24)
-    ax.set_ylabel('Peak Normalized', fontsize=24)
-    #title_str = 'Polarization Efficiency {:} GHz\n {:} Cross Pol: {:.2f}%'.format(frequency, pixel, data_dict['efficiency'])
-    title_str = 'Polarization Efficiency'.format(frequency)
-    ax.set_title(title_str, fontsize=24)
-    ax.set_ylim([-0.05, 1.05])
-    ax.set_xlim([-0., 450.])
-    ax.legend(loc='lower right', numpoints=1)
-    save_str = './Output/Polarization_Modulation_Efficiency_{0}_{1}_GHz.pdf'.format(pixel, frequency)
-    fig.subplots_adjust(top=0.93, bottom=0.13)
-    fig.savefig(save_str, pad_inches=-1)
-    fig.show()
-    _ask_user_if_they_want_to_quit()
-    return fig
+    def plot_polarization_efficiency(self, data_dict, label, fig=None):
+        # crete a figure if needed
+        if fig is None:
+                fig = plt.figure(figsize=(7.25,6))
+        ax = fig.add_subplot(111)
+        ax.tick_params(labelsize=18)
+        # Create the color map
+        ax.plot(data_dict['angle_vector'], data_dict['normalized_amplitude'], '-', ms=5.0, label='Data', lw=3)
+        ax.plot(data_dict['angle_vector'], data_dict['fit'], label='Fit', lw=2)
+        # Basic Plotting Options 
+        ax.set_xlabel('Polarizing Grid Position ($^{\circ}$)', fontsize=24)
+        ax.set_ylabel('Peak Normalized', fontsize=24)
+        title_str = 'Polarization Efficiency for\n{0}'.format(label)
+        ax.set_title(title_str, fontsize=24)
+        ax.set_ylim([-0.05, 1.05])
+        ax.set_xlim([-0., 450.])
+        ax.legend(loc='lower right', numpoints=1)
+        save_str = './Output/Polarization_Modulation_Efficiency_{0}.pdf'.format(label)
+        fig.subplots_adjust(top=0.93, bottom=0.13)
+        fig.savefig(save_str, pad_inches=-1)
+        fig.show()
+        _ask_user_if_they_want_to_quit()
+        return fig
 
+    ## Fitting Utilities
+    def arbitrary_sine(self, amplitude, period, y_offset):
+        def arb_sine(x):
+            value = amplitude*np.sin(x * period) + y_offset
+            return value
+        return arb_sine
 
-## Fitting Utilities
-def arbitrary_sine(amplitude, period, y_offset):
-    def arb_sine(x):
-        value = amplitude*np.sin(x * period) + y_offset
+    def test_sine(self, x_val, amplitude, period, phase, y_offset):
+        period = float(period)
+        y_offset = float(y_offset)
+        value = amplitude * np.sin((2.5 * x_val / period) * 2 * np.pi + phase) + y_offset
         return value
-    return arb_sine
 
+    def moments(self, data):
+        amplitude = (np.max(data) - np.min(data)) / 2.0
+        y_offset = np.min(data) + amplitude
+        period = 50000
+        phase = 0.0
+        return amplitude, period, phase, y_offset
 
-def test_sine(x_val, amplitude, period, phase, y_offset):
-    period = float(period)
-    y_offset = float(y_offset)
-    value = amplitude * np.sin((2.5 * x_val / period) * 2 * np.pi + phase) + y_offset
-    return value
+    def fit_sine(self, x_data, y_data, fit_params):
+        fit_params = curve_fit(test_sine, x_data, y_data, p0=fit_params)
+        return fit_params[0]
 
+    ## General Utilities
+    def _ask_user_if_they_want_to_quit(self):
+        input_ = raw_input('Press q to (q)uit, Any other Key to Continue')
+        if input_ == 'q':
+            print 'Exiting'
+            exit()
 
-def moments(data):
-    amplitude = (np.max(data) - np.min(data)) / 2.0
-    y_offset = np.min(data) + amplitude
-    period = 50000
-    phase = 0.0
-    return amplitude, period, phase, y_offset
-
-
-def fit_sine(x_data, y_data, fit_params):
-    fit_params = curve_fit(test_sine, x_data, y_data, p0=fit_params)
-    return fit_params[0]
-
-
-## General Utilities
-def _ask_user_if_they_want_to_quit():
-    input_ = raw_input('Press q to (q)uit, Any other Key to Continue')
-    if input_ == 'q':
-        print 'Exiting'
-        exit()
-
-
-def run(data_path, frequency, pixel):
-    data_dict = load_pol_efficiency_data(data_path)
-    processed_data_dict = parse_data(data_dict)
-    fig = plot_polarization_efficiency(processed_data_dict, frequency, pixel, fig=None)
+    def run(self, list_of_input_dicts):
+        for input_dict in list_of_input_dicts:
+            data_path = input_dict['data_path']
+            label = input_dict['label']
+            data_dict = load_pol_efficiency_data(data_path)
+            processed_data_dict = parse_data(data_dict)
+            fig = plot_polarization_efficiency(processed_data_dict, label, fig=None)
 
 
 if __name__ == '__main__':
@@ -196,5 +196,7 @@ if __name__ == '__main__':
 	data_path = '../Data/2017_03_08/SQ1_Polarization3.dat' # 1.5% efficiency
 	run(data_path, 150, 'PB2_Pixel')
     if True:
-	data_path = '../Data/2017_03_08/SQ1_Polarization3.dat' # 1.5% efficiency
-	run(data_path, 150, 'PB2_Pixel')
+        list_of_input_dicts = [{'data_path': '../Data/2017_03_08/SQ1_Polarization3.dat',
+                               'label': '150 PB2 Pixel'}]
+        pol = POLCurve()
+        pol.run(list_of_input_dicts)
