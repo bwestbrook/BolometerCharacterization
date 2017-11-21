@@ -56,8 +56,11 @@ class GuiTemplate(QtGui.QWidget):
 
     def _select_analysis_type(self):
         sender_name = str(self.sender().whatsThis())
-        checkboxes = ['_main_panel_ivcurve_checkbox', '_main_panel_rtcurve_checkbox', '_main_panel_ftscurve_checkbox']
+        print sender_name
+        checkboxes = ['_main_panel_polcurve_checkbox', '_main_panel_ivcurve_checkbox',
+                      '_main_panel_rtcurve_checkbox', '_main_panel_ftscurve_checkbox']
         for checkbox in checkboxes:
+            print sender_name, checkbox
             if sender_name == checkbox:
                 self.analysis_type = checkbox.split('_')[3]
                 getattr(self, checkbox).setCheckState(True)
@@ -66,6 +69,7 @@ class GuiTemplate(QtGui.QWidget):
                 getattr(self, checkbox).setCheckState(False)
                 analysis_type = checkbox.split('_')[3]
                 self._close_settings_popup(analysis_type)
+        print self.analysis_type
 
     def _select_files(self):
         data_paths = QtGui.QFileDialog.getOpenFileNames(self, 'Open file', self.data_folder)
@@ -392,6 +396,66 @@ class GuiTemplate(QtGui.QWidget):
         iv = IVCurve(list_of_input_dicts)
         iv.run()
 
+    #################################################
+    # POL Curves 
+    #################################################
+
+    def _close_pol(self):
+        self.ftscurve_settings_popup.close()
+
+    def _build_polcurve_settings_popup(self):
+        popup_name = '{0}_settings_popup'.format(self.analysis_type)
+        if hasattr(self, popup_name):
+            self._initialize_panel(popup_name)
+            self._build_panel(settings.polcurve_popup_build_dict)
+        else:
+            self._create_popup_window(popup_name)
+            self._build_panel(settings.polcurve_popup_build_dict)
+        row = 3
+        self.selected_files_col_dict = {}
+        for i, selected_file in enumerate(self.selected_files):
+            # update dict with column file mapping
+            col = 1 + i * 2
+            basename = os.path.basename(selected_file)
+            self.selected_files_col_dict[selected_file] = col
+            # Add the file name for organization
+            unique_widget_name = '_{0}_{1}_label'.format(popup_name, basename)
+            widget_settings = {'text': '{0}'.format(basename),
+                               'position': (row, col, 1, 1)}
+            self._create_and_place_widget(unique_widget_name, **widget_settings)
+            row += 1
+            # Add a lineedit for plot labeling
+            unique_widget_name = '_{0}_{1}_plot_label_lineedit'.format(popup_name, col)
+            widget_settings = {'text': '',
+                               'position': (row, col, 1, 1)}
+            self._create_and_place_widget(unique_widget_name, **widget_settings)
+            row += 1
+            # Add an "normalize" checkbox
+            unique_widget_name = '_{0}_{1}_normalize_checkbox'.format(popup_name, col)
+            widget_settings = {'text': '',
+                               'position': (row, col, 1, 1)}
+            self._create_and_place_widget(unique_widget_name, **widget_settings)
+            getattr(self, unique_widget_name).setChecked(True)
+            row += 1
+            # Add an "color" lineedit
+            unique_widget_name = '_{0}_{1}_color_lineedit'.format(popup_name, col)
+            widget_settings = {'text': 'b',
+                               'position': (row, col, 1, 1)}
+            self._create_and_place_widget(unique_widget_name, **widget_settings)
+            row += 1
+            # Add an "xlim" lineedit
+            unique_widget_name = '_{0}_{1}_xlim_lineedit'.format(popup_name, col)
+            widget_settings = {'text': '100:440',
+                               'position': (row, col, 1, 1)}
+            self._create_and_place_widget(unique_widget_name, **widget_settings)
+            row += 1
+            # Add an "Smoothing" lineedit
+            unique_widget_name = '_{0}_{1}_smoothing_factor_lineedit'.format(popup_name, col)
+            widget_settings = {'text': '0.0',
+                               'position': (row, col, 1, 1)}
+            self._create_and_place_widget(unique_widget_name, **widget_settings)
+            row = 3
+        getattr(self, popup_name).show()
     #################################################
     # FTS Curves 
     #################################################
