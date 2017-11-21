@@ -11,6 +11,7 @@ polcurve_settings_popup_settings.polcurve_popup_build_dict = {
                                                               '_polcurve_settings_popup_plot_label_label': {'text': 'Plot Label', 'position': (4, 0, 1, 1)},
                                                               '_polcurve_settings_popup_color_label': {'text': 'Color', 'position': (5, 0, 1, 1)},
                                                               '_polcurve_settings_popup_xlim_label': {'text': 'X Lim', 'position': (6, 0, 1, 1)},
+                                                              '_polcurve_settings_popup_degperpoint_label': {'text': 'Deg/Point Factor', 'position': (7, 0, 1, 1)},
                                                               #'_polcurve_settings_popup_normalize_label': {'text': 'Normalize?', 'position': (5, 0, 1, 1)},
                                                               #'_polcurve_settings_popup_smoothing_factor_label': {'text': 'Smoothing:', 'position': (8, 0, 1, 1)},
                                                              }

@@ -441,12 +441,18 @@ class GuiTemplate(QtGui.QWidget):
             widget_settings = {'text': '-10:360',
                                'position': (row, col, 1, 1)}
             self._create_and_place_widget(unique_widget_name, **widget_settings)
+            row += 1
+            # Add an "step2deg" lineedit
+            unique_widget_name = '_{0}_{1}_degsperpoint_lineedit'.format(popup_name, col)
+            widget_settings = {'text': '1.0',
+                               'position': (row, col, 1, 1)}
+            self._create_and_place_widget(unique_widget_name, **widget_settings)
             row = 3
         getattr(self, popup_name).show()
 
     def _build_pol_input_dicts(self):
         list_of_input_dicts = []
-        pol_settings = ['xlim', 'color', 'plot_label']
+        pol_settings = ['xlim', 'color', 'degsperpoint', 'plot_label']
         for selected_file, col in self.selected_files_col_dict.iteritems():
             input_dict = {'measurements': {'data_path': selected_file}}
             for setting in pol_settings:
@@ -466,8 +472,8 @@ class GuiTemplate(QtGui.QWidget):
         selected_files = list(set(self.selected_files))
         list_of_input_dicts = self._build_pol_input_dicts()
         pprint(list_of_input_dicts)
-        pol = PolCurve(list_of_input_dicts)
-        pol.run()
+        pol = POLCurve()
+        pol.run(list_of_input_dicts)
 
     #################################################
     # FTS Curves 

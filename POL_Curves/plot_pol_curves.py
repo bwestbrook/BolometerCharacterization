@@ -21,27 +21,25 @@ class POLCurve():
             amplitude_vector = np.zeros(len(lines))
             for i, line in enumerate(lines):
                 data_ = line.split('\t')
-                x_position = data_[0]
+                x_position = float(data_[0])
                 amplitude_value = data_[1]
                 np.put(x_position_vector, i, x_position)
                 np.put(amplitude_vector, i, amplitude_value)
         data_dict = {'x_position': x_position_vector, 'amplitude': amplitude_vector}
         return data_dict
 
-
-    def parse_data(self, data_dict):
+    def parse_data(self, data_dict, degsperpoint):
         normalized_amplitude = data_dict['amplitude'] / np.max(data_dict['amplitude'])
         x_position_raw = data_dict['x_position']
-        angle_vector = x_position_raw
-        initial_fit_params = moments(normalized_amplitude)
-        fit_params = fit_sine(x_position_raw, normalized_amplitude, initial_fit_params)
+        initial_fit_params = self.moments(x_position_raw, normalized_amplitude, degsperpoint)
+        fit_params = self.fit_sine(x_position_raw, normalized_amplitude, initial_fit_params)
         initial_fit = np.zeros(len(x_position_raw))
         fit = np.zeros(len(x_position_raw))
         angle_vector = np.zeros(len(x_position_raw))
         for i, x_val in enumerate(x_position_raw):
-            fit_val = test_sine(x_val, fit_params[0], fit_params[1], fit_params[2], fit_params[3])
-            initial_fit_val = test_sine(x_val, initial_fit_params[0], initial_fit_params[1],
-                                        initial_fit_params[2], initial_fit_params[3])
+            fit_val = self.test_sine(x_val, fit_params[0], fit_params[1], fit_params[2], fit_params[3])
+            initial_fit_val = self.test_sine(x_val, initial_fit_params[0], initial_fit_params[1],
+                                             initial_fit_params[2], initial_fit_params[3])
             angle_ = (x_val / fit_params[1]) * 2 * np.pi
             np.put(fit, i, fit_val)
             np.put(initial_fit, i, initial_fit_val)
@@ -59,7 +57,8 @@ class POLCurve():
     def plot_polarization_efficiency(self, data_dict, label, fig=None):
         # crete a figure if needed
         if fig is None:
-                fig = plt.figure(figsize=(7.25,6))
+            fig = plt.figure(figsize=(7.25,6))
+            fig.subplots_adjust(top=0.93, bottom=0.13)
         ax = fig.add_subplot(111)
         ax.tick_params(labelsize=18)
         # Create the color map
@@ -73,12 +72,7 @@ class POLCurve():
         ax.set_ylim([-0.05, 1.05])
         ax.set_xlim([-0., 450.])
         ax.legend(loc='lower right', numpoints=1)
-        save_str = './Output/Polarization_Modulation_Efficiency_{0}.pdf'.format(label)
-        fig.subplots_adjust(top=0.93, bottom=0.13)
-        fig.savefig(save_str, pad_inches=-1)
-        fig.show()
-        _ask_user_if_they_want_to_quit()
-        return fig
+        pl.show()
 
     ## Fitting Utilities
     def arbitrary_sine(self, amplitude, period, y_offset):
@@ -90,18 +84,21 @@ class POLCurve():
     def test_sine(self, x_val, amplitude, period, phase, y_offset):
         period = float(period)
         y_offset = float(y_offset)
-        value = amplitude * np.sin((2.5 * x_val / period) * 2 * np.pi + phase) + y_offset
+        #value = amplitude * np.sin((2.5 * x_val / period) * 2 * np.pi + phase) + y_offset
+        value = amplitude * np.sin((x_val / period) * 2 * np.pi + phase) + y_offset
         return value
 
-    def moments(self, data):
+    def moments(self, raw_angle, data, degsperstep):
         amplitude = (np.max(data) - np.min(data)) / 2.0
         y_offset = np.min(data) + amplitude
-        period = 50000
+        radsperstep = degsperstep * (np.pi / 180.0)
+        period_in_stepper_steps = 2 * np.abs(raw_angle[data.argmax()] - raw_angle[data.argmin()])
+        period = period_in_stepper_steps
         phase = 0.0
         return amplitude, period, phase, y_offset
 
     def fit_sine(self, x_data, y_data, fit_params):
-        fit_params = curve_fit(test_sine, x_data, y_data, p0=fit_params)
+        fit_params = curve_fit(self.test_sine, x_data, y_data, p0=fit_params)
         return fit_params[0]
 
     ## General Utilities
@@ -113,11 +110,12 @@ class POLCurve():
 
     def run(self, list_of_input_dicts):
         for input_dict in list_of_input_dicts:
-            data_path = input_dict['data_path']
-            label = input_dict['label']
-            data_dict = load_pol_efficiency_data(data_path)
-            processed_data_dict = parse_data(data_dict)
-            fig = plot_polarization_efficiency(processed_data_dict, label, fig=None)
+            data_path = input_dict['measurements']['data_path']
+            degsperpoint = float(input_dict['measurements']['degsperpoint'])
+            label = input_dict['measurements']['plot_label']
+            data_dict = self.load_pol_efficiency_data(data_path)
+            processed_data_dict = self.parse_data(data_dict, degsperpoint)
+            fig = self.plot_polarization_efficiency(processed_data_dict, label, fig=None)
 
 
 if __name__ == '__main__':
@@ -196,7 +194,8 @@ if __name__ == '__main__':
 	data_path = '../Data/2017_03_08/SQ1_Polarization3.dat' # 1.5% efficiency
 	run(data_path, 150, 'PB2_Pixel')
     if True:
-        list_of_input_dicts = [{'data_path': '../Data/2017_03_08/SQ1_Polarization3.dat',
-                               'label': '150 PB2 Pixel'}]
+        list_of_input_dicts = [{'measurements': {'data_path': '../Data/2017_03_08/SQ1_Polarization3.dat',
+                                                 'degperpoint': 5,
+                                                 'plot_label': '150 PB2 Pixel'}}]
         pol = POLCurve()
         pol.run(list_of_input_dicts)
