@@ -5,7 +5,7 @@ class Atmosphere():
 
     def __init__(self):
         self.start_freq = '0' # GHz
-        self.end_freq = '300' # GHz
+        self.end_freq = '400' # GHz
         self.freq_bins = '50' # MHz
         self.zenith_angle = '60' # Degs
         self.trop_h20_scale_factor = '1.0' #

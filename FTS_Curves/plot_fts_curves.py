@@ -114,7 +114,8 @@ class FTSCurve():
         return fig
 
     def plot_FFT_data(self, frequency_vector, transmission_vector, color='b',
-                      label='', xlim=(100,400), fig=None, plot_if=False, plot_fft=False):
+                      label='', xlim=(100,400), fig=None, plot_if=False, plot_fft=False,
+                      add_atmosphere=False):
         '''
         This function will take the output of Load_FFT_Data
         '''
@@ -129,15 +130,26 @@ class FTSCurve():
                 ax = fig.get_axes()[0]
             fig.subplots_adjust(hspace=0.26, bottom=0.12, top =0.96, left=0.16, right=0.84)
         ax1 = fig.get_axes()[0]
-        ax1.plot(frequency_vector, transmission_vector, color, label=label, lw=2)
+        if add_atmosphere:
+            fig = self.add_atmospheric_lines(fig)
+            add_atmosphere = False
+        ax1.plot(frequency_vector, transmission_vector, color, label=label, lw=1, alpha=0.8)
         ax1.tick_params(labelsize=14)
         ax1.set_xlabel('Frequency (GHz)', fontsize=14)
         ax1.set_ylabel('Normalized Transmission', fontsize=14)
         ax1.set_xlim(xlim)
         for axis in fig.get_axes():
             handles, labels = axis.get_legend_handles_labels()
+            #print handles, labels#
+            #for i, label in enumerate(labels):
+                #if 'ATM Model' in labels:
+                    #extra_index = labels.index('ATM Model')
+                    #last_handle = handles.pop(extra_index)
+                    #last_label = labels.pop(extra_index)
+            #handles.insert(extra_index, last_handle)
+            #labels.insert(extra_index, labels)
             axis.legend(handles, labels, numpoints=1, loc=1)
-        return fig
+        return fig, add_atmosphere
 
 
     def _ask_user_if_they_want_to_quit(self):
@@ -162,8 +174,20 @@ class FTSCurve():
             np.put(averaged_vector, i, averaged_value)
         return averaged_vector
 
+    def add_atmospheric_lines(self, fig):
+        ax = fig.get_axes()[0]
+        frequencies, transmissions = [], []
+        with open('./Atmospheric_Modeling/chajnantor.dat', 'r') as atm_file_handle:
+            for line in atm_file_handle.readlines():
+                frequency = float(line.split(', ')[0])
+                frequencies.append(frequency)
+                transmission = float(line.split(', ')[1])
+                transmissions.append(transmission)
+        ax.plot(frequencies, transmissions, 'k', alpha=0.5, label='ATM Model')
+        return fig
+
     def run(self, save_fft=False, run_open_comparison=False,
-            add_atmosphric_lines=False, add_foreground=False):
+            add_atmosphere=False, add_foreground=False):
         fig = None
         plot_if = False
         plot_fft = False
@@ -172,7 +196,9 @@ class FTSCurve():
                 plot_if = True
             elif '.fft' == dict_['measurements']['data_path'][-4:]:
                 plot_fft = True
+        add_atmosphere = True
         for dict_ in self.list_of_input_dicts:
+            print add_atmosphere
             data_path = dict_['measurements']['data_path']
             label = dict_['measurements']['plot_label']
             color = dict_['measurements']['color']
@@ -192,8 +218,8 @@ class FTSCurve():
                     save_path = './Output/{0}_Filter_Transmission.fft'.format(dict_['filter_name'])
                     save_path = 'out.fft'
                     self.save_FFT_data(frequency_vector, divided_transmission_vector, save_path)
-                fig = self.plot_FFT_data(frequency_vector, divided_transmission_vector, color=color, label=label, xlim=xlim,
-                                         fig=fig, plot_if=plot_if, plot_fft=plot_fft)
+                fig, add_atmosphere = self.plot_FFT_data(frequency_vector, divided_transmission_vector, color=color, label=label, xlim=xlim,
+                                                         fig=fig, plot_if=plot_if, plot_fft=plot_fft, add_atmosphere=add_atmosphere)
                 print 'plottting FFT', data_path
             elif data_path[-3:] == '.if':
                 position_vector, signal_vector = self.load_IF_data(data_path)
