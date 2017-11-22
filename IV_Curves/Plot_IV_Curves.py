@@ -35,6 +35,8 @@ class IVCurve():
                 squid_voltage.append(float(squid_voltage_val))
         return np.asarray(bias_voltage), np.asarray(squid_voltage)
 
+## Mathematical Operations
+
     def convert_IV_to_real_units(self, bias_voltage, squid_voltage, squid_conv=30.0, v_bias_multiplier=1e-4,
                                  determine_calibration=False, calibration_resistor_val=1.0,
                                  clip=None, quick_plot=True, label=''):
@@ -126,23 +128,37 @@ class IVCurve():
         print '\n\n Transimpedance Value: {0}\n\n'.format(squid_conv)
         return squid_conv
 
-    def plot_differenced_ivs(self, v_biases, i_bolos, labels):
+    def find_nearest_r_bolo(self, r_bolo, r_n, fracrn):
+        frac_r_n = fracrn * r_n
+        nearest_r_bolo_index = np.abs(r_bolo - frac_r_n).argmin()
+        nearest_r_bolo = r_bolo[nearest_r_bolo_index]
+        return nearest_r_bolo, nearest_r_bolo_index
+
+## Plotting
+
+    def plot_differenced_ivs(self, v_biases, i_bolos, fracrns, colors, labels):
         fig = pl.figure(figsize=(10, 5))
         #fig.subplots_adjust(right=0.64, bottom=0.11, hspace=0.66)
         ax = fig.add_subplot(111)
         ax.set_xlabel('Resistance ($\Omega$)', fontsize=16)
+        ax.set_xlabel('Normalized Resistance ($\Omega$)', fontsize=16)
         ax.set_ylabel('Power ($\mu$V)', fontsize=16)
         p_at_same_rfracs = []
         for i, v_bias in enumerate(v_biases):
+            fracrn = fracrns[i]
             i_bolo = i_bolos[i]
             r_bolo = v_bias / i_bolo
+            r_bolo_norm = r_bolo / np.max(r_bolo)
             p_bolo = v_bias * i_bolo
-            ax.plot(r_bolo, p_bolo, label=labels[i])
-            r_n = r_bolo[10] # some value near the start
-            nearest_r_bolo, nearest_r_bolo_index = self.find_nearest_r_bolo(r_bolo, r_n)
+            #ax.plot(r_bolo, p_bolo, color=colors[i], label=labels[i])
+            ax.plot(r_bolo_norm, p_bolo, color=colors[i], label=labels[i])
+            #r_n = r_bolo[10] # some value near the start
+            r_n = r_bolo_norm[10] # some value near the start
+            nearest_r_bolo, nearest_r_bolo_index = self.find_nearest_r_bolo(r_bolo_norm, r_n, fracrn)
             p_at_same_rfrac = p_bolo[nearest_r_bolo_index]
             p_at_same_rfracs.append(p_at_same_rfrac)
-            ax.axvline(r_bolo[nearest_r_bolo_index], label=labels[i])
+            #ax.axvline(r_bolo[nearest_r_bolo_index], color=colors[i], label=labels[i])
+            ax.axvline(r_bolo_norm[nearest_r_bolo_index], color=colors[i], label=labels[i])
         p_diff = np.abs(p_at_same_rfracs[1] - p_at_same_rfracs[0])
         print
         print
@@ -151,14 +167,9 @@ class IVCurve():
         print
         print
         print
-        ax.legend(bbox_to_anchor=(0.66, 0.1, 1, 1), numpoints=1)
+        ax.legend(bbox_to_anchor=(1.0, 1.0, 1, 1), numpoints=1)
         pl.show()
 
-    def find_nearest_r_bolo(self, r_bolo, r_n):
-        frac_r_n = self.r_n_fraction * r_n
-        nearest_r_bolo_index = np.abs(r_bolo - frac_r_n).argmin()
-        nearest_r_bolo = r_bolo[nearest_r_bolo_index]
-        return nearest_r_bolo, nearest_r_bolo_index
 
     def plot_all_curves(self, bolo_voltage_bias, bolo_current, label='', fit_clip=None, plot_clip=None):
         '''
@@ -214,10 +225,12 @@ class IVCurve():
             difference = input_dict['difference']
             if difference:
                 break
-        v_biases, i_bolos, label_strs = [], [], []
+        v_biases, i_bolos, colors, label_strs, fracrns = [], [], [], [], []
         for input_dict in self.list_of_input_dicts:
             data_path = input_dict['data_path']
             label = input_dict['label']
+            color = input_dict['color']
+            fracrn = input_dict['fracrn']
             bias_voltage, squid_voltage = self.load_data(data_path)
             fit_clip = (input_dict['v_fit_lo'], input_dict['v_fit_hi'])
             plot_clip = (input_dict['v_plot_lo'], input_dict['v_plot_hi'])
@@ -232,12 +245,14 @@ class IVCurve():
             v_biases.append(v_bias_real)
             i_bolos.append(i_bolo_real)
             label_strs.append(label)
+            colors.append(color)
+            fracrns.append(fracrn)
             if not difference:
                 self.plot_all_curves(v_bias_real, i_bolo_real, label=label,
                                      fit_clip=fit_clip, plot_clip=plot_clip)
 
         if difference:
-            self.plot_differenced_ivs(v_biases, i_bolos, labels)
+            self.plot_differenced_ivs(v_biases, i_bolos, fracrns, colors, label_strs)
 
 if __name__ == '__main__':
     ivc = IVCurve()

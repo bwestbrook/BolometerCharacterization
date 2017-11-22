@@ -345,6 +345,20 @@ class GuiTemplate(QtGui.QWidget):
             self._create_and_place_widget(unique_widget_name, **widget_settings)
             getattr(self, unique_widget_name).setText('0.5')
             row += 1
+            unique_widget_name = '_{0}_{1}_fracrn_lineedit'.format(popup_name, col)
+            widget_settings = {'text': '', 'width': 200,
+                               'position': (row, col, 1, 1)}
+            print unique_widget_name
+            self._create_and_place_widget(unique_widget_name, **widget_settings)
+            getattr(self, unique_widget_name).setText('0.75')
+            row += 1
+            unique_widget_name = '_{0}_{1}_color_lineedit'.format(popup_name, col)
+            widget_settings = {'text': '', 'width': 200,
+                               'position': (row, col, 1, 1)}
+            print unique_widget_name
+            self._create_and_place_widget(unique_widget_name, **widget_settings)
+            getattr(self, unique_widget_name).setText('r')
+            row += 1
             unique_widget_name = '_{0}_{1}_calibrate_checkbox'.format(popup_name, col)
             widget_settings = {'text': 'Calibrate?',
                                'position': (row, col, 1, 1)}
@@ -366,7 +380,7 @@ class GuiTemplate(QtGui.QWidget):
 
     def _build_iv_input_dicts(self):
         list_of_input_dicts = []
-        iv_settings = ['voltage_conversion', 'label', 'squid_conversion',
+        iv_settings = ['voltage_conversion', 'label', 'squid_conversion', 'color', 'fracrn',
                        'v_fit_lo', 'v_fit_hi', 'v_plot_lo', 'v_plot_hi', 'v_plot_lo', 'v_plot_hi',
                        'calibration_resistance', 'calibrate', 'difference']
         for selected_file, col in self.selected_files_col_dict.iteritems():
@@ -385,7 +399,7 @@ class GuiTemplate(QtGui.QWidget):
                     elif 'checkbox' in widget and 'calibrate' in widget:
                         invert_bool = getattr(self, widget).isChecked()
                         input_dict['calibrate'] = invert_bool
-                    elif 'lineedit' in widget and 'label' in widget:
+                    elif 'lineedit' in widget and ('label' in widget or 'color' in widget):
                         widget_text = str(getattr(self, widget).text())
                         input_dict[setting] = widget_text
                     elif 'lineedit' in widget:

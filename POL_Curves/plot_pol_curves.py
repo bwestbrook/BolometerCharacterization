@@ -33,26 +33,33 @@ class POLCurve():
         x_position_raw = data_dict['x_position']
         initial_fit_params = self.moments(x_position_raw, normalized_amplitude, degsperpoint)
         fit_params = self.fit_sine(x_position_raw, normalized_amplitude, initial_fit_params)
-        initial_fit = np.zeros(len(x_position_raw))
-        fit = np.zeros(len(x_position_raw))
+        print fit_params
         angle_vector = np.zeros(len(x_position_raw))
         for i, x_val in enumerate(x_position_raw):
+            angle_ = (x_val / fit_params[1]) * 2 * np.pi
+            np.put(angle_vector, i, angle_)
+        starting_fit_vector = np.arange(int(x_position_raw[-1]), step=1000)
+        initial_fit = np.zeros(len(starting_fit_vector))
+        fit = np.zeros(len(starting_fit_vector))
+        angle_vector_fit = np.zeros(len(starting_fit_vector))
+        for i, x_val in enumerate(starting_fit_vector):
             fit_val = self.test_sine(x_val, fit_params[0], fit_params[1], fit_params[2], fit_params[3])
             initial_fit_val = self.test_sine(x_val, initial_fit_params[0], initial_fit_params[1],
                                              initial_fit_params[2], initial_fit_params[3])
             angle_ = (x_val / fit_params[1]) * 2 * np.pi
+            print angle_
             np.put(fit, i, fit_val)
             np.put(initial_fit, i, initial_fit_val)
-            np.put(angle_vector, i, angle_)
+            np.put(angle_vector_fit, i, angle_)
         efficiency = (np.min(normalized_amplitude) / 1.0 ) * 100.0
         processed_data_dict = {'x_position': x_position_raw,
                                'angle_vector': np.rad2deg(angle_vector),
+                               'angle_vector_fit': np.rad2deg(angle_vector_fit),
                                'fit': fit,
                                'initial_fit': initial_fit,
                                'normalized_amplitude': normalized_amplitude,
                                'efficiency': efficiency}
         return processed_data_dict
-
 
     def plot_polarization_efficiency(self, data_dict, label, fig=None):
         # crete a figure if needed
@@ -62,8 +69,8 @@ class POLCurve():
         ax = fig.add_subplot(111)
         ax.tick_params(labelsize=18)
         # Create the color map
-        ax.plot(data_dict['angle_vector'], data_dict['normalized_amplitude'], '-', ms=5.0, label='Data', lw=3)
-        ax.plot(data_dict['angle_vector'], data_dict['fit'], label='Fit', lw=2)
+        ax.plot(data_dict['angle_vector'], data_dict['normalized_amplitude'], '*', ms=5.0, label='Data', lw=3)
+        #ax.plot(data_dict['angle_vector_fit'], data_dict['fit'], label='Fit', lw=2)
         # Basic Plotting Options 
         ax.set_xlabel('Polarizing Grid Position ($^{\circ}$)', fontsize=24)
         ax.set_ylabel('Peak Normalized', fontsize=24)
@@ -94,6 +101,7 @@ class POLCurve():
         radsperstep = degsperstep * (np.pi / 180.0)
         period_in_stepper_steps = 2 * np.abs(raw_angle[data.argmax()] - raw_angle[data.argmin()])
         period = period_in_stepper_steps
+        period = 120000
         phase = 0.0
         return amplitude, period, phase, y_offset
 
