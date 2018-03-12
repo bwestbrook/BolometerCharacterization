@@ -1,6 +1,8 @@
+import os
+import sys
 import pylab as pl
 import numpy as np
-import sys
+from copy import copy
 from foreground_plotter import ForegroundPlotter
 
 
@@ -51,7 +53,7 @@ class FTSCurve():
         return None
 
 
-    def load_FFT_data(self, data_path, smoothing_factor=0):
+    def load_FFT_data(self, data_path, smoothing_factor=0.01, xlim_clip=(10, 600)):
         '''
         Inputs:
             data_path:  the path to the .fft data file (string)
@@ -68,8 +70,11 @@ class FTSCurve():
             for i, line in enumerate(lines):
                 frequency = line.split('\t')[0]
                 transmission = line.split('\t')[1]
-                np.put(frequency_vector, i, frequency)
-                np.put(transmission_vector, i, transmission)
+                if float(xlim_clip[0]) < float(frequency) < float(xlim_clip[1]):
+                    np.put(frequency_vector, i, frequency)
+                    np.put(transmission_vector, i, transmission)
+        transmission_vector = transmission_vector[frequency_vector != 0.0]
+        frequency_vector = frequency_vector[frequency_vector != 0.0]
         if smoothing_factor > 0.0:
             transmission_vector = self.running_mean(transmission_vector, smoothing_factor=smoothing_factor)
         normalized_transmission_vector = transmission_vector / max(transmission_vector)
@@ -114,7 +119,7 @@ class FTSCurve():
         return fig
 
     def plot_FFT_data(self, frequency_vector, transmission_vector, color='b',
-                      label='', xlim=(100,400), fig=None, plot_if=False, plot_fft=False,
+                      title='', label='', xlim=(100,400), fig=None, plot_if=False, plot_fft=False,
                       add_atmosphere=False):
         '''
         This function will take the output of Load_FFT_Data
@@ -138,6 +143,8 @@ class FTSCurve():
         ax1.set_xlabel('Frequency (GHz)', fontsize=14)
         ax1.set_ylabel('Normalized Transmission', fontsize=14)
         ax1.set_xlim(xlim)
+        ax1.set_title(title)
+        ax1.set_ylim((-0.05, 1.05))
         for axis in fig.get_axes():
             handles, labels = axis.get_legend_handles_labels()
             #print handles, labels#
@@ -160,9 +167,6 @@ class FTSCurve():
         N = int(smoothing_factor * len(vector))
 
     def running_mean(self, vector, smoothing_factor=0.01):
-        print smoothing_factor
-        print smoothing_factor
-        print smoothing_factor
         N = int(smoothing_factor * len(vector))
         averaged_vector = np.zeros(len(vector))
         for i, value in enumerate(vector):
@@ -171,7 +175,10 @@ class FTSCurve():
             if hi_index > len(vector) - 1:
                 hi_index = len(vector) - 1
             averaged_value = np.mean(vector[low_index:hi_index])
-            np.put(averaged_vector, i, averaged_value)
+            if np.isnan(averaged_value):
+                np.put(averaged_vector, i, 0.0)
+            else:
+                np.put(averaged_vector, i, averaged_value)
         return averaged_vector
 
     def add_atmospheric_lines(self, fig):
@@ -185,6 +192,67 @@ class FTSCurve():
                 transmissions.append(transmission)
         ax.plot(frequencies, transmissions, 'k', alpha=0.5, label='ATM Model')
         return fig
+
+    def divide_out_optical_element_response(self, frequency_vector, normalized_transmission_vector,
+                                            optical_element='mmf', frequency_=350, transmission_threshold=0.15,
+                                            bs_thickness=10, quick_plot=False):
+        '''
+        This divides out the mmf filter response between 40 and 450 GHz (data our side of this is too noisy)
+        Inputs:
+            frequency_vector: the frequency vector on to which the mmf data that will interpolated
+            mmf_frequency_vector: the native frequency vector of the mmf data that will interpolated
+            normalized_transmission_vector: FFT data to divide the response out of
+            normalized_mmf_transmission_vector: FFT data from the mmf which will be divided into the other vector
+            band_edges: approximated band_edges where you want to divide out the frequency response (default is for 350 band most affected by the mmf)
+        Outputs:
+            corrected_transmission_vector: the divided spectra with the response removed
+        '''
+        if optical_element == 'bs':
+            bs_transmission_file_name = '{0}_mil_beamsplitter_efficiency.dat'.format(bs_thickness)
+            bs_transmission_path = os.path.join('.\\FTS_Curves\\Output\\Beam_Splitter_Efficiency', bs_transmission_file_name)
+            element_frequency_vector = []
+            element_transmission_vector = []
+            with open(bs_transmission_path, 'r') as bs_file_handle:
+                for line in bs_file_handle.readlines():
+                    element_frequency = line.split('\t')[0]
+                    element_transmission = line.split('\t')[1].strip('\n')
+                    if float(element_transmission) > transmission_threshold:
+                        element_frequency_vector.append(element_frequency)
+                        element_transmission_vector.append(element_transmission)
+
+        # Make a copy for before and after comparison
+        corrected_transmission_vector = copy(normalized_transmission_vector)
+
+        # Interpolate the optical element to the bolo transmission data and then divide it out
+        #print frequency_vector, element_frequency_vector
+        transmission_vector_to_divide = np.interp(frequency_vector, element_frequency_vector,
+                                                  element_transmission_vector)
+        corrected_transmission_vector = normalized_transmission_vector / transmission_vector_to_divide
+
+        # Renormalize the vector after the division
+        corrected_transmission_vector = corrected_transmission_vector / np.max(corrected_transmission_vector)
+
+
+        if quick_plot:
+            fig = pl.figure()
+            ax1 = fig.add_subplot(111)
+            ax1.plot(frequency_vector, normalized_transmission_vector, 'r', lw=3, label='Input')
+            ax1.plot(frequency_vector, corrected_transmission_vector, 'b', label='Corrected')
+            ax1.plot(element_frequency_vector, element_transmission_vector, 'g', alpha=0.75, label='Element')
+            ax1.set_xlabel('Frequency (GHz)', fontsize=16)
+            ax1.set_ylabel('Response', fontsize=16)
+            ax1.set_title('Division Inspection for {0}'.format(optical_element), fontsize=16)
+            ax1.set_ylim(-1, 2)
+            for axis in fig.get_axes():
+                handles, labels = axis.get_legend_handles_labels()
+                axis.legend(handles, labels, numpoints=1, loc='best')
+            pl.show()
+        return corrected_transmission_vector
+
+    def _ask_user_if_they_want_to_quit(self):
+        quit_boolean = raw_input('Press q to q(uit), any other key to continue:\n')
+        if quit_boolean == 'q':
+            exit()
 
     def run(self, save_fft=False, run_open_comparison=False,
             add_atmosphere=False, add_foreground=False):
@@ -201,26 +269,36 @@ class FTSCurve():
             print add_atmosphere
             data_path = dict_['measurements']['data_path']
             label = dict_['measurements']['plot_label']
+            title = dict_['measurements']['plot_title']
             color = dict_['measurements']['color']
-            color = dict_['measurements']['color']
-            xlim = dict_['measurements']['xlim']
+            xlim_plot = dict_['measurements']['xlim_plot']
+            xlim_clip = dict_['measurements']['xlim_clip']
+            divide_bs_5 = dict_['measurements']['divide_bs_5']
+            divide_bs_10 = dict_['measurements']['divide_bs_10']
+            add_atmosphere = dict_['measurements']['add_atm_model']
             smoothing_factor = float(dict_['measurements']['smoothing_factor'])
             if data_path[-4:] == '.fft':
-                frequency_vector, transmission_vector, normalized_transmission_vector = self.load_FFT_data(data_path, smoothing_factor=smoothing_factor)
+                frequency_vector, transmission_vector, normalized_transmission_vector = self.load_FFT_data(data_path, smoothing_factor=smoothing_factor,
+                                                                                                           xlim_clip=xlim_clip)
                 if run_open_comparison:
                     open_data_path = dict_['open_air']['data_path']
                     data_path = dict_['measurements']['data_path']
                     open_frequency_vector, open_transmission_vector, open_normalized_transmission_vector = self.load_FFT_data(open_data_path)
                     divided_transmission_vector = transmission_vector / open_transmission_vector
+                elif divide_bs_5:
+                    divided_transmission_vector = self.divide_out_optical_element_response(frequency_vector, normalized_transmission_vector,
+                                                                                           optical_element='bs', bs_thickness=5)
+                elif divide_bs_10:
+                    divided_transmission_vector = self.divide_out_optical_element_response(frequency_vector, normalized_transmission_vector,
+                                                                                           optical_element='bs', bs_thickness=10)
                 else:
                     divided_transmission_vector = normalized_transmission_vector
                 if save_fft:
                     save_path = './Output/{0}_Filter_Transmission.fft'.format(dict_['filter_name'])
                     save_path = 'out.fft'
                     self.save_FFT_data(frequency_vector, divided_transmission_vector, save_path)
-                fig, add_atmosphere = self.plot_FFT_data(frequency_vector, divided_transmission_vector, color=color, label=label, xlim=xlim,
+                fig, add_atmosphere = self.plot_FFT_data(frequency_vector, divided_transmission_vector, color=color, title=title, label=label, xlim=xlim_plot,
                                                          fig=fig, plot_if=plot_if, plot_fft=plot_fft, add_atmosphere=add_atmosphere)
-                print 'plottting FFT', data_path
             elif data_path[-3:] == '.if':
                 position_vector, signal_vector = self.load_IF_data(data_path)
                 fig = self.plot_IF_data(position_vector, signal_vector, color=color, label=label, fig=fig,

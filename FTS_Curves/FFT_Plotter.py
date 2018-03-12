@@ -564,12 +564,14 @@ class Run():
                 settings.divide_mmf_response = False
             else:
                 settings.divide_mmf_response = True
-            if settings.divide_mmf_response:
+            if dict_['divide_mmf']:
                 normalized_transmission_vector= self.data_loading.divide_out_optical_element_response(frequency_vector, mmf_frequency_vector,
                                                                                                       mmf_transmission_vector, normalized_transmission_vector,
                                                                                                       optical_element='mmf', frequency_=frequency,
                                                                                                       transmission_threshold=0.1, quick_plot=False)
-            if settings.divide_beam_splitter_response:
+            if dict_['divide_bs']:
+                bs_thickness = dict_['divide_bs']
+                print 'divinding beam splitter with {0} mil thickness'.format(bs_thickness)
                 normalized_transmission_vector= self.data_loading.divide_out_optical_element_response(frequency_vector, bs_frequency_vector,
                                                                                                       bs_transmission_vector, normalized_transmission_vector,
                                                                                                       optical_element='beam_splitter', frequency_=frequency,

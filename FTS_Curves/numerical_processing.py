@@ -218,7 +218,7 @@ class BeamSplitter():
         '''
         A simple run/test option
         '''
-        thickness = 5  # mils
+        thickness = 10  # mils
         save_path = './Output/temp.dat'
         if plot_example:
             example_path = './Simulations/BeamSplitter10mil.dat'
@@ -226,6 +226,7 @@ class BeamSplitter():
             self.plot_beam_splitter_efficiency(example_frequency_vector, example_efficiency_vector, 10)
         frequency_vector, efficiency_vector = self.create_beam_splitter_response(save_path, thickness)
         if save_data:
+            print 'saving'
             self.save_beam_splitter_efficiency(frequency_vector / 1e9, efficiency_vector, thickness)
         if plot_data:
             self.plot_beam_splitter_efficiency(frequency_vector / 1e9, efficiency_vector, thickness)

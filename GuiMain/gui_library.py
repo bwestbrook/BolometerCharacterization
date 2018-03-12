@@ -506,6 +506,17 @@ class GuiTemplate(QtGui.QWidget):
     def _close_fts(self):
         self.ftscurve_settings_popup.close()
 
+    def _select_bs_thickness(self):
+        file_col = int(str(self.sender().whatsThis()).split('_')[4])
+        print file_col
+        other_thickness_dict = {'5': '10', '10': '5'}
+        bs_thickness = str(self.sender().text()).split(' ')[0]
+        other_thickness = other_thickness_dict[bs_thickness]
+        sender_widget_name = '_ftscurve_settings_popup_{0}_divide_bs_{1}mil_checkbox'.format(file_col, bs_thickness)
+        other_widget_name = '_ftscurve_settings_popup_{0}_divide_bs_{1}mil_checkbox'.format(file_col, other_thickness)
+        getattr(self, sender_widget_name).setCheckState(True)
+        getattr(self, other_widget_name).setCheckState(False)
+
     def _build_ftscurve_settings_popup(self):
         popup_name = '{0}_settings_popup'.format(self.analysis_type)
         if hasattr(self, popup_name):
@@ -527,6 +538,13 @@ class GuiTemplate(QtGui.QWidget):
                                'position': (row, col, 1, 1)}
             self._create_and_place_widget(unique_widget_name, **widget_settings)
             row += 1
+            # Add a lineedit for plot title
+            print col
+            unique_widget_name = '_{0}_{1}_plot_title_lineedit'.format(popup_name, col)
+            widget_settings = {'text': '',
+                               'position': (row, col, 1, 1)}
+            self._create_and_place_widget(unique_widget_name, **widget_settings)
+            row += 1
             # Add a lineedit for plot labeling
             unique_widget_name = '_{0}_{1}_plot_label_lineedit'.format(popup_name, col)
             widget_settings = {'text': '',
@@ -535,10 +553,39 @@ class GuiTemplate(QtGui.QWidget):
             row += 1
             # Add an "normalize" checkbox
             unique_widget_name = '_{0}_{1}_normalize_checkbox'.format(popup_name, col)
-            widget_settings = {'text': '',
+            widget_settings = {'text': 'Check = Do Normalize',
                                'position': (row, col, 1, 1)}
             self._create_and_place_widget(unique_widget_name, **widget_settings)
             getattr(self, unique_widget_name).setChecked(True)
+            row += 1
+            # Add an 5mil "Divide Beam Splitter" checkbox
+            unique_widget_name = '_{0}_{1}_divide_bs_5mil_checkbox'.format(popup_name, col)
+            widget_settings = {'text': '5 mil',
+                               'function': self._select_bs_thickness,
+                               'position': (row, col, 1, 1)}
+            self._create_and_place_widget(unique_widget_name, **widget_settings)
+            # Add a 10mil "Divide Beam Splitter" checkbox
+            unique_widget_name = '_{0}_{1}_divide_bs_10mil_checkbox'.format(popup_name, col)
+            widget_settings = {'text': '10 mil',
+                               'function': self._select_bs_thickness,
+                               'position': (row, col + 1, 1, 1)}
+            self._create_and_place_widget(unique_widget_name, **widget_settings)
+            getattr(self, unique_widget_name).setChecked(True)
+            row += 1
+            # Add a "Add ATM Model" checkbox
+            unique_widget_name = '_{0}_{1}_divide_mmf_checkbox'.format(popup_name, col)
+            widget_settings = {'text': 'NOT SUPPORTED 3/13/2018',
+                               'position': (row, col, 1, 1)}
+            self._create_and_place_widget(unique_widget_name, **widget_settings)
+            getattr(self, unique_widget_name).setChecked(False)
+            row += 1
+            # Add a "Add  Model" checkbox
+            unique_widget_name = '_{0}_{1}_add_atm_model_checkbox'.format(popup_name, col)
+            widget_settings = {'text': 'Check = Do Add ATM Model',
+                               'position': (row, col, 1, 1)}
+            self._create_and_place_widget(unique_widget_name, **widget_settings)
+            if col == 1:
+                getattr(self, unique_widget_name).setChecked(True)
             row += 1
             # Add an "color" lineedit
             unique_widget_name = '_{0}_{1}_color_lineedit'.format(popup_name, col)
@@ -546,8 +593,14 @@ class GuiTemplate(QtGui.QWidget):
                                'position': (row, col, 1, 1)}
             self._create_and_place_widget(unique_widget_name, **widget_settings)
             row += 1
-            # Add an "xlim" lineedit
-            unique_widget_name = '_{0}_{1}_xlim_lineedit'.format(popup_name, col)
+            # Add an "xlim clip" lineedit
+            unique_widget_name = '_{0}_{1}_xlim_clip_lineedit'.format(popup_name, col)
+            widget_settings = {'text': '10:600',
+                               'position': (row, col, 1, 1)}
+            self._create_and_place_widget(unique_widget_name, **widget_settings)
+            row += 1
+            # Add an "xlim plot" lineedit
+            unique_widget_name = '_{0}_{1}_xlim_plot_lineedit'.format(popup_name, col)
             widget_settings = {'text': '100:440',
                                'position': (row, col, 1, 1)}
             self._create_and_place_widget(unique_widget_name, **widget_settings)
@@ -562,16 +615,23 @@ class GuiTemplate(QtGui.QWidget):
 
     def _build_fts_input_dicts(self):
         list_of_input_dicts = []
-        fts_settings = ['smoothing_factor', 'xlim', 'color', 'normalize', 'plot_label']
+        fts_settings = ['smoothing_factor', 'xlim_plot', 'xlim_clip', 'divide_mmf', 'add_atm_model',
+                        'divide_bs_5', 'divide_bs_10', 'color', 'normalize', 'plot_title', 'plot_label']
         for selected_file, col in self.selected_files_col_dict.iteritems():
             input_dict = {'measurements': {'data_path': selected_file}}
             for setting in fts_settings:
                 identity_string = '{0}_{1}'.format(col, setting)
-                print identity_string
-                for widget in [x for x in dir(self) if identity_string in x]:
-                    if 'checkbox' in widget and 'normalize' in widget:
-                        normalize_bool = getattr(self, widget).isChecked()
-                        input_dict['measurements']['normalize'] = normalize_bool
+                widgets = [x for x in dir(self) if identity_string in x]
+                for widget in widgets:
+                    if 'checkbox' in widget:
+                        bool_value = getattr(self, widget).isChecked()
+                        if 'divide_bs' in widget and bool_value:
+                            thickness = str(getattr(self, widget).text()).split(' ')[0]
+                            input_dict['measurements'][setting] = thickness
+                        elif 'divide_bs' in widget:
+                            input_dict['measurements'][setting] = False
+                        else:
+                            input_dict['measurements'][setting] = bool_value
                     elif 'lineedit' in widget:
                         widget_text = str(getattr(self, widget).text())
                         if 'xlim' in widget:
