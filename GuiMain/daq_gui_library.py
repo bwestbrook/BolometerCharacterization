@@ -16,6 +16,7 @@ from RT_Curves.plot_rt_curves import RTCurve
 from IV_Curves.plot_iv_curves import IVCurve
 from FTS_Curves.plot_fts_curves import FTSCurve
 from POL_Curves.plot_pol_curves import POLCurve
+from Stepper_Motor.stepper import Stepper
 
 
 class GuiTemplate(QtGui.QWidget):
@@ -31,6 +32,7 @@ class GuiTemplate(QtGui.QWidget):
         self.data_folder = './data'
         self.selected_files = []
         self.current_stepper_position = 100
+        self.stepper = Stepper()
 
     def __apply_settings__(self, settings):
         for setting in dir(settings):
@@ -69,33 +71,63 @@ class GuiTemplate(QtGui.QWidget):
     # USER MOVE STEPPER
     #################################################
 
+    def _close_user_move_stepper(self):
+        self.user_move_stepper_popup.close()
+
     def _user_move_stepper(self):
         print 'code for moving stepper'
         if not hasattr(self, 'user_move_stepper_popup'):
             self._create_popup_window('user_move_stepper_popup')
         else:
             self._initialize_panel('user_move_stepper_popup')
-
         self._build_panel(settings.user_move_stepper_build_dict)
+        self._add_comports_to_user_move_stepper()
         self._update_stepper_position()
         self.user_move_stepper_popup.show()
         self.user_move_stepper_popup.setWindowTitle('User Move Stepper')
 
-    def _close_user_move_stepper(self):
-        self.user_move_stepper_popup.close()
+    def _add_comports_to_user_move_stepper(self):
+        for com_port in settings.com_ports:
+            com_port_entry = QtCore.QString(com_port)
+            getattr(self, '_user_move_stepper_popup_current_com_port_combobox').addItem(com_port_entry)
+
+    def _connect_to_com_port(self):
+        com_port = self._get_com_port()
+        self.stepper.connect_to_com_port(com_port)
+        old_stepper_position = self._get_stepper_position()
+        move_to_position = getattr(self, '_user_move_stepper_popup_lineedit').setText(str(old_stepper_position))
+        self._update_stepper_position()
 
     def _move_stepper(self):
         move_to_position = int(str(getattr(self, '_user_move_stepper_popup_lineedit').text()))
-        print 'Code would physically get this to move from {0} to {1}'.format(self.current_stepper_position,
-                                                                              move_to_position)
-        self.current_stepper_position = move_to_position
+        old_stepper_position = self._get_stepper_position()
+        com_port = self._get_com_port()
+        print 'Code would physically get this to move {0} from {1} to {2}'.format(com_port, old_stepper_position,
+                                                                                  move_to_position)
+        self.stepper.stepper_position_dict[com_port] = move_to_position
         self._update_stepper_position()
 
     def _reset_stepper_zero(self):
-        self.current_stepper_position = 0.0
+        com_port = self._get_com_port()
+        self.stepper.stepper_position_dict[com_port] = 0
+        self._update_stepper_position()
+        getattr(self, '_user_move_stepper_popup_lineedit').setText(str(0))
+
+    def _get_stepper_position(self):
+        com_port = self._get_com_port()
+        stepper_position = self.stepper.stepper_position_dict[com_port]
+        return stepper_position
 
     def _update_stepper_position(self):
-        getattr(self, '_user_move_stepper_popup_current_position_label').setText(str(self.current_stepper_position))
+        com_port = self._get_com_port()
+        stepper_position = self.stepper.stepper_position_dict[com_port]
+        header_str = '{0} Current Position:'.format(com_port)
+        getattr(self, '_user_move_stepper_popup_current_position_header_label').setText(header_str)
+        getattr(self, '_user_move_stepper_popup_current_position_label').setText(str(stepper_position))
+
+    def _get_com_port(self):
+        com_port = str(getattr(self, '_user_move_stepper_popup_current_com_port_combobox').currentText())
+        return com_port
 
     #################################################
     # SINGLE CHANNEL FTS BILLS 
