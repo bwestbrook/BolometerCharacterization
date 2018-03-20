@@ -1,4 +1,5 @@
 import os
+import matplotlib
 import sys
 import pylab as pl
 import numpy as np
@@ -8,8 +9,8 @@ from foreground_plotter import ForegroundPlotter
 
 class FTSCurve():
 
-    def __init__(self, list_of_input_dicts):
-        self.list_of_input_dicts = list_of_input_dicts
+    def __init__(self):
+        self.hello = 'hello'
 
     def load_simulation_data(self, data_path):
         '''
@@ -50,7 +51,6 @@ class FTSCurve():
                 transmission = transmission_vector[i]
                 line = '{0} \t {1}\n'.format(frequency, transmission)
                 file_handle.write(line)
-        return None
 
 
     def load_FFT_data(self, data_path, smoothing_factor=0.01, xlim_clip=(10, 600)):
@@ -68,8 +68,12 @@ class FTSCurve():
             frequency_vector = np.zeros(len(lines))
             transmission_vector = np.zeros(len(lines))
             for i, line in enumerate(lines):
-                frequency = line.split('\t')[0]
-                transmission = line.split('\t')[1]
+                if ',' in line:
+                    frequency = line.split(', ')[0]
+                    transmission = line.split(', ')[1]
+                else:
+                    frequency = line.split('\t')[0]
+                    transmission = line.split('\t')[1]
                 if float(xlim_clip[0]) < float(frequency) < float(xlim_clip[1]):
                     np.put(frequency_vector, i, frequency)
                     np.put(transmission_vector, i, transmission)
@@ -104,7 +108,7 @@ class FTSCurve():
     def plot_IF_data(self, position_vector, signal_vector, color='b',
                      label='', fig=None, plot_if=False, plot_fft=False):
         if fig is None:
-            fig = pl.figure()
+            fig = matplotlib.figure.Figure()
             if plot_fft and plot_if:
                 fig.add_subplot(211)
                 fig.add_subplot(212)
@@ -120,7 +124,7 @@ class FTSCurve():
 
     def plot_FFT_data(self, frequency_vector, transmission_vector, color='b',
                       title='', label='', xlim=(100,400), fig=None, plot_if=False, plot_fft=False,
-                      add_atmosphere=False):
+                      add_atmosphere=False, save_data=True):
         '''
         This function will take the output of Load_FFT_Data
         '''
@@ -254,19 +258,21 @@ class FTSCurve():
         if quit_boolean == 'q':
             exit()
 
-    def run(self, save_fft=False, run_open_comparison=False,
-            add_atmosphere=False, add_foreground=False):
+    def close_fig(self):
+        #fig.close()
+        pl.close()
+
+    def run(self, list_of_input_dicts, save_fft=True, run_open_comparison=False,
+            add_atmosphere=False, add_foreground=False, fig=None):
         fig = None
         plot_if = False
         plot_fft = False
-        for dict_ in self.list_of_input_dicts:
+        for dict_ in list_of_input_dicts:
             if '.if' == dict_['measurements']['data_path'][-3:]:
                 plot_if = True
             elif '.fft' == dict_['measurements']['data_path'][-4:]:
                 plot_fft = True
-        add_atmosphere = True
-        for dict_ in self.list_of_input_dicts:
-            print add_atmosphere
+        for dict_ in list_of_input_dicts:
             data_path = dict_['measurements']['data_path']
             label = dict_['measurements']['plot_label']
             title = dict_['measurements']['plot_title']
@@ -293,10 +299,11 @@ class FTSCurve():
                                                                                            optical_element='bs', bs_thickness=10)
                 else:
                     divided_transmission_vector = normalized_transmission_vector
-                if save_fft:
-                    save_path = './Output/{0}_Filter_Transmission.fft'.format(dict_['filter_name'])
-                    save_path = 'out.fft'
-                    self.save_FFT_data(frequency_vector, divided_transmission_vector, save_path)
+                if save_fft and len(label) > 0:
+                    save_path = '{0}.fft'.format(label)
+                    if os.path.exists(save_path):
+                        os.remove(save_path)
+                    self.save_FFT_data(frequency_vector, transmission_vector, save_path)
                 fig, add_atmosphere = self.plot_FFT_data(frequency_vector, divided_transmission_vector, color=color, title=title, label=label, xlim=xlim_plot,
                                                          fig=fig, plot_if=plot_if, plot_fft=plot_fft, add_atmosphere=add_atmosphere)
             elif data_path[-3:] == '.if':
@@ -304,8 +311,12 @@ class FTSCurve():
                 fig = self.plot_IF_data(position_vector, signal_vector, color=color, label=label, fig=fig,
                                          plot_if=plot_if, plot_fft=plot_fft)
                 print 'plottting IF', data_path
-        fig.savefig('{0}.png'.format(label))
-        pl.show()
+        if len(title) > 0:
+            fig.savefig('{0}.png'.format(title))
+        elif len(label) > 0:
+            fig.savefig('{0}.png'.format(label))
+        pl.show(fig)
+        return fig
 
 
 if __name__ == '__main__':

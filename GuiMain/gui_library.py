@@ -36,6 +36,8 @@ class GuiTemplate(QtGui.QWidget):
         self.sample_res_factors = [0.1, 1.0, 10.0]
         self.grt_res_factors = [100.0, 1000.0]
         self.selected_files = []
+        self.fts = FTSCurve()
+        self.fts_fig = None
 
     def __apply_settings__(self, settings):
         for setting in dir(settings):
@@ -508,7 +510,6 @@ class GuiTemplate(QtGui.QWidget):
 
     def _select_bs_thickness(self):
         file_col = int(str(self.sender().whatsThis()).split('_')[4])
-        print file_col
         other_thickness_dict = {'5': '10', '10': '5'}
         bs_thickness = str(self.sender().text()).split(' ')[0]
         other_thickness = other_thickness_dict[bs_thickness]
@@ -644,9 +645,23 @@ class GuiTemplate(QtGui.QWidget):
     def _plot_ftscurve(self):
         selected_files = list(set(self.selected_files))
         list_of_input_dicts = self._build_fts_input_dicts()
-        pprint(list_of_input_dicts)
-        fts = FTSCurve(list_of_input_dicts)
-        fts.run()
+        print
+        print
+        print '############PLOTTING#################'
+        print
+        print
+        print
+        getattr(self, '_ftscurve_settings_popup_run_pushbutton').setText('Close Pylab Window')
+        getattr(self, '_ftscurve_settings_popup_run_pushbutton').setEnabled(False)
+        self.ftscurve_settings_popup.repaint()
+        self.fts.run(list_of_input_dicts)
+        #getattr(self, '_ftscurve_settings_popup_run_pushbutton').clicked.connect(self._run_analysis)
+        getattr(self, '_ftscurve_settings_popup_run_pushbutton').setText('Run')
+        getattr(self, '_ftscurve_settings_popup_run_pushbutton').setEnabled(True)
+        pl.close('all')
+
+    def __no_function(self):
+        print 'no function'
 
     #################################################
     # WIDGET GENERATORS AND FUNCTIONS
