@@ -44,19 +44,12 @@ class GuiTemplate(QtGui.QWidget):
         self._build_panel(settings.daq_main_panel_build_dict)
         self._add_daq_types_to_combobox()
 
-
     def _close_main(self):
         self.daq_main_panel_widget.close()
         sys.exit()
 
     def _dummy(self):
-        print 'hi'
-
-    #################################################
-    #################################################
-    # DAQ TYP SPECFIC CODES 
-    #################################################
-    #################################################
+        print 'Dummy Function'
 
     def _add_daq_types_to_combobox(self):
         for daq_function in settings.daq_functions:
@@ -69,6 +62,12 @@ class GuiTemplate(QtGui.QWidget):
         print 'hello'
         function_name = '_'.join(str(' ' + self.sender().currentText()).split(' ')).lower()
         getattr(self, function_name)()
+
+    #################################################
+    #################################################
+    # DAQ TYP SPECFIC CODES 
+    #################################################
+    #################################################
 
     #################################################
     # USER MOVE STEPPER
@@ -148,6 +147,22 @@ class GuiTemplate(QtGui.QWidget):
         self._build_panel(settings.single_channel_fts_build_dict)
         self.single_channel_fts_popup.show()
         self.single_channel_fts_popup.setWindowTitle('Single Channel FTS')
+
+    #################################################
+    # BEAM MAPPER 
+    #################################################
+
+    def _close_beam_mapper(self):
+        self.beam_mapper_popup.close()
+
+    def _beam_mapper(self):
+        print 'code for running beam mapper'
+        if not hasattr(self, 'beam_mapper_popup'):
+            self._create_popup_window('beam_mapper_popup')
+        else:
+            self._initialize_panel('beam_mapper_popup')
+        self._build_panel(settings.beam_mapper_build_dict)
+        self.beam_mapper_popup.show()
 
     #################################################
     # WIDGET GENERATORS AND FUNCTIONS
