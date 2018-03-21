@@ -49,6 +49,9 @@ class GuiTemplate(QtGui.QWidget):
         self.daq_main_panel_widget.close()
         sys.exit()
 
+    def _dummy(self):
+        print 'hi'
+
     #################################################
     #################################################
     # DAQ TYP SPECFIC CODES 
@@ -133,8 +136,18 @@ class GuiTemplate(QtGui.QWidget):
     # SINGLE CHANNEL FTS BILLS 
     #################################################
 
+    def _close_single_channel_fts(self):
+        self.single_channel_fts_popup.close()
+
     def _single_channel_fts(self):
         print 'code for running fts'
+        if not hasattr(self, 'single_channel_fts_popup'):
+            self._create_popup_window('single_channel_fts_popup')
+        else:
+            self._initialize_panel('single_channel_fts_popup')
+        self._build_panel(settings.single_channel_fts_build_dict)
+        self.single_channel_fts_popup.show()
+        self.single_channel_fts_popup.setWindowTitle('Single Channel FTS')
 
     #################################################
     # WIDGET GENERATORS AND FUNCTIONS
