@@ -83,6 +83,7 @@ class GuiTemplate(QtGui.QWidget):
         self._build_panel(settings.user_move_stepper_build_dict)
         self._add_comports_to_user_move_stepper()
         self._update_stepper_position()
+        print self.stepper.connect_to_com_port('COM1')
         self.user_move_stepper_popup.show()
         self.user_move_stepper_popup.setWindowTitle('User Move Stepper')
 
@@ -94,6 +95,9 @@ class GuiTemplate(QtGui.QWidget):
     def _connect_to_com_port(self):
         com_port = self._get_com_port()
         self.stepper.connect_to_com_port(com_port)
+        #### SOME CODE HERE TO CONNECT TO BACKEND ####
+        connected_to_com_port = self.stepper.connect_to_com_port(com_port)
+        print connected_to_com_port
         old_stepper_position = self._get_stepper_position()
         move_to_position = getattr(self, '_user_move_stepper_popup_lineedit').setText(str(old_stepper_position))
         self._update_stepper_position()

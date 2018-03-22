@@ -8,7 +8,10 @@ class Stepper():
 
     def connect_to_com_port(self, com_port):
         print 'will connect to com port {0} here'.format(com_port)
-        return True
+        if np.random.random() > 0.5:
+            return True
+        else:
+            return False
 
     def get_current_position_from_com_port(self, com_port):
         print 'Actual code will connect to driver and get position of {0}'.format(com_port)
