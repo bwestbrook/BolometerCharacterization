@@ -7,6 +7,8 @@ from FTS_popup import ftscurve_settings_popup_settings
 from POL_popup import polcurve_settings_popup_settings
 from daq_main_panel import daq_main_panel_settings
 from user_move_stepper import user_move_stepper_settings
+from single_channel_fts import single_channel_fts_settings
+from beam_mapper import beam_mapper_settings
 
 
 settings = Class()
@@ -39,7 +41,8 @@ settings.widget_to_object_dict = {
 list_of_extra_settings = [main_panel_settings, rtcurve_settings_popup_settings,
                           ivcurve_settings_popup_settings, ftscurve_settings_popup_settings,
                           polcurve_settings_popup_settings, daq_main_panel_settings,
-                          user_move_stepper_settings]
+                          user_move_stepper_settings, single_channel_fts_settings,
+                          beam_mapper_settings]
 
 for extra_settings in list_of_extra_settings:
     for attribute in dir(extra_settings):

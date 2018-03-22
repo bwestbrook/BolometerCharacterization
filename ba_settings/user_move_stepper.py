@@ -22,8 +22,10 @@ user_move_stepper_settings.user_move_stepper_build_dict = {
                                                                                                         'position': (4, 0, 1, 2)},
                                                            '_user_move_stepper_popup_reset_zero_pushbutton': {'text': 'Reset Zero', 'function': '_reset_stepper_zero',
                                                                                                               'position': (5, 0, 1, 2)},
+                                                           '_user_move_stepper_popup_test_pushbutton': {'text': 'Test', 
+                                                                                                        'position': (6, 0, 1, 2)},
                                                            '_user_move_stepper_popup_close_pushbutton': {'text': 'Close User Move Stepper', 'function': '_close_user_move_stepper',
-                                                                                                         'position': (6, 0, 1, 2)},
+                                                                                                         'position': (7, 0, 1, 2)},
                                                            }
 
 user_move_stepper_settings.com_ports = ['COM1', 'COM2', 'COM3', 'COM4']
