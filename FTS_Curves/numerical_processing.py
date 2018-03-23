@@ -15,7 +15,7 @@ class Fourier():
         '''
         self.mesg = 'hey'
 
-    def convert_IF_to_FFT_data(self, position_vector, efficiency_vector, distance_per_step=250.39-9, steps_per_point=500, quick_plot=True):
+    def convert_IF_to_FFT_data(self, position_vector, efficiency_vector, distance_per_step=1, steps_per_point=500, quick_plot=True):
         '''
         Returns a frequency and efficiency vector from the inteferogram data and the input
         params of the FTS setup being used
@@ -27,7 +27,10 @@ class Fourier():
         Outputs:
             frequency_vector: the extracted frequency vector
             efficiency_vector: the extracted frequency vector
+
         '''
+        position_vector = np.asarray(position_vector)
+        efficiency_vector = np.asarray(efficiency_vector)
         efficiency_left_data, efficiency_right_data, position_left_data, position_right_data =\
             self.split_data_into_left_right_points(position_vector, efficiency_vector)
         symmetric_position_data = self.make_data_symmetric(position_right_data, position=True)
@@ -36,7 +39,7 @@ class Fourier():
         xf = np.arange(symmetric_efficiency_data.size)
         frequency_vector, fft_vector = self.compute_fourier_transform(symmetric_position_data, poly_subtracted_data, distance_per_step,
                                                                       steps_per_point, quick_plot=quick_plot)
-        return xf, fft_vector
+        return frequency_vector, fft_vector
 
     def split_data_into_left_right_points(self, position_vector, efficiency_vector):
         efficiency_left_data = efficiency_vector[position_vector < 0]
@@ -102,7 +105,7 @@ class Fourier():
             fig.subplots_adjust(bottom=0.15, top =0.96, left=0.13, right=0.68, hspace=0.44)
             ax1 = fig.add_subplot(211)
             ax2 = fig.add_subplot(212)
-            ax1.plot(frequency_vector, peak_normalized_fft_vector, label='Spectra')
+            ax1.plot(frequency_vector / 1e9, peak_normalized_fft_vector, label='Spectra')
             ax2.plot(position_vector, efficiency_data, label='IF Data')
             ax1.set_xlabel('Frequency (GHz)', fontsize=16)
             ax1.set_ylabel('Normalized \n efficiency', fontsize=16)
@@ -112,8 +115,9 @@ class Fourier():
             for axis in fig.get_axes():
                 handles, labels = axis.get_legend_handles_labels()
                 axis.legend(handles, labels, numpoints=1, loc=2, bbox_to_anchor=(1.01, 1.0))
-            fig.show()
-            self._ask_user_if_they_want_to_quit()
+            fig.savefig('temp_fft.png')
+            pl.close('all')
+            #self._ask_user_if_they_want_to_quit()
         return frequency_vector, peak_normalized_fft_vector
 
     def run_test(self, data_points=1000, spacing=150.):
