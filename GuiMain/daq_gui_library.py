@@ -20,6 +20,7 @@ from FTS_Curves.numerical_processing import Fourier
 from POL_Curves.plot_pol_curves import POLCurve
 from Stepper_Motor.stepper import Stepper
 from FTS_DAQ.fts_daq import FTSDAQ
+from BeamMapping.beam_map_daq import BeamMapDAQ
 
 
 class GuiTemplate(QtGui.QWidget):
@@ -67,6 +68,18 @@ class GuiTemplate(QtGui.QWidget):
         for entry_str in entries:
             entry = QtCore.QString(entry_str)
             getattr(self, unique_combobox_name).addItem(entry)
+
+    def _get_com_port(self):
+        com_port = str(getattr(self, '_user_move_stepper_popup_current_com_port_combobox').currentText())
+        return com_port
+
+    def _get_all_scan_params(self, popup=None):
+        if popup is None:
+            popup = str(self.sender().whatsThis()).split('_popup')[0]
+        widget = '_get_all{0}_scan_params'.format(popup)
+        print widget
+        if hasattr(self, widget):
+            return getattr(self, widget)()
 
     #################################################
     #################################################
@@ -134,9 +147,6 @@ class GuiTemplate(QtGui.QWidget):
         getattr(self, '_user_move_stepper_popup_current_position_header_label').setText(header_str)
         getattr(self, '_user_move_stepper_popup_current_position_label').setText(str(stepper_position))
 
-    def _get_com_port(self):
-        com_port = str(getattr(self, '_user_move_stepper_popup_current_com_port_combobox').currentText())
-        return com_port
 
     #################################################
     # SINGLE CHANNEL FTS BILLS 
@@ -159,7 +169,7 @@ class GuiTemplate(QtGui.QWidget):
         self.single_channel_fts_popup.show()
         self.single_channel_fts_popup.setWindowTitle('Single Channel FTS')
 
-    def _get_all_scan_params(self):
+    def _get_all_single_channel_fts_scan_params(self):
         scan_params = {}
         for fts_run_setting in settings.fts_int_run_settings:
             pull_from_widget_name = '_single_channel_fts_popup_{0}_lineedit'.format(fts_run_setting)
@@ -211,7 +221,7 @@ class GuiTemplate(QtGui.QWidget):
         return resolution, highest_frequency
 
     def _update_single_channel_fts(self):
-        scan_params = self._get_all_scan_params()
+        scan_params = self._get_all_single_channel_fts_scan_params()
         if type(scan_params) is not dict:
             return None
         # Update Slider
@@ -282,12 +292,93 @@ class GuiTemplate(QtGui.QWidget):
         self.beam_mapper_popup.close()
 
     def _beam_mapper(self):
+        self.beam_map_daq = BeamMapDAQ()
         if not hasattr(self, 'beam_mapper_popup'):
             self._create_popup_window('beam_mapper_popup')
         else:
             self._initialize_panel('beam_mapper_popup')
         self._build_panel(settings.beam_mapper_build_dict)
+        for combobox_widget, entry_list in self.beam_mapper_combobox_entry_dict.iteritems():
+            self.populate_combobox(combobox_widget, entry_list)
         self.beam_mapper_popup.show()
+        self._initialize_beam_mapper()
+        self.beam_mapper_popup.repaint()
+
+    def _get_all_beam_mapper_scan_params(self):
+        scan_params = {}
+        for beam_map_setting in settings.beam_map_int_settings:
+            pull_from_widget_name = '_beam_mapper_popup_{0}_lineedit'.format(beam_map_setting)
+            print pull_from_widget_name
+            if not hasattr(self, pull_from_widget_name):
+                return None
+            value = getattr(self, pull_from_widget_name).text()
+            if len(str(value)) == 0:
+                value = 0
+            else:
+                value = int(value)
+            scan_params[beam_map_setting] = value
+        scan_param = self._get_grid(scan_params)
+        return scan_params
+
+    def _get_grid(self, scan_params):
+        x_total = scan_params['end_x_position'] - scan_params['start_x_position']
+        x_steps = x_total / scan_params['n_points_x']
+        scan_params['step_size_x'] = x_steps
+        scan_params['x_total'] = x_total
+        getattr(self, '_beam_mapper_popup_step_size_x_label').setText('{0} cm'.format(str(x_steps)))
+        getattr(self, '_beam_mapper_popup_total_x_label').setText('{0} cm'.format(str(x_total)))
+        y_total = scan_params['end_y_position'] - scan_params['start_y_position']
+        y_steps = y_total / scan_params['n_points_y']
+        getattr(self, '_beam_mapper_popup_step_size_y_label').setText('{0} cm'.format(str(y_steps)))
+        getattr(self, '_beam_mapper_popup_total_y_label').setText('{0} cm'.format(str(y_total)))
+        scan_params['step_size_y'] = y_steps
+        scan_params['y_total'] = y_total
+        return scan_params
+
+    def _create_beam_grid(self, scan_params):
+        pprint(scan_params)
+        fig = pl.figure(figsize=(3,3))
+        ax = fig.add_subplot(111)
+        #fig.savefig('temp_beam_map.png')
+        pl.close('all')
+
+    def _initialize_beam_mapper(self):
+        print self.sender()
+        if len(str(self.sender().whatsThis())) == 0:
+            return None
+        else:
+            scan_params = self._get_all_scan_params(popup='_beam_mapper')
+            print scan_params
+            if scan_params is not None and len(scan_params) > 0:
+                self.beam_map_daq.simulate_beam(scan_params)
+                image = QtGui.QPixmap('temp_beam.png')
+                image = image.scaled(350, 175)
+                getattr(self, '_beam_mapper_popup_2D_plot_label').setPixmap(image)
+
+    def _take_beam_map(self):
+        scan_params = self._get_all_scan_params(popup='_beam_mapper')
+        X, Y, Z_sim = self.beam_map_daq.simulate_beam(scan_params)
+        print Z_sim
+        Z_data = np.zeros(shape=X.shape)
+        x_grid = np.linspace(scan_params['start_x_position'], scan_params['end_x_position'],  scan_params['n_points_x'])
+        y_grid = np.linspace(scan_params['start_y_position'], scan_params['end_y_position'],  scan_params['n_points_y'])
+        for i, x_pos in enumerate(x_grid):
+            for j, y_pos in enumerate(y_grid):
+                print x_pos, y_pos
+                Z_datum = self.beam_map_daq.get_value(x_pos, y_pos, scan_params)
+                Z_data[i][j] = Z_datum
+                fig = pl.figure()
+                ax = fig.add_subplot(111)
+                ax.pcolor(X, Y, Z_data)
+                fig.savefig('temp_beam.png')
+                pl.close('all')
+                image = QtGui.QPixmap('temp_beam.png')
+                image = image.scaled(350, 175)
+                getattr(self, '_beam_mapper_popup_2D_plot_label').setPixmap(image)
+                self.beam_mapper.repaint()
+                #import ipdb;ipdb.set_trace()
+
+
 
     #################################################
     # WIDGET GENERATORS AND FUNCTIONS
