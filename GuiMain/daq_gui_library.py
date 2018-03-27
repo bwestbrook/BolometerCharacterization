@@ -86,7 +86,7 @@ class GuiTemplate(QtGui.QWidget):
 
     #################################################
     #################################################
-    # DAQ TYP SPECFIC CODES 
+    # DAQ TYPE SPECFIC CODES 
     #################################################
     #################################################
 
@@ -117,7 +117,16 @@ class GuiTemplate(QtGui.QWidget):
         com_port = self._get_com_port()
         self.stepper.connect_to_com_port(com_port)
         #### SOME CODE HERE TO CONNECT TO BACKEND ####
+        #### SOME CODE HERE TO CONNECT TO BACKEND ####
+        #### SOME CODE HERE TO CONNECT TO BACKEND ####
+        #### SOME CODE HERE TO CONNECT TO BACKEND ####
+        #### SOME CODE HERE TO CONNECT TO BACKEND ####
         connected_to_com_port = self.stepper.connect_to_com_port(com_port)
+        #### SOME CODE HERE TO CONNECT TO BACKEND ####
+        #### SOME CODE HERE TO CONNECT TO BACKEND ####
+        #### SOME CODE HERE TO CONNECT TO BACKEND ####
+        #### SOME CODE HERE TO CONNECT TO BACKEND ####
+        #### SOME CODE HERE TO CONNECT TO BACKEND ####
         old_stepper_position = self._get_stepper_position()
         move_to_position = getattr(self, '_user_move_stepper_popup_lineedit').setText(str(old_stepper_position))
         self._update_stepper_position()
@@ -148,7 +157,6 @@ class GuiTemplate(QtGui.QWidget):
         header_str = '{0} Current Position:'.format(com_port)
         getattr(self, '_user_move_stepper_popup_current_position_header_label').setText(header_str)
         getattr(self, '_user_move_stepper_popup_current_position_label').setText(str(stepper_position))
-
 
     #################################################
     # SINGLE CHANNEL FTS BILLS 
@@ -225,13 +233,6 @@ class GuiTemplate(QtGui.QWidget):
 
     def _update_single_channel_fts(self):
         scan_params = self._get_all_scan_params(popup='_single_channel_fts')
-        print scan_params
-        print
-        print
-        print
-        print
-        print
-        print
         if type(scan_params) is not dict:
             return None
         # Update Slider
@@ -262,7 +263,6 @@ class GuiTemplate(QtGui.QWidget):
 
     def _run_fts(self):
         scan_params = self._get_all_scan_params(popup='_single_channel_fts')
-        #self.fts_daq.run_fts(scan_params)
         positions, data = [], []
         for position in np.arange(scan_params['starting_position'], scan_params['ending_position'],
                                   scan_params['step_size']):
@@ -436,7 +436,11 @@ class GuiTemplate(QtGui.QWidget):
             if unique_widget_name != '_common_settings':
                 widget_settings_copy.update(widget_settings)
                 widget_settings_copy.update({'parent': parent})
+                print
+                print
+                print unique_widget_name
                 for widget_param, widget_param_value in widget_settings.iteritems():
+                    print widget_param, widget_param_value
                     if 'function' == widget_param:
                         widget_function = self._unpack_widget_function(widget_param_value)
                         widget_settings_copy.update({'function':  widget_function})
