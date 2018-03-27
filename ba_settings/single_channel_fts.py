@@ -77,26 +77,21 @@ single_channel_fts_settings.single_channel_fts_build_dict = {
 
                                                              '_single_channel_fts_popup_close_pushbutton': {'text': 'Close', 'function': '_close_single_channel_fts', 'position': (17, 3, 1, 1)},
 
-# SCAN MONITORING 
-                                                             '_single_channel_fts_popup_scan_monitor_label': {'text': 'SCAN MONITOR', 'font': 'huge', 'color': 'blue', 'alignment': 'Center', 'position': (19, 0, 1, 4)},
+# VISUAL DATA MONITORING 
+                                                             '_single_channel_fts_popup_position_monitor_slider': {'function': None, 'position': (0, 7, 1, 4), 'orientation': 'Horizontal'},
 
-                                                             '_single_channel_fts_popup_mean_header_label': {'text': 'Time Average:', 'position': (20, 0, 1, 1)},
-                                                             '_single_channel_fts_popup_mean_label': {'text': '0', 'position': (20, 1, 1, 1)},
+                                                             '_single_channel_fts_popup_mean_header_label': {'text': 'Time Average:', 'position': (1, 7, 1, 1)},
+                                                             '_single_channel_fts_popup_mean_label': {'text': '0', 'position': (1, 8, 1, 1)},
 
-                                                             '_single_channel_fts_popup_std_header_label': {'text': 'Standard Dev:', 'position': (20, 2, 1, 1)},
-                                                             '_single_channel_fts_popup_std_label': {'text': '0', 'position': (20, 3, 1, 1)},
+                                                             '_single_channel_fts_popup_std_header_label': {'text': 'Standard Dev:', 'position': (1, 10, 1, 1)},
+                                                             '_single_channel_fts_popup_std_label': {'text': '0', 'position': (1, 11, 1, 1)},
 
-                                                             '_single_channel_fts_popup_current_position_header_label': {'text': 'Current Position (White):', 'position': (21, 0, 1, 1)},
-                                                             '_single_channel_fts_popup_current_position_label': {'text': '0', 'position': (21, 1, 1, 1)},
+                                                             '_single_channel_fts_popup_current_position_header_label': {'text': 'Current Position (White):', 'position': (2, 10, 1, 1)},
+                                                             '_single_channel_fts_popup_current_position_label': {'text': '0', 'position': (2, 11, 1, 1)},
 
                                                              '_single_channel_fts_popup_position_slider_min_label': {'position': (22, 0, 1, 1)},
                                                              '_single_channel_fts_popup_position_slider_max_label': {'position': (22, 5, 1, 1)},
-                                                             '_single_channel_fts_popup_position_monitor_slider': {'function': None, 'position': (22, 1, 1, 4), 'orientation': 'Horizontal'},
 
-                                                             '_single_channel_fts_popup_monitor_panel': {'function': None, 'position': (22, 1, 1, 4), 'orientation': 'Horizontal'},
-
-
-# VISUAL DATA MONITORING 
                                                              '_single_channel_fts_popup_data_monitor_label': {'text': 'VISUAL DATA MONITOR', 'font': 'huge', 'color': 'blue',
                                                                                                               'alignment': 'Center', 'position': (0, 7, 1, 4)},
 

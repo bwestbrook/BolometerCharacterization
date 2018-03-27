@@ -487,10 +487,6 @@ class GuiTemplate(QtGui.QWidget):
                 widget.valueChanged.connect(function)
             elif widget_type in ('QPushButton', 'QCheckBox'):
                 widget.clicked.connect(function)
-                #button_icon = QtGui.QIcon()
-                #button_icon.addFile('./resources/Bolo_Chip.jpg')
-                #widget.setIcon(button_icon)
-                #widget.setIconSize(QtCore.QSize(50, 50))
             elif widget_type in ('QLineEdit', 'QTextEdit'):
                 widget.textChanged.connect(function)
             elif widget_type in ('QComboBox',):
