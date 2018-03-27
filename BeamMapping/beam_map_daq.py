@@ -1,6 +1,6 @@
 import numpy as np
 import pylab as pl
-import DAQ.daq as DAQ
+from DAQ.daq import DAQ
 
 class BeamMapDAQ():
 

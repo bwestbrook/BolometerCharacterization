@@ -21,6 +21,7 @@ from POL_Curves.plot_pol_curves import POLCurve
 from Stepper_Motor.stepper import Stepper
 from FTS_DAQ.fts_daq import FTSDAQ
 from BeamMapping.beam_map_daq import BeamMapDAQ
+from DAQ.daq import DAQ
 
 
 class GuiTemplate(QtGui.QWidget):
@@ -36,6 +37,8 @@ class GuiTemplate(QtGui.QWidget):
         self.selected_files = []
         self.current_stepper_position = 100
         self.daq_main_panel_widget.show()
+        self.daq = DAQ()
+        self.stepper = Stepper()
 
     def __apply_settings__(self, settings):
         for setting in dir(settings):
@@ -76,10 +79,10 @@ class GuiTemplate(QtGui.QWidget):
     def _get_all_scan_params(self, popup=None):
         if popup is None:
             popup = str(self.sender().whatsThis()).split('_popup')[0]
-        widget = '_get_all{0}_scan_params'.format(popup)
-        print widget
-        if hasattr(self, widget):
-            return getattr(self, widget)()
+
+        function = '_get_all{0}_scan_params'.format(popup)
+        if hasattr(self, function):
+            return getattr(self, function)()
 
     #################################################
     #################################################
@@ -95,7 +98,6 @@ class GuiTemplate(QtGui.QWidget):
         self.user_move_stepper_popup.close()
 
     def _user_move_stepper(self):
-        self.stepper = Stepper()
         if not hasattr(self, 'user_move_stepper_popup'):
             self._create_popup_window('user_move_stepper_popup')
         else:
@@ -173,26 +175,27 @@ class GuiTemplate(QtGui.QWidget):
         scan_params = {}
         for fts_run_setting in settings.fts_int_run_settings:
             pull_from_widget_name = '_single_channel_fts_popup_{0}_lineedit'.format(fts_run_setting)
-            if not hasattr(self, pull_from_widget_name):
-                return None
-            value = getattr(self, pull_from_widget_name).text()
-            if len(str(value)) == 0:
-                value = 0
-            else:
-                value = int(value)
-            scan_params[fts_run_setting] = value
+            if hasattr(self, pull_from_widget_name):
+                value = getattr(self, pull_from_widget_name).text()
+                if len(str(value)) == 0:
+                    value = 0
+                else:
+                    value = int(value)
+                scan_params[fts_run_setting] = value
         for fts_run_setting in settings.fts_pulldown_run_settings:
             pull_from_widget_name = '_single_channel_fts_popup_{0}_combobox'.format(fts_run_setting)
-            value = str(getattr(self, pull_from_widget_name).currentText())
-            scan_params[fts_run_setting] = value
+            if hasattr(self, pull_from_widget_name):
+                value = str(getattr(self, pull_from_widget_name).currentText())
+                scan_params[fts_run_setting] = value
         for fts_run_setting in settings.fts_float_run_settings:
             pull_from_widget_name = '_single_channel_fts_popup_{0}_lineedit'.format(fts_run_setting)
-            value = getattr(self, pull_from_widget_name).text()
-            if len(str(value)) == 0:
-                value = 0
-            else:
-                value = float(value)
-            scan_params[fts_run_setting] = value
+            if hasattr(self, pull_from_widget_name):
+                value = getattr(self, pull_from_widget_name).text()
+                if len(str(value)) == 0:
+                    value = 0
+                else:
+                    value = float(value)
+                scan_params[fts_run_setting] = value
         return scan_params
 
     def _compute_fft(self, positions, data, scan_params):
@@ -221,17 +224,25 @@ class GuiTemplate(QtGui.QWidget):
         return resolution, highest_frequency
 
     def _update_single_channel_fts(self):
-        scan_params = self._get_all_single_channel_fts_scan_params()
+        scan_params = self._get_all_scan_params(popup='_single_channel_fts')
+        print scan_params
+        print
+        print
+        print
+        print
+        print
+        print
         if type(scan_params) is not dict:
             return None
         # Update Slider
-        resolution, highest_frequency = self._compute_resolution_and_max_frequency(scan_params)
-        resolution_widget = '_single_channel_fts_popup_resolution_label'
-        getattr(self, resolution_widget).setText(resolution)
-        highest_frequency_widget = '_single_channel_fts_popup_highest_frequency_label'
-        getattr(self, highest_frequency_widget).setText(highest_frequency)
-        # Update Slider
-        self._update_slider_setup(scan_params)
+        if 'starting_position' in scan_params and 'ending_position' in scan_params:
+            resolution, highest_frequency = self._compute_resolution_and_max_frequency(scan_params)
+            resolution_widget = '_single_channel_fts_popup_resolution_label'
+            getattr(self, resolution_widget).setText(resolution)
+            highest_frequency_widget = '_single_channel_fts_popup_highest_frequency_label'
+            getattr(self, highest_frequency_widget).setText(highest_frequency)
+            # Update Slider
+            self._update_slider_setup(scan_params)
         self.single_channel_fts_popup.repaint()
 
     def _update_slider(self, slider_pos):
@@ -250,13 +261,13 @@ class GuiTemplate(QtGui.QWidget):
         self.starting_position = scan_params['starting_position']
 
     def _run_fts(self):
-        scan_params = self._get_all_scan_params()
-        self.fts_daq.run_fts(scan_params)
+        scan_params = self._get_all_scan_params(popup='_single_channel_fts')
+        #self.fts_daq.run_fts(scan_params)
         positions, data = [], []
         for position in np.arange(scan_params['starting_position'], scan_params['ending_position'],
                                   scan_params['step_size']):
-            data_time_stream, mean, min_, max_, std = self.fts_daq.get_data(position, scan_params)
-            time.sleep(scan_params['pause_time'] / 1000.)
+            data_time_stream, mean, min_, max_, std = self.daq.get_data(signal_channel=scan_params['signal_channel'], integration_time=scan_params['integration_time'],
+                                                                        sample_rate=scan_params['sample_rate'])
             getattr(self, '_single_channel_fts_popup_std_label').setText(str(std))
             getattr(self, '_single_channel_fts_popup_mean_label').setText(str(mean))
             getattr(self, '_single_channel_fts_popup_current_position_label').setText(str(position))
@@ -308,16 +319,25 @@ class GuiTemplate(QtGui.QWidget):
         scan_params = {}
         for beam_map_setting in settings.beam_map_int_settings:
             pull_from_widget_name = '_beam_mapper_popup_{0}_lineedit'.format(beam_map_setting)
+            print beam_map_setting
             print pull_from_widget_name
-            if not hasattr(self, pull_from_widget_name):
-                return None
-            value = getattr(self, pull_from_widget_name).text()
-            if len(str(value)) == 0:
-                value = 0
-            else:
-                value = int(value)
-            scan_params[beam_map_setting] = value
-        scan_param = self._get_grid(scan_params)
+            print hasattr(self, pull_from_widget_name)
+            print
+            print
+            print
+            if hasattr(self, pull_from_widget_name):
+                value = getattr(self, pull_from_widget_name).text()
+                if len(str(value)) == 0:
+                    value = 0
+                else:
+                    value = int(value)
+                scan_params[beam_map_setting] = value
+        for beam_map_setting in settings.beam_map_pulldown_run_settings:
+            pull_from_widget_name = '_beam_mapper_popup_{0}_combobox'.format(beam_map_setting)
+            if hasattr(self, pull_from_widget_name):
+                value = str(getattr(self, pull_from_widget_name).currentText())
+                scan_params[beam_map_setting] = value
+        scan_params = self._get_grid(scan_params)
         return scan_params
 
     def _get_grid(self, scan_params):
@@ -336,19 +356,16 @@ class GuiTemplate(QtGui.QWidget):
         return scan_params
 
     def _create_beam_grid(self, scan_params):
-        pprint(scan_params)
         fig = pl.figure(figsize=(3,3))
         ax = fig.add_subplot(111)
         #fig.savefig('temp_beam_map.png')
         pl.close('all')
 
     def _initialize_beam_mapper(self):
-        print self.sender()
         if len(str(self.sender().whatsThis())) == 0:
             return None
         else:
             scan_params = self._get_all_scan_params(popup='_beam_mapper')
-            print scan_params
             if scan_params is not None and len(scan_params) > 0:
                 self.beam_map_daq.simulate_beam(scan_params)
                 image = QtGui.QPixmap('temp_beam.png')
@@ -357,26 +374,37 @@ class GuiTemplate(QtGui.QWidget):
 
     def _take_beam_map(self):
         scan_params = self._get_all_scan_params(popup='_beam_mapper')
-        X, Y, Z_sim = self.beam_map_daq.simulate_beam(scan_params)
-        print Z_sim
-        Z_data = np.zeros(shape=X.shape)
         x_grid = np.linspace(scan_params['start_x_position'], scan_params['end_x_position'],  scan_params['n_points_x'])
         y_grid = np.linspace(scan_params['start_y_position'], scan_params['end_y_position'],  scan_params['n_points_y'])
+        X, Y = np.meshgrid(x_grid, y_grid)
+        Z_data = np.zeros(shape=X.shape)
+        X_sim, Y_sim, Z_sim = self.beam_map_daq.simulate_beam(scan_params)
         for i, x_pos in enumerate(x_grid):
             for j, y_pos in enumerate(y_grid):
                 print x_pos, y_pos
-                Z_datum = self.beam_map_daq.get_value(x_pos, y_pos, scan_params)
-                Z_data[i][j] = Z_datum
+                central_value = Z_sim[i][j]
+                data_time_stream, mean, min_, max_, std = self.daq.get_data(signal_channel=scan_params['signal_channel'], integration_time=scan_params['integration_time'],
+                                                                            sample_rate=scan_params['sample_rate'], central_value=central_value)
+                Z_datum = mean
+                Z_data[j][i] = Z_datum
                 fig = pl.figure()
                 ax = fig.add_subplot(111)
                 ax.pcolor(X, Y, Z_data)
+                ax.set_title('BEAM DATA', fontsize=12)
+                ax.set_xlabel('Position (cm)', fontsize=12)
+                ax.set_ylabel('Position (cm)', fontsize=12)
                 fig.savefig('temp_beam.png')
                 pl.close('all')
+                image = QtGui.QPixmap('temp_ts.png')
+                image = image.scaled(350, 175)
+                getattr(self, '_beam_mapper_popup_time_stream_label').setPixmap(image)
                 image = QtGui.QPixmap('temp_beam.png')
                 image = image.scaled(350, 175)
                 getattr(self, '_beam_mapper_popup_2D_plot_label').setPixmap(image)
-                self.beam_mapper.repaint()
-                #import ipdb;ipdb.set_trace()
+                getattr(self, '_beam_mapper_popup_data_mean_label').setText(str(mean))
+                getattr(self, '_beam_mapper_popup_x_position_label').setText(str(x_pos))
+                getattr(self, '_beam_mapper_popup_y_position_label').setText(str(y_pos))
+                self.beam_mapper_popup.repaint()
 
 
 

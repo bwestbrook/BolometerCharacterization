@@ -47,10 +47,10 @@ beam_mapper_settings.beam_mapper_build_dict = {
                                                '_beam_mapper_popup_end_y_position_lineedit': {'function': '_initialize_beam_mapper', 'text': '50', 'position': (7, 3, 1, 1)},
 
                                                '_beam_mapper_popup_n_points_x_header_label': {'text': 'N points X', 'position': (8, 0, 1, 1)},
-                                               '_beam_mapper_popup_n_points_x_lineedit': {'text': '15', 'position': (8, 1, 1, 1)},
+                                               '_beam_mapper_popup_n_points_x_lineedit': {'text': '10', 'position': (8, 1, 1, 1)},
 
                                                '_beam_mapper_popup_n_points_y_header_label': {'text': 'N points Y', 'position': (8, 2, 1, 1)},
-                                               '_beam_mapper_popup_n_points_y_lineedit': {'text': '15', 'position': (8, 3, 1, 1)},
+                                               '_beam_mapper_popup_n_points_y_lineedit': {'text': '10', 'position': (8, 3, 1, 1)},
 
                                                '_beam_mapper_popup_total_x_header_label': {'text': 'Total X', 'position': (9, 0, 1, 1)},
                                                '_beam_mapper_popup_total_x_label': {'text': '', 'position': (9, 1, 1, 1)},
@@ -58,15 +58,23 @@ beam_mapper_settings.beam_mapper_build_dict = {
                                                '_beam_mapper_popup_total_y_header_label': {'text': 'Total Y', 'position': (9, 2, 1, 1)},
                                                '_beam_mapper_popup_total_y_label': {'text': '', 'position': (9, 3, 1, 1)},
 
-                                               '_beam_mapper_popup_step_size_y_header_label': {'text': 'Step Size Y', 'position': (10, 2, 1, 1)},
-                                               '_beam_mapper_popup_step_size_y_label': {'text': '', 'position': (10, 3, 1, 1)},
-
                                                '_beam_mapper_popup_step_size_x_header_label': {'text': 'Step Size X', 'position': (10, 0, 1, 1)},
                                                '_beam_mapper_popup_step_size_x_label': {'text': '', 'position': (10, 1, 1, 1)},
 
                                                '_beam_mapper_popup_step_size_y_header_label': {'text': 'Step Size Y', 'position': (10, 2, 1, 1)},
                                                '_beam_mapper_popup_step_size_y_label': {'text': '', 'position': (10, 3, 1, 1)},
 
+                                               '_beam_mapper_popup_integration_time_header_label': {'text': 'Integration Time (ms):', 'position': (11, 0, 1, 1)},
+                                               '_beam_mapper_popup_integration_time_lineedit': {'text': '100', 'position': (11, 1, 1, 1)},
+
+                                               '_beam_mapper_popup_pause_time_header_label': {'text': 'Pause (ms):', 'position': (11, 2, 1, 1)},
+                                               '_beam_mapper_popup_pause_time_lineedit': {'text': '100', 'position': (11, 3, 1, 1)},
+
+                                               '_beam_mapper_popup_signal_channel_header_label': {'text': 'Signal Channel', 'position': (12, 0, 1, 1)},
+                                               '_beam_mapper_popup_signal_channel_combobox': {'position': (12, 1, 1, 1)},
+
+                                               '_beam_mapper_popup_sample_rate_header_label': {'text': 'Sample Rate (Hz):', 'position': (12, 2, 1, 1)},
+                                               '_beam_mapper_popup_sample_rate_combobox': {'position': (12, 3, 1, 1)},
 #CONTROL
                                                '_beam_mapper_popup_controls_label': {'text': 'CONTROLS', 'alignment': 'Center', 'font': 'huge', 'color': 'blue', 'position': (13, 0, 1, 6)},
 
@@ -84,14 +92,27 @@ beam_mapper_settings.beam_mapper_build_dict = {
                                                '_beam_mapper_popup_y_position_header_label': {'text': 'Y Pos (cm)', 'position': (1, 10, 1, 1)},
                                                '_beam_mapper_popup_y_position_label': {'text': '', 'position': (1, 11, 1, 1)},
 
-                                               '_beam_mapper_popup_2D_plot_label': {'position': (2, 8, 4, 4)},
+                                               '_beam_mapper_popup_data_mean_header_label': {'text': 'Data Mean:', 'position': (2, 8, 1, 1)},
+                                               '_beam_mapper_popup_data_mean_label': {'text': '', 'position': (2, 9, 1, 1)},
+
+                                               '_beam_mapper_popup_data_std_header_label': {'text': 'Data STD:', 'position': (2, 10, 1, 1)},
+                                               '_beam_mapper_popup_data_std_label': {'text': '', 'position': (2, 11, 1, 1)},
+
+                                               '_beam_mapper_popup_time_stream_label': {'position': (3, 8, 4, 4)},
+
+                                               '_beam_mapper_popup_2D_plot_label': {'position': (10, 8, 4, 4)},
                                                }
 
 beam_mapper_settings.motor_currents = np.linspace(1, 1, 10)
 beam_mapper_settings.beam_mapper_combobox_entry_dict = {'_beam_mapper_popup_x_motor_combobox': ['COM1', 'COM2', 'COM3', 'COM4'],
-                                                        '_beam_mapper_popup_y_motor_combobox': ['COM1', 'COM2', 'COM3', 'COM4']}
+                                                        '_beam_mapper_popup_y_motor_combobox': ['COM1', 'COM2', 'COM3', 'COM4'],
+                                                        '_beam_mapper_popup_sample_rate_combobox': ['50', '100', '250', '500', '1000'],
+                                                        '_beam_mapper_popup_signal_channel_combobox': ['0', '1', '2', '3', '4', '5', '6', '7']}
 
-beam_mapper_settings.beam_map_int_settings = ['n_points_x', 'n_points_y', 'start_x_position', 'end_x_position', 'start_y_position', 'end_y_position']
+beam_mapper_settings.beam_map_int_settings = ['n_points_x', 'start_x_position', 'end_x_position',
+                                              'n_points_y', 'start_y_position', 'end_y_position',
+                                              'integration_time', 'pause_time']
 
+beam_mapper_settings.beam_map_pulldown_run_settings = ['x_motor', 'y_motor', 'signal_channel', 'sample_rate']
 
 

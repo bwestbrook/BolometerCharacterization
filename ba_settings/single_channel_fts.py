@@ -31,7 +31,7 @@ single_channel_fts_settings.single_channel_fts_build_dict = {
                                                              '_single_channel_fts_popup_pause_time_lineedit': {'text': '100', 'position': (5, 3, 1, 1)},
 
                                                              '_single_channel_fts_popup_sample_rate_header_label': {'text': 'Sample Rate (Hz):', 'position': (5, 4, 1, 1)},
-                                                             '_single_channel_fts_popup_sample_rate_lineedit': {'text': '50', 'position': (5, 5, 1, 1)},
+                                                             '_single_channel_fts_popup_sample_rate_combobox': {'position': (5, 5, 1, 1)},
 # DERIVED QUANTITIES 
 
                                                              '_single_channel_fts_popup_number_of_steps_header_label': {'text': 'Number of Steps:', 'position': (4, 0, 1, 1)},
@@ -69,7 +69,7 @@ single_channel_fts_settings.single_channel_fts_build_dict = {
 # CONTROL BUTTONS 
                                                              '_single_channel_fts_popup_control_buttons_label': {'text': 'CONTROLS', 'font': 'huge', 'color': 'blue', 'alignment': 'Center', 'position': (16, 0, 1, 4)},
 
-                                                             '_single_channel_fts_popup_scan_pushbutton': {'text': 'Scan', 'function': '_run_fts', 'position': (17, 0, 1, 1)},
+                                                             '_single_channel_fts_popup_start_pushbutton': {'text': 'Start', 'function': '_run_fts', 'position': (17, 0, 1, 1)},
 
                                                              '_single_channel_fts_popup_pause_pushbutton': {'text': 'Pause', 'function': '_dummy', 'position': (17, 1, 1, 1)},
 
@@ -123,10 +123,12 @@ single_channel_fts_settings.combobox_entry_dict = {
                                                    '_single_channel_fts_popup_carrier_type_combobox': ['phone', 'e-mail'],
                                                    '_single_channel_fts_popup_apodization_type_combobox': ['BOXCAR', 'TRIAGNULAR'],
                                                    '_single_channel_fts_popup_stepper_motor_combobox': ['COM1', 'COM2', 'COM3', 'COM4'],
+                                                   '_single_channel_fts_popup_sample_rate_combobox': ['50', '100', '250', '500', '1000'],
                                                    }
 
 
 single_channel_fts_settings.fts_int_run_settings = ['starting_position', 'ending_position', 'step_size', 'integration_time', 'pause_time', 'sample_rate']
 single_channel_fts_settings.fts_float_run_settings = ['DistPerStep']
-single_channel_fts_settings.fts_pulldown_run_settings = ['stepper_motor', 'signal_channel']
+single_channel_fts_settings.fts_pulldown_run_settings = ['stepper_motor', 'signal_channel', 'sample_rate']
+
 
