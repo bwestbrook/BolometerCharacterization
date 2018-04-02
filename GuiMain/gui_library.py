@@ -378,6 +378,17 @@ class GuiTemplate(QtGui.QWidget):
             print unique_widget_name
             self._create_and_place_widget(unique_widget_name, **widget_settings)
             getattr(self, unique_widget_name).setChecked(False)
+            row += 1
+            unique_widget_name = '_{0}_{1}_load_spectra_pushbutton'.format(popup_name, col)
+            widget_settings = {'text': 'Load Spectra', 'function': self._load_spectra,
+                               'position': (row, col, 1, 1)}
+            print unique_widget_name
+            self._create_and_place_widget(unique_widget_name, **widget_settings)
+            unique_widget_name = '_{0}_{1}_loaded_spectra_label'.format(popup_name, col)
+            widget_settings = {'text': '',
+                               'position': (row, col + 1, 1, 1)}
+            print unique_widget_name
+            self._create_and_place_widget(unique_widget_name, **widget_settings)
             row = 3
         if not hasattr(self, popup_name):
             self._create_popup_window(popup_name)
@@ -388,7 +399,7 @@ class GuiTemplate(QtGui.QWidget):
         list_of_input_dicts = []
         iv_settings = ['voltage_conversion', 'label', 'squid_conversion', 'color', 'fracrn',
                        'v_fit_lo', 'v_fit_hi', 'v_plot_lo', 'v_plot_hi', 'v_plot_lo', 'v_plot_hi',
-                       'calibration_resistance', 'calibrate', 'difference']
+                       'calibration_resistance', 'calibrate', 'difference', 'loaded_spectra']
         for selected_file, col in self.selected_files_col_dict.iteritems():
             input_dict = {'data_path': selected_file}
             for setting in iv_settings:
@@ -418,6 +429,14 @@ class GuiTemplate(QtGui.QWidget):
             pprint(input_dict)
             list_of_input_dicts.append(copy(input_dict))
         return list_of_input_dicts
+
+    def _load_spectra(self):
+        sender_str = str(self.sender().whatsThis())
+        base = sender_str.split('_load')[0]
+        data_path = QtGui.QFileDialog.getOpenFileName(self, 'Open file', self.data_folder)
+        set_to_widget = '{0}_loaded_spectra_label'.format(base)
+        short_data_path = data_path.split('BolometerCharacterization')[-1]
+        getattr(self, set_to_widget).setText(str(short_data_path))
 
     def _plot_ivcurve(self):
         selected_files = list(set(self.selected_files))

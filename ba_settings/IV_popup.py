@@ -30,5 +30,7 @@ ivcurve_settings_popup_settings.ivcurve_popup_build_dict = {
                                                             '_ivcurve_settings_popup_calibrate_squid_label': {'text': 'Calibrate?',
                                                                                                               'position': (15, 0, 1, 1)},
                                                             '_ivcurve_settings_popup_difference_label': {'text': 'Difference?',
-                                                                                                         'position': (16, 0, 1, 1)}
+                                                                                                         'position': (16, 0, 1, 1)},
+                                                            '_ivcurve_settings_popup_spectra_label': {'text': 'Load Spectra:',
+                                                                                                      'position': (17, 0, 1, 1)}
                                                            }
