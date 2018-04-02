@@ -18,14 +18,14 @@ def load_FFT_data(data_path):
     produced by Toki's LabView software
     '''
     with open(data_path, 'r') as file_handle:
-            lines = file_handle.readlines()
-            frequency_vector = np.zeros(len(lines))
-            transmission_vector = np.zeros(len(lines))
-            for i, line in enumerate(lines):
-                    frequency = line.split('\t')[0]
-                    transmission = line.split('\t')[1]
-                    np.put(frequency_vector, i, frequency)
-                    np.put(transmission_vector, i, transmission)
+        lines = file_handle.readlines()
+        frequency_vector = np.zeros(len(lines))
+        transmission_vector = np.zeros(len(lines))
+        for i, line in enumerate(lines):
+            frequency = line.split('\t')[0]
+            transmission = line.split('\t')[1]
+            np.put(frequency_vector, i, frequency)
+            np.put(transmission_vector, i, transmission)
     normalized_transmission_vector = transmission_vector / max(transmission_vector)
     return frequency_vector, transmission_vector, normalized_transmission_vector
 
@@ -36,12 +36,11 @@ def compute_delta_power_at_window(frequency, spectra_path, t_source_low=77, t_so
     frequency_vector = fft_data[0]
     normalized_transmission_vector = fft_data[2]
     integrated_bandwidth = np.trapz(normalized_transmission_vector, frequency_vector) * 1e9
-    pl.plot(frequency_vector, normalized_transmission_vector)
-    pl.show()
     delta_power = boltzmann_constant * (t_source_high - t_source_low) * integrated_bandwidth
     if show_spectra:
-            pl.plot(normalized_transmission_vector)
-            pl.show()
+        pl.plot(frequency_vector, normalized_transmission_vector)
+        pl.plot(normalized_transmission_vector)
+        pl.show()
     return delta_power
 
 

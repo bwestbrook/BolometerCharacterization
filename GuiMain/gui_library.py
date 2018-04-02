@@ -385,6 +385,7 @@ class GuiTemplate(QtGui.QWidget):
             print unique_widget_name
             self._create_and_place_widget(unique_widget_name, **widget_settings)
             unique_widget_name = '_{0}_{1}_loaded_spectra_label'.format(popup_name, col)
+            print unique_widget_name
             widget_settings = {'text': '',
                                'position': (row, col + 1, 1, 1)}
             print unique_widget_name
@@ -426,6 +427,9 @@ class GuiTemplate(QtGui.QWidget):
                             input_dict[setting] = widget_text
                         else:
                             input_dict[setting] = float(widget_text)
+                    elif 'label' in widget:
+                        widget_text = str(getattr(self, widget).text())
+                        input_dict[setting] = widget_text
             pprint(input_dict)
             list_of_input_dicts.append(copy(input_dict))
         return list_of_input_dicts
@@ -436,7 +440,7 @@ class GuiTemplate(QtGui.QWidget):
         data_path = QtGui.QFileDialog.getOpenFileName(self, 'Open file', self.data_folder)
         set_to_widget = '{0}_loaded_spectra_label'.format(base)
         short_data_path = data_path.split('BolometerCharacterization')[-1]
-        getattr(self, set_to_widget).setText(str(short_data_path))
+        getattr(self, set_to_widget).setText(str(data_path))
 
     def _plot_ivcurve(self):
         selected_files = list(set(self.selected_files))

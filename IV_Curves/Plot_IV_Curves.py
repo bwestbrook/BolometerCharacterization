@@ -87,19 +87,8 @@ class IVCurve():
         scaled_x_vector = copy(x_vector)
         scaled_x_vector *= v_bias_multiplier
         scaled_x_vector *= 1e6 # This is now in uV
-        print
-        print
-        print clip
-        print scaled_x_vector
-        print x_vector
-        print
-        print
-        print
         if clip is not None:
             selector = np.logical_and(clip[0] < scaled_x_vector, scaled_x_vector < clip[1])
-        print
-        print selector
-        print
         fit_vals = np.polyfit(x_vector[selector], y_vector[selector], n)
         poly_fit = np.polyval(fit_vals, x_vector[selector])
         offset_removed = y_vector - fit_vals[1]
@@ -140,7 +129,10 @@ class IVCurve():
 
 ## Plotting
 
-    def plot_differenced_ivs(self, v_biases, i_bolos, fracrns, colors, labels):
+    def plot_differenced_ivs(self, v_biases, i_bolos, fracrns, colors, labels, spectra_paths):
+        '''
+        This code takes to sets of IV curves and takes a differenc in power at the same fracrn
+        '''
         fig = pl.figure(figsize=(10, 5))
         #fig.subplots_adjust(right=0.64, bottom=0.11, hspace=0.66)
         ax = fig.add_subplot(111)
@@ -164,17 +156,16 @@ class IVCurve():
             p_at_same_rfracs.append(p_at_same_rfrac)
             #ax.axvline(r_bolo[nearest_r_bolo_index], color=colors[i], label=labels[i])
             ax.axvline(r_bolo_norm[nearest_r_bolo_index], color=colors[i])
-        p_diff = np.abs(p_at_same_rfracs[1] - p_at_same_rfracs[0])
+            spectra_path = spectra_paths[i]
+        p_window = self.compute_delta_power_at_window(spectra_path)
+        p_sensed = np.abs(p_at_same_rfracs[1] - p_at_same_rfracs[0])
+        efficiency = 100.0 * p_sensed / p_window
         print
-        print
-        print
-        title =  'Power diff {0} pW'.format(p_diff)
+        title =  'Power diff {0:.2f} / {1:.2f} (sensed / window) pW'.format(p_sensed, p_window)
+        title += '\nEffiency is {0:.2f}%'.format(efficiency)
         print title
         print
-        print
-        print
         ax.set_title(title)
-        #ax.legend(bbox_to_anchor=(1.0, 1.0, 1, 1), numpoints=1)
         ax.legend(numpoints=1)
         pl.show()
 
@@ -226,6 +217,43 @@ class IVCurve():
         if quit_boolean == 'q':
             exit()
 
+    def load_FFT_data(self, data_path):
+        '''
+        Inputs:
+            data_path:  the path to the .fft data file (string)
+        Outputs:
+            frequency_vector: the extracted frequency vector
+            transmission_vector: the extracted frequency vector
+        Returns a frequency and transmission vector from the data file
+        produced by Toki's LabView software
+        '''
+        with open(data_path, 'r') as file_handle:
+            lines = file_handle.readlines()
+            frequency_vector = np.zeros(len(lines))
+            transmission_vector = np.zeros(len(lines))
+            for i, line in enumerate(lines):
+                frequency = line.split('\t')[0]
+                transmission = line.split('\t')[1]
+                np.put(frequency_vector, i, frequency)
+                np.put(transmission_vector, i, transmission)
+        normalized_transmission_vector = transmission_vector / max(transmission_vector)
+        return frequency_vector, transmission_vector, normalized_transmission_vector
+
+
+    def compute_delta_power_at_window(self, spectra_path, t_source_low=77, t_source_high=300, show_spectra=False):
+        boltzmann_constant = 1.38e-23
+        fft_data = self.load_FFT_data(spectra_path)
+        frequency_vector = fft_data[0]
+        normalized_transmission_vector = fft_data[2]
+        integrated_bandwidth = np.trapz(normalized_transmission_vector, frequency_vector) * 1e9
+        delta_power = boltzmann_constant * (t_source_high - t_source_low) * integrated_bandwidth  # in W
+        delta_power *= 1e12 # pW
+        if show_spectra:
+            pl.plot(frequency_vector, normalized_transmission_vector)
+            pl.plot(normalized_transmission_vector)
+            pl.show()
+        return delta_power
+
     def run(self):
         '''
         Cycles through the input dicts and plots them
@@ -234,12 +262,13 @@ class IVCurve():
             difference = input_dict['difference']
             if difference:
                 break
-        v_biases, i_bolos, colors, label_strs, fracrns = [], [], [], [], []
+        v_biases, i_bolos, colors, label_strs, fracrns, spectra_paths = [], [], [], [], [], []
         for input_dict in self.list_of_input_dicts:
             data_path = input_dict['data_path']
             label = input_dict['label']
             color = input_dict['color']
             fracrn = input_dict['fracrn']
+            spectra_path = input_dict['loaded_spectra']
             bias_voltage, squid_voltage = self.load_data(data_path)
             fit_clip = (input_dict['v_fit_lo'], input_dict['v_fit_hi'])
             plot_clip = (input_dict['v_plot_lo'], input_dict['v_plot_hi'])
@@ -256,12 +285,13 @@ class IVCurve():
             label_strs.append(label)
             colors.append(color)
             fracrns.append(fracrn)
+            spectra_paths.append(spectra_path)
             if not difference:
                 self.plot_all_curves(v_bias_real, i_bolo_real, label=label,
                                      fit_clip=fit_clip, plot_clip=plot_clip)
 
         if difference:
-            self.plot_differenced_ivs(v_biases, i_bolos, fracrns, colors, label_strs)
+            self.plot_differenced_ivs(v_biases, i_bolos, fracrns, colors, label_strs, spectra_paths)
 
 if __name__ == '__main__':
     ivc = IVCurve()
