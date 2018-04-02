@@ -94,8 +94,12 @@ class IVCurve():
         print x_vector
         print
         print
+        print
         if clip is not None:
             selector = np.logical_and(clip[0] < scaled_x_vector, scaled_x_vector < clip[1])
+        print
+        print selector
+        print
         fit_vals = np.polyfit(x_vector[selector], y_vector[selector], n)
         poly_fit = np.polyval(fit_vals, x_vector[selector])
         offset_removed = y_vector - fit_vals[1]
@@ -145,6 +149,7 @@ class IVCurve():
         ax.set_ylabel('Power ($\mu$V)', fontsize=16)
         p_at_same_rfracs = []
         for i, v_bias in enumerate(v_biases):
+            print i, v_bias
             fracrn = fracrns[i]
             i_bolo = i_bolos[i]
             r_bolo = v_bias / i_bolo
@@ -158,16 +163,19 @@ class IVCurve():
             p_at_same_rfrac = p_bolo[nearest_r_bolo_index]
             p_at_same_rfracs.append(p_at_same_rfrac)
             #ax.axvline(r_bolo[nearest_r_bolo_index], color=colors[i], label=labels[i])
-            ax.axvline(r_bolo_norm[nearest_r_bolo_index], color=colors[i], label=labels[i])
+            ax.axvline(r_bolo_norm[nearest_r_bolo_index], color=colors[i])
         p_diff = np.abs(p_at_same_rfracs[1] - p_at_same_rfracs[0])
         print
         print
         print
-        print 'Power diff {0} pW'.format(p_diff)
+        title =  'Power diff {0} pW'.format(p_diff)
+        print title
         print
         print
         print
-        ax.legend(bbox_to_anchor=(1.0, 1.0, 1, 1), numpoints=1)
+        ax.set_title(title)
+        #ax.legend(bbox_to_anchor=(1.0, 1.0, 1, 1), numpoints=1)
+        ax.legend(numpoints=1)
         pl.show()
 
 
@@ -203,7 +211,8 @@ class IVCurve():
         ax3.set_xlabel("Power ($pW$)", fontsize=12)
         ax3.set_ylabel("Res ($\Omega$)", fontsize=12)
         ax1.legend(bbox_to_anchor=(0.66, 0.1, 1, 1), numpoints=1)
-        ax2.set_ylim((0, 40))
+        ax2.set_ylim((max(power_vector[plot_selector]) - 0.8 * max(power_vector[plot_selector]),
+                      1.1 * max(power_vector[plot_selector])))
         ax1.set_xlim((plot_clip[0], plot_clip[1]))
         ax2.set_xlim((plot_clip[0], plot_clip[1]))
         ax3.set_xlim((plot_clip[0], plot_clip[1]))

@@ -109,6 +109,7 @@ if __name__ == '__main__':
     input_dict_150 = {'150': {'v_bias': 0.095e-4, 'delta_v_squid': 0.030, 'squid_conversion': 37.1,
                               'spectra_path': '../FTS_Transmission_Tests/Data/PB2/2016_03_25/Wafer_AS7-20_Die_Corner/150/009_SQ1_High_Res_MedHF_Spectra.fft'}}
     #for input_dict in [input_dict_220, input_dict_280, input_dict_350, input_dict_350_double_slot]:
+
     for input_dict in [input_dict_150]:
         #, input_dict_280, input_dict_350, input_dict_350_double_slot]:
         run(input_dict)

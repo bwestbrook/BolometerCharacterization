@@ -258,22 +258,26 @@ class GuiTemplate(QtGui.QWidget):
         popup_name = 'ivcurve_settings_popup'
         col = sender.split('_')[4]
         if '1e-4' in sender:
-            lo_limit = 5.0
-            hi_limit = 10.0
+            fit_lo_limit = 5.0
+            fit_hi_limit = 10.0
+            plot_lo_limit = 0.0
+            plot_hi_limit = 40.0
         elif '1e-5' in sender:
-            lo_limit = 5.0
-            hi_limit = 8.0
+            fit_lo_limit = 25.0
+            fit_hi_limit = 30.0
+            plot_lo_limit = 0.0
+            plot_hi_limit = 40.0
         # Fit Limits
         unique_widget_name = '_{0}_{1}_v_fit_lo_lineedit'.format(popup_name, col)
         #if hasattr(self, unique_widget_name):
-        getattr(self, unique_widget_name).setText(str(lo_limit))
+        getattr(self, unique_widget_name).setText(str(fit_lo_limit))
         unique_widget_name = '_{0}_{1}_v_fit_hi_lineedit'.format(popup_name, col)
-        getattr(self, unique_widget_name).setText(str(hi_limit))
+        getattr(self, unique_widget_name).setText(str(fit_hi_limit))
         # Plot Limits
         unique_widget_name = '_{0}_{1}_v_plot_lo_lineedit'.format(popup_name, col)
-        getattr(self, unique_widget_name).setText(str(lo_limit - 0.5))
+        getattr(self, unique_widget_name).setText(str(plot_lo_limit))
         unique_widget_name = '_{0}_{1}_v_plot_hi_lineedit'.format(popup_name, col)
-        getattr(self, unique_widget_name).setText(str(hi_limit + 0.5))
+        getattr(self, unique_widget_name).setText(str(plot_hi_limit))
 
     def _select_squid_channel_checkbox(self):
         sender = str(self.sender().whatsThis())
