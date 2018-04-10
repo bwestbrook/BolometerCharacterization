@@ -302,7 +302,7 @@ class FTSCurve():
                 else:
                     divided_transmission_vector = normalized_transmission_vector
                 if save_fft and len(label) > 0:
-                    save_path = '{0}.fft'.format(label)
+                    save_path = './FTS_Curves/temp/{0}.fft'.format(label)
                     if os.path.exists(save_path):
                         os.remove(save_path)
                     self.save_FFT_data(frequency_vector, transmission_vector, save_path)
@@ -323,7 +323,7 @@ class FTSCurve():
 
 if __name__ == '__main__':
     dict_12icm = {'filter_name': '12icm',
-                  'open_air': {'data_path': "./Data/MMF/2015_03_20/003_OpenAir_High_Res.fft",
+                  'open_air': {'data_path': "./Data/MMF/2015_03_20/003_OpenAir_High_Res../FST_Curves/temp/fft",
                                'label': 'Open Trans', 'color': 'r'},
                   'measurements': {'data_path': "./Data/MMF/2015_03_20/004_576_12icm_High_Res.fft",
                                    'label': 'Raw Trans', 'color': 'b'}}
