@@ -105,6 +105,7 @@ class FTSCurve():
                 signal = line.split('\t')[1]
                 np.put(position_vector, i, position)
                 np.put(signal_vector, i, signal)
+        print position_vector, signal_vector
         return position_vector, signal_vector
 
     def plot_IF_data(self, position_vector, signal_vector, color='b',
@@ -123,7 +124,6 @@ class FTSCurve():
                                                                                                                                          signal_vector,
                                                                                                                                          scan_param_dict=scan_param_dict,
                                                                                                                                          quick_plot=False)
-        pprint(scan_param_dict)
         ax1.set_xlabel('Mirror Position', fontsize=14)
         ax1.set_ylabel('IF Signal ', fontsize=14)
         ax1.plot(position_vector, signal_vector, color, label=label, lw=2)

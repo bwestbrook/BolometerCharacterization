@@ -38,7 +38,6 @@ class GuiTemplate(QtGui.QWidget):
         self.current_stepper_position = 100
         self.daq_main_panel_widget.show()
         self.daq = DAQ()
-        self.stepper = Stepper()
 
     def __apply_settings__(self, settings):
         for setting in dir(settings):
@@ -109,7 +108,9 @@ class GuiTemplate(QtGui.QWidget):
         self.user_move_stepper_popup.setWindowTitle('User Move Stepper')
 
     def _add_comports_to_user_move_stepper(self):
-        for com_port in settings.com_ports:
+        for i, com_port in enumerate(settings.com_ports):
+            if i == 0:
+                self.stepper = Stepper(comport_entry)
             com_port_entry = QtCore.QString(com_port)
             getattr(self, '_user_move_stepper_popup_current_com_port_combobox').addItem(com_port_entry)
 
@@ -225,10 +226,12 @@ class GuiTemplate(QtGui.QWidget):
         total_steps = scan_params['ending_position'] - scan_params['starting_position']
         total_distance = total_steps * scan_params['DistPerStep'] #nm
         min_distance = scan_params['step_size'] * scan_params['DistPerStep'] #nm
-        highest_frequency = ((3 * 10 ** 8) / min_distance) / (10 ** 9) # GHz
+        nyquist_distance = 2 * min_distance
+        highest_frequency = ((2.99792458 * 10 ** 8) / nyquist_distance) / (10 ** 9) # GHz
+        
         resolution = ((3 * 10 ** 8) / total_distance) / (10 ** 9) # GHz
-        resolution = '{0:.2}'.format(0.5 * resolution * 1e9)
-        highest_frequency = '{0:.2}'.format(0.5 * highest_frequency * 1e9)
+        resolution = '{0:.4}'.format(0.5 * resolution * 1e9)
+        highest_frequency = '{0:.4}'.format(0.5 * highest_frequency * 1e9)
         return resolution, highest_frequency
 
     def _update_single_channel_fts(self):

@@ -30,7 +30,7 @@ class Fourier():
             efficiency_vector: the extracted frequency vector
 
         '''
-        step_size =float(scan_param_dict['measurements']['step_size'])
+        step_size = float(scan_param_dict['measurements']['step_size'])
         steps_per_point = int(scan_param_dict['measurements']['steps_per_point'])
         position_vector = np.asarray(position_vector)
         efficiency_vector = np.asarray(efficiency_vector)
@@ -40,8 +40,8 @@ class Fourier():
         symmetric_efficiency_data = self.make_data_symmetric(efficiency_right_data)
         poly_subtracted_data = self.remove_polynomial(symmetric_efficiency_data)
         xf = np.arange(symmetric_efficiency_data.size)
-        frequency_vector, fft_vector = self.compute_fourier_transform(symmetric_position_data, poly_subtracted_data, step_size,
-                                                                      steps_per_point, quick_plot=quick_plot)
+        frequency_vector, fft_vector = self.compute_fourier_transform_new(symmetric_position_data, poly_subtracted_data, step_size,
+                                                                          steps_per_point, quick_plot=quick_plot)
         return frequency_vector, fft_vector, symmetric_position_data, poly_subtracted_data
 
     def split_data_into_left_right_points(self, position_vector, efficiency_vector):
@@ -87,6 +87,21 @@ class Fourier():
             window_function = np.bartlett(N)
             apodized_efficiency_vector = window_function * efficiency_data
         return apodized_efficiency_vector
+
+    def compute_fourier_transform_new(self, position_vector, efficiency_data, distance_per_step, steps_per_point, quick_plot=False):
+        print
+        print
+        print 'position_vector'
+        print position_vector
+        print 'efficiency_data'
+        print efficiency_data
+        print 'steps_per_point'
+        print steps_per_point
+        print 'distance_per_step'
+        print distance_per_step
+        print
+        print
+        return position_vector, efficiency_data
 
     def compute_fourier_transform(self, position_vector, efficiency_data, distance_per_step, steps_per_point, quick_plot=False):
         N = efficiency_data.size
