@@ -121,7 +121,6 @@ class GuiTemplate(QtGui.QWidget):
     #################################################
 
     def _build_rtcurve_settings_popup(self):
-        
         popup_name = '{0}_settings_popup'.format(self.analysis_type)
         if hasattr(self, popup_name):
             self._initialize_panel(popup_name)
@@ -134,7 +133,7 @@ class GuiTemplate(QtGui.QWidget):
         for i, selected_file in enumerate(self.selected_files):
             col = 2 + i * 3
             basename = os.path.basename(selected_file)
-            unique_widget_name = '_{0}_{1}_label'.format(popup_name, basename)
+            unique_widget_name = '_{0}_{1}_lineedit'.format(popup_name, basename)
             widget_settings = {'text': '{0}'.format(basename),
                                'position': (row, col, 1, 1)}
             self._create_and_place_widget(unique_widget_name, **widget_settings)
@@ -263,10 +262,10 @@ class GuiTemplate(QtGui.QWidget):
             plot_lo_limit = 0.0
             plot_hi_limit = 40.0
         elif '1e-5' in sender:
-            fit_lo_limit = 25.0
-            fit_hi_limit = 30.0
+            fit_lo_limit = 21.0
+            fit_hi_limit = 25.0
             plot_lo_limit = 0.0
-            plot_hi_limit = 40.0
+            plot_hi_limit = 35.0
         # Fit Limits
         unique_widget_name = '_{0}_{1}_v_fit_lo_lineedit'.format(popup_name, col)
         #if hasattr(self, unique_widget_name):
@@ -301,7 +300,7 @@ class GuiTemplate(QtGui.QWidget):
         for i, selected_file in enumerate(self.selected_files):
             col = 2 + i * 6
             basename = os.path.basename(selected_file)
-            unique_widget_name = '_{0}_{1}_label'.format(popup_name, basename)
+            unique_widget_name = '_{0}_{1}_lineedit'.format(popup_name, basename)
             widget_settings = {'text': '{0}'.format(basename),
                                'position': (row, col, 1, 1)}
             row += 1
@@ -323,13 +322,13 @@ class GuiTemplate(QtGui.QWidget):
             widget_settings = {'text': '', 'width': 200,
                                'position': (row, col, 1, 1)}
             self._create_and_place_widget(unique_widget_name, **widget_settings)
-            getattr(self, unique_widget_name).setText('5.0')
+            getattr(self, unique_widget_name).setText('3.0')
             row += 1
             unique_widget_name = '_{0}_{1}_v_fit_hi_lineedit'.format(popup_name, col)
             widget_settings = {'text': '', 'width': 200,
                                'position': (row, col, 1, 1)}
             self._create_and_place_widget(unique_widget_name, **widget_settings)
-            getattr(self, unique_widget_name).setText('30.0')
+            getattr(self, unique_widget_name).setText('8.0')
             row += 1
             unique_widget_name = '_{0}_{1}_v_plot_lo_lineedit'.format(popup_name, col)
             widget_settings = {'text': '', 'width': 200,
@@ -561,7 +560,7 @@ class GuiTemplate(QtGui.QWidget):
             basename = os.path.basename(selected_file)
             self.selected_files_col_dict[selected_file] = col
             # Add the file name for organization
-            unique_widget_name = '_{0}_{1}_label'.format(popup_name, basename)
+            unique_widget_name = '_{0}_{1}_lineedit'.format(popup_name, basename)
             widget_settings = {'text': '{0}'.format(basename),
                                'position': (row, col, 1, 1)}
             self._create_and_place_widget(unique_widget_name, **widget_settings)
@@ -623,13 +622,13 @@ class GuiTemplate(QtGui.QWidget):
             row += 1
             # Add an "xlim clip" lineedit
             unique_widget_name = '_{0}_{1}_xlim_clip_lineedit'.format(popup_name, col)
-            widget_settings = {'text': '10:600',
+            widget_settings = {'text': '10:250',
                                'position': (row, col, 1, 1)}
             self._create_and_place_widget(unique_widget_name, **widget_settings)
             row += 1
             # Add an "xlim plot" lineedit
             unique_widget_name = '_{0}_{1}_xlim_plot_lineedit'.format(popup_name, col)
-            widget_settings = {'text': '100:440',
+            widget_settings = {'text': '50:300',
                                'position': (row, col, 1, 1)}
             self._create_and_place_widget(unique_widget_name, **widget_settings)
             row += 1

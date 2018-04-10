@@ -129,7 +129,7 @@ class FTSCurve():
         This function will take the output of Load_FFT_Data
         '''
         if fig is None:
-            fig = pl.figure()
+            fig = pl.figure(figsize=(8,4))
             if plot_fft and plot_if:
                 fig.add_subplot(211)
                 fig.add_subplot(212)
@@ -137,7 +137,7 @@ class FTSCurve():
             elif plot_fft or plot_if:
                 fig.add_subplot(111)
                 ax = fig.get_axes()[0]
-            fig.subplots_adjust(hspace=0.26, bottom=0.12, top =0.96, left=0.16, right=0.84)
+            fig.subplots_adjust(hspace=0.26, bottom=0.15, top =0.90, left=0.16, right=0.70)
         ax1 = fig.get_axes()[0]
         if add_atmosphere:
             fig = self.add_atmospheric_lines(fig)
@@ -159,7 +159,9 @@ class FTSCurve():
                     #last_label = labels.pop(extra_index)
             #handles.insert(extra_index, last_handle)
             #labels.insert(extra_index, labels)
-            axis.legend(handles, labels, numpoints=1, loc=1)
+            axis.legend(handles, labels, numpoints=1,
+                        borderaxespad=0.0, loc=2,
+                        bbox_to_anchor=(1.01, 1.0))
         return fig, add_atmosphere
 
 
