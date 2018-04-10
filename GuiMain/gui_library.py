@@ -614,6 +614,18 @@ class GuiTemplate(QtGui.QWidget):
             if col == 1:
                 getattr(self, unique_widget_name).setChecked(True)
             row += 1
+            # Add a "step size" lineedit
+            unique_widget_name = '_{0}_{1}_step_size_lineedit'.format(popup_name, col)
+            widget_settings = {'text': '250.39',
+                               'position': (row, col, 1, 1)}
+            self._create_and_place_widget(unique_widget_name, **widget_settings)
+            row += 1
+            # Add a "steps per point" lineedit
+            unique_widget_name = '_{0}_{1}_steps_per_point_lineedit'.format(popup_name, col)
+            widget_settings = {'text': '500',
+                               'position': (row, col, 1, 1)}
+            self._create_and_place_widget(unique_widget_name, **widget_settings)
+            row += 1
             # Add an "color" lineedit
             unique_widget_name = '_{0}_{1}_color_lineedit'.format(popup_name, col)
             widget_settings = {'text': 'b',
@@ -643,7 +655,8 @@ class GuiTemplate(QtGui.QWidget):
     def _build_fts_input_dicts(self):
         list_of_input_dicts = []
         fts_settings = ['smoothing_factor', 'xlim_plot', 'xlim_clip', 'divide_mmf', 'add_atm_model',
-                        'divide_bs_5', 'divide_bs_10', 'color', 'normalize', 'plot_title', 'plot_label']
+                        'divide_bs_5', 'divide_bs_10', 'step_size', 'steps_per_point',
+                        'color', 'normalize', 'plot_title', 'plot_label']
         for selected_file, col in self.selected_files_col_dict.iteritems():
             input_dict = {'measurements': {'data_path': selected_file}}
             for setting in fts_settings:

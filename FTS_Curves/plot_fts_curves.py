@@ -4,13 +4,15 @@ import sys
 import pylab as pl
 import numpy as np
 from copy import copy
+from pprint import pprint
 from foreground_plotter import ForegroundPlotter
+from numerical_processing import Fourier
 
 
 class FTSCurve():
 
     def __init__(self):
-        self.hello = 'hello'
+        self.fourier = Fourier()
 
     def load_simulation_data(self, data_path):
         '''
@@ -106,63 +108,61 @@ class FTSCurve():
         return position_vector, signal_vector
 
     def plot_IF_data(self, position_vector, signal_vector, color='b',
-                     label='', fig=None, plot_if=False, plot_fft=False):
+                     label='', fig=None, plot_if=False, plot_fft=False,
+                     scan_param_dict={}):
         if fig is None:
-            fig = matplotlib.figure.Figure()
-            if plot_fft and plot_if:
-                fig.add_subplot(211)
-                fig.add_subplot(212)
-                ax = fig.get_axes()[1]
-            elif plot_fft or plot_if:
-                fig.add_subplot(111)
-                ax = fig.get_axes()[0]
+            fig = pl.figure()
+            fig.add_subplot(311)
+            fig.add_subplot(312)
+            fig.add_subplot(313)
+            ax1 = fig.get_axes()[0]
+            ax2 = fig.get_axes()[1]
+            ax3 = fig.get_axes()[2]
             fig.subplots_adjust(hspace=0.26, bottom=0.12, top =0.96, left=0.16, right=0.84)
-        ax.set_xlabel('Mirror Position', fontsize=14)
-        ax.set_ylabel('IF Signal ', fontsize=14)
-        ax.plot(position_vector, signal_vector, color, label=label, lw=2)
+        frequency_vector, transmission_vector, symmetric_position_vector, symmetric_signal_vector  = self.fourier.convert_IF_to_FFT_data(position_vector,
+                                                                                                                                         signal_vector,
+                                                                                                                                         scan_param_dict=scan_param_dict,
+                                                                                                                                         quick_plot=False)
+        pprint(scan_param_dict)
+        ax1.set_xlabel('Mirror Position', fontsize=14)
+        ax1.set_ylabel('IF Signal ', fontsize=14)
+        ax1.plot(position_vector, signal_vector, color, label=label, lw=2)
+        ax2.plot(symmetric_position_vector, symmetric_signal_vector, color, label=label, lw=2)
+        if plot_fft:
+            self.plot_FFT_data(frequency_vector, transmission_vector, fig=fig, xlim=(0, 1200))
+        pl.show()
         return fig
 
     def plot_FFT_data(self, frequency_vector, transmission_vector, color='b',
-                      title='', label='', xlim=(100,400), fig=None, plot_if=False, plot_fft=False,
+                      title='', label='', xlim=(100,400), fig=None, add_FFT=False,
                       add_atmosphere=False, save_data=True):
         '''
         This function will take the output of Load_FFT_Data
         '''
         if fig is None:
             fig = pl.figure(figsize=(8,4))
-            if plot_fft and plot_if:
-                fig.add_subplot(211)
-                fig.add_subplot(212)
-                ax = fig.get_axes()[1]
-            elif plot_fft or plot_if:
-                fig.add_subplot(111)
-                ax = fig.get_axes()[0]
+            fig.add_subplot(111)
             fig.subplots_adjust(hspace=0.26, bottom=0.15, top =0.90, left=0.16, right=0.70)
-        ax1 = fig.get_axes()[0]
+            ax = fig.get_axes()[0]
+        else:
+            ax = fig.get_axes()[2]
         if add_atmosphere:
-            fig = self.add_atmospheric_lines(fig)
+            ax = self.add_atmospheric_lines(ax)
             add_atmosphere = False
-        ax1.plot(frequency_vector, transmission_vector, color, label=label, lw=1, alpha=0.8)
-        ax1.tick_params(labelsize=14)
-        ax1.set_xlabel('Frequency (GHz)', fontsize=14)
-        ax1.set_ylabel('Normalized Transmission', fontsize=14)
-        ax1.set_xlim(xlim)
-        ax1.set_title(title)
-        ax1.set_ylim((-0.05, 1.05))
-        for axis in fig.get_axes():
-            handles, labels = axis.get_legend_handles_labels()
-            #print handles, labels#
-            #for i, label in enumerate(labels):
-                #if 'ATM Model' in labels:
-                    #extra_index = labels.index('ATM Model')
-                    #last_handle = handles.pop(extra_index)
-                    #last_label = labels.pop(extra_index)
-            #handles.insert(extra_index, last_handle)
-            #labels.insert(extra_index, labels)
-            axis.legend(handles, labels, numpoints=1,
-                        borderaxespad=0.0, loc=2,
-                        bbox_to_anchor=(1.01, 1.0))
-        return fig, add_atmosphere
+        print 'plotting freq and tran vector'
+        ax.plot(frequency_vector, transmission_vector, color, label=label, lw=1, alpha=0.8)
+        ax.tick_params(labelsize=14)
+        ax.set_xlabel('Frequency (GHz)', fontsize=14)
+        ax.set_ylabel('Normalized Transmission', fontsize=14)
+        ax.set_xlim(xlim)
+        ax.set_title(title)
+        ax.set_ylim((-0.05, 1.05))
+        # Add Legend
+        handles, labels = ax.get_legend_handles_labels()
+        ax.legend(handles, labels, numpoints=1,
+                  borderaxespad=0.0, loc=2,
+                  bbox_to_anchor=(1.01, 1.0))
+        return ax, add_atmosphere
 
 
     def _ask_user_if_they_want_to_quit(self):
@@ -187,8 +187,7 @@ class FTSCurve():
                 np.put(averaged_vector, i, averaged_value)
         return averaged_vector
 
-    def add_atmospheric_lines(self, fig):
-        ax = fig.get_axes()[0]
+    def add_atmospheric_lines(self, ax):
         frequencies, transmissions = [], []
         with open('./Atmospheric_Modeling/chajnantor.dat', 'r') as atm_file_handle:
             for line in atm_file_handle.readlines():
@@ -197,7 +196,7 @@ class FTSCurve():
                 transmission = float(line.split(', ')[1])
                 transmissions.append(transmission)
         ax.plot(frequencies, transmissions, 'k', alpha=0.5, label='ATM Model')
-        return fig
+        return ax
 
     def divide_out_optical_element_response(self, frequency_vector, normalized_transmission_vector,
                                             optical_element='mmf', frequency_=350, transmission_threshold=0.15,
@@ -230,7 +229,6 @@ class FTSCurve():
         corrected_transmission_vector = copy(normalized_transmission_vector)
 
         # Interpolate the optical element to the bolo transmission data and then divide it out
-        #print frequency_vector, element_frequency_vector
         transmission_vector_to_divide = np.interp(frequency_vector, element_frequency_vector,
                                                   element_transmission_vector)
         corrected_transmission_vector = normalized_transmission_vector / transmission_vector_to_divide
@@ -261,7 +259,6 @@ class FTSCurve():
             exit()
 
     def close_fig(self):
-        #fig.close()
         pl.close()
 
     def run(self, list_of_input_dicts, save_fft=True, run_open_comparison=False,
@@ -309,14 +306,15 @@ class FTSCurve():
                 fig, add_atmosphere = self.plot_FFT_data(frequency_vector, divided_transmission_vector, color=color, title=title, label=label, xlim=xlim_plot,
                                                          fig=fig, plot_if=plot_if, plot_fft=plot_fft, add_atmosphere=add_atmosphere)
             elif data_path[-3:] == '.if':
+                plot_fft = True
                 position_vector, signal_vector = self.load_IF_data(data_path)
                 fig = self.plot_IF_data(position_vector, signal_vector, color=color, label=label, fig=fig,
-                                         plot_if=plot_if, plot_fft=plot_fft)
-                print 'plottting IF', data_path
+                                        plot_if=plot_if, plot_fft=plot_fft, scan_param_dict=dict_)
         if len(title) > 0:
             fig.savefig('./FST_Curves/temp/{0}.png'.format(title))
         elif len(label) > 0:
             fig.savefig('./FST_Curves/temp/{0}.png'.format(label))
+        fig.savefig('./FTS_Curves/temp/try.png')
         pl.show(fig)
         return fig
 

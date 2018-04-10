@@ -1,6 +1,7 @@
 import numpy as np
 import pylab as pl
 import scipy.fftpack
+from pprint import pprint
 from copy import copy, deepcopy
 from scipy.signal import blackman, hanning
 
@@ -15,7 +16,7 @@ class Fourier():
         '''
         self.mesg = 'hey'
 
-    def convert_IF_to_FFT_data(self, position_vector, efficiency_vector, distance_per_step=1, steps_per_point=500, quick_plot=True):
+    def convert_IF_to_FFT_data(self, position_vector, efficiency_vector, scan_param_dict, quick_plot=True):
         '''
         Returns a frequency and efficiency vector from the inteferogram data and the input
         params of the FTS setup being used
@@ -29,6 +30,8 @@ class Fourier():
             efficiency_vector: the extracted frequency vector
 
         '''
+        step_size =float(scan_param_dict['measurements']['step_size'])
+        steps_per_point = int(scan_param_dict['measurements']['steps_per_point'])
         position_vector = np.asarray(position_vector)
         efficiency_vector = np.asarray(efficiency_vector)
         efficiency_left_data, efficiency_right_data, position_left_data, position_right_data =\
@@ -37,9 +40,9 @@ class Fourier():
         symmetric_efficiency_data = self.make_data_symmetric(efficiency_right_data)
         poly_subtracted_data = self.remove_polynomial(symmetric_efficiency_data)
         xf = np.arange(symmetric_efficiency_data.size)
-        frequency_vector, fft_vector = self.compute_fourier_transform(symmetric_position_data, poly_subtracted_data, distance_per_step,
+        frequency_vector, fft_vector = self.compute_fourier_transform(symmetric_position_data, poly_subtracted_data, step_size,
                                                                       steps_per_point, quick_plot=quick_plot)
-        return frequency_vector, fft_vector
+        return frequency_vector, fft_vector, symmetric_position_data, poly_subtracted_data
 
     def split_data_into_left_right_points(self, position_vector, efficiency_vector):
         efficiency_left_data = efficiency_vector[position_vector < 0]
@@ -89,14 +92,18 @@ class Fourier():
         N = efficiency_data.size
         T = distance_per_step * steps_per_point
         x_vector = np.linspace(0.0, N * T, N)
-        #import ipdb;ipdb.set_trace()
-        frequency_vector = np.linspace(0.0, 1.0 / (2.0 * T), N / 2)
-        print N * float(T)
-        print 1. / (N * float(T))
-        print 3e8 / (N * float(T))
+        frequency_vector = np.linspace(0.0, 1.0 / (2 * np.pi * T), N / 2)
+        # some important factors
+        print
+        print
+        print 'FFT Setup'
+        print 'real distance per point is {0} nm ({1} m)'.format(T, T * 1e-9)
+        print 'number of points in data is {0}'.format(N)
+        print
+        print
         frequency_vector = frequency_vector * 3e8
         apodized_efficiency_vector = self.apply_window_to_data(position_vector, efficiency_data)
-        fft_vector = scipy.fftpack.fft(apodized_efficiency_vector)
+        fft_vector = scipy.fftpack.rfft(apodized_efficiency_vector)
         normalized_fft_vector = (2.0 / N) * np.abs(fft_vector[0: N / 2])
         peak_normalized_fft_vector = normalized_fft_vector / np.max(normalized_fft_vector)
         # Plot the fourier transform
@@ -116,8 +123,6 @@ class Fourier():
                 handles, labels = axis.get_legend_handles_labels()
                 axis.legend(handles, labels, numpoints=1, loc=2, bbox_to_anchor=(1.01, 1.0))
             fig.savefig('temp_fft.png')
-            pl.close('all')
-            #self._ask_user_if_they_want_to_quit()
         return frequency_vector, peak_normalized_fft_vector
 
     def run_test(self, data_points=1000, spacing=150.):
