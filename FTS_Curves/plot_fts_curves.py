@@ -314,9 +314,9 @@ class FTSCurve():
                                          plot_if=plot_if, plot_fft=plot_fft)
                 print 'plottting IF', data_path
         if len(title) > 0:
-            fig.savefig('{0}.png'.format(title))
+            fig.savefig('./FST_Curves/temp/{0}.png'.format(title))
         elif len(label) > 0:
-            fig.savefig('{0}.png'.format(label))
+            fig.savefig('./FST_Curves/temp/{0}.png'.format(label))
         pl.show(fig)
         return fig
 

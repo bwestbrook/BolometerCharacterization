@@ -671,12 +671,6 @@ class GuiTemplate(QtGui.QWidget):
     def _plot_ftscurve(self):
         selected_files = list(set(self.selected_files))
         list_of_input_dicts = self._build_fts_input_dicts()
-        print
-        print
-        print '############PLOTTING#################'
-        print
-        print
-        print
         getattr(self, '_ftscurve_settings_popup_run_pushbutton').setText('Close Pylab Window')
         getattr(self, '_ftscurve_settings_popup_run_pushbutton').setEnabled(False)
         self.ftscurve_settings_popup.repaint()
