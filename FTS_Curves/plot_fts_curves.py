@@ -145,7 +145,7 @@ class FTSCurve():
             fig.subplots_adjust(hspace=0.26, bottom=0.15, top =0.90, left=0.16, right=0.70)
             ax = fig.get_axes()[0]
         else:
-            ax = fig.get_axes()[2]
+            ax = fig.get_axes()[0]
         if add_atmosphere:
             ax = self.add_atmospheric_lines(ax)
             add_atmosphere = False
@@ -162,7 +162,7 @@ class FTSCurve():
         ax.legend(handles, labels, numpoints=1,
                   borderaxespad=0.0, loc=2,
                   bbox_to_anchor=(1.01, 1.0))
-        return ax, add_atmosphere
+        return fig, ax, add_atmosphere
 
 
     def _ask_user_if_they_want_to_quit(self):
@@ -235,8 +235,6 @@ class FTSCurve():
 
         # Renormalize the vector after the division
         corrected_transmission_vector = corrected_transmission_vector / np.max(corrected_transmission_vector)
-
-
         if quick_plot:
             fig = pl.figure()
             ax1 = fig.add_subplot(111)
@@ -303,17 +301,17 @@ class FTSCurve():
                     if os.path.exists(save_path):
                         os.remove(save_path)
                     self.save_FFT_data(frequency_vector, transmission_vector, save_path)
-                fig, add_atmosphere = self.plot_FFT_data(frequency_vector, divided_transmission_vector, color=color, title=title, label=label, xlim=xlim_plot,
-                                                         fig=fig, plot_if=plot_if, plot_fft=plot_fft, add_atmosphere=add_atmosphere)
+                fig, ax, add_atmosphere = self.plot_FFT_data(frequency_vector, divided_transmission_vector, color=color, title=title, label=label, xlim=xlim_plot,
+                                                             fig=fig, add_atmosphere=add_atmosphere)
             elif data_path[-3:] == '.if':
                 plot_fft = True
                 position_vector, signal_vector = self.load_IF_data(data_path)
                 fig = self.plot_IF_data(position_vector, signal_vector, color=color, label=label, fig=fig,
                                         plot_if=plot_if, plot_fft=plot_fft, scan_param_dict=dict_)
         if len(title) > 0:
-            fig.savefig('./FST_Curves/temp/{0}.png'.format(title))
+            fig.savefig('./FTS_Curves/temp/{0}.png'.format(title))
         elif len(label) > 0:
-            fig.savefig('./FST_Curves/temp/{0}.png'.format(label))
+            fig.savefig('./FTS_Curves/temp/{0}.png'.format(label))
         fig.savefig('./FTS_Curves/temp/try.png')
         pl.show(fig)
         return fig

@@ -44,8 +44,16 @@ class RTHist():
         rn_vector = rn_vector[rn_vector < xlim[1]]
         return rn_vector
 
-    def make_histogram(self, data, xlabel='', ylabel='', xlim=(0,2), bins=20):
+    def basic(self):
+        data = np.asarray([1.27, 1.29, 1.25, 1.19, 1.09, 1.21])
+        data = np.asarray([465, 461, 454, 457])
+        data = np.asarray([10.4, 10.0, 24.8, 20.1])
+        self.make_histogram(data, xlabel='Psat (pW)', ylabel='Count', xlim=(8, 30),
+                            bins=10, title='13-18 and 13-20 witness pixel Psat')
+
+    def make_histogram(self, data, xlabel='', ylabel='', xlim=(0,2), bins=20, title=''):
         counts, bins, patches = pl.hist(data, bins, range=xlim, normed=False)
+        pl.title(title)
         pl.xlabel(xlabel, fontsize=16)
         pl.ylabel(ylabel, fontsize=16)
         pl.show()
@@ -80,4 +88,5 @@ class RTHist():
 
 if __name__ == '__main__':
     rt_hist = RTHist()
-    rt_hist.run()
+    #rt_hist.run()
+    rt_hist.basic()

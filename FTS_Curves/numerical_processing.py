@@ -140,23 +140,32 @@ class Fourier():
             fig.savefig('temp_fft.png')
         return frequency_vector, peak_normalized_fft_vector
 
-    def run_test(self, data_points=1000, spacing=150.):
+    def run_test(self, data_points=600, steps_per_point=500, spacing=250.39):
         N = data_points
-        T = spacing
+        steps_per_point = 1
+        T = spacing * steps_per_point
         # Based on the sample spacing and the number of points build a frequency vector 
-        x_vector = np.linspace(0.0, N * T, N)
+        x_vector = np.linspace(-N * T,  N * T, N)
+        #x_vector = np.linspace(-2**8, 2**8, 1)
+        
         frequency_vector = np.linspace(0.0, 1.0 / (2.0 * T), N / 2)
         # Create Some Test Data 
-        y_vector = np.sin(x_vector)
+        y_vector = 2e4 * np.sinc(x_vector) + 2e4 * np.sinc(-1 * x_vector) + 2
+        frequency = 100.
+        period = 1 / frequency
+        y_vector = np.sin(x_vector / period)
+        print x_vector, y_vector
         # Compute the FFT of the test data
-        fft_vector = scipy.fftpack.fft(y_vector)
+        fft_vector = np.fft.fft(y_vector)
         normalized_fft_vector = (2.0 / N) * np.abs(fft_vector[0: N / 2])
         # Create the figure and plot the data
         fig = pl.figure(figsize=(10, 5))
         ax1 = fig.add_subplot(211)
         ax2 = fig.add_subplot(212)
+        print len(frequency_vector), len(normalized_fft_vector)
+        print len(x_vector), len(y_vector)
         ax1.plot(x_vector, y_vector)
-        ax2.plot(frequency_vector, normalized_fft_vector)
+        #ax2.plot(frequency_vector, normalized_fft_vector)
         fig.show()
         self._ask_user_if_they_want_to_quit()
 
@@ -257,7 +266,7 @@ class BeamSplitter():
 
 
 if __name__ == '__main__':
-    bs = BeamSplitter()
-    bs.run()
-    #fourier = Fourier()
-    #fourier.run_test()
+    #bs = BeamSplitter()
+    #bs.run()
+    fourier = Fourier()
+    fourier.run_test()

@@ -262,10 +262,10 @@ class GuiTemplate(QtGui.QWidget):
             plot_lo_limit = 0.0
             plot_hi_limit = 40.0
         elif '1e-5' in sender:
-            fit_lo_limit = 21.0
-            fit_hi_limit = 25.0
+            fit_lo_limit = 3.0
+            fit_hi_limit = 8.0
             plot_lo_limit = 0.0
-            plot_hi_limit = 35.0
+            plot_hi_limit = 12.0
         # Fit Limits
         unique_widget_name = '_{0}_{1}_v_fit_lo_lineedit'.format(popup_name, col)
         #if hasattr(self, unique_widget_name):

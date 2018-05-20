@@ -42,6 +42,8 @@ class RTCurve():
         with open(data_path, 'r') as file_handle:
             for i, file_line in enumerate(file_handle.readlines()):
                 grt_res = float(file_line.split('\t')[0].strip('\r\n')) * input_dict['grt_res_factor']
+                if grt_res < 0:
+                    grt_res *= -1
                 sample_res = float(file_line.split('\t')[1].strip('\r\n')) * input_dict['sample_res_factor']
                 grt_res_vector.append(grt_res)
                 sample_res_vector.append(sample_res)
