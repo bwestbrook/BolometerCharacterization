@@ -1,6 +1,7 @@
 from libraries.gen_class import Class
 
 ftscurve_settings_popup_settings = Class()
+ftscurve_settings_popup_settings.simulated_bands = ['90', '150', '220', '270']
 
 ftscurve_settings_popup_settings.ftscurve_popup_build_dict = {
                                                               '_common_settings': {'font': 'med'},
@@ -14,10 +15,11 @@ ftscurve_settings_popup_settings.ftscurve_popup_build_dict = {
                                                               '_ftscurve_settings_popup_divide_bs_label': {'text': 'Divide BS:', 'position': (7, 0, 1, 1)},
                                                               '_ftscurve_settings_popup_divide_mmf_label': {'text': 'Divide MMF:', 'position': (8, 0, 1, 1)},
                                                               '_ftscurve_settings_popup_add_atm_model_label': {'text': 'Add ATM:', 'position': (9, 0, 1, 1)},
-                                                              '_ftscurve_settings_popup_step_size_point_label': {'text': 'Step Size (nm)', 'position': (10, 0, 1, 1)},
-                                                              '_ftscurve_settings_popup_steps_per_point_label': {'text': 'Steps/Point:', 'position': (11, 0, 1, 1)},
-                                                              '_ftscurve_settings_popup_color_label': {'text': 'Color', 'position': (12, 0, 1, 1)},
-                                                              '_ftscurve_settings_popup_xlim_clip_label': {'text': 'X Lim Clip', 'position': (13, 0, 1, 1)},
-                                                              '_ftscurve_settings_popup_xlim_plot_label': {'text': 'X Lim Plot', 'position': (14, 0, 1, 1)},
-                                                              '_ftscurve_settings_popup_smoothing_factor_label': {'text': 'Smoothing:', 'position': (15, 0, 1, 1)},
+                                                              '_ftscurve_settings_popup_simulation_band_label': {'text': 'Add Sim:', 'position': (10, 0, 1, 1)},
+                                                              '_ftscurve_settings_popup_step_size_point_label': {'text': 'Step Size (nm)', 'position': (12, 0, 1, 1)},
+                                                              '_ftscurve_settings_popup_steps_per_point_label': {'text': 'Steps/Point:', 'position': (13, 0, 1, 1)},
+                                                              '_ftscurve_settings_popup_color_label': {'text': 'Color', 'position': (14, 0, 1, 1)},
+                                                              '_ftscurve_settings_popup_xlim_clip_label': {'text': 'X Lim Clip', 'position': (15, 0, 1, 1)},
+                                                              '_ftscurve_settings_popup_xlim_plot_label': {'text': 'X Lim Plot', 'position': (16, 0, 1, 1)},
+                                                              '_ftscurve_settings_popup_smoothing_factor_label': {'text': 'Smoothing:', 'position': (17, 0, 1, 1)},
                                                               }

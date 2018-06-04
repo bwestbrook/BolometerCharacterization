@@ -562,20 +562,20 @@ class GuiTemplate(QtGui.QWidget):
             # Add the file name for organization
             unique_widget_name = '_{0}_{1}_lineedit'.format(popup_name, basename)
             widget_settings = {'text': '{0}'.format(basename),
-                               'position': (row, col, 1, 1)}
+                               'position': (row, col, 1, 2)}
             self._create_and_place_widget(unique_widget_name, **widget_settings)
             row += 1
             # Add a lineedit for plot title
             print col
             unique_widget_name = '_{0}_{1}_plot_title_lineedit'.format(popup_name, col)
             widget_settings = {'text': '',
-                               'position': (row, col, 1, 1)}
+                               'position': (row, col, 1, 2)}
             self._create_and_place_widget(unique_widget_name, **widget_settings)
             row += 1
             # Add a lineedit for plot labeling
             unique_widget_name = '_{0}_{1}_plot_label_lineedit'.format(popup_name, col)
             widget_settings = {'text': '',
-                               'position': (row, col, 1, 1)}
+                               'position': (row, col, 1, 2)}
             self._create_and_place_widget(unique_widget_name, **widget_settings)
             row += 1
             # Add an "normalize" checkbox
@@ -614,40 +614,55 @@ class GuiTemplate(QtGui.QWidget):
             if col == 1:
                 getattr(self, unique_widget_name).setChecked(True)
             row += 1
+            # Add a "Sim Bands" checkbox
+            for j, band in enumerate(settings.simulated_bands):
+                unique_widget_name = '_{0}_{1}_add_sim_band_{2}_checkbox'.format(popup_name, col, band)
+                if j == 0:
+                    position = (row, col, 1, 1)
+                elif j == 1:
+                    position = (row, col + 1, 1, 1)
+                elif j == 2:
+                    position = (row + 1, col, 1, 1)
+                elif j == 3:
+                    position = (row + 1, col + 1, 1, 1)
+                widget_settings = {'text': band,
+                                   'position': position}
+                self._create_and_place_widget(unique_widget_name, **widget_settings)
+            row += 2
             # Add a "step size" lineedit
             unique_widget_name = '_{0}_{1}_step_size_lineedit'.format(popup_name, col)
             widget_settings = {'text': '250.39',
-                               'position': (row, col, 1, 1)}
+                               'position': (row, col, 1, 2)}
             self._create_and_place_widget(unique_widget_name, **widget_settings)
             row += 1
             # Add a "steps per point" lineedit
             unique_widget_name = '_{0}_{1}_steps_per_point_lineedit'.format(popup_name, col)
             widget_settings = {'text': '500',
-                               'position': (row, col, 1, 1)}
+                               'position': (row, col, 1, 2)}
             self._create_and_place_widget(unique_widget_name, **widget_settings)
             row += 1
             # Add an "color" lineedit
             unique_widget_name = '_{0}_{1}_color_lineedit'.format(popup_name, col)
             widget_settings = {'text': 'b',
-                               'position': (row, col, 1, 1)}
+                               'position': (row, col, 1, 2)}
             self._create_and_place_widget(unique_widget_name, **widget_settings)
             row += 1
             # Add an "xlim clip" lineedit
             unique_widget_name = '_{0}_{1}_xlim_clip_lineedit'.format(popup_name, col)
             widget_settings = {'text': '10:250',
-                               'position': (row, col, 1, 1)}
+                               'position': (row, col, 1, 2)}
             self._create_and_place_widget(unique_widget_name, **widget_settings)
             row += 1
             # Add an "xlim plot" lineedit
             unique_widget_name = '_{0}_{1}_xlim_plot_lineedit'.format(popup_name, col)
             widget_settings = {'text': '50:300',
-                               'position': (row, col, 1, 1)}
+                               'position': (row, col, 1, 2)}
             self._create_and_place_widget(unique_widget_name, **widget_settings)
             row += 1
             # Add an "Smoothing" lineedit
             unique_widget_name = '_{0}_{1}_smoothing_factor_lineedit'.format(popup_name, col)
             widget_settings = {'text': '0.0',
-                               'position': (row, col, 1, 1)}
+                               'position': (row, col, 1, 2)}
             self._create_and_place_widget(unique_widget_name, **widget_settings)
             row = 3
         getattr(self, popup_name).show()
@@ -655,7 +670,7 @@ class GuiTemplate(QtGui.QWidget):
     def _build_fts_input_dicts(self):
         list_of_input_dicts = []
         fts_settings = ['smoothing_factor', 'xlim_plot', 'xlim_clip', 'divide_mmf', 'add_atm_model',
-                        'divide_bs_5', 'divide_bs_10', 'step_size', 'steps_per_point',
+                        'divide_bs_5', 'divide_bs_10', 'step_size', 'steps_per_point', 'add_sim_band',
                         'color', 'normalize', 'plot_title', 'plot_label']
         for selected_file, col in self.selected_files_col_dict.iteritems():
             input_dict = {'measurements': {'data_path': selected_file}}
@@ -665,11 +680,10 @@ class GuiTemplate(QtGui.QWidget):
                 for widget in widgets:
                     if 'checkbox' in widget:
                         bool_value = getattr(self, widget).isChecked()
-                        if 'divide_bs' in widget and bool_value:
-                            thickness = str(getattr(self, widget).text()).split(' ')[0]
-                            input_dict['measurements'][setting] = thickness
-                        elif 'divide_bs' in widget:
-                            input_dict['measurements'][setting] = False
+                        if 'divide_bs' in widget:
+                            input_dict['measurements'][setting] = bool_value
+                        elif 'add_sim_band' in widget:
+                            input_dict['measurements']['{0}_{1}'.format(setting, widget.split('_')[-2])] = bool_value
                         else:
                             input_dict['measurements'][setting] = bool_value
                     elif 'lineedit' in widget:
