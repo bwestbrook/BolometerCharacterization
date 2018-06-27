@@ -5,7 +5,7 @@ import pylab as pl
 import numpy as np
 from histogram_settings import histogram_settings
 
-class Hist():
+class RTHist():
 
     def __init__(self):
         self.hello = 'hello'
