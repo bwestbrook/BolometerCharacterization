@@ -175,20 +175,20 @@ class RTHist():
                 if from_kek:
                     pturn_vector = self.extract_data_from_kek_pkl(data, pturn=True)
                 if from_john:
-                    pturn_vector = self.extract_data_from_john_pkl(data, psat=True)
+                    pturn_vector = self.extract_data_from_john_pkl(data, psat=run_psat, pturn=run_pturn)
                 all_pturn_data = np.append(all_pturn_data, pturn_vector)
             print
             print 'Pturn data'
             print np.median(all_pturn_data)
             print np.std(all_pturn_data)
-            self.make_histogram(all_pturn_data, xlabel='$P_turn$ ($pW$)', ylabel='Count',
+            self.make_histogram(all_pturn_data, xlabel='$P_{turn}$ ($pW$)', ylabel='Count',
                                 xlim=self.pturn_xlim, bins=self.pturn_bins,
                                 target_range=[(7.0, 9.0), (17.0, 24.0)],
-                                title='PB20.13.09 $P_{sat}$ Histogram')
+                                title='PB20.13.09 $P_{turn}$ Histogram')
 
 
 if __name__ == '__main__':
     rt_hist = RTHist()
-    rt_hist.run(run_tc=False, run_rn=False, run_pturn=False, run_psat=True,
+    rt_hist.run(run_tc=False, run_rn=False, run_pturn=True, run_psat=False,
                 from_logan=False, from_john=True, from_kek=False, from_darcy=False)
     #rt_hist.basic()
