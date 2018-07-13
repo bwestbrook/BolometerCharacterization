@@ -12,4 +12,4 @@ daq_main_panel_settings.daq_main_panel_build_dict = {
                                                                                           'position': (2, 0, 1, 4)}
                                                      }
 
-daq_main_panel_settings.daq_functions = ['_user_move_stepper', '_single_channel_fts', '_beam_mapper']
+daq_main_panel_settings.daq_functions = ['_user_move_stepper', '_single_channel_fts', '_beam_mapper','_pol_efficiency']

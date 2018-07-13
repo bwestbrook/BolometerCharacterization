@@ -8,10 +8,12 @@ single_channel_fts_settings.single_channel_fts_build_dict = {
                                                              '_single_channel_fts_popup_hardware_setup_label': {'text': 'HARDWARE SETUP', 'font': 'huge', 'color': 'blue', 'alignment': 'Center', 'position': (0, 0, 1, 4)},
 
                                                              '_single_channel_fts_popup_stepper_motor_resource_name_header_label': {'text': 'Stepper Motor Resource Name:', 'position': (1, 0, 1, 1)},
-                                                             '_single_channel_fts_popup_stepper_motor_combobox': {'function': '_connect_to_com_port', 'position': (1, 1, 1, 1)},
+                                                             '_single_channel_fts_popup_current_com_port_combobox': {'function': '_connect_to_com_port', 'position': (1, 1, 1, 1)},
 
                                                              '_single_channel_fts_popup_signal_channel_header_label': {'text': 'Signal Channel:', 'position': (1, 2, 1, 1)},
                                                              '_single_channel_fts_popup_signal_channel_combobox': {'position': (1, 3, 1, 1)},
+
+                                                             '_single_channel_fts_popup_successful_connection_header_label': {'text': '', 'function': '_connect_to_com_port', 'position': (1, 4, 1, 2)},
 # SCAN SETUP 
                                                              '_single_channel_fts_popup_scan_setup_label': {'text': 'SCAN SETUP', 'font': 'huge', 'color': 'blue', 'alignment': 'Center', 'position': (2, 0, 1, 4)},
 
@@ -28,7 +30,7 @@ single_channel_fts_settings.single_channel_fts_build_dict = {
                                                              '_single_channel_fts_popup_integration_time_lineedit': {'text': '200', 'position': (5, 1, 1, 1)},
 
                                                              '_single_channel_fts_popup_pause_time_header_label': {'text': 'Pause (ms):', 'position': (5, 2, 1, 1)},
-                                                             '_single_channel_fts_popup_pause_time_lineedit': {'text': '100', 'position': (5, 3, 1, 1)},
+                                                             '_single_channel_fts_popup_pause_time_lineedit': {'text': '10', 'position': (5, 3, 1, 1)},
 
                                                              '_single_channel_fts_popup_sample_rate_header_label': {'text': 'Sample Rate (Hz):', 'position': (5, 4, 1, 1)},
                                                              '_single_channel_fts_popup_sample_rate_combobox': {'position': (5, 5, 1, 1)},
@@ -77,27 +79,30 @@ single_channel_fts_settings.single_channel_fts_build_dict = {
 
                                                              '_single_channel_fts_popup_close_pushbutton': {'text': 'Close', 'function': '_close_single_channel_fts', 'position': (17, 3, 1, 1)},
 
-# VISUAL DATA MONITORING 
-                                                             '_single_channel_fts_popup_position_monitor_slider': {'function': None, 'position': (0, 7, 1, 4), 'orientation': 'Horizontal'},
+                                                             '_single_channel_fts_popup_save_pushbutton': {'text': 'Save', 'function': '_final_plot', 'position': (20, 9, 1, 1)},
 
-                                                             '_single_channel_fts_popup_mean_header_label': {'text': 'Time Average:', 'position': (1, 7, 1, 1)},
-                                                             '_single_channel_fts_popup_mean_label': {'text': '0', 'position': (1, 8, 1, 1)},
-
-                                                             '_single_channel_fts_popup_std_header_label': {'text': 'Standard Dev:', 'position': (1, 10, 1, 1)},
-                                                             '_single_channel_fts_popup_std_label': {'text': '0', 'position': (1, 11, 1, 1)},
-
-                                                             '_single_channel_fts_popup_current_position_header_label': {'text': 'Current Position (White):', 'position': (2, 10, 1, 1)},
-                                                             '_single_channel_fts_popup_current_position_label': {'text': '0', 'position': (2, 11, 1, 1)},
-
-                                                             '_single_channel_fts_popup_position_slider_min_label': {'position': (22, 0, 1, 1)},
-                                                             '_single_channel_fts_popup_position_slider_max_label': {'position': (22, 5, 1, 1)},
-
+# VISUAL DATA MONITORING
                                                              '_single_channel_fts_popup_data_monitor_label': {'text': 'VISUAL DATA MONITOR', 'font': 'huge', 'color': 'blue',
                                                                                                               'alignment': 'Center', 'position': (0, 7, 1, 4)},
 
-                                                             '_single_channel_fts_popup_time_stream_label': {'alignment': 'Center', 'width': 700, 'position': (1, 7, 5, 4)},
+                                                             '_single_channel_fts_popup_position_monitor_slider': {'function': None, 'position': (1, 7, 1, 5), 'orientation': 'Horizontal'},
 
-                                                             '_single_channel_fts_popup_interferogram_label': {'alignment': 'Center', 'position': (8, 7, 6, 4)},
+                                                             '_single_channel_fts_popup_mean_header_label': {'text': 'Time Average:', 'position': (3, 7, 1, 1)},
+                                                             '_single_channel_fts_popup_mean_label': {'text': '0', 'position': (3, 8, 1, 1)},
+
+                                                             '_single_channel_fts_popup_std_header_label': {'text': 'Standard Dev:', 'position': (3, 9, 1, 1)},
+                                                             '_single_channel_fts_popup_std_label': {'text': '0', 'position': (3, 10, 1, 1)},
+
+                                                             '_single_channel_fts_popup_current_position_header_label': {'text': 'Current Position (White):', 'position': (4, 9, 1, 1)},
+                                                             '_single_channel_fts_popup_current_position_label': {'text': '0', 'position': (4, 10, 1, 1)},
+
+                                                             '_single_channel_fts_popup_position_slider_min_label': {'text': '-5000', 'position': (2, 7, 1, 1)},
+                                                             '_single_channel_fts_popup_position_slider_max_label': {'text': '10000', 'position': (2, 11, 1, 1)},
+
+                                                            
+                                                             '_single_channel_fts_popup_time_stream_label': {'alignment': 'Center', 'width': 700, 'position': (5, 7, 5, 4)},
+
+                                                             '_single_channel_fts_popup_interferogram_label': {'alignment': 'Center', 'position': (10, 7, 6, 4)},
 
                                                              '_single_channel_fts_popup_fft_label': {'alignment': 'Center', 'width': 700, 'position': (14, 7, 7, 4)},
 }
@@ -117,7 +122,7 @@ single_channel_fts_settings.combobox_entry_dict = {
                                                    '_single_channel_fts_popup_signal_channel_combobox': ['0', '1', '2', '3', '4', '5', '6', '7'],
                                                    '_single_channel_fts_popup_carrier_type_combobox': ['phone', 'e-mail'],
                                                    '_single_channel_fts_popup_apodization_type_combobox': ['BOXCAR', 'TRIAGNULAR'],
-                                                   '_single_channel_fts_popup_stepper_motor_combobox': ['COM1', 'COM2', 'COM3', 'COM4'],
+                                                   '_single_channel_fts_popup_current_com_port_combobox': ['COM1', 'COM2', 'COM3', 'COM4'],
                                                    '_single_channel_fts_popup_sample_rate_combobox': ['50', '100', '250', '500', '1000'],
                                                    }
 
