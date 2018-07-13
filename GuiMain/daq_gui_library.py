@@ -6,6 +6,7 @@ import time
 import numpy as np
 import datetime
 import pylab as pl
+import matplotlib.pyplot as plt
 import time
 from PyPDF2 import PdfFileMerger
 from pprint import pprint
@@ -18,9 +19,11 @@ from IV_Curves.plot_iv_curves import IVCurve
 from FTS_Curves.plot_fts_curves import FTSCurve
 from FTS_Curves.numerical_processing import Fourier
 from POL_Curves.plot_pol_curves import POLCurve
-from Stepper_Motor.stepper import Stepper
+#from Stepper_Motor.stepper_motor import stepper_motor
 from FTS_DAQ.fts_daq import FTSDAQ
 from BeamMapping.beam_map_daq import BeamMapDAQ
+from Motor_Driver.stepper_motor import stepper_motor
+
 from DAQ.daq import DAQ
 
 
@@ -38,6 +41,7 @@ class GuiTemplate(QtGui.QWidget):
         self.current_stepper_position = 100
         self.daq_main_panel_widget.show()
         self.daq = DAQ()
+        self.user_desktop_path = os.path.expanduser('~')
 
     def __apply_settings__(self, settings):
         for setting in dir(settings):
@@ -71,9 +75,10 @@ class GuiTemplate(QtGui.QWidget):
             entry = QtCore.QString(entry_str)
             getattr(self, unique_combobox_name).addItem(entry)
 
-    def _get_com_port(self):
-        com_port = str(getattr(self, '_user_move_stepper_popup_current_com_port_combobox').currentText())
+    def _get_com_port(self, combobox):
+        com_port = str(getattr(self, combobox).currentText())
         return com_port
+    
 
     def _get_all_scan_params(self, popup=None):
         if popup is None:
@@ -83,12 +88,306 @@ class GuiTemplate(QtGui.QWidget):
         if hasattr(self, function):
             return getattr(self, function)()
 
+    def _connect_to_com_port(self, beammapper=None):
+        combobox = str(self.sender().whatsThis())
+        if combobox == '_daq_main_panel_daq_select_combobox':
+            popup = str(self.sender().currentText())
+	    if popup == 'Pol Efficiency':
+                com_port = 'COM1'
+                connection = '_pol_efficiency_popup_successful_connection_header_label'
+	    elif popup == 'Beam Mapper':
+                if beammapper == 1:
+	            com_port = 'COM1'
+		    connection = '_beam_mapper_popup_x_successful_connection_header_label'
+		    popup_combobox = '_beam_mapper_popup_y_current_com_port_combobox'
+                    getattr(self, popup_combobox).setCurrentIndex(0)
+		elif beammapper == 2:
+		    com_port = 'COM2'
+		    connection = '_beam_mapper_popup_y_successful_connection_header_label'
+		    popup_combobox = '_beam_mapper_popup_y_current_com_port_combobox'
+                    getattr(self, popup_combobox).setCurrentIndex(1)
+	    elif popup == 'Single Channel Fts':
+	        com_port = 'COM1'
+	        connection = '_single_channel_fts_popup_successful_connection_header_label'
+	    elif popup == 'User Move Stepper':
+	        com_port = 'COM1'
+	        connection = '_user_move_stepper_popup_successful_connection_header_label'
+	else:
+       	    com_port = self._get_com_port(combobox=combobox)
+            connection = combobox.replace('current_com_port_combobox','successful_connection_header_label')
+       
+	port_number = int(com_port.strip('COM')) - 1
+	init_string = '/dev/ttyUSB{0}'.format(port_number)
+        if com_port not in ['COM2','COM3','COM4']:
+            if not hasattr(self, 'sm_{0}'.format(com_port)):
+	        setattr(self, 'sm_{0}'.format(com_port), stepper_motor(init_string))
+	        current_string = getattr(self, 'sm_{0}'.format(com_port)).get_motor_current().strip('CC=')
+                position_string = getattr(self, 'sm_{0}'.format(com_port)).get_position().strip('SP=')
+                velocity_string = getattr(self, 'sm_{0}'.format(com_port)).get_velocity().strip('VE=')
+            else:
+                current_string, position_string,velocity_string = '0','0','0'   
+        else:
+            current_string, position_string,velocity_string = '0','0','0'   
+        getattr(self,connection).setText('Successful Connection to '+ com_port +'!' )
+        return current_string, position_string, velocity_string
+       
+    def _draw_time_stream(self,data_time_stream, min_, max_, label):
+         fig = pl.figure(figsize=(3,1.5))
+         ax = fig.add_subplot(111)
+         yticks = np.linspace(min_,max_,5)
+         yticks = [round(x,2) for x in yticks]
+         ax.set_yticks(yticks)
+         ax.set_yticklabels(yticks,fontsize = 6)
+
+ 
+         fig.subplots_adjust(left=0.24, right=0.95, top=0.80, bottom=0.35)
+         ax.plot(data_time_stream)
+         ax.set_title('Timestream', fontsize=12)
+         ax.set_xlabel('Sample', fontsize=10)
+         ax.set_ylabel('Amplitude', fontsize=10)       
+         fig.savefig('temp_files/temp_ts.png')
+         pl.close('all')
+         image = QtGui.QPixmap('temp_files/temp_ts.png')
+         image = image.scaled(600, 300)
+         getattr(self, label).setPixmap(image)  
+
+
+    def _final_plot(self):
+        current =  str(self.sender().whatsThis())
+        xdata = self.xdata
+        ydata = self.ydata
+        stds = self.stds 
+        if current == '_pol_efficiency_popup_save_pushbutton':
+            title = 'Pol Efficiency'
+        elif current == '_single_channel_fts_popup_save_pushbutton':
+            title = 'Single Channel FTS'
+        elif current == '_beam_mapper_popup_save_pushbutton':
+            title = 'Beam Mapper'
+        if not hasattr(self, 'final_plot_popup'):
+            self._create_popup_window('final_plot_popup')
+        else:
+            self._initialize_panel('final_plot_popup')
+        self._build_panel(settings.final_plot_build_dict)
+        self.final_plot_popup.showMaximized()
+        self.final_plot_popup.setWindowTitle('Result')
+        self._draw_final_plot(xdata,ydata,stds,title=title) 
+
+    def _close_final_plot(self):
+        self.final_plot_popup.close()
+
+
+    def _draw_final_plot(self, x, y, stds, save_path=None,title='Result',legend=None):
+        fig = plt.figure(figsize=(3,1.5))
+        ax = fig.add_subplot(111)
+        if legend:
+            ax.errorbar(x,y,yerr=stds,label = legend)
+            ax.legend(prop={'size':6})
+        else:
+            ax.errorbar(x,y,yerr=stds)
+        ticks = np.linspace(x[0],x[len(y)-1],5)
+        fig.subplots_adjust(left=0.24, right=0.95, top=0.80, bottom=0.35)
+        xlabel = 'Sample'
+        ax.set_xticks(ticks)
+        if title == 'Pol Efficiency':
+            xlabel = 'Angle'
+        elif title == 'Single Channel FTS':
+            xlabel = 'Position'
+        elif title == 'Beam Mapper':
+            xlabel = 'Position'
+#        elif title == 'Result':
+ #           xlabel = 'Sample'
+        ax.set_title(title, fontsize=12)
+        ax.set_xlabel(xlabel, fontsize=10)
+        ax.set_ylabel('Amplitude', fontsize=10)
+        if save_path is not None:
+            fig.savefig(save_path)
+        else:    
+            fig.savefig('temp_files/temp_fp.png')       
+            image = QtGui.QPixmap('temp_files/temp_fp.png')
+            image = image.scaled(800, 400)
+            getattr(self,  '_final_plot_popup_result_label').setPixmap(image)  
+        pl.close('all')
+
+    def _replot(self):
+        title = getattr(self, '_final_plot_popup_plot_title_lineedit').text()
+        legend = getattr(self,'_final_plot_popup_data_label_lineedit').text()
+        if title != '':
+            if legend != '':
+                self._draw_final_plot(self.xdata,self.ydata,self.stds,title = title, legend = legend)
+            else:
+                self._draw_final_plot(self.xdata,self.ydata,self.stds,title = title)
+        else:
+             if legend != '':
+                self._draw_final_plot(self.xdata,self.ydata,self.stds, legend = legend)
+
+    def _save_final_plot(self):
+        current =  str(self.sender().whatsThis())
+        save_path = QtGui.QFileDialog.getSaveFileName(self, 'Save Location', self.user_desktop_path,
+                                                            "Image files (*.png *.jpg *.gif)")
+        plot_path = copy(save_path).replace('csv','png')
+        self.write_file(self.xdata,self.ydata,self.stds,save_path)
+        self._draw_final_plot(self.xdata,self.ydata,self.stds,str(plot_path))
+
+
+
+
+
+        
     #################################################
     #################################################
     # DAQ TYPE SPECFIC CODES 
     #################################################
     #################################################
+    
+    #################################################
+    # POL EFFICIENCY
+    #################################################
+    
 
+    def _close_pol_efficiency(self):
+        self.pol_efficiency_popup.close()
+
+    def _pol_efficiency(self):
+        if not hasattr(self, 'pol_efficiency_popup'):
+            self._create_popup_window('pol_efficiency_popup')
+        else:
+            self._initialize_panel('pol_efficiency_popup')
+        self._build_panel(settings.pol_efficiency_build_dict)
+        for combobox_widget, entry_list in self.pol_efficiency_combobox_entry_dict.iteritems():
+            self.populate_combobox(combobox_widget, entry_list)
+        self._connect_to_com_port()
+        self.pol_efficiency_popup.showMaximized()
+        self.pol_efficiency_popup.setWindowTitle('POL EFFICIENCY')
+        self._update_pol_efficiency_popup()
+        self._blank_pol_plot()
+        getattr(self, '_pol_efficiency_popup_save_pushbutton').setDisabled(True)
+        self._draw_time_stream([0]*5, -1, -1,'_pol_efficiency_popup_time_stream_label') 
+
+
+
+    def _update_pol_efficiency_popup(self):
+        scan_params = self._get_all_scan_params(popup='_pol_efficiency')
+        if type(scan_params) is not dict:
+            return None
+        if 'starting_angle' in scan_params and 'ending_angle' in scan_params:
+            start_angle = scan_params['starting_angle']
+            end_angle = scan_params['ending_angle']
+            step_size = scan_params['step_size']
+            num_steps = (end_angle-start_angle)/step_size
+            getattr(self,'_pol_efficiency_popup_number_of_steps_label').setText(str(num_steps))
+            getattr(self,'_pol_efficiency_popup_position_slider_min_label').setText(str(start_angle))
+            getattr(self,'_pol_efficiency_popup_position_slider_max_label').setText(str(end_angle))
+            getattr(self, '_pol_efficiency_popup_position_monitor_slider').setMinimum(start_angle)
+            getattr(self, '_pol_efficiency_popup_position_monitor_slider').setMaximum(end_angle)
+        self.pol_efficiency_popup.repaint()
+        
+    def _close_pol_efficiency(self):
+        self.pol_efficiency_popup.close()
+
+    def _run_pol_efficiency(self):
+        scan_params = self._get_all_pol_efficiency_scan_params()
+        self.take_pol_efficiency(scan_params,1)
+
+    def get_simulated_data(self, datatype, current_position, noise=10):
+        '''
+        noise is in percent and is of the max-min of data
+        '''
+        in_degree = current_position*np.pi/180
+        dev = (np.random.randn()-0.5)*2/100*noise
+        simulated_data = np.sin(in_degree) + dev
+        return simulated_data
+
+
+    def _blank_pol_plot(self):
+        fig = pl.figure(figsize=(3,1.5))
+        ax = fig.add_subplot(111)
+        fig.subplots_adjust(left=0.24, right=0.95, top=0.80, bottom=0.35)
+        ax.plot([0]*5)
+        ax.set_title('POL EFFICICENCY', fontsize=12)
+        ax.set_xlabel('Angle', fontsize=10)
+        ax.set_ylabel('Amplitude', fontsize=10)
+        fig.savefig('temp_files/temp_pol.png')
+        pl.close('all')
+        image = QtGui.QPixmap('temp_files/temp_pol.png')
+        image = image.scaled(600,300)
+        getattr(self, '_pol_efficiency_popup_data_label').setPixmap(image)
+
+    def take_pol_efficiency(self, scan_params, noise=10):
+        com_port = self._get_com_port('_pol_efficiency_popup_current_com_port_combobox')
+        stepnum = (scan_params['ending_angle']-scan_params['starting_angle'])/scan_params['step_size']+1
+        self.xdata = np.linspace(scan_params['starting_angle'],scan_params['ending_angle'],stepnum)
+        self.ydata = []
+        angles = []
+        self.stds = []
+        for i, step in enumerate(self.xdata):
+            data_point = self.get_simulated_data(int, step, noise=noise)
+            angles.append(step)
+            if step != 0:
+                getattr(self, 'sm_{0}'.format(com_port)).finite_rotation(scan_params['step_size'])
+                time.sleep(scan_params['pause_time']/1000)
+            current_angle = getattr(self, 'sm_{0}'.format(com_port)).get_position()
+            data_time_stream, mean, min_, max_, std = self.daq.get_data(signal_channel=scan_params['signal_channel'], integration_time=scan_params['integration_time'],
+                                                                        sample_rate=scan_params['sample_rate'],central_value=data_point)
+            self.ydata.append(mean)
+            self.stds.append(std)
+            getattr(self,'_pol_efficiency_popup_mean_label').setText('{0:.3f}'.format(mean))
+            getattr(self,'_pol_efficiency_popup_current_angle_label').setText(str(step))
+            getattr(self,'_pol_efficiency_popup_std_label').setText('{0:.3f}'.format(std))
+            start = scan_params['starting_angle']
+            end = scan_params['ending_angle']
+
+            self._draw_time_stream(data_time_stream, min_, max_, '_pol_efficiency_popup_time_stream_label')
+            fig = pl.figure(figsize=(3,2))
+            ax = fig.add_subplot(111)
+            fig.subplots_adjust(left=0.24, right=0.95, top=0.80, bottom=0.35)
+            ax.plot(angles,self.ydata)
+            ax.set_title('POL EFFICICENCY', fontsize=12)
+            ticks = np.linspace(start,end,5)
+            ax.set_xticks(ticks)
+            ax.set_xlabel('Angle', fontsize=10)
+            ax.set_ylabel('Amplitude', fontsize=10)
+            fig.savefig('temp_files/temp_pol.png')
+            pl.close('all')
+            image = QtGui.QPixmap('temp_files/temp_pol.png')
+            image = image.scaled(600,400)
+            getattr(self, '_pol_efficiency_popup_data_label').setPixmap(image)
+            self.pol_efficiency_popup.repaint()
+            getattr(self, '_pol_efficiency_popup_position_monitor_slider').setSliderPosition(step)
+        getattr(self, '_pol_efficiency_popup_save_pushbutton').setEnabled(True)
+#        return steps, data 
+
+    def write_file(self,xdata,ydata,stds,data_path):
+        with open(data_path,'w') as f:
+            for x, y,std in zip(xdata, ydata,stds):
+                f.write('{:f}\t{:f}\t{:f}\n'.format(x, y, std))
+
+    def read_file(self, filename):
+        x, y = np.loadtxt(filename, unpack=True)
+        return x,y
+    
+    def _get_all_pol_efficiency_scan_params(self):
+        scan_params = {}
+        for pol_efficiency_setting in settings.pol_int_run_settings:
+            pull_from_widget_name = '_pol_efficiency_popup_{0}_lineedit'.format(pol_efficiency_setting)
+            if hasattr(self, pull_from_widget_name):
+                value = getattr(self, pull_from_widget_name).text()
+                if len(str(value)) == 0:
+                    value = 0
+                else:
+                    value = int(value)
+                scan_params[pol_efficiency_setting] = value
+        for pol_efficiency_setting in settings.pol_pulldown_run_settings:
+            pull_from_widget_name = '_pol_efficiency_popup_{0}_combobox'.format(pol_efficiency_setting)
+            if hasattr(self, pull_from_widget_name):
+                value = str(getattr(self, pull_from_widget_name).currentText())
+                scan_params[pol_efficiency_setting] = value
+        return scan_params
+
+
+    def _pause(self):
+        print 'hi'
+        # getattr(self, 'sm_{0}'.format(com_port)).
+        
     #################################################
     # USER MOVE STEPPER
     #################################################
@@ -102,44 +401,44 @@ class GuiTemplate(QtGui.QWidget):
         else:
             self._initialize_panel('user_move_stepper_popup')
         self._build_panel(settings.user_move_stepper_build_dict)
-        self._add_comports_to_user_move_stepper()
+        for combobox_widget, entry_list in self.user_move_stepper_combobox_entry_dict.iteritems():
+            self.populate_combobox(combobox_widget, entry_list)
+        current_string, position_string, velocity_string = self._connect_to_com_port()
+
+       	getattr(self, '_user_move_stepper_popup_current_act_label').setText(current_string)
+        getattr(self,'_user_move_stepper_popup_velocity_act_label').setText(velocity_string)
+        getattr(self,'_user_move_stepper_popup_current_position_label').setText(position_string)
         self._update_stepper_position()
-        self.user_move_stepper_popup.show()
+        self.user_move_stepper_popup.showMaximized()
         self.user_move_stepper_popup.setWindowTitle('User Move Stepper')
+        
 
     def _add_comports_to_user_move_stepper(self):
         for i, com_port in enumerate(settings.com_ports):
-            if i == 0:
-                self.stepper = Stepper(comport_entry)
             com_port_entry = QtCore.QString(com_port)
             getattr(self, '_user_move_stepper_popup_current_com_port_combobox').addItem(com_port_entry)
 
-    def _connect_to_com_port(self):
-        com_port = self._get_com_port()
-        self.stepper.connect_to_com_port(com_port)
-        #### SOME CODE HERE TO CONNECT TO BACKEND ####
-        #### SOME CODE HERE TO CONNECT TO BACKEND ####
-        #### SOME CODE HERE TO CONNECT TO BACKEND ####
-        #### SOME CODE HERE TO CONNECT TO BACKEND ####
-        #### SOME CODE HERE TO CONNECT TO BACKEND ####
-        connected_to_com_port = self.stepper.connect_to_com_port(com_port)
-        #### SOME CODE HERE TO CONNECT TO BACKEND ####
-        #### SOME CODE HERE TO CONNECT TO BACKEND ####
-        #### SOME CODE HERE TO CONNECT TO BACKEND ####
-        #### SOME CODE HERE TO CONNECT TO BACKEND ####
-        #### SOME CODE HERE TO CONNECT TO BACKEND ####
-        old_stepper_position = self._get_stepper_position()
-        move_to_position = getattr(self, '_user_move_stepper_popup_lineedit').setText(str(old_stepper_position))
+    def _set_velocity(self):
+        com_port = self._get_com_port('_user_move_stepper_popup_current_com_port_combobox')
+        speed =  str(getattr(self, '_user_move_stepper_popup_velocity_set_lineedit').text())
+        getattr(self, 'sm_{0}'.format(com_port)).set_speed(float(speed))
+        actual = getattr(self, 'sm_{0}'.format(com_port)).get_velocity().strip('VE=')
+        getattr(self,'_user_move_stepper_popup_velocity_act_label').setText(str(actual))
+
+    def _set_current(self):
+        com_port = self._get_com_port('_user_move_stepper_popup_current_com_port_combobox')
+        current =  getattr(self, '_user_move_stepper_popup_current_set_lineedit').text()
+        getattr(self, 'sm_{0}'.format(com_port)).set_current(float(current))
+        actual =  getattr(self, 'sm_{0}'.format(com_port)).get_motor_current().strip('CC=')
+        getattr(self,'_user_move_stepper_popup_current_act_label').setText(str(actual))
+        
+        
+    def _move_stepper(self):
+        move_to_pos = int(str(getattr(self, '_user_move_stepper_popup_move_to_position_lineedit').text()))
+        com_port = self._get_com_port('_user_move_stepper_popup_current_com_port_combobox')
+        getattr(self, 'sm_{0}'.format(com_port)).move_to_position(move_to_pos)
         self._update_stepper_position()
 
-    def _move_stepper(self):
-        move_to_position = int(str(getattr(self, '_user_move_stepper_popup_lineedit').text()))
-        old_stepper_position = self._get_stepper_position()
-        com_port = self._get_com_port()
-        print 'Code would physically get this to move {0} from {1} to {2}'.format(com_port, old_stepper_position,
-                                                                                  move_to_position)
-        self.stepper.stepper_position_dict[com_port] = move_to_position
-        self._update_stepper_position()
 
     def _reset_stepper_zero(self):
         com_port = self._get_com_port()
@@ -152,12 +451,14 @@ class GuiTemplate(QtGui.QWidget):
         stepper_position = self.stepper.stepper_position_dict[com_port]
         return stepper_position
 
+    
     def _update_stepper_position(self):
-        com_port = self._get_com_port()
-        stepper_position = self.stepper.stepper_position_dict[com_port]
+        com_port = self._get_com_port('_user_move_stepper_popup_current_com_port_combobox')
+        stepper_position = getattr(self, 'sm_{0}'.format(com_port)).get_position().strip('SP=')
         header_str = '{0} Current Position:'.format(com_port)
         getattr(self, '_user_move_stepper_popup_current_position_header_label').setText(header_str)
         getattr(self, '_user_move_stepper_popup_current_position_label').setText(str(stepper_position))
+
 
     #################################################
     # SINGLE CHANNEL FTS BILLS 
@@ -177,8 +478,12 @@ class GuiTemplate(QtGui.QWidget):
         for unique_combobox, entries in settings.combobox_entry_dict.iteritems():
             self.populate_combobox(unique_combobox, entries)
         self._update_single_channel_fts()
-        self.single_channel_fts_popup.show()
+        self._connect_to_com_port()
+        self. _blank_fts_plot()
+        getattr(self, '_single_channel_fts_popup_save_pushbutton').setDisabled(True)
+        self.single_channel_fts_popup.showMaximized()
         self.single_channel_fts_popup.setWindowTitle('Single Channel FTS')
+        self._draw_time_stream([0]*5, -1, -1,'_single_channel_fts_popup_time_stream_label')
 
     def _get_all_single_channel_fts_scan_params(self):
         scan_params = {}
@@ -245,10 +550,11 @@ class GuiTemplate(QtGui.QWidget):
             getattr(self, resolution_widget).setText(resolution)
             highest_frequency_widget = '_single_channel_fts_popup_highest_frequency_label'
             getattr(self, highest_frequency_widget).setText(highest_frequency)
-            # Update Slider
+            num_steps = (scan_params['ending_position']-scan_params['starting_position'])/scan_params['step_size']
+            getattr(self, '_single_channel_fts_popup_number_of_steps_label').setText(str(num_steps))
             self._update_slider_setup(scan_params)
         self.single_channel_fts_popup.repaint()
-
+       
     def _update_slider(self, slider_pos):
         print slider_pos
 
@@ -258,30 +564,49 @@ class GuiTemplate(QtGui.QWidget):
         getattr(self, min_slider).setText(str(scan_params['starting_position']))
         getattr(self, max_slider).setText(str(scan_params['ending_position']))
         slider = '_single_channel_fts_popup_position_monitor_slider'
-        getattr(self, slider).setSliderPosition(0)
-        getattr(self, slider).setRange(0, scan_params['starting_position'] + scan_params['ending_position'])
-        getattr(self, slider).setTickInterval(scan_params['step_size'])
+        getattr(self, slider).setMinimum(scan_params['starting_position'])
+        getattr(self, slider).setMaximum(scan_params['ending_position'])
+        com_port = self._get_com_port('_single_channel_fts_popup_current_com_port_combobox')
+        #motor_position =  getattr(self, 'sm_{0}'.format(com_port)).get_position()
+        motor_position = 0
+        getattr(self, slider).setSliderPosition(motor_position)
+        #getattr(self, slider).setRange(0, scan_params['starting_position'] + scan_params['ending_position'])
+        #getattr(self, slider).setTickInterval(scan_params['step_size'])
         getattr(self, slider).sliderPressed.connect(self._dummy)
         self.starting_position = scan_params['starting_position']
 
+    def _blank_fts_plot(self):
+        data = [0]*5
+        fig = pl.figure(figsize=(3,1.5))
+        ax = fig.add_subplot(111)
+        fig.subplots_adjust(left=0.24, right=0.95, top=0.80, bottom=0.35)
+        ax.plot(data)
+        ax.set_xlabel('Mirror Position (m)',fontsize = 10)
+        ax.set_ylabel('Amplitude',fontsize = 10)
+        ax.set_title('Interferogram')
+        fig.savefig('temp_files/temp_int.png')
+        pl.close('all')
+        image = QtGui.QPixmap('temp_files/temp_int.png')
+        image = image.scaled(600,300)        
+        getattr(self, '_single_channel_fts_popup_interferogram_label').setPixmap(image)
+        
     def _run_fts(self):
         scan_params = self._get_all_scan_params(popup='_single_channel_fts')
-        positions, data = [], []
-        for position in np.arange(scan_params['starting_position'], scan_params['ending_position'],
+        positions, data, self.stds = [], [], []
+        for position in np.arange(scan_params['starting_position'], scan_params['ending_position']+scan_params['step_size'],
                                   scan_params['step_size']):
             data_time_stream, mean, min_, max_, std = self.daq.get_data(signal_channel=scan_params['signal_channel'], integration_time=scan_params['integration_time'],
                                                                         sample_rate=scan_params['sample_rate'])
-            getattr(self, '_single_channel_fts_popup_std_label').setText(str(std))
-            getattr(self, '_single_channel_fts_popup_mean_label').setText(str(mean))
-            getattr(self, '_single_channel_fts_popup_current_position_label').setText(str(position))
-            image = QtGui.QPixmap('temp_files/temp_ts.png')
-            image = image.scaled(350, 175)
-            getattr(self, '_single_channel_fts_popup_time_stream_label').setPixmap(image)
+            self.stds.append(std)
+            getattr(self, '_single_channel_fts_popup_std_label').setText('{0:.3f}'.format(std))
+            getattr(self, '_single_channel_fts_popup_mean_label').setText('{0:.3f}'.format(mean))
+            getattr(self, '_single_channel_fts_popup_current_position_label').setText('{0:.3f}'.format(position))
+            self._draw_time_stream(data_time_stream, min_, max_,'_single_channel_fts_popup_time_stream_label')       
             positions.append(position * scan_params['DistPerStep'] * 1e-9)
             data.append(mean)
             fig = pl.figure(figsize=(3.5,1.5))
             ax = fig.add_subplot(111)
-            fig.subplots_adjust(left=0.24, right=0.99, top=0.80, bottom=0.35)
+            fig.subplots_adjust(left=0.24, right=0.95, top=0.80, bottom=0.35)
             ax.plot(positions, data)
             ax.set_xlabel('Mirror Position (m)')
             ax.set_ylabel('Amplitude')
@@ -289,20 +614,29 @@ class GuiTemplate(QtGui.QWidget):
             fig.savefig('temp_files/temp_int.png')
             pl.close('all')
             image = QtGui.QPixmap('temp_files/temp_int.png')
-            image = image.scaled(350, 175)
+            image = image.scaled(600, 300)
             getattr(self, '_single_channel_fts_popup_interferogram_label').setPixmap(image)
             self.single_channel_fts_popup.repaint()
             getattr(self, '_single_channel_fts_popup_position_monitor_slider').setSliderPosition(position)
-        self._compute_fft(positions, data, scan_params)
-        image = QtGui.QPixmap('temp_files/temp_fft.png')
-        image = image.scaled(350, 175)
-        getattr(self, '_single_channel_fts_popup_fft_label').setPixmap(image)
+#        self._compute_fft(positions, data, scan_params)
+#        image = QtGui.QPixmap('temp_files/temp_fft.png')
+ #       image = image.scaled(350, 175)
+  #      getattr(self, '_single_channel_fts_popup_fft_label').setPixmap(image)
+        self.xdata = positions
+        self.ydata = data
+        getattr(self, '_single_channel_fts_popup_save_pushbutton').setEnabled(True)
 
     #################################################
     # BEAM MAPPER 
     #################################################
 
     def _close_beam_mapper(self):
+        '''
+        Description: Closes the Beam Mapper popup window
+        Input: None
+        Output: None
+        '''
+        
         self.beam_mapper_popup.close()
 
     def _beam_mapper(self):
@@ -314,20 +648,18 @@ class GuiTemplate(QtGui.QWidget):
         self._build_panel(settings.beam_mapper_build_dict)
         for combobox_widget, entry_list in self.beam_mapper_combobox_entry_dict.iteritems():
             self.populate_combobox(combobox_widget, entry_list)
-        self.beam_mapper_popup.show()
+        self._connect_to_com_port(1)
+        self._connect_to_com_port(2)
+        self._draw_time_stream([0]*5, -1, -1,'_beam_mapper_popup_time_stream_label')     
+        self.beam_mapper_popup.showMaximized()
         self._initialize_beam_mapper()
         self.beam_mapper_popup.repaint()
+                                                                                
 
     def _get_all_beam_mapper_scan_params(self):
         scan_params = {}
         for beam_map_setting in settings.beam_map_int_settings:
             pull_from_widget_name = '_beam_mapper_popup_{0}_lineedit'.format(beam_map_setting)
-            print beam_map_setting
-            print pull_from_widget_name
-            print hasattr(self, pull_from_widget_name)
-            print
-            print
-            print
             if hasattr(self, pull_from_widget_name):
                 value = getattr(self, pull_from_widget_name).text()
                 if len(str(value)) == 0:
@@ -345,16 +677,16 @@ class GuiTemplate(QtGui.QWidget):
 
     def _get_grid(self, scan_params):
         x_total = scan_params['end_x_position'] - scan_params['start_x_position']
-        x_steps = x_total / scan_params['n_points_x']
-        scan_params['step_size_x'] = x_steps
+        x_steps = scan_params['step_size_x']
+        n_points_x = (scan_params['end_x_position']-scan_params['start_x_position'])/scan_params['step_size_x']
+        n_points_y = (scan_params['end_y_position']-scan_params['start_y_position'])/scan_params['step_size_y']
+        scan_params['n_points_x'] = n_points_x
+        scan_params['n_points_y'] = n_points_y
         scan_params['x_total'] = x_total
-        getattr(self, '_beam_mapper_popup_step_size_x_label').setText('{0} cm'.format(str(x_steps)))
-        getattr(self, '_beam_mapper_popup_total_x_label').setText('{0} cm'.format(str(x_total)))
+        getattr(self, '_beam_mapper_popup_total_x_label').setText('{0} in'.format(str(x_total)))
         y_total = scan_params['end_y_position'] - scan_params['start_y_position']
-        y_steps = y_total / scan_params['n_points_y']
-        getattr(self, '_beam_mapper_popup_step_size_y_label').setText('{0} cm'.format(str(y_steps)))
-        getattr(self, '_beam_mapper_popup_total_y_label').setText('{0} cm'.format(str(y_total)))
-        scan_params['step_size_y'] = y_steps
+        y_steps = scan_params['step_size_y']
+        getattr(self, '_beam_mapper_popup_total_y_label').setText('{0} in'.format(str(y_total)))
         scan_params['y_total'] = y_total
         return scan_params
 
@@ -372,8 +704,12 @@ class GuiTemplate(QtGui.QWidget):
             if scan_params is not None and len(scan_params) > 0:
                 self.beam_map_daq.simulate_beam(scan_params)
                 image = QtGui.QPixmap('temp_files/temp_beam.png')
-                image = image.scaled(350, 175)
+                image = image.scaled(600, 300)
                 getattr(self, '_beam_mapper_popup_2D_plot_label').setPixmap(image)
+                n_points_x= scan_params['n_points_x']
+                n_points_y= scan_params['n_points_y']
+                getattr(self,'_beam_mapper_popup_n_points_x_label').setText(str(n_points_x))
+                getattr(self,'_beam_mapper_popup_n_points_y_label').setText(str(n_points_y))
 
     def _take_beam_map(self):
         scan_params = self._get_all_scan_params(popup='_beam_mapper')
@@ -384,7 +720,6 @@ class GuiTemplate(QtGui.QWidget):
         X_sim, Y_sim, Z_sim = self.beam_map_daq.simulate_beam(scan_params)
         for i, x_pos in enumerate(x_grid):
             for j, y_pos in enumerate(y_grid):
-                print x_pos, y_pos
                 central_value = Z_sim[i][j]
                 data_time_stream, mean, min_, max_, std = self.daq.get_data(signal_channel=scan_params['signal_channel'], integration_time=scan_params['integration_time'],
                                                                             sample_rate=scan_params['sample_rate'], central_value=central_value)
@@ -398,15 +733,15 @@ class GuiTemplate(QtGui.QWidget):
                 ax.set_ylabel('Position (cm)', fontsize=12)
                 fig.savefig('temp_files/temp_beam.png')
                 pl.close('all')
-                image = QtGui.QPixmap('temp_files/temp_ts.png')
-                image = image.scaled(350, 175)
-                getattr(self, '_beam_mapper_popup_time_stream_label').setPixmap(image)
+                self._draw_time_stream(data_time_stream, min_, max_,'_beam_mapper_popup_time_stream_label')
                 image = QtGui.QPixmap('temp_files/temp_beam.png')
-                image = image.scaled(350, 175)
+                image = image.scaled(600, 300)
                 getattr(self, '_beam_mapper_popup_2D_plot_label').setPixmap(image)
-                getattr(self, '_beam_mapper_popup_data_mean_label').setText(str(mean))
-                getattr(self, '_beam_mapper_popup_x_position_label').setText(str(x_pos))
-                getattr(self, '_beam_mapper_popup_y_position_label').setText(str(y_pos))
+                getattr(self, '_beam_mapper_popup_data_mean_label').setText('{0:.3f}'.format(mean))
+                getattr(self, '_beam_mapper_popup_x_position_label').setText('{0:.3f}'.format(x_pos))
+                getattr(self, '_beam_mapper_popup_y_position_label').setText('{0:.3f}'.format(y_pos))
+                getattr(self, '_beam_mapper_popup_data_std_label').setText('{0:.3f}'.format(std))
+                
                 self.beam_mapper_popup.repaint()
 
 
@@ -439,11 +774,7 @@ class GuiTemplate(QtGui.QWidget):
             if unique_widget_name != '_common_settings':
                 widget_settings_copy.update(widget_settings)
                 widget_settings_copy.update({'parent': parent})
-                print
-                print
-                print unique_widget_name
                 for widget_param, widget_param_value in widget_settings.iteritems():
-                    print widget_param, widget_param_value
                     if 'function' == widget_param:
                         widget_function = self._unpack_widget_function(widget_param_value)
                         widget_settings_copy.update({'function':  widget_function})

@@ -3,6 +3,7 @@ import numpy as np
 from copy import copy
 from datetime import datetime
 from PyQt4 import QtGui
+#from gen_class import Class
 from libraries.gen_class import Class
 from daq_gui_library import GuiTemplate
 
