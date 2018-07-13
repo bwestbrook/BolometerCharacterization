@@ -5,7 +5,7 @@ import pylab as pl
 import numpy as np
 from histogram_settings import histogram_settings
 
-class RTHist():
+class Hist():
 
     def __init__(self):
         self.hello = 'hello'
@@ -41,9 +41,9 @@ class RTHist():
         data_array_90 = np.asarray([])
         data_array_150 = np.asarray([])
         for value in data:
-            if value < 15.0:
+            if value < 9.0:
                 data_array_90 = np.append(data_array_90, value)
-            elif value >= 15.0:
+            elif value >= 9.0:
                 data_array_150 = np.append(data_array_150, value)
         data_array = [data_array_90, data_array_150]
         return data_array
@@ -77,7 +77,8 @@ class RTHist():
             if rn:
                 return data['Rn_corrected']
             if tc:
-                return data['Tc']
+                print data
+                return data['Tc'] * 1e3
             if pturn or psat:
                 data = data['Psat_corrected']
                 data = self.split_power_data_into_bands(data)
@@ -88,7 +89,14 @@ class RTHist():
     def extract_data_from_kek_pkl(self, data, rn=False, tc=False, psat=False, pturn=False):
         data_array = data
         if psat or pturn:
+            data_array = np.asarray(data_array)
+            data_array *= 1e12
             data_array = self.split_power_data_into_bands(data_array)
+        if tc:
+            print data.shape
+            if len(data.shape) == 2:
+                data_array = np.asarray(data_array.transpose()[0], dtype=float)
+            data_array *= 1e3
         return data_array
 
     def extract_data_from_tucker_pkl(self, data, rn=False, tc=False, psat=False, pturn=False):
@@ -115,15 +123,21 @@ class RTHist():
                             bins=10, title='13-18 and 13-20 witness pixel Psat')
 
     def make_histogram(self, data, xlabel='', ylabel='', xlim=(0,2), bins=20, title='', target_ranges=[]):
-        print len(data)
         if len(data) == 2:
-            counts, bins, patches = pl.hist(data[0], bins, range=xlim, normed=False, color='r', label='95 GHz')
-            counts, bins, patches = pl.hist(data[1], bins, range=xlim, normed=False, color='b', label='150 GHz')
-            print np.median(data[0])
-            print np.median(data[1])
-            #import ipdb;ipdb.set_trace()
+            median_1 = np.median(data[0])
+            var_1 = np.std(data[0])
+            label_1 = '90 GHz: {0:.2f} +/ {1:.2f} pW'.format(median_1, var_1)
+            counts, bins, patches = pl.hist(data[0], bins, range=xlim, color='r', label=label_1)
+            median_2 = np.median(data[1])
+            var_2 = np.std(data[1])
+            label_2 = '150 GHz: {0:.2f} +/ {1:.2f} pW'.format(median_2, var_2)
+            counts, bins, patches = pl.hist(data[1], bins, range=xlim, color='b', label=label_2)
         else:
-            counts, bins, patches = pl.hist(data, bins, range=xlim, normed=False)
+            median = np.median(data[data > 0])
+            var = np.std(data[np.logical_and(0.7 < data, data < 2.0)])
+            label = '{0:.2f} +/ {1:.2f} $\Omega$'.format(median, var)
+            #import ipdb;ipdb.set_trace()
+            counts, bins, patches = pl.hist(data, bins, range=xlim, label=label)
         pl.title(title, fontsize=20)
         pl.xlabel(xlabel, fontsize=16)
         pl.ylabel(ylabel, fontsize=16)
@@ -175,7 +189,7 @@ class RTHist():
                                 title='Seven V11 Wafers $R_n$ Histogram')
         if run_pturn or run_psat:
             all_pturn_data = np.asarray([])
-            for pkl_path in self.pturn_paths:
+            for pkl_path in histogram_settings.data_paths:
                 data = self.load_data(pkl_path)
                 if from_logan:
                     pturn_vector = self.extract_data_from_logan_pkl(data, pturn=True)
@@ -220,10 +234,6 @@ class RTHist():
         return all_data
 
 if __name__ == '__main__':
-    rt_hist = RTHist()
-    rt_hist.run(run_tc=False, run_rn=False, run_pturn=True, run_psat=False,
-                from_logan=False, from_john=True, from_kek=False, from_darcy=False)
-    #rt_hist.basic()
     hist = Hist()
     if histogram_settings.make_histogram:
         hist.run(run_tc=histogram_settings.run_tc,
@@ -242,12 +252,23 @@ if __name__ == '__main__':
                                      run_pturn=histogram_settings.run_pturn,
                                      run_psat=histogram_settings.run_psat)
 
-        hist.make_histogram(all_data, xlabel='$P_{sat}$ ($pW$)', ylabel='Count',
-                            xlim=histogram_settings.pturn_xlim, bins=histogram_settings.pturn_bins,
-                            target_ranges=histogram_settings.psat_target_range,
-                            title='$P_{sat}$ Histogram\nPB20.13.09+PB20.13.11')
+        if histogram_settings.run_psat:
+            hist.make_histogram(all_data, xlabel='$P_{sat}$ ($pW$)', ylabel='Count',
+                                xlim=histogram_settings.pturn_xlim, bins=histogram_settings.pturn_bins,
+                                target_ranges=histogram_settings.psat_target_range,
+                                title='$P_{sat}$ Histogram PB20.11.08')
 
+        if histogram_settings.run_rn:
+            hist.make_histogram(all_data, xlabel='$R_{n}$ ($\Omega$)', ylabel='Count',
+                                xlim=histogram_settings.rn_xlim, bins=histogram_settings.rn_bins,
+                                target_ranges=histogram_settings.rn_target_range,
+                                title='$R_{n}$ Histogram PB20.13.11')
 
+        if histogram_settings.run_tc:
+            hist.make_histogram(all_data, xlabel='$T_{c}$ ($mK$)', ylabel='Count',
+                                xlim=histogram_settings.tc_xlim, bins=histogram_settings.tc_bins,
+                                target_ranges=histogram_settings.tc_target_range,
+                                title='$T_{c}$ Histogram PB20.13.11')
 
 
 
