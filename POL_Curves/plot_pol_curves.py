@@ -21,6 +21,7 @@ class POLCurve():
             amplitude_vector = np.zeros(len(lines))
             for i, line in enumerate(lines):
                 data_ = line.split('\t')
+                print data_[0]
                 x_position = float(data_[0])
                 amplitude_value = data_[1]
                 np.put(x_position_vector, i, x_position)
@@ -47,7 +48,6 @@ class POLCurve():
             initial_fit_val = self.test_sine(x_val, initial_fit_params[0], initial_fit_params[1],
                                              initial_fit_params[2], initial_fit_params[3])
             angle_ = (x_val / fit_params[1]) * 2 * np.pi
-            print angle_
             np.put(fit, i, fit_val)
             np.put(initial_fit, i, initial_fit_val)
             np.put(angle_vector_fit, i, angle_)
@@ -67,12 +67,17 @@ class POLCurve():
             fig = plt.figure(figsize=(7.25,6))
             fig.subplots_adjust(top=0.93, bottom=0.13)
         ax = fig.add_subplot(111)
+        fig.subplots_adjust(top=0.85)
         ax.tick_params(labelsize=18)
         # Create the color map
         ax.plot(data_dict['angle_vector'], data_dict['normalized_amplitude'], '*', ms=5.0, label='Data', lw=3)
-        #ax.plot(data_dict['angle_vector_fit'], data_dict['fit'], label='Fit', lw=2)
+        ax.plot(data_dict['angle_vector_fit'], data_dict['fit'], label='Fit', lw=2)
         # Basic Plotting Options 
+
         ax.set_xlabel('Polarizing Grid Position ($^{\circ}$)', fontsize=24)
+        eff_value = 1e2 * np.min(data_dict['fit']) / np.max(data_dict['fit'])
+        ax.text(0.05, 0.05, 'Min/Max = {0:.2f} %'.format(eff_value), color='k',
+                fontsize=16, transform=ax.transAxes)
         ax.set_ylabel('Peak Normalized', fontsize=24)
         title_str = 'Polarization Efficiency for\n{0}'.format(label)
         ax.set_title(title_str, fontsize=24)
@@ -84,7 +89,7 @@ class POLCurve():
     ## Fitting Utilities
     def arbitrary_sine(self, amplitude, period, y_offset):
         def arb_sine(x):
-            value = amplitude*np.sin(x * period) + y_offset
+            value = amplitude*np.sin(x * period) ** 2 + y_offset
             return value
         return arb_sine
 
@@ -123,6 +128,7 @@ class POLCurve():
             label = input_dict['measurements']['plot_label']
             data_dict = self.load_pol_efficiency_data(data_path)
             processed_data_dict = self.parse_data(data_dict, degsperpoint)
+            print label
             fig = self.plot_polarization_efficiency(processed_data_dict, label, fig=None)
 
 
@@ -203,7 +209,16 @@ if __name__ == '__main__':
 	run(data_path, 150, 'PB2_Pixel')
     if True:
         list_of_input_dicts = [{'measurements': {'data_path': '../Data/2017_03_08/SQ1_Polarization3.dat',
-                                                 'degperpoint': 5,
+                                                 'degsperpoint': 5,
                                                  'plot_label': '150 PB2 Pixel'}}]
+        list_of_input_dicts = [{'measurements': {'data_path': '../Data/2018_06_27/SQ3_Pix118_090T_PolEff_02.dat',
+                                                 'degsperpoint': 5,
+                                                 'plot_label': 'PB20.13.26.P118.090T'}},
+                               {'measurements': {'data_path': '../Data/2018_06_27/SQ2_Pix100_150B_PolEff_05.dat',
+                                                 'degsperpoint': 5,
+                                                 'plot_label': 'PB20.13.26.P100.150B'}},]
+                               #{'measurements': {'data_path': '../Data/2018_06_27/SQ5_Pix100_150B_PolEff_05.dat',
+                                                 #'degsperpoint': 5,
+                                                 #'plot_label': 'PB20.13.26.P100.150B'}}]
         pol = POLCurve()
         pol.run(list_of_input_dicts)

@@ -37,7 +37,6 @@ class FTSCurve():
         normalized_transmission_vector = transmission_vector / max(transmission_vector)
         return frequency_vector, transmission_vector, normalized_transmission_vector
 
-
     def save_FFT_data(self, frequency_vector, transmission_vector, save_path):
         '''
         Inputs:
@@ -53,6 +52,11 @@ class FTSCurve():
                 transmission = transmission_vector[i]
                 line = '{0} \t {1}\n'.format(frequency, transmission)
                 file_handle.write(line)
+
+    def add_co_lines(self, ax):
+        ax.axvline(110, 0, 1, linestyle='-.', color='k', alpha=0.5, label='CO 110 GHz')
+        ax.axvline(115, 0, 1, linestyle=':', color='k', alpha=0.5, label='CO 115 GHz')
+        return ax
 
     def add_sim_data(self, ax, band='150'):
         if band in ['90', '150']:
@@ -79,7 +83,7 @@ class FTSCurve():
             color = 'c'
         elif band == '90':
             color = 'm'
-        ax.plot(frequency, transmission, color=color, lw=2, label='{0} GHz Sim'.format(band))
+        ax.plot(frequency, transmission, color=color, linestyle=':', lw=3, alpha=0.5, label='{0} GHz Sim'.format(band))
         return ax
 
     def load_FFT_data(self, data_path, smoothing_factor=0.01, xlim_clip=(10, 600)):
@@ -163,7 +167,7 @@ class FTSCurve():
     def plot_FFT_data(self, frequency_vector, transmission_vector, color='b',
                       title='', label='', xlim=(100,400), fig=None, add_FFT=False,
                       add_atmosphere=False, save_data=True, add_90_sim=False, add_150_sim=False,
-                      add_220_sim=False, add_270_sim=False, custom_order=[]):
+                      add_220_sim=False, add_270_sim=False, add_co_lines=False, custom_order=[]):
         '''
         This function will take the output of Load_FFT_Data
         '''
@@ -185,7 +189,8 @@ class FTSCurve():
             ax = self.add_sim_data(ax, band='220')
         if add_270_sim:
             ax = self.add_sim_data(ax, band='270')
-        print 'plotting freq and tran vector'
+        if add_co_lines:
+            ax = self.add_co_lines(ax)
         ax.plot(frequency_vector, transmission_vector, color, label=label, lw=1, alpha=0.8)
         ax.tick_params(labelsize=14)
         ax.set_xlabel('Frequency (GHz)', fontsize=14)
@@ -327,6 +332,7 @@ class FTSCurve():
             divide_bs_5 = dict_['measurements']['divide_bs_5']
             divide_bs_10 = dict_['measurements']['divide_bs_10']
             add_atmosphere = dict_['measurements']['add_atm_model']
+            add_co_lines = dict_['measurements']['add_co_lines']
             smoothing_factor = float(dict_['measurements']['smoothing_factor'])
             add_90_sim = float(dict_['measurements']['add_sim_band_90'])
             add_150_sim = float(dict_['measurements']['add_sim_band_150'])
@@ -356,10 +362,13 @@ class FTSCurve():
                     self.save_FFT_data(frequency_vector, transmission_vector, save_path)
                 custom_order = []
                 #custom_order = ['ATM Model', '90T', '90B', '150T', '150B']
-                custom_order = ['ATM Model', '90 GHz Sim', '90 GHz Bottom', '90 GHz Top', '150 GHz Sim', '150 GHz Bottom', '150 GHz Top']
+                custom_order = ['ATM Model', 'CO 110 GHz', 'CO 115 GHz', '90 GHz Sim', '90 GHz Bottom', '90 GHz Top', '150 GHz Sim', '150 GHz Bottom', '150 GHz Top']
+                custom_order = ['ATM Model', 'CO 110 GHz', 'CO 115 GHz', '90 GHz Sim', '90 GHz Bottom', '90 GHz Top', '150 GHz Sim', '150 GHz Bottom', '150 GHz Top']
+                custom_order = ['ATM Model', 'CO 110 GHz', 'CO 115 GHz', '90 GHz Sim', 'Pix 118 90 GHz Top', 'Pix 101 90 GHz Top',
+                                '150 GHz Sim', 'Pix 118 150 GHz Top', 'Pix 100 150 GHz Bottom']
                 fig, ax, add_atmosphere = self.plot_FFT_data(frequency_vector, divided_transmission_vector, color=color, title=title, label=label, xlim=xlim_plot,
                                                              fig=fig, add_atmosphere=add_atmosphere, add_90_sim=add_90_sim, add_150_sim=add_150_sim, add_220_sim=add_220_sim,
-                                                             add_270_sim=add_270_sim, custom_order=custom_order)
+                                                             add_270_sim=add_270_sim, add_co_lines=add_co_lines, custom_order=custom_order)
             elif data_path[-3:] == '.if':
                 plot_fft = True
                 position_vector, signal_vector = self.load_IF_data(data_path)
