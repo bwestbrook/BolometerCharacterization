@@ -1,14 +1,24 @@
 import numpy as np
 import pylab as pl
 from pprint import pprint
-
+import csv
+        
 class FTSDAQ():
 
     def __init__(self):
         self.hi = 'hi'
 
+    def read_inteferogram(self,file_path,i):
+        with open(file_path) as f:
+            reader = csv.reader(f, delimiter='\t')
+ #           first_col = list(zip(*reader))[0]
+            second_col = list(zip(*reader))[i]
+  #      first_col = map(float,first_col)              
+        second_col = map(float,second_col)  
+        return second_col
+
     def simulate_inteferogram(self, starting_position=-10000, ending_position=300000, step_size=500, test=False):
-        dummy_int_x = np.arange(starting_position, ending_position, step_size)
+        dummy_int_x = np.arange(starting_position, ending_position+step_size, step_size)
         print dummy_int_x
         dummy_int_y = np.zeros(0)
         for i, x_pos in enumerate(dummy_int_x):
@@ -20,8 +30,8 @@ class FTSDAQ():
             pl.show()
         return dummy_int_x, dummy_int_y
 
-    def noisy_sync(self, x_pos, noise_amp=0.2):
-        pure_sync = np.sinc(x_pos * 100)
+    def noisy_sync(self, x_pos, noise_amp=0.02):
+        pure_sync = np.sinc(x_pos * 100000)
         noise = pure_sync * noise_amp * (np.random.random() - 0.5)
         noisy_sync = pure_sync + noise
         return noisy_sync
@@ -47,4 +57,5 @@ class FTSDAQ():
 
 if __name__ == '__main__':
     fts_daq = FTSDAQ()
-    fts_daq.test(test=True)
+    #fts_daq.test(test=True)
+    x = fts_daq.read_inteferogram('/home/polarbear/BolometerCharacterization/SQ5_Pix101_90T_Spectra_09.fft',0)
