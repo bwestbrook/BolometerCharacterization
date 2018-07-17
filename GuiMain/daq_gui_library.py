@@ -19,11 +19,10 @@ from IV_Curves.plot_iv_curves import IVCurve
 from FTS_Curves.plot_fts_curves import FTSCurve
 from FTS_Curves.numerical_processing import Fourier
 from POL_Curves.plot_pol_curves import POLCurve
-#from Stepper_Motor.stepper_motor import stepper_motor
 from FTS_DAQ.fts_daq import FTSDAQ
 from BeamMapping.beam_map_daq import BeamMapDAQ
 from Motor_Driver.stepper_motor import stepper_motor
-
+from analyzeFTS import FTSanalyzer
 from DAQ.daq import DAQ
 
 
@@ -42,6 +41,8 @@ class GuiTemplate(QtGui.QWidget):
         self.daq_main_panel_widget.show()
         self.daq = DAQ()
         self.user_desktop_path = os.path.expanduser('~')
+        self.fts_analyzer = FTSanalyzer()
+        self.fts_daq = FTSDAQ()
 
     def __apply_settings__(self, settings):
         for setting in dir(settings):
@@ -88,7 +89,7 @@ class GuiTemplate(QtGui.QWidget):
         if hasattr(self, function):
             return getattr(self, function)()
 
-    def _connect_to_com_port(self, beammapper=None):
+    def _connect_to_com_port(self, beammapper=None,single_channel_fts=None):
         combobox = str(self.sender().whatsThis())
         if combobox == '_daq_main_panel_daq_select_combobox':
             popup = str(self.sender().currentText())
@@ -99,7 +100,7 @@ class GuiTemplate(QtGui.QWidget):
                 if beammapper == 1:
 	            com_port = 'COM1'
 		    connection = '_beam_mapper_popup_x_successful_connection_header_label'
-		    popup_combobox = '_beam_mapper_popup_y_current_com_port_combobox'
+		    popup_combobox = '_beam_mapper_popup_x_current_com_port_combobox'
                     getattr(self, popup_combobox).setCurrentIndex(0)
 		elif beammapper == 2:
 		    com_port = 'COM2'
@@ -107,8 +108,15 @@ class GuiTemplate(QtGui.QWidget):
 		    popup_combobox = '_beam_mapper_popup_y_current_com_port_combobox'
                     getattr(self, popup_combobox).setCurrentIndex(1)
 	    elif popup == 'Single Channel Fts':
-	        com_port = 'COM1'
-	        connection = '_single_channel_fts_popup_successful_connection_header_label'
+                 if single_channel_fts == 1:
+	            com_port = 'COM1'
+		    connection = '_single_channel_fts_popup_successful_connection_header_label'
+		    popup_combobox = '_single_channel_fts_popup_current_com_port_combobox'
+                    getattr(self, popup_combobox).setCurrentIndex(0)
+		 elif single_channel_fts == 2:
+		    com_port = 'COM2'
+		    connection = '_single_channel_fts_popup_grid_successful_connection_header_label'
+		    popup_combobox = '_single_channel_fts_popup_grid_current_com_port_combobox'
 	    elif popup == 'User Move Stepper':
 	        com_port = 'COM1'
 	        connection = '_user_move_stepper_popup_successful_connection_header_label'
@@ -154,15 +162,10 @@ class GuiTemplate(QtGui.QWidget):
 
     def _final_plot(self):
         current =  str(self.sender().whatsThis())
+        self.is_fft = False
         xdata = self.xdata
         ydata = self.ydata
-        stds = self.stds 
-        if current == '_pol_efficiency_popup_save_pushbutton':
-            title = 'Pol Efficiency'
-        elif current == '_single_channel_fts_popup_save_pushbutton':
-            title = 'Single Channel FTS'
-        elif current == '_beam_mapper_popup_save_pushbutton':
-            title = 'Beam Mapper'
+        stds = self.stds       
         if not hasattr(self, 'final_plot_popup'):
             self._create_popup_window('final_plot_popup')
         else:
@@ -170,7 +173,19 @@ class GuiTemplate(QtGui.QWidget):
         self._build_panel(settings.final_plot_build_dict)
         self.final_plot_popup.showMaximized()
         self.final_plot_popup.setWindowTitle('Result')
-        self._draw_final_plot(xdata,ydata,stds,title=title) 
+        if current == '_pol_efficiency_popup_save_pushbutton':
+            title = 'Pol Efficiency'
+        elif current == '_single_channel_fts_popup_save_pushbutton':
+            title = 'Single Channel FTS'
+            self.is_fft = True
+            self.fts_analyzer.plotCompleteFT(self.posFreqArray,self.FTArrayPosFreq)
+            image = QtGui.QPixmap('temp_files/temp_fft.png')
+            image = image.scaled(600, 300)
+            getattr(self, '_final_plot_popup_fft_label').setPixmap(image)
+        elif current == '_beam_mapper_popup_save_pushbutton':
+            title = 'Beam Mapper'
+        self._draw_final_plot(xdata,ydata,stds,title=title)
+        
 
     def _close_final_plot(self):
         self.final_plot_popup.close()
@@ -184,10 +199,16 @@ class GuiTemplate(QtGui.QWidget):
             ax.legend(prop={'size':6})
         else:
             ax.errorbar(x,y,yerr=stds)
-        ticks = np.linspace(x[0],x[len(y)-1],5)
+        yticks = np.linspace(min(y),max(y),5)
+        yticks = [round(s,2) for s in yticks]
+        xticks = np.linspace(x[0],x[len(y)-1],5)
+        xticks = [round(s,2) for s in xticks]
+        ax.set_xticks(xticks)
+        ax.set_xticklabels(xticks,fontsize = 6)
+        ax.set_yticks(yticks)
+        ax.set_yticklabels(yticks,fontsize = 6)
         fig.subplots_adjust(left=0.24, right=0.95, top=0.80, bottom=0.35)
         xlabel = 'Sample'
-        ax.set_xticks(ticks)
         if title == 'Pol Efficiency':
             xlabel = 'Angle'
         elif title == 'Single Channel FTS':
@@ -221,12 +242,20 @@ class GuiTemplate(QtGui.QWidget):
                 self._draw_final_plot(self.xdata,self.ydata,self.stds, legend = legend)
 
     def _save_final_plot(self):
-        current =  str(self.sender().whatsThis())
         save_path = QtGui.QFileDialog.getSaveFileName(self, 'Save Location', self.user_desktop_path,
                                                             "Image files (*.png *.jpg *.gif)")
         plot_path = copy(save_path).replace('csv','png')
         self.write_file(self.xdata,self.ydata,self.stds,save_path)
         self._draw_final_plot(self.xdata,self.ydata,self.stds,str(plot_path))
+        if self.is_fft:
+            fft_path = str(copy(save_path)).strip('.csv')
+            fft_path += '_fft.csv'
+            self.write_file(self.posFreqArray,self.FTArrayPosFreq,[0]*len(self.posFreqArray),data_path = fft_path)
+#            self.fts_analyzer.makeRawInterferogram(self.xdata,self.ydata,self.stds,str(plot_path))
+            filenameRoot = copy(fft_path).replace('csv','png')
+            self.fts_analyzer.plotCompleteFT(self.posFreqArray,self.FTArrayPosFreq,filenameRoot)
+ 
+ 
 
 
 
@@ -478,7 +507,8 @@ class GuiTemplate(QtGui.QWidget):
         for unique_combobox, entries in settings.combobox_entry_dict.iteritems():
             self.populate_combobox(unique_combobox, entries)
         self._update_single_channel_fts()
-        self._connect_to_com_port()
+        self._connect_to_com_port(single_channel_fts=1)
+        self._connect_to_com_port(single_channel_fts=2)
         self. _blank_fts_plot()
         getattr(self, '_single_channel_fts_popup_save_pushbutton').setDisabled(True)
         self.single_channel_fts_popup.showMaximized()
@@ -558,6 +588,11 @@ class GuiTemplate(QtGui.QWidget):
     def _update_slider(self, slider_pos):
         print slider_pos
 
+    def _apodize(self):
+        scan_params = self._get_all_single_channel_fts_scan_params()
+        self.apodization = scan_params['apodization_type']
+        print self.apodization
+
     def _update_slider_setup(self, scan_params):
         min_slider = '_single_channel_fts_popup_position_slider_min_label'
         max_slider = '_single_channel_fts_popup_position_slider_max_label'
@@ -567,11 +602,8 @@ class GuiTemplate(QtGui.QWidget):
         getattr(self, slider).setMinimum(scan_params['starting_position'])
         getattr(self, slider).setMaximum(scan_params['ending_position'])
         com_port = self._get_com_port('_single_channel_fts_popup_current_com_port_combobox')
-        #motor_position =  getattr(self, 'sm_{0}'.format(com_port)).get_position()
         motor_position = 0
         getattr(self, slider).setSliderPosition(motor_position)
-        #getattr(self, slider).setRange(0, scan_params['starting_position'] + scan_params['ending_position'])
-        #getattr(self, slider).setTickInterval(scan_params['step_size'])
         getattr(self, slider).sliderPressed.connect(self._dummy)
         self.starting_position = scan_params['starting_position']
 
@@ -591,24 +623,35 @@ class GuiTemplate(QtGui.QWidget):
         getattr(self, '_single_channel_fts_popup_interferogram_label').setPixmap(image)
         
     def _run_fts(self):
+        self._apodize()
         scan_params = self._get_all_scan_params(popup='_single_channel_fts')
         positions, data, self.stds = [], [], []
-        for position in np.arange(scan_params['starting_position'], scan_params['ending_position']+scan_params['step_size'],
-                                  scan_params['step_size']):
+        #dummy_x, dummy_y = self.fts_daq.simulate_inteferogram(scan_params['starting_position'], scan_params['ending_position'],scan_params['step_size'])
+        amplitude = self.fts_daq.read_inteferogram('SQ5_Pix101_90T_Spectra_09.if',1)
+        for i,position in enumerate( np.arange(scan_params['starting_position'], scan_params['ending_position'] + scan_params['step_size'], scan_params['step_size'])):
             data_time_stream, mean, min_, max_, std = self.daq.get_data(signal_channel=scan_params['signal_channel'], integration_time=scan_params['integration_time'],
-                                                                        sample_rate=scan_params['sample_rate'])
+                                                                        sample_rate=scan_params['sample_rate'],central_value = amplitude[i])
             self.stds.append(std)
             getattr(self, '_single_channel_fts_popup_std_label').setText('{0:.3f}'.format(std))
             getattr(self, '_single_channel_fts_popup_mean_label').setText('{0:.3f}'.format(mean))
             getattr(self, '_single_channel_fts_popup_current_position_label').setText('{0:.3f}'.format(position))
             self._draw_time_stream(data_time_stream, min_, max_,'_single_channel_fts_popup_time_stream_label')       
-            positions.append(position * scan_params['DistPerStep'] * 1e-9)
+            positions.append(position * scan_params['DistPerStep'])
             data.append(mean)
             fig = pl.figure(figsize=(3.5,1.5))
             ax = fig.add_subplot(111)
             fig.subplots_adjust(left=0.24, right=0.95, top=0.80, bottom=0.35)
             ax.plot(positions, data)
-            ax.set_xlabel('Mirror Position (m)')
+            yticks = np.linspace(min(data),max(data),5)
+            yticks = [round(x,2) for x in yticks]
+            xticks = np.linspace(positions[0],positions[-1],5)
+            xticks = [round(x,2) for x in xticks]
+            ax.set_xticks(xticks)
+            ax.set_xticklabels(xticks,fontsize = 6)
+
+            ax.set_yticks(yticks)
+            ax.set_yticklabels(yticks,fontsize = 6)
+            ax.set_xlabel('Mirror Position (in)')
             ax.set_ylabel('Amplitude')
             ax.set_title('Interferogram')
             fig.savefig('temp_files/temp_int.png')
@@ -622,9 +665,14 @@ class GuiTemplate(QtGui.QWidget):
 #        image = QtGui.QPixmap('temp_files/temp_fft.png')
  #       image = image.scaled(350, 175)
   #      getattr(self, '_single_channel_fts_popup_fft_label').setPixmap(image)
+        self.posFreqArray,self.FTArrayPosFreq = self.fts_analyzer.analyzeBolo(positions, data,apodization=self.apodization)
+        image = QtGui.QPixmap('temp_files/temp_fft.png')
+        image = image.scaled(600, 300)
+        getattr(self, '_single_channel_fts_popup_fft_label').setPixmap(image)
         self.xdata = positions
         self.ydata = data
         getattr(self, '_single_channel_fts_popup_save_pushbutton').setEnabled(True)
+        
 
     #################################################
     # BEAM MAPPER 
@@ -648,8 +696,8 @@ class GuiTemplate(QtGui.QWidget):
         self._build_panel(settings.beam_mapper_build_dict)
         for combobox_widget, entry_list in self.beam_mapper_combobox_entry_dict.iteritems():
             self.populate_combobox(combobox_widget, entry_list)
-        self._connect_to_com_port(1)
-        self._connect_to_com_port(2)
+        self._connect_to_com_port(beammapper=1)
+        self._connect_to_com_port(beammapper=2)
         self._draw_time_stream([0]*5, -1, -1,'_beam_mapper_popup_time_stream_label')     
         self.beam_mapper_popup.showMaximized()
         self._initialize_beam_mapper()
