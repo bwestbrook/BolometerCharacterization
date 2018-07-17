@@ -20,7 +20,8 @@ final_plot_settings.final_plot_build_dict = {                '_common_settings':
 
 # VISUAL DATA MONITORING
 
-                                                             '_final_plot_popup_result_label': {'alignment': 'Center', 'position': (2, 0, 8, 6)},
+                                                             '_final_plot_popup_result_label': {'alignment': 'Center', 'position': (2, 0, 6, 6)},
+                                                             '_final_plot_popup_fft_label': {'alignment': 'Center', 'position': (2, 6, 6, 6)},                                                             
 
 }
 
