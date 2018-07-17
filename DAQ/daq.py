@@ -37,7 +37,7 @@ class DAQ():
     def read_buffer(self, signal_channel=0, integration_time=500, sample_rate=50, central_value=1.0, simulate=True):
         return raw_data
 
-    def simulate_time_stream(self, central_value, integration_time, sample_rate, noise_factor=0.1):
+    def simulate_time_stream(self, central_value, integration_time, sample_rate, noise_factor=0):
         n_samples = int(sample_rate) * (integration_time / 1000.)
         simulated_time_stream = np.random.rand(int(n_samples))
         simulated_time_stream *= noise_factor
