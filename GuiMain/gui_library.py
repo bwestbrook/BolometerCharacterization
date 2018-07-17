@@ -614,6 +614,14 @@ class GuiTemplate(QtGui.QWidget):
             if col == 1:
                 getattr(self, unique_widget_name).setChecked(True)
             row += 1
+            # Add a "Add  CO lines" checkbox
+            unique_widget_name = '_{0}_{1}_add_co_lines_checkbox'.format(popup_name, col)
+            widget_settings = {'text': 'Check = Do Add CO lines',
+                               'position': (row, col, 1, 1)}
+            self._create_and_place_widget(unique_widget_name, **widget_settings)
+            if col == 1:
+                getattr(self, unique_widget_name).setChecked(True)
+            row += 1
             # Add a "Sim Bands" checkbox
             for j, band in enumerate(settings.simulated_bands):
                 unique_widget_name = '_{0}_{1}_add_sim_band_{2}_checkbox'.format(popup_name, col, band)
@@ -655,7 +663,7 @@ class GuiTemplate(QtGui.QWidget):
             row += 1
             # Add an "xlim plot" lineedit
             unique_widget_name = '_{0}_{1}_xlim_plot_lineedit'.format(popup_name, col)
-            widget_settings = {'text': '50:300',
+            widget_settings = {'text': '50:250',
                                'position': (row, col, 1, 2)}
             self._create_and_place_widget(unique_widget_name, **widget_settings)
             row += 1
@@ -671,7 +679,7 @@ class GuiTemplate(QtGui.QWidget):
         list_of_input_dicts = []
         fts_settings = ['smoothing_factor', 'xlim_plot', 'xlim_clip', 'divide_mmf', 'add_atm_model',
                         'divide_bs_5', 'divide_bs_10', 'step_size', 'steps_per_point', 'add_sim_band',
-                        'color', 'normalize', 'plot_title', 'plot_label']
+                        'add_co_lines', 'color', 'normalize', 'plot_title', 'plot_label']
         for selected_file, col in self.selected_files_col_dict.iteritems():
             input_dict = {'measurements': {'data_path': selected_file}}
             for setting in fts_settings:

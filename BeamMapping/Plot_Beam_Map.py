@@ -14,7 +14,7 @@ class BeamMap():
     def __init__(self):
         self.hi = 'hello'
 
-    def load_beam_map_data(self, data_path, map_limit=2.5e6, quick_plot=False):
+    def load_beam_map_data(self, data_path, map_limit=2.5e6):
         '''
         This function loads the data output by labview
         Inputs
@@ -57,15 +57,7 @@ class BeamMap():
         error_vector = error_vector[~np.isnan(x_position_vector)]
         data_dict = {'x_position': x_position_vector, 'y_position': y_position_vector,
                      'amplitude': amplitude_vector, 'error': error_vector}
-        if quick_plot:
-            x_vector = np.arange(-300000, 300000, 12500)
-            y_vector = np.arange(-300000, 25000, 12500)
-            X, Y = np.meshgrid(x_vector, y_vector)
-            Z = amplitude_vector[:1248].reshape(X.shape)
-            pl.pcolor(X, Y, Z)
-            pl.show()
         return data_dict
-
 
     def parse_beam_map_data(self, data_dict, source_distance=18.0):
         '''
@@ -90,22 +82,13 @@ class BeamMap():
         plot_extent = [-boundary_x, boundary_x, -boundary_y, boundary_y]
         # Create a matrix with the X, Y values
         if len(np.arange(-boundary_x, boundary_x + step_size_x / 2.0, step_size_x)) % 2 == 0:
-            #X, Y = np.meshgrid(np.arange(-boundary_x, boundary_x, step_size_x),
-                               #np.arange(-boundary_x, boundary_x, step_size_x))
-
-
             X, Y = np.meshgrid(np.arange(-boundary_x, boundary_x, step_size_x),
                                np.arange(-boundary_x, boundary_x, step_size_x))
-
-
         else:
-
             X, Y = np.meshgrid(np.arange(-boundary_x, boundary_x + step_size_x / 2.0, step_size_x),
                                np.arange(-boundary_x, boundary_x + step_size_x / 2.0, step_size_x))
-
         # Re-shape and normalize the amplitude data
         try:
-            print
             print
             print 'Basic boundary conditions extracted from data'
             print -boundary_x, -boundary_y, boundary_x, boundary_y
@@ -115,14 +98,11 @@ class BeamMap():
             print
             print
         except ValueError:
-            print 'data size error'
+            print 'data size error padding with zeroes'
             zeros = np.zeros(Y.shape[0] ** 2 - raw_amplitude.shape[0])
             padded_amplitude = np.append(raw_amplitude, zeros)
             raw_amplitude = padded_amplitude
             amplitude = padded_amplitude.reshape(X.shape)
-            #print amplitude
-            #print np.max(amplitude)
-            #import ipdb;ipdb.set_trace()
         normalized_amplitude = amplitude / np.max(amplitude)
         initial_guess = self.guess_fit_params(raw_amplitude.reshape(X.shape))
         fit_params = self.fit_function(self.twoD_Gaussian, X, Y, raw_amplitude, initial_guess)
@@ -138,7 +118,7 @@ class BeamMap():
         return processed_data_dict
 
 
-    def plot_beam_map(self, processed_data_dict, frequency='150',
+    def plot_beam_map(self, processed_data_dict, label='test',
                       plot_raw=True, save_raw=True,
                       plot_fits=True, save_fits=True,
                       plot_3d=True, save_3d=True,
@@ -155,121 +135,126 @@ class BeamMap():
                         Z_fit[i, j] = 0.0
                         Z_res[i, j] = 0.0
         if plot_raw or save_raw:
-            fig_raw = pl.figure(figsize=(6.5, 6.5))
-            box_size = 0.72
-            box_start_corner = 0.20
-            main_box_rectangle = (box_start_corner, box_start_corner, box_size, box_size)
-            cb_box_rectangle = (box_size + 0.15, box_start_corner, 0.04, box_size)
-            ax_raw = fig_raw.add_axes(main_box_rectangle)
-            ax_raw.tick_params(labelsize=18)
-            fig_raw_cb_axis = fig_raw.add_axes(cb_box_rectangle)
-            ax_raw.set_xlabel('X position ($^{\circ}$)', fontsize=24)
-            ax_raw.set_ylabel('Y position ($^{\circ}$)', fontsize=24)
-            ax_raw.set_title('Beam Map {0} GHz'.format(frequency), fontsize=24)
-            color_plot_data = ax_raw.pcolor(X, Y, Z_data, label='Data',
-                                            vmin=np.nanmin(Z_data), vmax=np.nanmax(Z_data),
-                                            cmap=matplotlib.cm.jet)
-            contour_plot_data = ax_raw.contour(X, Y, Z_data, 8, colors='w',
-                                               vmin=0, vmax=np.nanmax(Z_data))
-            if clip:
-                # Data
-                ax_raw.set_xlim([-clip_value, clip_value])
-                ax_raw.set_ylim([-clip_value, clip_value])
-            fig_raw.colorbar(color_plot_data, cax=fig_raw_cb_axis)
-            save_str_raw = './Output/Python/Beam_Map_{0}_GHz.pdf'.format(frequency)
-            if save_raw:
-                fig_raw.savefig(save_str_raw, pad_inches=-1, axis='equal')
-            if plot_raw:
-                fig_raw.show()
-                self._ask_user_if_they_want_to_quit()
+            self.plot_raw(X, Y, Z_data, Z_fit, label=label, contours='fit')
         if plot_fits:
-            fig_height = 10.
-            fig_width = 5.
-            left_align_position = 0.25
-            sub_plot_width = 2.5
-            sub_plot_height = sub_plot_width
-            top_position = 0.72
-            bot_position = 0.08
-            cb_width = 0.06
-            full_figure = pl.figure(figsize=(fig_width, 2.0 * fig_width))
-            full_figure.sub_plotsadjust(left=17)
-            sub_plot_height = sub_plot_height / fig_height
-            sub_plot_width = sub_plot_width / fig_width
-            cb_align_position = sub_plot_width + left_align_position + 0.06
-            mid_position = np.mean([top_position, bot_position])
-            cb_bot_height = sub_plot_height
-            cb_mid_height = sub_plot_height
-            cb_top_height = sub_plot_height
-            # Add the axes for the plots
-            raw_data_cb_axis = full_figure.add_axes((cb_align_position, top_position, cb_width, cb_top_height))
-            fit_data_cb_axis = full_figure.add_axes((cb_align_position, mid_position, cb_width, cb_mid_height))
-            res_cb_axis = full_figure.add_axes((cb_align_position, bot_position, cb_width, cb_bot_height))
-            # Add the axes for the plots
-            ax_data = full_figure.add_axes((left_align_position, top_position, sub_plot_width, sub_plot_height))
-            ax_fit = full_figure.add_axes((left_align_position, mid_position, sub_plot_width, sub_plot_height))
-            ax_res = full_figure.add_axes((left_align_position, bot_position, sub_plot_width, sub_plot_height))
-            # Create the color and contour maps for each of the three cases
-            ### Data ###
-            color_plot_data = ax_data.pcolor(X, Y, Z_data, label='Data',
-                                             vmin=0, vmax=np.nanmax(Z_data),
-                                             cmap=matplotlib.cm.jet)
-            contour_plot_data = ax_data.contour(X, Y, Z_data, 8, label='Data', color='w', vmin=np.nanmin(Z_data), vmax=np.nanmax(Z_data))
-            ### Fit ###
-            color_plot_fit = ax_fit.pcolor(X, Y, Z_fit, label='Fit',
-                                           vmin=np.nanmin(Z_fit), vmax=np.nanmax(Z_fit),
-                                           cmap=matplotlib.cm.jet)
-            contour_plot_fit = ax_fit.contour(X, Y, Z_fit, 8, label='Fit', color='w', vmin=np.nanmin(Z_fit), vmax=np.nanmax(Z_fit))
-            ### Residual ###
-            color_plot_res = ax_res.pcolor(X, Y, Z_res, label='Residual',
-                                           vmin=np.nanmin(Z_res), vmax=np.nanmax(Z_res),
-                                           cmap=matplotlib.cm.jet)
-            contour_plot_res = ax_res.contour(X, Y, Z_res, 8, label='Residual', color='w', vmin=np.nanmin(Z_res), vmax=np.nanmax(Z_res))
-            # Add text labels to the color map
-            ax_data.text(0.05, 0.85, 'Data', color='w', fontsize=16, transform=ax_data.transAxes)
-            ax_fit.text(0.05, 0.85, 'Fit', color='w', fontsize=16, transform=ax_fit.transAxes)
-            ax_res.text(0.05, 0.85, 'Residual', color='k', fontsize=16, transform=ax_res.transAxes)
-            if clip:
-                # Data
-                ax_data.set_xlim([-clip_value, clip_value])
-                ax_data.set_ylim([-clip_value, clip_value])
-                # Fit
-                ax_fit.set_xlim([-clip_value, clip_value])
-                ax_fit.set_ylim([-clip_value, clip_value])
-                # Residual
-                ax_res.set_xlim([-clip_value, clip_value])
-                ax_res.set_ylim([-clip_value, clip_value])
-            # Add the color bars
-            full_figure.colorbar(color_plot_data, cax=raw_data_cb_axis)
-            full_figure.colorbar(color_plot_fit, cax=fit_data_cb_axis)
-            full_figure.colorbar(color_plot_res, cax=res_cb_axis)
-            # Basic Plotting Options 
-            ax_data.set_xlabel('X position ($^{\circ}$)', fontsize=16)
-            ax_fit.set_xlabel('X position ($^{\circ}$)', fontsize=16)
-            ax_res.set_xlabel('X position ($^{\circ}$)', fontsize=16)
-            ax_data.set_ylabel('Y position ($^{\circ}$)', fontsize=16)
-            ax_fit.set_ylabel('Y position ($^{\circ}$)', fontsize=16)
-            ax_res.set_ylabel('Y position ($^{\circ}$)', fontsize=16)
-            ax_data.set_title('Beam Map {0} GHz'.format(frequency))
-            save_str_fits = './Output/Python/Beam_Map_{0}_GHz_fits.png'.format(frequency)
-            if save_fits:
-                full_figure.savefig(save_str_fits, figsize=(6,6))
-            full_figure.show()
-        self._ask_user_if_they_want_to_quit()
+            self.plot_fits(X, Y, Z_data, Z_fit, Z_res, label=label)
         if plot_3d:
-            fig_3d = pl.figure()
-            ax_3d = fig_3d.add_subplot(111, projection='3d')
-            surface_plot = ax_3d.plot_surface(X, Y, Z_data, rstride=1, cstride=1,
-                                              vmin=np.nanmin(0), vmax=np.nanmax(Z_res),
-                                              cmap=matplotlib.cm.jet)
-            ax_3d.set_xlabel('X position ($^{\circ}$)')
-            ax_3d.set_ylabel('Y position ($^{\circ}$)')
-            ax_3d.set_zlabel('Normalized Amplitude')
-            ax_3d.set_title('{0} GHz 3D Beammap'.format(frequency))
-            fig_3d.colorbar(surface_plot)
-            save_str_3d = './Output/Python/Beam_Map_{0}_GHz_3d.png'.format(frequency)
-            if save_3d:
-                fig_3d.savefig(save_str_3d, figsize=(6,6))
-            fig_3d.show()
+            self.plot_3d(X, Y, Z_data, label=label)
+
+    def plot_raw(self, X, Y, Z, Z_fit, label='', contours='data'):
+        fig_raw = pl.figure(figsize=(6.5, 6.5))
+        box_size = 0.70 #width and height
+        box_start_corner = 0.19 # lower left corner
+        main_box_rectangle = (box_start_corner, box_start_corner, box_size, box_size)
+        cb_box_rectangle = (box_size + 0.2, box_start_corner, 0.04, box_size)
+        ax_raw = fig_raw.add_axes(main_box_rectangle)
+        ax_raw.tick_params(labelsize=18)
+        fig_raw_cb_axis = fig_raw.add_axes(cb_box_rectangle)
+        ax_raw.set_xlabel('X position ($^{\circ}$)', fontsize=24)
+        ax_raw.set_ylabel('Y position ($^{\circ}$)', fontsize=24)
+        ax_raw.set_title('Beam Map\n{0}'.format(label), fontsize=24)
+        color_plot_data = ax_raw.pcolor(X, Y, Z, label='Data',
+                                        vmin=np.nanmin(Z), vmax=np.nanmax(Z),
+                                        cmap=matplotlib.cm.jet)
+        if contours == 'data':
+            contour_plot_data = ax_raw.contour(X, Y, Z, 8, color='w',
+                                               vmin=0, vmax=np.nanmax(Z))
+        elif contours == 'fit':
+            contour_plot_data = ax_raw.contour(X, Y, Z_fit, 8, color='w',
+                                               vmin=0, vmax=np.nanmax(Z))
+        fig_raw.colorbar(color_plot_data, cax=fig_raw_cb_axis)
+        save_str_raw = './Output/Python/Beam_Map_{0}_GHz.png'.format(label)
+        fig_raw.savefig(save_str_raw, pad_inches=-1, axis='equal')
+        fig_raw.show()
+        self._ask_user_if_they_want_to_quit()
+
+    def plot_fits(self, X, Y, Z_data, Z_fit, Z_res, label='', clip=False):
+        fig_height = 10.
+        fig_width = 5.
+        left_align_position = 0.25
+        sub_plot_width = 2.5
+        sub_plot_height = sub_plot_width
+        top_position = 0.72
+        bot_position = 0.08
+        cb_width = 0.06
+        full_figure = pl.figure(figsize=(fig_width, 2.0 * fig_width))
+        sub_plot_height = sub_plot_height / fig_height
+        sub_plot_width = sub_plot_width / fig_width
+        cb_align_position = sub_plot_width + left_align_position + 0.06
+        mid_position = np.mean([top_position, bot_position])
+        cb_bot_height = sub_plot_height
+        cb_mid_height = sub_plot_height
+        cb_top_height = sub_plot_height
+        # Add the axes for the plots
+        raw_data_cb_axis = full_figure.add_axes((cb_align_position, top_position, cb_width, cb_top_height))
+        fit_data_cb_axis = full_figure.add_axes((cb_align_position, mid_position, cb_width, cb_mid_height))
+        res_cb_axis = full_figure.add_axes((cb_align_position, bot_position, cb_width, cb_bot_height))
+        # Add the axes for the plots
+        ax_data = full_figure.add_axes((left_align_position, top_position, sub_plot_width, sub_plot_height))
+        ax_fit = full_figure.add_axes((left_align_position, mid_position, sub_plot_width, sub_plot_height))
+        ax_res = full_figure.add_axes((left_align_position, bot_position, sub_plot_width, sub_plot_height))
+        # Create the color and contour maps for each of the three cases
+        ### Data ###
+        color_plot_data = ax_data.pcolor(X, Y, Z_data, label='Data',
+                                         vmin=0, vmax=np.nanmax(Z_data),
+                                         cmap=matplotlib.cm.jet)
+        contour_plot_data = ax_data.contour(X, Y, Z_data, 8, label='Data', color='w', vmin=np.nanmin(Z_data), vmax=np.nanmax(Z_data))
+        ### Fit ###
+        color_plot_fit = ax_fit.pcolor(X, Y, Z_fit, label='Fit',
+                                       vmin=np.nanmin(Z_fit), vmax=np.nanmax(Z_fit),
+                                       cmap=matplotlib.cm.jet)
+        contour_plot_fit = ax_fit.contour(X, Y, Z_fit, 8, label='Fit', color='w', vmin=np.nanmin(Z_fit), vmax=np.nanmax(Z_fit))
+        ### Residual ###
+        color_plot_res = ax_res.pcolor(X, Y, Z_res, label='Residual',
+                                       vmin=np.nanmin(Z_res), vmax=np.nanmax(Z_res),
+                                       cmap=matplotlib.cm.jet)
+        contour_plot_res = ax_res.contour(X, Y, Z_res, 8, label='Residual', color='w', vmin=np.nanmin(Z_res), vmax=np.nanmax(Z_res))
+        # Add text labels to the color map
+        ax_data.text(0.05, 0.85, 'Data', color='w', fontsize=16, transform=ax_data.transAxes)
+        ax_fit.text(0.05, 0.85, 'Fit', color='w', fontsize=16, transform=ax_fit.transAxes)
+        ax_res.text(0.05, 0.85, 'Residual', color='k', fontsize=16, transform=ax_res.transAxes)
+        if clip:
+            # Data
+            ax_data.set_xlim([-clip_value, clip_value])
+            ax_data.set_ylim([-clip_value, clip_value])
+            # Fit
+            ax_fit.set_xlim([-clip_value, clip_value])
+            ax_fit.set_ylim([-clip_value, clip_value])
+            # Residual
+            ax_res.set_xlim([-clip_value, clip_value])
+            ax_res.set_ylim([-clip_value, clip_value])
+        # Add the color bars
+        full_figure.colorbar(color_plot_data, cax=raw_data_cb_axis)
+        full_figure.colorbar(color_plot_fit, cax=fit_data_cb_axis)
+        full_figure.colorbar(color_plot_res, cax=res_cb_axis)
+        # Basic Plotting Options 
+        ax_data.set_xlabel('X position ($^{\circ}$)', fontsize=16)
+        ax_fit.set_xlabel('X position ($^{\circ}$)', fontsize=16)
+        ax_res.set_xlabel('X position ($^{\circ}$)', fontsize=16)
+        ax_data.set_ylabel('Y position ($^{\circ}$)', fontsize=16)
+        ax_fit.set_ylabel('Y position ($^{\circ}$)', fontsize=16)
+        ax_res.set_ylabel('Y position ($^{\circ}$)', fontsize=16)
+        ax_data.set_title('Beam Map {0}'.format(label))
+        save_str_fits = './Output/Python/Beam_Map_{0}_GHz_fits.png'.format(label)
+        full_figure.savefig(save_str_fits, figsize=(6,6))
+        full_figure.show()
+        self._ask_user_if_they_want_to_quit()
+
+    def plot_3d(self, X, Y, Z, label=''):
+        fig_3d = pl.figure()
+        ax_3d = fig_3d.add_subplot(111, projection='3d')
+        surface_plot = ax_3d.plot_surface(X, Y, Z, rstride=1, cstride=1,
+                                          vmin=np.nanmin(0), vmax=np.nanmax(Z_res),
+                                          cmap=matplotlib.cm.jet)
+        ax_3d.set_xlabel('X position ($^{\circ}$)')
+        ax_3d.set_ylabel('Y position ($^{\circ}$)')
+        ax_3d.set_zlabel('Normalized Amplitude')
+        ax_3d.set_title('{0} GHz 3D Beammap'.format(label))
+        fig_3d.colorbar(surface_plot)
+        save_str_3d = './Output/Python/Beam_Map_{0}_GHz_3d.png'.format(label)
+        if save_3d:
+            fig_3d.savefig(save_str_3d, figsize=(6,6))
+        fig_3d.show()
         self._ask_user_if_they_want_to_quit()
 
     def twoD_Gaussian(self, (x, y), amplitude, x_0, y_0, sigma_x, sigma_y, theta):
@@ -328,84 +313,20 @@ class BeamMap():
         data_dict = self.load_beam_map_data(data_path, map_limit)
         processed_data_dict = self.parse_beam_map_data(data_dict, source_distance=5.3937)
         fig = self.plot_beam_map(processed_data_dict, frequency, clip=False, clip_value=12,
-                                 plot_fits=False, plot_raw=True, plot_3d=False)
+                                 plot_fits=True, plot_raw=True, plot_3d=False)
 
 
 if __name__ == '__main__':
     bm = BeamMap()
     data_path = '../Data/2018_06_25/SQ4_2D_4by4in_0p125inStep_0p25inAp_Pix118_150T_Beammap.dat'
-    data_path = '../Data/2018_06_26/SQ3_2D_6by6in_0p25inStep_0p5inAp_Pix118_00T_Beammap01.dat'
     data_path = '../Data/2018_06_26/SQ4_2D_2by2in_0p125inStep_0p25inAp_Pix118_150T_Beammap05.dat'
     data_path = '../Data/2018_06_26/SQ4_2D_6by6in_0p125inStep_0p25inAp_Pix118_150T_Beammap03.dat'
+    data_path = '../Data/2018_06_26/SQ3_2D_6by6in_0p25inStep_0p5inAp_Pix118_00T_Beammap01.dat'
+    frequency = 'PB201326-P1118-90T'
+    data_path = '../Data/2018_06_27/SQ5_2D_6by6in_0p25inStep_0p5inAp_Pix101_90T_Beammap02.dat'
+    frequency = 'PB201326-P101-90T'
     data_path = '../Data/2018_06_25/SQ4_2D_6by6in_0p25in_Pix118_150T_Beammap.dat'
-    frequency = '150'
+    frequency = 'PB201326-P1118-150T'
+    data_path = '../Data/2018_06_27/SQ2_2D_6by6in_0p25inStep_0p5inAp_Pix100_150B_Beammap03.dat'
+    frequency = 'PB201326-P100-150B'
     bm.run(data_path, frequency, test=False)
-
-
-    if False:
-        # Double Slot Dipole 
-        data_path = '../Data/2015_06_10/003_350_GHz_Beammap.dat'
-        frequency = 350
-
-        # Tetraplexer 2015-06-18
-        data_path = '../Data/2015_06_18/010_150_BeamMap.dat'
-        frequency = 150
-
-        # HF Triplexer 2015-07-11
-        data_path = '../Data/2015_07_11/280/012_Beammap.dat'
-        data_path = '../Data/2015_07_11/280/017_Beammap.dat'
-        frequency = 280
-        data_path = '../Data/2015_07_11/350/014_Beammap.dat'
-        frequency = 350
-        data_path = '../Data/2015_07_11/220/008_Beammap.dat'
-        frequency = 220
-
-        # Tetraplexer 2015-07-01 to 2015-07-02
-        data_path = '../Data/2015_07_02/280/018_Beammap.dat'
-        frequency = 280
-        data_path = '../Data/2015_07_01/90/004_BeamMap_Small.dat'
-        data_path = '../Data/2015_07_02/90/024_Beammap.dat'
-        frequency = 90
-        data_path = '../Data/2015_07_02/150/009_Beammap.dat'
-        data_path = '../Data/2015_07_01/150/015_BeamMap.dat'
-        frequency = 150
-        data_path = '../Data/2015_07_02/220/005_Beammap.dat'
-        frequency = 220
-
-        # Tetraplexer 2015-06-18
-        data_path = '../Data/2015_06_18/008_280_BeamMap.dat'
-        frequency = 280
-        data_path = '../Data/2015_06_18/009_220_BeamMap.dat'
-        frequency = 220
-        data_path = '../Data/2015_06_18/010_150_BeamMap_2.dat'
-        frequency = 150
-
-        # HF Triplexer 2015-05-27 to 2015-06-01
-        data_path = '../Data/2015_06_01/005_280_GHz_Beammap.dat'
-        data_path = '../Data/2015_05_28/008_280_GHz_Full_Beammap.dat'
-        frequency = 280
-        data_path = '../Data/2015_05_28/009_220_GHz_Full_Beammap.dat'
-        frequency = 220
-        data_path = '../Data/2015_05_29/015_350_GHz_BeamMap_MedRes_Big.dat'
-        data_path = '../Data/2015_05_28/007_350_GHz_Full_Beammap.dat'
-        data_path = '../Data/2015_05_30/004_350_GHz_Beammap.dat'
-        data_path = '../Data/2015_06_01/003_350_GHz_Beammap.dat'
-        frequency = 350
-
-        # LF Triplexer 2015-07-11
-        data_path = '../Data/2015_07_13/60/004_Beammap.dat'
-        frequency = 60
-        data_path = '../Data/2015_07_13/40/003_Beammap.dat'
-        frequency = 40
-        data_path = '../Data/2015_07_13/90/006_Beammap.dat'
-        frequency = 90
-
-        # LF Triplexer 2016-01-25/6
-        data_path = '../Data/2016_01_26/006_SQ1_BeamMap_Huge.dat'
-        frequency = 60
-        data_path = '../Data/2016_01_26/010_SQ2_BeamMap_Huge.dat'
-        frequency = 40
-        data_path = '../Data/2016_01_25/017_SQ3_BeamMap_ScanXY_Huge.dat'
-        frequency = 90
-
-        run(data_path, frequency, map_limit=2.1e5)
