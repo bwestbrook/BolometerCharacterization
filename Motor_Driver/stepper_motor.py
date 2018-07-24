@@ -30,9 +30,8 @@ class stepper_motor():
 
         # tell the motor what to do
         self._setup()
-        self._send_command('DI{:f}'.format(x))
-        self._send_command('FP')
-       # self._send_command('MD')
+        self._send_command('FP{:d}'.format(int(x)))
+
 
         # check that the motor did what you wanted
         # IP, EP, commands to see
@@ -68,11 +67,12 @@ class stepper_motor():
         self._send_command('VE{:f}'.format(speed))
 
     def finite_rotation(self, step_size):
-        degrees = step_size*1000/3
+        degrees = step_size*2500/6
+#        degrees = step_size
         self._setup()
-        self._send_command('DI{:f}'.format(float(degrees)))
+        self._send_command('DI{:d}'.format(int(degrees)))
         self._send_command('FL')
-        self._send_command('MD')
+
 
 
     def _setup(self):
@@ -136,6 +136,7 @@ class stepper_motor():
 if __name__ == '__main__':
     SM = stepper_motor('/dev/ttyUSB0')
     SM.set_current(2)
-    angles, data = SM.take_pol_efficiency(1, 60, noise = 1)
-    SM.plot_pol_efficiency_data(angles, data)
+#    SM.finite_rotation(6000)
+ #   angles, data = SM.take_pol_efficiency(1, 60, noise = 1)
+ #   SM.plot_pol_efficiency_data(angles, data)
    
