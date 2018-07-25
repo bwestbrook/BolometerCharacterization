@@ -17,37 +17,41 @@ single_channel_fts_settings.single_channel_fts_build_dict = {
                                                              '_single_channel_fts_popup_grid_motor_header_label': {'text': 'Polar Grid Motor:', 'position': (2, 0, 1, 1)},
                                                              '_single_channel_fts_popup_grid_current_com_port_combobox': {'function': '_connect_to_com_port', 'position': (2, 1, 1, 1)},
 
-                                                             '_single_channel_fts_popup_grid_successful_connection_header_label': {'text': '', 'function': '_connect_to_com_port', 'position': (2, 2, 1, 2)},
+                                                             '_single_channel_fts_popup_grid_successful_connection_header_label': {'text': '', 'function': '_connect_to_com_port', 'position': (3, 0, 1, 2)},
+                                                             '_single_channel_fts_popup_desired_grid_angle_header_label': {'text': 'Desired Grid Angle:', 'position': (2, 2, 1, 1)},
+                                                             '_single_channel_fts_popup_desired_grid_angle_lineedit': {'text': '0',  'position': (2, 3, 1, 1)},
+    
+                                                             '_single_channel_fts_popup_move_grid_pushbutton': {'text': 'Move', 'function': '_rotate_grid', 'position': (2, 4, 1, 1)},    
 # SCAN SETUP 
-                                                             '_single_channel_fts_popup_scan_setup_label': {'text': 'SCAN SETUP', 'font': 'huge', 'color': 'blue', 'alignment': 'Center', 'position': (3, 0, 1, 4)},
+                                                             '_single_channel_fts_popup_scan_setup_label': {'text': 'SCAN SETUP', 'font': 'huge', 'color': 'blue', 'alignment': 'Center', 'position': (4, 0, 1, 4)},
 
-                                                             '_single_channel_fts_popup_starting_position_header_label': {'text': 'Starting Position (Blue):', 'position': (4, 0, 1, 1)},
-                                                             '_single_channel_fts_popup_starting_position_lineedit': {'text': '-30000', 'function': '_update_single_channel_fts', 'position': (4, 1, 1, 1)},
+                                                             '_single_channel_fts_popup_starting_position_header_label': {'text': 'Starting Position:', 'position': (5, 0, 1, 1)},
+                                                             '_single_channel_fts_popup_starting_position_lineedit': {'text': '-30000', 'function': '_update_single_channel_fts', 'position': (5, 1, 1, 1)},
 
-                                                             '_single_channel_fts_popup_ending_position_header_label': {'text': 'Ending Position (Red):', 'position': (4, 2, 1, 1)},
-                                                             '_single_channel_fts_popup_ending_position_lineedit': {'text': '30000', 'function': '_update_single_channel_fts', 'position': (4, 3, 1, 1)},
+                                                             '_single_channel_fts_popup_ending_position_header_label': {'text': 'Ending Position:', 'position': (5, 2, 1, 1)},
+                                                             '_single_channel_fts_popup_ending_position_lineedit': {'text': '30000', 'function': '_update_single_channel_fts', 'position': (5, 3, 1, 1)},
 
-                                                             '_single_channel_fts_popup_step_size_header_label': {'text': 'Step Size:', 'position': (4, 4, 1, 1)},
-                                                             '_single_channel_fts_popup_step_size_lineedit': {'text': '1000', 'function': '_update_single_channel_fts', 'position': (4, 5, 1, 1)},
+                                                             '_single_channel_fts_popup_step_size_header_label': {'text': 'Step Size:', 'position': (5, 4, 1, 1)},
+                                                             '_single_channel_fts_popup_step_size_lineedit': {'text': '1000', 'function': '_update_single_channel_fts', 'position': (5, 5, 1, 1)},
 
-                                                             '_single_channel_fts_popup_integration_time_header_label': {'text': 'Integration Time (ms):', 'position': (6, 0, 1, 1)},
-                                                             '_single_channel_fts_popup_integration_time_lineedit': {'text': '200', 'position': (6, 1, 1, 1)},
+                                                             '_single_channel_fts_popup_integration_time_header_label': {'text': 'Integration Time (ms):', 'position': (7, 0, 1, 1)},
+                                                             '_single_channel_fts_popup_integration_time_lineedit': {'text': '200', 'position': (7, 1, 1, 1)},
 
-                                                             '_single_channel_fts_popup_pause_time_header_label': {'text': 'Pause (ms):', 'position': (6, 2, 1, 1)},
-                                                             '_single_channel_fts_popup_pause_time_lineedit': {'text': '10', 'position': (6, 3, 1, 1)},
+                                                             '_single_channel_fts_popup_pause_time_header_label': {'text': 'Pause (ms):', 'position': (7, 2, 1, 1)},
+                                                             '_single_channel_fts_popup_pause_time_lineedit': {'text': '10', 'position': (7, 3, 1, 1)},
 
-                                                             '_single_channel_fts_popup_sample_rate_header_label': {'text': 'Sample Rate (Hz):', 'position': (6, 4, 1, 1)},
-                                                             '_single_channel_fts_popup_sample_rate_combobox': {'position': (6, 5, 1, 1)},
+                                                             '_single_channel_fts_popup_sample_rate_header_label': {'text': 'Sample Rate (Hz):', 'position': (7, 4, 1, 1)},
+                                                             '_single_channel_fts_popup_sample_rate_combobox': {'position': (7, 5, 1, 1)},
 # DERIVED QUANTITIES 
 
-                                                             '_single_channel_fts_popup_number_of_steps_header_label': {'text': 'Number of Steps:', 'position': (5, 0, 1, 1)},
-                                                             '_single_channel_fts_popup_number_of_steps_label': {'text': '0', 'position': (5, 1, 1, 1)},
+                                                             '_single_channel_fts_popup_number_of_steps_header_label': {'text': 'Number of Steps:', 'position': (6, 0, 1, 1)},
+                                                             '_single_channel_fts_popup_number_of_steps_label': {'text': '0', 'position': (6, 1, 1, 1)},
 
-                                                             '_single_channel_fts_popup_highest_frequency_header_label': {'text': 'Highest Freq (Ghz):', 'position': (5, 2, 1, 1)},
-                                                             '_single_channel_fts_popup_highest_frequency_label': {'text': '0', 'position': (5, 3, 1, 1)},
+                                                             '_single_channel_fts_popup_highest_frequency_header_label': {'text': 'Highest Freq (Ghz):', 'position': (6, 2, 1, 1)},
+                                                             '_single_channel_fts_popup_highest_frequency_label': {'text': '0', 'position': (6, 3, 1, 1)},
 
-                                                             '_single_channel_fts_popup_resolution_header_label': {'text': 'Resolution (Ghz):', 'position': (5, 4, 1, 1)},
-                                                             '_single_channel_fts_popup_resolution_label': {'text': '0', 'position': (5, 5, 1, 1)},
+                                                             '_single_channel_fts_popup_resolution_header_label': {'text': 'Resolution (Ghz):', 'position': (6, 4, 1, 1)},
+                                                             '_single_channel_fts_popup_resolution_label': {'text': '0', 'position': (6, 5, 1, 1)},
 
 
 # ANALYSIS SETUP 

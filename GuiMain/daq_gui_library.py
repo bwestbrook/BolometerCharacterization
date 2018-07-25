@@ -22,7 +22,7 @@ from POL_Curves.plot_pol_curves import POLCurve
 from FTS_DAQ.fts_daq import FTSDAQ
 from BeamMapping.beam_map_daq import BeamMapDAQ
 from Motor_Driver.stepper_motor import stepper_motor
-from analyzeFTS import FTSanalyzer
+from FTS_DAQ.analyzeFTS import FTSanalyzer
 from DAQ.daq import DAQ
 
 
@@ -621,14 +621,24 @@ class GuiTemplate(QtGui.QWidget):
         image = QtGui.QPixmap('temp_files/temp_int.png')
         image = image.scaled(600,300)        
         getattr(self, '_single_channel_fts_popup_interferogram_label').setPixmap(image)
-        
+
+
+    def _rotate_grid(self):
+        polar_com_port = self._get_com_port('_single_channel_fts_popup_grid_current_com_port_combobox')
+        angle = getattr(self,'_single_channel_fts_popup_desired_grid_angle_lineedit').text()
+        getattr(self, 'sm_{0}'.format(polar_com_port)).finite_rotation(int(angle))
+
+       
     def _run_fts(self):
-        self._apodize()
         scan_params = self._get_all_scan_params(popup='_single_channel_fts')
+        linear_com_port = self._get_com_port('_single_channel_fts_popup_current_com_port_combobox')
+        self._apodize()
         positions, data, self.stds = [], [], []
         #dummy_x, dummy_y = self.fts_daq.simulate_inteferogram(scan_params['starting_position'], scan_params['ending_position'],scan_params['step_size'])
         amplitude = self.fts_daq.read_inteferogram('SQ5_Pix101_90T_Spectra_09.if',1)
         for i,position in enumerate( np.arange(scan_params['starting_position'], scan_params['ending_position'] + scan_params['step_size'], scan_params['step_size'])):
+            getattr(self, 'sm_{0}'.format(linear_com_port)).move_to_position(position)
+            time.sleep(int(scan_params['pause_time']))
             data_time_stream, mean, min_, max_, std = self.daq.get_data(signal_channel=scan_params['signal_channel'], integration_time=scan_params['integration_time'],
                                                                         sample_rate=scan_params['sample_rate'],central_value = amplitude[i])
             self.stds.append(std)
@@ -661,10 +671,6 @@ class GuiTemplate(QtGui.QWidget):
             getattr(self, '_single_channel_fts_popup_interferogram_label').setPixmap(image)
             self.single_channel_fts_popup.repaint()
             getattr(self, '_single_channel_fts_popup_position_monitor_slider').setSliderPosition(position)
-#        self._compute_fft(positions, data, scan_params)
-#        image = QtGui.QPixmap('temp_files/temp_fft.png')
- #       image = image.scaled(350, 175)
-  #      getattr(self, '_single_channel_fts_popup_fft_label').setPixmap(image)
         self.posFreqArray,self.FTArrayPosFreq = self.fts_analyzer.analyzeBolo(positions, data,apodization=self.apodization)
         image = QtGui.QPixmap('temp_files/temp_fft.png')
         image = image.scaled(600, 300)
