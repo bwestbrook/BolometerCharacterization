@@ -7,8 +7,11 @@
 # FTS subdirectory.
 
 import os,pickle,sys
-from matplotlib.pyplot import *
+#from matplotlib.pyplot import *
+import pylab as pl
+#import numpy as np
 from numpy import *
+from PyQt4 import QtCore, QtGui
 
 class FTSanalyzer():
 
@@ -204,17 +207,30 @@ class FTSanalyzer():
 # plot both the real and the imaginary parts of the Fourier transform
     def plotCompleteFT(self,freq,FT,filenameRoot = None):
         freqGHz = freq / 10.0**9
-        figure()
-        plot(freqGHz,real(FT),color = 'b',label = 'Real')
-        plot(freqGHz,imag(FT),color = 'r',label = 'Imag')
-        xlabel('GHz')
-        legend()
-        title('FFT Complete')
-        grid()
+        fig = pl.figure(figsize=(3,1.5))
+        ax = fig.add_subplot(111)
+        yticks = linspace(min(real(FT)),max(real(FT)),5)
+        yticks = [round(x,2) for x in yticks]
+        ax.set_yticks(yticks)
+        ax.set_yticklabels(yticks,fontsize = 6)
+        '''xticks = linspace(freqGHZ[0],freqGHZ[-1],5)
+        ax.set_xticks(xticks)
+        ax.set_xticklabels(xticks,fontsize = 6)'''
+        ax.plot(freqGHz,real(FT),color = 'b',label = 'Real')
+        ax.plot(freqGHz,imag(FT),color = 'r',label = 'Imag')
+        ax.set_xlabel('Frequency(GHz)')
+        ax.set_ylabel('Amplitude')        
+        pl.legend(prop={'size': 6})
+        fig.subplots_adjust(left=0.24, right=0.95, top=0.80, bottom=0.35)
+        ax.set_title('FFT Complete')
+#        grid()
         if filenameRoot:
-            savefig(filenameRoot)
+            fig.savefig(filenameRoot)
         else:
-            savefig('temp_files/temp_fft.png')
+            fig.savefig('temp_files/temp_fft.png')
+        pl.close('all')
+        image = QtGui.QPixmap('temp_files/temp_fft.png')
+        image = image.scaled(600, 300)
 
 # analyze the data for a given bolo
     def analyzeBolo(self, posArray, magArray, filenameRoot = None,apodization=None):
