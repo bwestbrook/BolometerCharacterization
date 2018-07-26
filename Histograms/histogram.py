@@ -41,9 +41,9 @@ class Hist():
         data_array_90 = np.asarray([])
         data_array_150 = np.asarray([])
         for value in data:
-            if value < 9.0:
+            if value < 15.0:
                 data_array_90 = np.append(data_array_90, value)
-            elif value >= 9.0:
+            elif value >= 15.0:
                 data_array_150 = np.append(data_array_150, value)
         data_array = [data_array_90, data_array_150]
         return data_array
@@ -126,21 +126,32 @@ class Hist():
         if len(data) == 2:
             median_1 = np.median(data[0])
             var_1 = np.std(data[0])
-            label_1 = '90 GHz: {0:.2f} +/ {1:.2f} pW'.format(median_1, var_1)
+            label_1 = '90 GHz\n{0:.2f}$\pm${1:.2f}pW'.format(median_1, var_1)
             counts, bins, patches = pl.hist(data[0], bins, range=xlim, color='r', label=label_1)
             median_2 = np.median(data[1])
             var_2 = np.std(data[1])
-            label_2 = '150 GHz: {0:.2f} +/ {1:.2f} pW'.format(median_2, var_2)
+            label_2 = '150 GHz\n{0:.2f}$\pm${1:.2f}pW'.format(median_2, var_2)
             counts, bins, patches = pl.hist(data[1], bins, range=xlim, color='b', label=label_2)
         else:
             median = np.median(data[data > 0])
             var = np.std(data[np.logical_and(0.7 < data, data < 2.0)])
-            label = '{0:.2f} +/ {1:.2f} $\Omega$'.format(median, var)
-            #import ipdb;ipdb.set_trace()
+            var = np.std(data[np.logical_and(300 < data, data < 550)])
+            label = '{0:.2f}$\pm${1:.2f}$mK$'.format(median, var)
             counts, bins, patches = pl.hist(data, bins, range=xlim, label=label)
-        pl.title(title, fontsize=20)
-        pl.xlabel(xlabel, fontsize=16)
-        pl.ylabel(ylabel, fontsize=16)
+        pl.title(title, fontsize=24)
+        pl.xlabel(xlabel, fontsize=24)
+        pl.ylabel(ylabel, fontsize=24)
+        if histogram_settings.run_rn:
+            xticks = [float('{0:.2f}'.format(x)) for x in np.arange(0.5, 3.0, 0.5)]
+            yticks = [int(x) for x in np.arange(np.min(counts), np.max(counts), 50)]
+        if histogram_settings.run_tc:
+            xticks = [float('{0:.2f}'.format(x)) for x in np.arange(375, 575, 40)]
+            yticks = [int(x) for x in np.arange(np.min(counts), np.max(counts), 25)]
+        if histogram_settings.run_psat:
+            xticks = [float('{0:.2f}'.format(x)) for x in np.arange(5, 70, 10)]
+            yticks = [int(x) for x in np.arange(np.min(counts), 60, 10)]
+        pl.xticks(xticks, fontsize=20)
+        pl.yticks(yticks, fontsize=20)
         for frequency, target_range_list in target_ranges.iteritems():
             if frequency == '90':
                 color = 'r'
@@ -160,7 +171,8 @@ class Hist():
                         pl.axvspan(target_range[0], target_range[1], 0, 1, label=label, color=color, alpha=alpha)
                     else:
                         pl.axvspan(target_range[0], target_range[1], 0, 1, color=color, alpha=alpha)
-        pl.legend()
+        pl.legend(fontsize=20, loc=3)
+        pl.subplots_adjust(left=0.14, bottom=0.19, right=0.99, top=0.85)
         pl.show()
 
     def run(self, run_tc=False, run_rn=False, run_pturn=False, run_psat=False,
@@ -253,22 +265,28 @@ if __name__ == '__main__':
                                      run_psat=histogram_settings.run_psat)
 
         if histogram_settings.run_psat:
+            title='$P_{sat}$ Histogram PB20.11.08'
+            title='$P_{sat}$ Histogram\nPB20.13.09+PB20.13.11'
             hist.make_histogram(all_data, xlabel='$P_{sat}$ ($pW$)', ylabel='Count',
                                 xlim=histogram_settings.pturn_xlim, bins=histogram_settings.pturn_bins,
                                 target_ranges=histogram_settings.psat_target_range,
-                                title='$P_{sat}$ Histogram PB20.11.08')
+                                title=title)
 
         if histogram_settings.run_rn:
+            title='$R_{n}$ Histogram PB20.13.11'
+            title='$R_{n}$ Histogram All V11 Wafers'
             hist.make_histogram(all_data, xlabel='$R_{n}$ ($\Omega$)', ylabel='Count',
                                 xlim=histogram_settings.rn_xlim, bins=histogram_settings.rn_bins,
                                 target_ranges=histogram_settings.rn_target_range,
-                                title='$R_{n}$ Histogram PB20.13.11')
+                                title=title)
 
         if histogram_settings.run_tc:
+            title='$T_{c}$ Histogram PB20.13.11'
+            title='$T_{c}$ Histogram PB20.11.01'
             hist.make_histogram(all_data, xlabel='$T_{c}$ ($mK$)', ylabel='Count',
                                 xlim=histogram_settings.tc_xlim, bins=histogram_settings.tc_bins,
                                 target_ranges=histogram_settings.tc_target_range,
-                                title='$T_{c}$ Histogram PB20.13.11')
+                                title=title)
 
 
 

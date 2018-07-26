@@ -8,8 +8,8 @@ histogram_settings.make_histogram = False
 histogram_settings.combine_data = True
 
 # Data Types to Run
-histogram_settings.run_tc = False
-histogram_settings.run_rn = True
+histogram_settings.run_tc = True
+histogram_settings.run_rn = False
 histogram_settings.run_psat = False
 histogram_settings.run_pturn = False
 
@@ -48,16 +48,19 @@ histogram_settings.pturn_path_5 = os.path.join(histogram_settings.data_dir, 'Ver
 #histogram_settings.data_paths = [histogram_settings.tc_path_5]
 histogram_settings.data_paths = [histogram_settings.pturn_path_3]
 
-
+histogram_settings.data_combo_dict = {
+                                       #'john': histogram_settings.rn_path_3,
+                                      'logan': histogram_settings.rn_path_1,
+                                      }
 
 histogram_settings.data_combo_dict = {
-                                      'logan': histogram_settings.tc_path_4,
+                                      'kek': histogram_settings.rn_path_2,
                                       }
 
 
+
 histogram_settings.data_combo_dict = {
-                                      'logan': histogram_settings.tc_path_4,
-                                      #'kek': histogram_settings.tc_path_2,
+                                      'kek': histogram_settings.pturn_path_3,
                                       }
 
 histogram_settings.data_combo_dict = {
@@ -66,13 +69,13 @@ histogram_settings.data_combo_dict = {
                                       }
 
 histogram_settings.data_combo_dict = {
-                                      'kek': histogram_settings.pturn_path_3,
+                                      'logan': histogram_settings.tc_path_4,
                                       }
 
 histogram_settings.data_combo_dict = {
-                                       #'john': histogram_settings.rn_path_3,
-                                      'logan': histogram_settings.rn_path_1,
+                                      'kek': histogram_settings.tc_path_1,
                                       }
+
 ##################################################### PLOTTING #####################################################
 # TARGET RANGES
 histogram_settings.tc_target_range = {'90': {'Target': [(440.0, 460.0)], 'Requirement': [(420.0, 480.0)]},
