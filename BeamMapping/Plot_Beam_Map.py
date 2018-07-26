@@ -14,6 +14,7 @@ class BeamMap():
     def __init__(self):
         self.hi = 'hello'
 
+    # Data Loading
     def load_beam_map_data(self, data_path, map_limit=2.5e6):
         '''
         This function loads the data output by labview
@@ -59,66 +60,103 @@ class BeamMap():
                      'amplitude': amplitude_vector, 'error': error_vector}
         return data_dict
 
-    def parse_beam_map_data(self, data_dict, source_distance=18.0):
+    # Data Parsing
+    def parse_1D_beam_map_data(self, data_dict, cut='x'):
+        if np.max(data_dict['y_position']) == 0.0:
+            positions = data_dict['x_position']
+        else:
+            positions = data_dict['y_position']
+        positions_in_inches = positions / 1e5
+        max_amplitude = np.max(data_dict['amplitude'])
+        amplitudes = data_dict['amplitude']
+        normalized_amplitudes = amplitudes / max_amplitude
+        initial_guess = self.guess_fit_params_1D(positions_in_inches, amplitudes)
+        fit_params = self.fit_1D_gaussian(self.oneD_Gaussian, positions_in_inches, amplitudes, initial_guess)
+        fit_amplitudes = self.oneD_Gaussian(positions_in_inches, *fit_params)
+        max_fit_amplitude = np.max(fit_amplitudes)
+        normalized_fit_amplitudes = fit_amplitudes / max_fit_amplitude
+        processed_data_dict = {'positions': positions, 'positions_in_inches': positions_in_inches,
+                               'amplitudes': amplitudes,'normalized_amplitudes': normalized_amplitudes,
+                               'fit_amplitudes': fit_amplitudes, 'normalized_fit_amplitudes': normalized_amplitudes,
+                               'fit_params': fit_params}
+        return processed_data_dict
+
+    def parse_beam_map_data(self, data_dict, source_distance=18.0, is_1D=False, cut='x'):
         '''
         This function parse the raw data loaded by load_data
         '''
-        #Load the raw data
-        X_Pos_Data = data_dict['x_position']
-        Y_Pos_Data = data_dict['y_position']
-        raw_amplitude = data_dict['amplitude']
-        # Convert to angle 
-        X_Pos_Angle = (180.0 / np.pi) * np.arctan((data_dict['x_position'] / 100000.) / source_distance)
-        Y_Pos_Angle = (180.0 / np.pi) * np.arctan((data_dict['x_position'] / 100000.) / source_distance)
-        # Find the stepping scheme and compute a few useful values
-        raw_x = sorted(list(set(X_Pos_Angle)))
-        raw_y = sorted(list(set(Y_Pos_Angle)))
-        num_step_x = len(raw_x)
-        num_step_y = len(raw_y)
-        step_size_x = (max(raw_x) - np.min(raw_x)) / (num_step_x - 1)
-        step_size_y = (max(raw_y) - np.min(raw_y)) / (num_step_y - 1)
-        boundary_x = step_size_x * (num_step_x - 1) / 2
-        boundary_y = step_size_y * (num_step_y - 1) / 2
-        plot_extent = [-boundary_x, boundary_x, -boundary_y, boundary_y]
-        # Create a matrix with the X, Y values
-        if len(np.arange(-boundary_x, boundary_x + step_size_x / 2.0, step_size_x)) % 2 == 0:
-            X, Y = np.meshgrid(np.arange(-boundary_x, boundary_x, step_size_x),
-                               np.arange(-boundary_x, boundary_x, step_size_x))
+        if is_1D:
+            processed_data_dict = self.parse_1D_beam_map_data(data_dict, cut=cut)
         else:
-            X, Y = np.meshgrid(np.arange(-boundary_x, boundary_x + step_size_x / 2.0, step_size_x),
-                               np.arange(-boundary_x, boundary_x + step_size_x / 2.0, step_size_x))
-        # Re-shape and normalize the amplitude data
-        try:
-            print
-            print 'Basic boundary conditions extracted from data'
-            print -boundary_x, -boundary_y, boundary_x, boundary_y
-            print raw_amplitude.shape
-            print X.shape
-            amplitude = raw_amplitude.reshape(X.shape)
-            print
-            print
-        except ValueError:
-            print 'data size error padding with zeroes'
-            zeros = np.zeros(Y.shape[0] ** 2 - raw_amplitude.shape[0])
-            padded_amplitude = np.append(raw_amplitude, zeros)
-            raw_amplitude = padded_amplitude
-            amplitude = padded_amplitude.reshape(X.shape)
-        normalized_amplitude = amplitude / np.max(amplitude)
-        initial_guess = self.guess_fit_params(raw_amplitude.reshape(X.shape))
-        fit_params = self.fit_function(self.twoD_Gaussian, X, Y, raw_amplitude, initial_guess)
-        fit_amplitude = self.twoD_Gaussian((X, Y), *fit_params)
-        fit_amplitude = fit_amplitude.reshape(X.shape)
-        normalized_fit_amplitude = fit_amplitude / np.max(fit_amplitude)
-        residual_amplitude = normalized_amplitude - normalized_fit_amplitude
-        processed_data_dict = {'X': X, 'Y': Y, 'fit_params': fit_params,
-                               'normalized_fit_amplitude': normalized_fit_amplitude, 'fit_amplitude': fit_amplitude,
-                               'amplitude': amplitude, 'normalized_amplitude': normalized_amplitude,
-                               'residual_amplitude': residual_amplitude,
-                               'extent': plot_extent}
+            #Load the raw data
+            X_Pos_Data = data_dict['x_position']
+            Y_Pos_Data = data_dict['y_position']
+            raw_amplitude = data_dict['amplitude']
+            # Convert to angle 
+            X_Pos_Angle = (180.0 / np.pi) * np.arctan((data_dict['x_position'] / 100000.) / source_distance)
+            Y_Pos_Angle = (180.0 / np.pi) * np.arctan((data_dict['x_position'] / 100000.) / source_distance)
+            # Find the stepping scheme and compute a few useful values
+            raw_x = sorted(list(set(X_Pos_Angle)))
+            raw_y = sorted(list(set(Y_Pos_Angle)))
+            num_step_x = len(raw_x)
+            num_step_y = len(raw_y)
+            step_size_x = (max(raw_x) - np.min(raw_x)) / (num_step_x - 1)
+            step_size_y = (max(raw_y) - np.min(raw_y)) / (num_step_y - 1)
+            boundary_x = step_size_x * (num_step_x - 1) / 2
+            boundary_y = step_size_y * (num_step_y - 1) / 2
+            plot_extent = [-boundary_x, boundary_x, -boundary_y, boundary_y]
+            # Create a matrix with the X, Y values
+            if len(np.arange(-boundary_x, boundary_x + step_size_x / 2.0, step_size_x)) % 2 == 0:
+                X, Y = np.meshgrid(np.arange(-boundary_x, boundary_x, step_size_x),
+                                   np.arange(-boundary_x, boundary_x, step_size_x))
+            else:
+                X, Y = np.meshgrid(np.arange(-boundary_x, boundary_x + step_size_x / 2.0, step_size_x),
+                                   np.arange(-boundary_x, boundary_x + step_size_x / 2.0, step_size_x))
+            # Re-shape and normalize the amplitude data
+            try:
+                print
+                print 'Basic boundary conditions extracted from data'
+                print -boundary_x, -boundary_y, boundary_x, boundary_y
+                print raw_amplitude.shape
+                print X.shape
+                amplitude = raw_amplitude.reshape(X.shape)
+                print
+                print
+            except ValueError:
+                print 'data size error padding with zeroes'
+                zeros = np.zeros(Y.shape[0] ** 2 - raw_amplitude.shape[0])
+                padded_amplitude = np.append(raw_amplitude, zeros)
+                raw_amplitude = padded_amplitude
+                amplitude = padded_amplitude.reshape(X.shape)
+            normalized_amplitude = amplitude / np.max(amplitude)
+            initial_guess = self.guess_fit_params_2D(raw_amplitude.reshape(X.shape))
+            fit_params = self.fit_2D_gaussian(self.twoD_Gaussian, X, Y, raw_amplitude, initial_guess)
+            fit_amplitude = self.twoD_Gaussian((X, Y), *fit_params)
+            fit_amplitude = fit_amplitude.reshape(X.shape)
+            normalized_fit_amplitude = fit_amplitude / np.max(fit_amplitude)
+            residual_amplitude = normalized_amplitude - normalized_fit_amplitude
+            processed_data_dict = {'X': X, 'Y': Y, 'fit_params': fit_params,
+                                   'normalized_fit_amplitude': normalized_fit_amplitude, 'fit_amplitude': fit_amplitude,
+                                   'amplitude': amplitude, 'normalized_amplitude': normalized_amplitude,
+                                   'residual_amplitude': residual_amplitude,
+                                   'extent': plot_extent}
         return processed_data_dict
 
+    # All Plottting 
+    def plot_1D_beam_map(self, processed_data_dict, bolo_name='test'):
+        fig = pl.figure(figsize=(6.5, 6.5))
+        ax = fig.add_subplot(111)
+        ax.plot(processed_data_dict['positions_in_inches'], processed_data_dict['amplitudes'], '*', label='Data')
+        ax.plot(processed_data_dict['positions_in_inches'], processed_data_dict['fit_amplitudes'], label='Fit')
+        ax.set_xlabel('Source Position (in)', fontsize=16)
+        ax.set_ylabel('Amplitude (Au)', fontsize=16)
+        ax.set_ylabel('Amplitude (Au)', fontsize=16)
+        ax.set_title('1D Cut for {0}'.format(bolo_name), fontsize=16)
+        ax.legend()
+        fig.show()
+        self._ask_user_if_they_want_to_quit()
 
-    def plot_beam_map(self, processed_data_dict, label='test',
+    def plot_beam_map(self, processed_data_dict, bolo_name='test',
                       plot_raw=True, save_raw=True,
                       plot_fits=True, save_fits=True,
                       plot_3d=True, save_3d=True,
@@ -135,11 +173,11 @@ class BeamMap():
                         Z_fit[i, j] = 0.0
                         Z_res[i, j] = 0.0
         if plot_raw or save_raw:
-            self.plot_raw(X, Y, Z_data, Z_fit, label=label, contours='fit')
+            self.plot_raw(X, Y, Z_data, Z_fit, label=bolo_name, contours='fit')
         if plot_fits:
-            self.plot_fits(X, Y, Z_data, Z_fit, Z_res, label=label)
+            self.plot_fits(X, Y, Z_data, Z_fit, Z_res, label=bolo_name)
         if plot_3d:
-            self.plot_3d(X, Y, Z_data, label=label)
+            self.plot_3d(X, Y, Z_data, label=bolo_name)
 
     def plot_raw(self, X, Y, Z, Z_fit, label='', contours='data'):
         fig_raw = pl.figure(figsize=(6.5, 6.5))
@@ -257,6 +295,7 @@ class BeamMap():
         fig_3d.show()
         self._ask_user_if_they_want_to_quit()
 
+    #Definitions of the 1D and 2D cases
     def twoD_Gaussian(self, (x, y), amplitude, x_0, y_0, sigma_x, sigma_y, theta):
         x_0 = float(x_0)
         y_0 = float(y_0)
@@ -267,15 +306,34 @@ class BeamMap():
         Z = amplitude * np.exp(- (a * ((x - x_0) **2) + 2 * b * (x - x_0) * (y - y_0) + c * ((y - y_0) ** 2)))
         return Z.ravel()
 
+    def oneD_Gaussian(self, position, amplitude, x_0, sigma_x):
+        x_0 = float(x_0)
+        print amplitude, x_0, sigma_x
+        gaussian = (amplitude / (sigma_x * np.sqrt(2 * np.pi))) * np.exp(-0.5 * ((position - x_0)/(sigma_x)) **2)
+        return gaussian
 
-    def fit_function(self, function, X, Y, data, initial_guess):
+    #Fitting the 1D and 2D cases
+    def fit_1D_gaussian(self, function, position, amplitude, initial_guess):
+        print initial_guess
+        popt, pcov = opt.curve_fit(self.oneD_Gaussian, position, amplitude, p0=initial_guess)
+        print popt
+        return popt
+
+    def fit_2D_gaussian(self, function, X, Y, data, initial_guess):
         print initial_guess
         popt, pcov = opt.curve_fit(self.twoD_Gaussian, (X, Y), data, p0=initial_guess)
         print popt
         return popt
 
+    #Initial Guesses for Fitting
+    def guess_fit_params_1D(self, positions, amplitudes):
+        amplitude = amplitudes.max()
+        x_0 = 0
+        sigma_x = 0.5 * np.max(positions)
+        return amplitude, x_0, sigma_x
 
-    def guess_fit_params(self, data):
+
+    def guess_fit_params_2D(self, data):
         height = data.max()
         x = 0
         y = 0
@@ -293,7 +351,7 @@ class BeamMap():
             exit()
 
 
-    def run(self, data_path, frequency, map_limit=2.5e6, test=False):
+    def run(self, data_path, bolo_name, map_limit=2.5e6, test=False, is_1D=False):
         if test:
             X = np.linspace(0, 200, 201)
             Y = np.linspace(0, 200, 201)
@@ -302,7 +360,7 @@ class BeamMap():
             data = self.twoD_Gaussian((X,Y), *initial_params)
             data_with_noise = data + 0.2 * np.random.normal(size=data.shape)
             initial_guess = (3, 100, 100, 20, 40, 0)
-            fit_params = self.fit_function(self.twoD_Gaussian, X, Y, data_with_noise, initial_guess)
+            fit_params = self.fit_2D_gaussian(self.twoD_Gaussian, X, Y, data_with_noise, initial_guess)
             fitted_data = self.twoD_Gaussian((X, Y), *fit_params)
             fig, ax = pl.subplots(1, 1)
             ax.hold(True)
@@ -311,22 +369,44 @@ class BeamMap():
             fig.show()
             self._ask_user_if_they_want_to_quit()
         data_dict = self.load_beam_map_data(data_path, map_limit)
-        processed_data_dict = self.parse_beam_map_data(data_dict, source_distance=5.3937)
-        fig = self.plot_beam_map(processed_data_dict, frequency, clip=False, clip_value=12,
-                                 plot_fits=True, plot_raw=True, plot_3d=False)
+        processed_data_dict = self.parse_beam_map_data(data_dict, source_distance=5.3937, is_1D=is_1D)
+        if is_1D:
+            processed_data_dict = self.parse_beam_map_data(data_dict, source_distance=5.3937, is_1D=is_1D)
+            fig = self.plot_1D_beam_map(processed_data_dict, bolo_name)
+        else:
+            processed_data_dict = self.parse_beam_map_data(data_dict, source_distance=5.3937, is_1D=is_1D)
+            fig = self.plot_beam_map(processed_data_dict, bolo_name, clip=False, clip_value=12,
+                                     plot_fits=True, plot_raw=True, plot_3d=False)
 
 
 if __name__ == '__main__':
     bm = BeamMap()
+# June 25 - 27th, 2018
     data_path = '../Data/2018_06_25/SQ4_2D_4by4in_0p125inStep_0p25inAp_Pix118_150T_Beammap.dat'
     data_path = '../Data/2018_06_26/SQ4_2D_2by2in_0p125inStep_0p25inAp_Pix118_150T_Beammap05.dat'
     data_path = '../Data/2018_06_26/SQ4_2D_6by6in_0p125inStep_0p25inAp_Pix118_150T_Beammap03.dat'
     data_path = '../Data/2018_06_26/SQ3_2D_6by6in_0p25inStep_0p5inAp_Pix118_00T_Beammap01.dat'
-    frequency = 'PB201326-P1118-90T'
+    bolo_name = 'PB201326-P1118-90T'
     data_path = '../Data/2018_06_27/SQ5_2D_6by6in_0p25inStep_0p5inAp_Pix101_90T_Beammap02.dat'
-    frequency = 'PB201326-P101-90T'
+    bolo_name = 'PB201326-P101-90T'
     data_path = '../Data/2018_06_25/SQ4_2D_6by6in_0p25in_Pix118_150T_Beammap.dat'
-    frequency = 'PB201326-P1118-150T'
+    bolo_name = 'PB201326-P1118-150T'
     data_path = '../Data/2018_06_27/SQ2_2D_6by6in_0p25inStep_0p5inAp_Pix100_150B_Beammap03.dat'
-    frequency = 'PB201326-P100-150B'
-    bm.run(data_path, frequency, test=False)
+    bolo_name = 'PB201326-P100-150B'
+# July 25th, 2018
+    #'PB201326-P118-150B'
+    data_path = '../Data/2018_07_25/Pix118_150B_BeamMap_0inX6in_Yscan_0p5inAp_0p025inStep_SQ5.dat'
+    data_path = '../Data/2018_07_25/Pix118_150B_BeamMap_6inX0in_Xscan_0p5inAp_0p025inStep_SQ5.dat'
+    data_path = '../Data/2018_07_25/Pix118_150B_BeamMap_6inX6in_0p5inAp_0p25inStep_SQ5.dat'
+    bolo_name = 'PB201326-P118-150B'
+    #'PB201326-P118-090T'
+    data_path = '../Data/2018_07_25/Pix118_090T_BeamMap_6inX6in_0p5inAp_0p25inStep_SQ6.dat'
+    data_path = '../Data/2018_07_25/Pix118_090T_BeamMap_6inX0in_Xscan_0p5inAp_0p025inStep_SQ6.dat'
+    data_path = '../Data/2018_07_25/Pix118_090T_BeamMap_0inX6in_Yscan_0p5inAp_0p025inStep_SQ6.dat'
+    bolo_name = 'PB201326-P118-090T'
+    #'PB201326-P101-150B'
+    data_path = '../Data/2018_07_25/Pix101_150B_BeamMap_6inX6in_0p5inAp_0p25inStep_SQ1.dat'
+    data_path = '../Data/2018_07_25/Pix101_150B_BeamMap_6inX0in_Xscan_0p5inAp_0p025inStep_SQ1.dat'
+    data_path = '../Data/2018_07_25/Pix101_150B_BeamMap_0inX6in_Yscan_0p5inAp_0p025inStep_SQ1.dat'
+    bolo_name = 'PB201326-P101-150B'
+    bm.run(data_path, test=False, is_1D=True, bolo_name=bolo_name)
