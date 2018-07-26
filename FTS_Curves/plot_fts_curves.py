@@ -239,15 +239,26 @@ class FTSCurve():
                 np.put(averaged_vector, i, averaged_value)
         return averaged_vector
 
-    def add_atmospheric_lines(self, ax):
+    def add_atmospheric_lines(self, ax=None):
+        if ax is None:
+            fig = pl.figure()
+            ax = fig.add_subplot(111)
+            ax_was_none = True
         frequencies, transmissions = [], []
-        with open('./Atmospheric_Modeling/chajnantor.dat', 'r') as atm_file_handle:
+        with open('../Atmospheric_Modeling/chajnantor.dat', 'r') as atm_file_handle:
             for line in atm_file_handle.readlines():
                 frequency = float(line.split(', ')[0])
                 frequencies.append(frequency)
                 transmission = float(line.split(', ')[1])
                 transmissions.append(transmission)
         ax.plot(frequencies, transmissions, 'k', alpha=0.5, label='ATM Model')
+        if ax_was_none:
+            ax.set_xlabel('Frequency (GHz)')
+            ax.set_ylabel('ATM \% Transmission')
+            ax.set_title('Atmospheric Transmission at Chajnantor')
+            ax.set_xlim((0, 500))
+            fig.show()
+            self._ask_user_if_they_want_to_quit()
         return ax
 
     def divide_out_optical_element_response(self, frequency_vector, normalized_transmission_vector,
@@ -399,6 +410,10 @@ if __name__ == '__main__':
                                'label': 'Open Trans', 'color': 'k'},
                   'measurements': {'data_path': "2015_03_20\\011_576_18icm_High_Res.fft",
                                    'label': 'Raw Trans', 'color': 'm'}}
+    if False:
+        list_of_input_dicts = [dict_12icm]
+        fts = FTSCurve(list_of_input_dicts)
+        fts.run()
     list_of_input_dicts = [dict_12icm]
-    fts = FTSCurve(list_of_input_dicts)
-    fts.run()
+    fts = FTSCurve()
+    fts.add_atmospheric_lines()
