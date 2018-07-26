@@ -5,7 +5,8 @@ Class for communicating with RS232 lab devices w/ a USB-to-RS232 converter
 import serial
 import time
 
-DEFAULT_PORT = '/dev/ttyUSB0'
+#DEFAULT_PORT = '/dev/ttyUSB0'
+DEFAULT_PORT = 'COM1'
 
 class lab_serial(object):
     def __init__(self, port=DEFAULT_PORT, verbose=True):
@@ -20,7 +21,7 @@ class lab_serial(object):
                                  xonxoff = False,
                                  rtscts = False,
                                  dsrdtr = True,
-                                 writeTimeout = 1)
+                                 writeTimeout = 0)
         if not self.ser.isOpen():
             self.ser.open() # sometimes it's already open
         if self.ser.isOpen():
@@ -41,26 +42,26 @@ class lab_serial(object):
             string += '\r\n'
         self.ser.write(string.encode()) # unicode not supported for serial module in python 3
 
-        
+
     def read(self):
         "Returns a properly decoded string of the bytes read from the port"
         return self.ser.readline().decode('utf-8').strip('\r\n')
 
-    
+
     def write_read(self, string, wait_time=0.1):
         self.write(string)
         time.sleep(wait_time)
         return self.read()
 
-    
+
     def is_open(self):
         return self.ser.isOpen()
 
-        
+
     def close(self):
         self.ser.close()
 
-        
+
     def reopen(self):
         if self.is_open():
             print('Warning! Attempt made to re-open serial connection that is already open.  Doing nothing...')
