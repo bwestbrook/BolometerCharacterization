@@ -303,12 +303,9 @@ class GuiTemplate(QtGui.QWidget):
                 for x, y,std in zip(xdata, ydata,stds):
                     f.write('{:f}\t{:f}\t{:f}\n'.format(x, y, std))
             else:
-                for x, y, z, std in zip(xdata, ydata, zdata,stds):
-                    print "type std"
-                    print type(std)
-                    print "type z"
-                    print type(z)
-                    f.write('{:f}\t{:f}\t{:f}\t{:f}\n'.format(x, y, z, std))
+                for i, x in enumerate(self.x_grid):
+                    for j, y in enumerate(self.y_grid):
+                        f.write('{0},{1},{2},{3}\n'.format(x, y, zdata[j,i], stds[j,i]))
                     
 
 
@@ -831,6 +828,7 @@ class GuiTemplate(QtGui.QWidget):
         y_grid = np.linspace(scan_params['start_y_position'], scan_params['end_y_position'],  scan_params['n_points_y'])
         X, Y = np.meshgrid(x_grid, y_grid)
         Z_data = np.zeros(shape=X.shape)
+        self.stds = np.zeros(shape=X.shape)
         X_sim, Y_sim, Z_sim = self.beam_map_daq.simulate_beam(scan_params)
         for i, x_pos in enumerate(x_grid):
             for j, y_pos in enumerate(y_grid):
@@ -840,7 +838,6 @@ class GuiTemplate(QtGui.QWidget):
                 self.stds[j][i]=std
                 Z_datum = mean
                 Z_data[j][i] = Z_datum
-                self.stds.append(std)
                 fig = pl.figure()
                 ax = fig.add_subplot(111)
                 ax.pcolor(X, Y, Z_data)
@@ -862,6 +859,8 @@ class GuiTemplate(QtGui.QWidget):
         self.X = X
         self.Y = Y
         self.Z_data = Z_data
+        self.x_grid = x_grid
+        self.y_grid = y_grid
         getattr(self, '_beam_mapper_popup_save_pushbutton').setEnabled(True)
 
 
