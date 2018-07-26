@@ -23,8 +23,8 @@ from FTS_DAQ.fts_daq import FTSDAQ
 from BeamMapping.beam_map_daq import BeamMapDAQ
 from Motor_Driver.stepper_motor import stepper_motor
 from FTS_DAQ.analyzeFTS import FTSanalyzer
-from DAQ.daq import DAQ
-
+#from DAQ.daq import DAQ
+from realDAQ.daq import DAQ
 
 class GuiTemplate(QtGui.QWidget):
 
@@ -43,6 +43,7 @@ class GuiTemplate(QtGui.QWidget):
         self.user_desktop_path = os.path.expanduser('~')
         self.fts_analyzer = FTSanalyzer()
         self.fts_daq = FTSDAQ()
+        self.real_daq = DAQ()
 
     def __apply_settings__(self, settings):
         for setting in dir(settings):
@@ -79,7 +80,7 @@ class GuiTemplate(QtGui.QWidget):
     def _get_com_port(self, combobox):
         com_port = str(getattr(self, combobox).currentText())
         return com_port
-    
+
 
     def _get_all_scan_params(self, popup=None):
         if popup is None:
@@ -123,49 +124,55 @@ class GuiTemplate(QtGui.QWidget):
 	else:
        	    com_port = self._get_com_port(combobox=combobox)
             connection = combobox.replace('current_com_port_combobox','successful_connection_header_label')
-       
-	port_number = int(com_port.strip('COM')) - 1
-	init_string = '/dev/ttyUSB{0}'.format(port_number)
+
+#	port_number = int(com_port.strip('COM')) - 1
+#	init_string = '/dev/ttyUSB{0}'.format(port_number)
         if com_port not in ['COM2','COM3','COM4']:
             if not hasattr(self, 'sm_{0}'.format(com_port)):
-	        setattr(self, 'sm_{0}'.format(com_port), stepper_motor(init_string))
-	        current_string = getattr(self, 'sm_{0}'.format(com_port)).get_motor_current().strip('CC=')
+	        setattr(self, 'sm_{0}'.format(com_port), stepper_motor(com_port))
+	        '''current_string = getattr(self, 'sm_{0}'.format(com_port)).get_motor_current().strip('CC=')
                 position_string = getattr(self, 'sm_{0}'.format(com_port)).get_position().strip('SP=')
                 velocity_string = getattr(self, 'sm_{0}'.format(com_port)).get_velocity().strip('VE=')
             else:
-                current_string, position_string,velocity_string = '0','0','0'   
+                current_string, position_string,velocity_string = '0','0','0'
         else:
-            current_string, position_string,velocity_string = '0','0','0'   
+            current_string, position_string,velocity_string = '0','0','0'
+            '''
         getattr(self,connection).setText('Successful Connection to '+ com_port +'!' )
-        return current_string, position_string, velocity_string
-       
-    def _draw_time_stream(self,data_time_stream, min_, max_, label):
+#        return current_string, position_string, velocity_string
+
+    def _draw_time_stream(self,data_time_stream, min_, max_, label,integration_time=1000):
          fig = pl.figure(figsize=(3,1.5))
          ax = fig.add_subplot(111)
          yticks = np.linspace(min_,max_,5)
          yticks = [round(x,2) for x in yticks]
          ax.set_yticks(yticks)
          ax.set_yticklabels(yticks,fontsize = 6)
+         num = len(data_time_stream)
+         time = np.linspace(0,integration_time,num)
+         xticks = np.linspace(0,integration_time,5)
+#         xticks = [round(s,2) for s in xticks]
+         ax.set_xticks(xticks)
+         ax.set_xticklabels(xticks,fontsize = 6)
+         
 
- 
          fig.subplots_adjust(left=0.24, right=0.95, top=0.80, bottom=0.35)
-         ax.plot(data_time_stream)
-         ax.set_title('Timestream', fontsize=12)
-         ax.set_xlabel('Sample', fontsize=10)
-         ax.set_ylabel('Amplitude', fontsize=10)       
+         ax.plot(time,data_time_stream)
+         ax.set_title('Timestream')
+         ax.set_xlabel('Integration time(ms)')
+         ax.set_ylabel('Amplitude')
          fig.savefig('temp_files/temp_ts.png')
          pl.close('all')
          image = QtGui.QPixmap('temp_files/temp_ts.png')
          image = image.scaled(600, 300)
-         getattr(self, label).setPixmap(image)  
+         getattr(self, label).setPixmap(image)
 
 
     def _final_plot(self):
         current =  str(self.sender().whatsThis())
         self.is_fft = False
-        xdata = self.xdata
-        ydata = self.ydata
-        stds = self.stds       
+        self.is_beam = False
+       
         if not hasattr(self, 'final_plot_popup'):
             self._create_popup_window('final_plot_popup')
         else:
@@ -173,8 +180,17 @@ class GuiTemplate(QtGui.QWidget):
         self._build_panel(settings.final_plot_build_dict)
         self.final_plot_popup.showMaximized()
         self.final_plot_popup.setWindowTitle('Result')
+        if current == '_beam_mapper_popup_save_pushbutton':
+            title = 'Beam Mapper'
+            self.is_beam = True
+            self._draw_beammaper_final()
+        else:
+            xdata = self.xdata
+            ydata = self.ydata
+            stds = self.stds
         if current == '_pol_efficiency_popup_save_pushbutton':
             title = 'Pol Efficiency'
+            self._draw_final_plot(xdata,ydata,stds,title=title)
         elif current == '_single_channel_fts_popup_save_pushbutton':
             title = 'Single Channel FTS'
             self.is_fft = True
@@ -182,10 +198,9 @@ class GuiTemplate(QtGui.QWidget):
             image = QtGui.QPixmap('temp_files/temp_fft.png')
             image = image.scaled(600, 300)
             getattr(self, '_final_plot_popup_fft_label').setPixmap(image)
-        elif current == '_beam_mapper_popup_save_pushbutton':
-            title = 'Beam Mapper'
-        self._draw_final_plot(xdata,ydata,stds,title=title)
-        
+            self._draw_final_plot(xdata,ydata,stds,title=title)
+
+            
 
     def _close_final_plot(self):
         self.final_plot_popup.close()
@@ -209,11 +224,12 @@ class GuiTemplate(QtGui.QWidget):
         ax.set_yticklabels(yticks,fontsize = 6)
         fig.subplots_adjust(left=0.24, right=0.95, top=0.80, bottom=0.35)
         xlabel = 'Sample'
+#        if title == 'Beam Mapper':
+ #           xlabel = 'Position'
+            
         if title == 'Pol Efficiency':
             xlabel = 'Angle'
         elif title == 'Single Channel FTS':
-            xlabel = 'Position'
-        elif title == 'Beam Mapper':
             xlabel = 'Position'
 #        elif title == 'Result':
  #           xlabel = 'Sample'
@@ -222,12 +238,34 @@ class GuiTemplate(QtGui.QWidget):
         ax.set_ylabel('Amplitude', fontsize=10)
         if save_path is not None:
             fig.savefig(save_path)
-        else:    
-            fig.savefig('temp_files/temp_fp.png')       
+        else:
+            fig.savefig('temp_files/temp_fp.png')
             image = QtGui.QPixmap('temp_files/temp_fp.png')
             image = image.scaled(800, 400)
-            getattr(self,  '_final_plot_popup_result_label').setPixmap(image)  
+            getattr(self,  '_final_plot_popup_result_label').setPixmap(image)
         pl.close('all')
+
+
+    def _draw_beammaper_final(self,save_path=None):
+        fig = pl.figure()
+        ax = fig.add_subplot(111)
+        ax.pcolor(self.X, self.Y, self.Z_data)
+        ax.set_title('BEAM DATA', fontsize=12)
+        ax.set_xlabel('Position (cm)', fontsize=12)
+        ax.set_ylabel('Position (cm)', fontsize=12)
+        fig.savefig('temp_files/temp_beam.png')
+        pl.close('all')
+        image = QtGui.QPixmap('temp_files/temp_beam.png')
+        image = image.scaled(600, 300)
+        if save_path is not None:
+            fig.savefig(save_path)
+        else:
+            fig.savefig('temp_files/temp_beam.png')
+            image = QtGui.QPixmap('temp_files/temp_beam.png')
+            image = image.scaled(800, 400)
+            getattr(self,  '_final_plot_popup_result_label').setPixmap(image)
+        pl.close('all')
+        
 
     def _replot(self):
         title = getattr(self, '_final_plot_popup_plot_title_lineedit').text()
@@ -245,33 +283,51 @@ class GuiTemplate(QtGui.QWidget):
         save_path = QtGui.QFileDialog.getSaveFileName(self, 'Save Location', self.user_desktop_path,
                                                             "Image files (*.png *.jpg *.gif)")
         plot_path = copy(save_path).replace('csv','png')
-        self.write_file(self.xdata,self.ydata,self.stds,save_path)
-        self._draw_final_plot(self.xdata,self.ydata,self.stds,str(plot_path))
+        if self.is_beam:
+            self._draw_beammaper_final(str(plot_path))
+            self.write_file(self.X,self.Y,self.stds,save_path,self.Z_data)
+        else:
+            self._draw_final_plot(self.xdata,self.ydata,self.stds,str(plot_path))
+            self.write_file(self.xdata,self.ydata,self.stds,save_path)
         if self.is_fft:
             fft_path = str(copy(save_path)).strip('.csv')
             fft_path += '_fft.csv'
             self.write_file(self.posFreqArray,self.FTArrayPosFreq,[0]*len(self.posFreqArray),data_path = fft_path)
-#            self.fts_analyzer.makeRawInterferogram(self.xdata,self.ydata,self.stds,str(plot_path))
             filenameRoot = copy(fft_path).replace('csv','png')
             self.fts_analyzer.plotCompleteFT(self.posFreqArray,self.FTArrayPosFreq,filenameRoot)
- 
- 
-
-
-
-
-
-        
-    #################################################
-    #################################################
-    # DAQ TYPE SPECFIC CODES 
-    #################################################
-    #################################################
     
+            
+    def write_file(self,xdata,ydata,stds,data_path,zdata=None):
+        with open(data_path,'w') as f:
+            if zdata is None:
+                for x, y,std in zip(xdata, ydata,stds):
+                    f.write('{:f}\t{:f}\t{:f}\n'.format(x, y, std))
+            else:
+                for x, y, z, std in zip(xdata, ydata, zdata,stds):
+                    print "type std"
+                    print type(std)
+                    print "type z"
+                    print type(z)
+                    f.write('{:f}\t{:f}\t{:f}\t{:f}\n'.format(x, y, z, std))
+                    
+
+
+
+
+
+
+
+
+    #################################################
+    #################################################
+    # DAQ TYPE SPECFIC CODES
+    #################################################
+    #################################################
+
     #################################################
     # POL EFFICIENCY
     #################################################
-    
+
 
     def _close_pol_efficiency(self):
         self.pol_efficiency_popup.close()
@@ -290,7 +346,7 @@ class GuiTemplate(QtGui.QWidget):
         self._update_pol_efficiency_popup()
         self._blank_pol_plot()
         getattr(self, '_pol_efficiency_popup_save_pushbutton').setDisabled(True)
-        self._draw_time_stream([0]*5, -1, -1,'_pol_efficiency_popup_time_stream_label') 
+        self._draw_time_stream([0]*5, -1, -1,'_pol_efficiency_popup_time_stream_label')
 
 
 
@@ -309,7 +365,7 @@ class GuiTemplate(QtGui.QWidget):
             getattr(self, '_pol_efficiency_popup_position_monitor_slider').setMinimum(start_angle)
             getattr(self, '_pol_efficiency_popup_position_monitor_slider').setMaximum(end_angle)
         self.pol_efficiency_popup.repaint()
-        
+
     def _close_pol_efficiency(self):
         self.pol_efficiency_popup.close()
 
@@ -355,7 +411,7 @@ class GuiTemplate(QtGui.QWidget):
                 getattr(self, 'sm_{0}'.format(com_port)).finite_rotation(scan_params['step_size'])
                 time.sleep(scan_params['pause_time']/1000)
             current_angle = getattr(self, 'sm_{0}'.format(com_port)).get_position()
-            data_time_stream, mean, min_, max_, std = self.daq.get_data(signal_channel=scan_params['signal_channel'], integration_time=scan_params['integration_time'],
+            data_time_stream, mean, min_, max_, std = self.real_daq.get_data(signal_channel=scan_params['signal_channel'], integration_time=scan_params['integration_time'],
                                                                         sample_rate=scan_params['sample_rate'],central_value=data_point)
             self.ydata.append(mean)
             self.stds.append(std)
@@ -365,14 +421,18 @@ class GuiTemplate(QtGui.QWidget):
             start = scan_params['starting_angle']
             end = scan_params['ending_angle']
 
-            self._draw_time_stream(data_time_stream, min_, max_, '_pol_efficiency_popup_time_stream_label')
+            self._draw_time_stream(data_time_stream, min_, max_, '_pol_efficiency_popup_time_stream_label',int(scan_params['integration_time']))
             fig = pl.figure(figsize=(3,2))
             ax = fig.add_subplot(111)
             fig.subplots_adjust(left=0.24, right=0.95, top=0.80, bottom=0.35)
             ax.plot(angles,self.ydata)
             ax.set_title('POL EFFICICENCY', fontsize=12)
-            ticks = np.linspace(start,end,5)
-            ax.set_xticks(ticks)
+            yticks = np.linspace(min(self.ydata),max(self.ydata),5)
+            yticks = [round(x,2) for x in yticks]
+            ax.set_yticks(yticks)
+            ax.set_yticklabels(yticks,fontsize = 6)
+            xticks = np.linspace(start,end,5)
+            ax.set_xticks(xticks)
             ax.set_xlabel('Angle', fontsize=10)
             ax.set_ylabel('Amplitude', fontsize=10)
             fig.savefig('temp_files/temp_pol.png')
@@ -383,17 +443,13 @@ class GuiTemplate(QtGui.QWidget):
             self.pol_efficiency_popup.repaint()
             getattr(self, '_pol_efficiency_popup_position_monitor_slider').setSliderPosition(step)
         getattr(self, '_pol_efficiency_popup_save_pushbutton').setEnabled(True)
-#        return steps, data 
+#        return steps, data
 
-    def write_file(self,xdata,ydata,stds,data_path):
-        with open(data_path,'w') as f:
-            for x, y,std in zip(xdata, ydata,stds):
-                f.write('{:f}\t{:f}\t{:f}\n'.format(x, y, std))
 
     def read_file(self, filename):
         x, y = np.loadtxt(filename, unpack=True)
         return x,y
-    
+
     def _get_all_pol_efficiency_scan_params(self):
         scan_params = {}
         for pol_efficiency_setting in settings.pol_int_run_settings:
@@ -416,7 +472,7 @@ class GuiTemplate(QtGui.QWidget):
     def _pause(self):
         print 'hi'
         # getattr(self, 'sm_{0}'.format(com_port)).
-        
+
     #################################################
     # USER MOVE STEPPER
     #################################################
@@ -440,7 +496,7 @@ class GuiTemplate(QtGui.QWidget):
         self._update_stepper_position()
         self.user_move_stepper_popup.showMaximized()
         self.user_move_stepper_popup.setWindowTitle('User Move Stepper')
-        
+
 
     def _add_comports_to_user_move_stepper(self):
         for i, com_port in enumerate(settings.com_ports):
@@ -460,8 +516,8 @@ class GuiTemplate(QtGui.QWidget):
         getattr(self, 'sm_{0}'.format(com_port)).set_current(float(current))
         actual =  getattr(self, 'sm_{0}'.format(com_port)).get_motor_current().strip('CC=')
         getattr(self,'_user_move_stepper_popup_current_act_label').setText(str(actual))
-        
-        
+
+
     def _move_stepper(self):
         move_to_pos = int(str(getattr(self, '_user_move_stepper_popup_move_to_position_lineedit').text()))
         com_port = self._get_com_port('_user_move_stepper_popup_current_com_port_combobox')
@@ -480,7 +536,7 @@ class GuiTemplate(QtGui.QWidget):
         stepper_position = self.stepper.stepper_position_dict[com_port]
         return stepper_position
 
-    
+
     def _update_stepper_position(self):
         com_port = self._get_com_port('_user_move_stepper_popup_current_com_port_combobox')
         stepper_position = getattr(self, 'sm_{0}'.format(com_port)).get_position().strip('SP=')
@@ -490,7 +546,7 @@ class GuiTemplate(QtGui.QWidget):
 
 
     #################################################
-    # SINGLE CHANNEL FTS BILLS 
+    # SINGLE CHANNEL FTS BILLS
     #################################################
 
     def _close_single_channel_fts(self):
@@ -563,7 +619,7 @@ class GuiTemplate(QtGui.QWidget):
         min_distance = scan_params['step_size'] * scan_params['DistPerStep'] #nm
         nyquist_distance = 2 * min_distance
         highest_frequency = ((2.99792458 * 10 ** 8) / nyquist_distance) / (10 ** 9) # GHz
-        
+
         resolution = ((3 * 10 ** 8) / total_distance) / (10 ** 9) # GHz
         resolution = '{0:.4}'.format(0.5 * resolution * 1e9)
         highest_frequency = '{0:.4}'.format(0.5 * highest_frequency * 1e9)
@@ -584,7 +640,7 @@ class GuiTemplate(QtGui.QWidget):
             getattr(self, '_single_channel_fts_popup_number_of_steps_label').setText(str(num_steps))
             self._update_slider_setup(scan_params)
         self.single_channel_fts_popup.repaint()
-       
+
     def _update_slider(self, slider_pos):
         print slider_pos
 
@@ -619,7 +675,7 @@ class GuiTemplate(QtGui.QWidget):
         fig.savefig('temp_files/temp_int.png')
         pl.close('all')
         image = QtGui.QPixmap('temp_files/temp_int.png')
-        image = image.scaled(600,300)        
+        image = image.scaled(600,300)
         getattr(self, '_single_channel_fts_popup_interferogram_label').setPixmap(image)
 
 
@@ -628,24 +684,28 @@ class GuiTemplate(QtGui.QWidget):
         angle = getattr(self,'_single_channel_fts_popup_desired_grid_angle_lineedit').text()
         getattr(self, 'sm_{0}'.format(polar_com_port)).finite_rotation(int(angle))
 
-       
+
     def _run_fts(self):
         scan_params = self._get_all_scan_params(popup='_single_channel_fts')
         linear_com_port = self._get_com_port('_single_channel_fts_popup_current_com_port_combobox')
         self._apodize()
         positions, data, self.stds = [], [], []
+        pause = int(scan_params['pause_time'])/1000
         #dummy_x, dummy_y = self.fts_daq.simulate_inteferogram(scan_params['starting_position'], scan_params['ending_position'],scan_params['step_size'])
         amplitude = self.fts_daq.read_inteferogram('SQ5_Pix101_90T_Spectra_09.if',1)
         for i,position in enumerate( np.arange(scan_params['starting_position'], scan_params['ending_position'] + scan_params['step_size'], scan_params['step_size'])):
             getattr(self, 'sm_{0}'.format(linear_com_port)).move_to_position(position)
-            time.sleep(int(scan_params['pause_time']))
-            data_time_stream, mean, min_, max_, std = self.daq.get_data(signal_channel=scan_params['signal_channel'], integration_time=scan_params['integration_time'],
-                                                                        sample_rate=scan_params['sample_rate'],central_value = amplitude[i])
+            time.sleep(pause)
+            #data_time_stream, mean, min_, max_, std = self.daq.get_data(signal_channel=scan_params['signal_channel'], integration_time=scan_params['integration_time'],
+            #                                                            sample_rate=scan_params['sample_rate'],central_value = amplitude[i])
+
+            data_time_stream, mean, min_, max_, std = self.real_daq.get_data(signal_channel=scan_params['signal_channel'], integration_time=scan_params['integration_time'],
+                                     sample_rate=scan_params['sample_rate'],central_value = amplitude[i])
             self.stds.append(std)
             getattr(self, '_single_channel_fts_popup_std_label').setText('{0:.3f}'.format(std))
             getattr(self, '_single_channel_fts_popup_mean_label').setText('{0:.3f}'.format(mean))
             getattr(self, '_single_channel_fts_popup_current_position_label').setText('{0:.3f}'.format(position))
-            self._draw_time_stream(data_time_stream, min_, max_,'_single_channel_fts_popup_time_stream_label')       
+            self._draw_time_stream(data_time_stream, min_, max_,'_single_channel_fts_popup_time_stream_label',int(scan_params['integration_time']))
             positions.append(position * scan_params['DistPerStep'])
             data.append(mean)
             fig = pl.figure(figsize=(3.5,1.5))
@@ -658,12 +718,11 @@ class GuiTemplate(QtGui.QWidget):
             xticks = [round(x,2) for x in xticks]
             ax.set_xticks(xticks)
             ax.set_xticklabels(xticks,fontsize = 6)
-
             ax.set_yticks(yticks)
             ax.set_yticklabels(yticks,fontsize = 6)
             ax.set_xlabel('Mirror Position (in)')
             ax.set_ylabel('Amplitude')
-            ax.set_title('Interferogram')
+            ax.set_title('Inteferogram')
             fig.savefig('temp_files/temp_int.png')
             pl.close('all')
             image = QtGui.QPixmap('temp_files/temp_int.png')
@@ -678,10 +737,10 @@ class GuiTemplate(QtGui.QWidget):
         self.xdata = positions
         self.ydata = data
         getattr(self, '_single_channel_fts_popup_save_pushbutton').setEnabled(True)
-        
+
 
     #################################################
-    # BEAM MAPPER 
+    # BEAM MAPPER
     #################################################
 
     def _close_beam_mapper(self):
@@ -690,7 +749,7 @@ class GuiTemplate(QtGui.QWidget):
         Input: None
         Output: None
         '''
-        
+
         self.beam_mapper_popup.close()
 
     def _beam_mapper(self):
@@ -704,11 +763,12 @@ class GuiTemplate(QtGui.QWidget):
             self.populate_combobox(combobox_widget, entry_list)
         self._connect_to_com_port(beammapper=1)
         self._connect_to_com_port(beammapper=2)
-        self._draw_time_stream([0]*5, -1, -1,'_beam_mapper_popup_time_stream_label')     
+        self._draw_time_stream([0]*5, -1, -1,'_beam_mapper_popup_time_stream_label')
         self.beam_mapper_popup.showMaximized()
         self._initialize_beam_mapper()
         self.beam_mapper_popup.repaint()
-                                                                                
+        getattr(self, '_beam_mapper_popup_save_pushbutton').setDisabled(True)
+
 
     def _get_all_beam_mapper_scan_params(self):
         scan_params = {}
@@ -775,10 +835,12 @@ class GuiTemplate(QtGui.QWidget):
         for i, x_pos in enumerate(x_grid):
             for j, y_pos in enumerate(y_grid):
                 central_value = Z_sim[i][j]
-                data_time_stream, mean, min_, max_, std = self.daq.get_data(signal_channel=scan_params['signal_channel'], integration_time=scan_params['integration_time'],
+                data_time_stream, mean, min_, max_, std = self.real_daq.get_data(signal_channel=scan_params['signal_channel'], integration_time=scan_params['integration_time'],
                                                                             sample_rate=scan_params['sample_rate'], central_value=central_value)
+                self.stds[j][i]=std
                 Z_datum = mean
                 Z_data[j][i] = Z_datum
+                self.stds.append(std)
                 fig = pl.figure()
                 ax = fig.add_subplot(111)
                 ax.pcolor(X, Y, Z_data)
@@ -795,9 +857,12 @@ class GuiTemplate(QtGui.QWidget):
                 getattr(self, '_beam_mapper_popup_x_position_label').setText('{0:.3f}'.format(x_pos))
                 getattr(self, '_beam_mapper_popup_y_position_label').setText('{0:.3f}'.format(y_pos))
                 getattr(self, '_beam_mapper_popup_data_std_label').setText('{0:.3f}'.format(std))
-                
-                self.beam_mapper_popup.repaint()
 
+                self.beam_mapper_popup.repaint()
+        self.X = X
+        self.Y = Y
+        self.Z_data = Z_data
+        getattr(self, '_beam_mapper_popup_save_pushbutton').setEnabled(True)
 
 
     #################################################
