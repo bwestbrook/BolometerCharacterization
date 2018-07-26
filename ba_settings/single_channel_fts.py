@@ -108,11 +108,11 @@ single_channel_fts_settings.single_channel_fts_build_dict = {
                                                              '_single_channel_fts_popup_position_slider_max_label': {'text': '10000', 'position': (2, 11, 1, 1)},
 
                                                             
-                                                             '_single_channel_fts_popup_time_stream_label': {'alignment': 'Center', 'width': 700, 'position': (5, 7, 5, 4)},
+                                                             '_single_channel_fts_popup_time_stream_label': {'alignment': 'Center', 'width': 700, 'position': (5, 7, 6, 4)},
 
-                                                             '_single_channel_fts_popup_interferogram_label': {'alignment': 'Center', 'position': (10, 7, 6, 4)},
+                                                             '_single_channel_fts_popup_interferogram_label': {'alignment': 'Center', 'position': (11, 7, 6, 4)},
 
-                                                             '_single_channel_fts_popup_fft_label': {'alignment': 'Center', 'width': 700, 'position': (16, 7, 7, 4)},
+                                                             '_single_channel_fts_popup_fft_label': {'alignment': 'Center', 'width': 700, 'position': (17, 7, 6, 4)},
 }
 
 single_channel_fts_settings.single_channel_fts_monitor_build_dict = {
@@ -132,7 +132,7 @@ single_channel_fts_settings.combobox_entry_dict = {
                                                    '_single_channel_fts_popup_apodization_type_combobox': ['BOXCAR', 'TRIAGNULAR'],
                                                    '_single_channel_fts_popup_current_com_port_combobox': ['COM1', 'COM2', 'COM3', 'COM4'],
                                                    '_single_channel_fts_popup_grid_current_com_port_combobox': ['COM1', 'COM2', 'COM3', 'COM4'],
-                                                   '_single_channel_fts_popup_sample_rate_combobox': ['50', '100', '250', '500', '1000'],
+                                                   '_single_channel_fts_popup_sample_rate_combobox': ['50', '100', '250', '500', '1000','2000','3000','4000','5000','6000','7000','8000','9000','10000','20000','30000','40000','48000']
                                                    }
 
 

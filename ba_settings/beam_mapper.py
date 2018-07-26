@@ -84,6 +84,8 @@ beam_mapper_settings.beam_mapper_build_dict = {
                                                '_beam_mapper_popup_pause_pushbutton': {'text': 'Pause', 'position': (15, 2, 1, 2)},
                                                '_beam_mapper_popup_cancel_pushbutton': {'text': 'Cancel', 'color': 'red', 'position': (16, 0, 1, 4)},
                                                '_beam_mapper_popup_close_pushbutton': {'function': '_close_beam_mapper', 'text': 'Close', 'position': (17, 0, 1, 4)},
+                                               '_beam_mapper_popup_save_pushbutton': {'text': 'Save', 'function': '_final_plot', 'position': (15, 5, 1, 4)},
+
 
 #SCAN MONITOR
                                                '_beam_mapper_popup_scan_monitor_label': {'text': 'SCAN MONITOR', 'alignment': 'Center', 'font': 'huge', 'color': 'blue', 'position': (0, 8, 1, 6)},
