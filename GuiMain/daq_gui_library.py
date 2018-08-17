@@ -95,11 +95,11 @@ class GuiTemplate(QtGui.QWidget):
         if combobox == '_daq_main_panel_daq_select_combobox':
             popup = str(self.sender().currentText())
 	    if popup == 'Pol Efficiency':
-                com_port = 'COM1'
+                com_port = 'COM4'
                 connection = '_pol_efficiency_popup_successful_connection_header_label'
 	    elif popup == 'Beam Mapper':
                 if beammapper == 1:
-	            com_port = 'COM1'
+	            com_port = 'COM4'
 		    connection = '_beam_mapper_popup_x_successful_connection_header_label'
 		    popup_combobox = '_beam_mapper_popup_x_current_com_port_combobox'
                     getattr(self, popup_combobox).setCurrentIndex(0)
@@ -110,7 +110,7 @@ class GuiTemplate(QtGui.QWidget):
                     getattr(self, popup_combobox).setCurrentIndex(1)
 	    elif popup == 'Single Channel Fts':
                  if single_channel_fts == 1:
-	            com_port = 'COM1'
+	            com_port = 'COM4'
 		    connection = '_single_channel_fts_popup_successful_connection_header_label'
 		    popup_combobox = '_single_channel_fts_popup_current_com_port_combobox'
                     getattr(self, popup_combobox).setCurrentIndex(0)
@@ -119,7 +119,7 @@ class GuiTemplate(QtGui.QWidget):
 		    connection = '_single_channel_fts_popup_grid_successful_connection_header_label'
 		    popup_combobox = '_single_channel_fts_popup_grid_current_com_port_combobox'
 	    elif popup == 'User Move Stepper':
-	        com_port = 'COM1'
+	        com_port = 'COM4'
 	        connection = '_user_move_stepper_popup_successful_connection_header_label'
 	else:
        	    com_port = self._get_com_port(combobox=combobox)
@@ -127,19 +127,19 @@ class GuiTemplate(QtGui.QWidget):
 
 #	port_number = int(com_port.strip('COM')) - 1
 #	init_string = '/dev/ttyUSB{0}'.format(port_number)
-        if com_port not in ['COM2','COM3','COM4']:
+        if com_port not in ['COM1','COM2','COM3']:
             if not hasattr(self, 'sm_{0}'.format(com_port)):
 	        setattr(self, 'sm_{0}'.format(com_port), stepper_motor(com_port))
-	        '''current_string = getattr(self, 'sm_{0}'.format(com_port)).get_motor_current().strip('CC=')
+	        current_string = getattr(self, 'sm_{0}'.format(com_port)).get_motor_current().strip('CC=')
                 position_string = getattr(self, 'sm_{0}'.format(com_port)).get_position().strip('SP=')
                 velocity_string = getattr(self, 'sm_{0}'.format(com_port)).get_velocity().strip('VE=')
             else:
                 current_string, position_string,velocity_string = '0','0','0'
         else:
             current_string, position_string,velocity_string = '0','0','0'
-            '''
+            
         getattr(self,connection).setText('Successful Connection to '+ com_port +'!' )
-#        return current_string, position_string, velocity_string
+        return current_string, position_string, velocity_string
 
     def _draw_time_stream(self,data_time_stream, min_, max_, label,integration_time=1000):
          fig = pl.figure(figsize=(3,1.5))
@@ -172,7 +172,7 @@ class GuiTemplate(QtGui.QWidget):
         current =  str(self.sender().whatsThis())
         self.is_fft = False
         self.is_beam = False
-       
+        self.is_iv = False
         if not hasattr(self, 'final_plot_popup'):
             self._create_popup_window('final_plot_popup')
         else:
@@ -184,13 +184,17 @@ class GuiTemplate(QtGui.QWidget):
             title = 'Beam Mapper'
             self.is_beam = True
             self._draw_beammaper_final()
+        elif current == '_xycollector_popup_save_pushbutton':
+            title = 'IV Curve'
+            self.is_iv = True
+            self.draw_final_plot(self.xdata,self.ydata,title = title)            
         else:
             xdata = self.xdata
             ydata = self.ydata
             stds = self.stds
         if current == '_pol_efficiency_popup_save_pushbutton':
             title = 'Pol Efficiency'
-            self._draw_final_plot(xdata,ydata,stds,title=title)
+            self._draw_final_plot(xdata,ydata,stds=stds,title=title)
         elif current == '_single_channel_fts_popup_save_pushbutton':
             title = 'Single Channel FTS'
             self.is_fft = True
@@ -198,7 +202,8 @@ class GuiTemplate(QtGui.QWidget):
             image = QtGui.QPixmap('temp_files/temp_fft.png')
             image = image.scaled(600, 300)
             getattr(self, '_final_plot_popup_fft_label').setPixmap(image)
-            self._draw_final_plot(xdata,ydata,stds,title=title)
+            self._draw_final_plot(xdata,ydata,stds=stds,title=title)
+
 
             
 
@@ -206,14 +211,15 @@ class GuiTemplate(QtGui.QWidget):
         self.final_plot_popup.close()
 
 
-    def _draw_final_plot(self, x, y, stds, save_path=None,title='Result',legend=None):
+    def _draw_final_plot(self, x, y, stds=None, save_path=None,title='Result',legend=None):
         fig = plt.figure(figsize=(3,1.5))
         ax = fig.add_subplot(111)
-        if legend:
-            ax.errorbar(x,y,yerr=stds,label = legend)
-            ax.legend(prop={'size':6})
-        else:
-            ax.errorbar(x,y,yerr=stds)
+        if stds is not None:
+            if legend:
+                ax.errorbar(x,y,yerr=stds,label = legend)
+                ax.legend(prop={'size':6})
+            else:
+                ax.errorbar(x,y,yerr=stds)
         yticks = np.linspace(min(y),max(y),5)
         yticks = [round(s,2) for s in yticks]
         xticks = np.linspace(x[0],x[len(y)-1],5)
@@ -272,12 +278,12 @@ class GuiTemplate(QtGui.QWidget):
         legend = getattr(self,'_final_plot_popup_data_label_lineedit').text()
         if title != '':
             if legend != '':
-                self._draw_final_plot(self.xdata,self.ydata,self.stds,title = title, legend = legend)
+                self._draw_final_plot(self.xdata,self.ydata,stds=self.stds,title = title, legend = legend)
             else:
-                self._draw_final_plot(self.xdata,self.ydata,self.stds,title = title)
+                self._draw_final_plot(self.xdata,self.ydata,stds=self.stds,title = title)
         else:
              if legend != '':
-                self._draw_final_plot(self.xdata,self.ydata,self.stds, legend = legend)
+                self._draw_final_plot(self.xdata,self.ydata,stds=self.stds, legend = legend)
 
     def _save_final_plot(self):
         save_path = QtGui.QFileDialog.getSaveFileName(self, 'Save Location', self.user_desktop_path,
@@ -285,10 +291,13 @@ class GuiTemplate(QtGui.QWidget):
         plot_path = copy(save_path).replace('csv','png')
         if self.is_beam:
             self._draw_beammaper_final(str(plot_path))
-            self.write_file(self.X,self.Y,self.stds,save_path,self.Z_data)
+            self.write_file(self.X,self.Y,save_path,self.Z_data,stds=self.stds)
+        elif self.is_iv:
+            self._draw_final_plot(self.xdata,self.ydata,str(plot_path))
+            self.write_file(self.xdata,self.ydata,save_path)
         else:
-            self._draw_final_plot(self.xdata,self.ydata,self.stds,str(plot_path))
-            self.write_file(self.xdata,self.ydata,self.stds,save_path)
+            self._draw_final_plot(self.xdata,self.ydata,str(plot_path),stds=self.stds)
+            self.write_file(self.xdata,self.ydata,save_path,stds=self.stds)
         if self.is_fft:
             fft_path = str(copy(save_path)).strip('.csv')
             fft_path += '_fft.csv'
@@ -297,11 +306,15 @@ class GuiTemplate(QtGui.QWidget):
             self.fts_analyzer.plotCompleteFT(self.posFreqArray,self.FTArrayPosFreq,filenameRoot)
     
             
-    def write_file(self,xdata,ydata,stds,data_path,zdata=None):
+    def write_file(self,xdata,ydata,data_path,stds=None,zdata=None):
         with open(data_path,'w') as f:
             if zdata is None:
-                for x, y,std in zip(xdata, ydata,stds):
-                    f.write('{:f}\t{:f}\t{:f}\n'.format(x, y, std))
+                if stds is None:
+                    for x, y in zip(xdata, ydata):
+                        f.write('{:f}\t{:f}\n'.format(x, y))
+                else:
+                    for x, y,std in zip(xdata, ydata,stds):
+                        f.write('{:f}\t{:f}\t{:f}\n'.format(x, y, std))
             else:
                 for i, x in enumerate(self.x_grid):
                     for j, y in enumerate(self.y_grid):
@@ -320,6 +333,93 @@ class GuiTemplate(QtGui.QWidget):
     # DAQ TYPE SPECFIC CODES
     #################################################
     #################################################
+
+
+    #################################################
+    # XY COLLECTOR
+    #################################################
+
+    def _close_xycollector(self):
+        self.xycollector_popup.close()
+
+    def _xycollector(self):
+        if not hasattr(self, 'xycollector_popup'):
+            self._create_popup_window('xycollector_popup')
+        else:
+            self._initialize_panel('xycollector_popup')
+        self._build_panel(settings.xycollector_build_dict)
+        for combobox_widget, entry_list in self.xycollector_combobox_entry_dict.iteritems():
+            self.populate_combobox(combobox_widget, entry_list)
+        self.xycollector_popup.showMaximized()
+        self.xycollector_popup.setWindowTitle('XY COLLECTOR')
+#        self._update_pol_efficiency_popup()
+
+    def _run_xycollector(self):
+        visa_x = getattr(self,'_xycollector_popup_visa_resource_name_x_combobox').currentText()
+        visa_x = getattr(self, '_xycollector_popup_visa_resource_name_y_combobox').currentText()
+        self.xdata,self.ydata = [],[]
+        while True:
+            x,y = self.real_daq.get_data2()
+            self.xdata.append(x)
+            self.ydata.append(y)
+            self._draw_x()
+            self._draw_y()
+            self._draw_xycollector()
+
+
+    def _draw_x(self):
+        fig = pl.figure(figsize=(3,2))
+        ax = fig.add_subplot(111)
+        fig.subplots_adjust(left=0.24, right=0.95, top=0.80, bottom=0.35)
+        ax.plot(self.xdata)
+        ax.set_title('Applied Voltage', fontsize=10)
+        ax.set_xlabel('Sample', fontsize=8)
+        ax.set_ylabel('Applied Voltage', fontsize=8)
+        fig.savefig('temp_files/temp_xv.png')
+        pl.close('all')
+        image = QtGui.QPixmap('temp_files/temp_xv.png')
+        image = image.scaled(600,400)
+        getattr(self, '_xycollector_popup_xdata_label').setPixmap(image)  
+
+    def _draw_y(self):
+        fig = pl.figure(figsize=(3,2))
+        ax = fig.add_subplot(111)
+        fig.subplots_adjust(left=0.24, right=0.95, top=0.80, bottom=0.35)
+        ax.plot(self.ydata)
+        ax.set_title('Bolometer Voltage', fontsize=10)
+        ax.set_xlabel('Sample', fontsize=8)
+        ax.set_ylabel('Bolometer Voltage', fontsize=8)
+        fig.savefig('temp_files/temp_yv.png')
+        pl.close('all')
+        image = QtGui.QPixmap('temp_files/temp_yv.png')
+        image = image.scaled(600,400)
+        getattr(self, '_xycollector_popup_ydata_label').setPixmap(image)       
+
+
+    def _draw_xycollector(self):
+        fig = pl.figure(figsize=(3,2))
+        ax = fig.add_subplot(111)
+        fig.subplots_adjust(left=0.24, right=0.95, top=0.80, bottom=0.35)
+        ax.plot(self.xdata,self.ydata)
+        ax.set_title('IV Curve', fontsize=10)
+        ax.set_xlabel('Applied Voltage', fontsize=8)
+        ax.set_ylabel('Bolometer Voltage', fontsize=8)
+#        if len(self.ydata)>1:
+ #           yticks = np.linspace(min(self.ydata),max(self.ydata),5)
+  #          yticks = [round(x,2) for x in yticks]
+#            ax.set_yticks(yticks)
+ #           ax.set_yticklabels(yticks,fontsize = 6)
+  #          xticks = np.linspace(min(self.xdata),max(self.xdata),5)
+   #         ax.set_xticks(xticks)
+    #        ax.set_xticklabels(xticks,fontsize = 6)                             
+       
+        fig.savefig('temp_files/temp_iv.png')
+        pl.close('all')
+        image = QtGui.QPixmap('temp_files/temp_iv.png')
+        image = image.scaled(600,400)
+        getattr(self, '_xycollector_popup_xydata_label').setPixmap(image)
+        
+            
 
     #################################################
     # POL EFFICIENCY
