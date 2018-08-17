@@ -8,6 +8,8 @@ import datetime
 import pylab as pl
 import matplotlib.pyplot as plt
 import time
+import threading
+from Tkinter import *
 from PyPDF2 import PdfFileMerger
 from pprint import pprint
 from copy import copy
@@ -26,7 +28,13 @@ from FTS_DAQ.analyzeFTS import FTSanalyzer
 #from DAQ.daq import DAQ
 from realDAQ.daq import DAQ
 
+
+#Global variables
+continue_run = True
+root = Tk()
+
 class GuiTemplate(QtGui.QWidget):
+
 
     def __init__(self):
         super(GuiTemplate, self).__init__()
@@ -187,7 +195,7 @@ class GuiTemplate(QtGui.QWidget):
         elif current == '_xycollector_popup_save_pushbutton':
             title = 'IV Curve'
             self.is_iv = True
-            self.draw_final_plot(self.xdata,self.ydata,title = title)            
+            self._draw_final_plot(self.xdata,self.ydata,title = title)            
         else:
             xdata = self.xdata
             ydata = self.ydata
@@ -322,6 +330,9 @@ class GuiTemplate(QtGui.QWidget):
                     
 
 
+    def _pause(self):
+        global continue_run
+        continue_run = False
 
 
 
@@ -354,17 +365,21 @@ class GuiTemplate(QtGui.QWidget):
         self.xycollector_popup.setWindowTitle('XY COLLECTOR')
 #        self._update_pol_efficiency_popup()
 
+
     def _run_xycollector(self):
+        global continue_run
+        continue_run = True
         visa_x = getattr(self,'_xycollector_popup_visa_resource_name_x_combobox').currentText()
         visa_x = getattr(self, '_xycollector_popup_visa_resource_name_y_combobox').currentText()
         self.xdata,self.ydata = [],[]
-        while True:
+        while continue_run:
             x,y = self.real_daq.get_data2()
             self.xdata.append(x)
             self.ydata.append(y)
             self._draw_x()
             self._draw_y()
             self._draw_xycollector()
+            root.update()
 
 
     def _draw_x(self):
@@ -566,10 +581,7 @@ class GuiTemplate(QtGui.QWidget):
         return scan_params
 
 
-    def _pause(self):
-        print 'hi'
-        # getattr(self, 'sm_{0}'.format(com_port)).
-
+   
     #################################################
     # USER MOVE STEPPER
     #################################################
