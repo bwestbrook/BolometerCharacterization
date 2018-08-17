@@ -20,7 +20,7 @@ xycollector_settings.xycollector_build_dict = {
 
                                                              '_xycollector_popup_start_pushbutton': {'text': 'Start', 'function': '_run_xycollector', 'position': (17, 0, 1, 1)},
 
-                                                             '_xycollector_popup_pause_pushbutton': {'text': 'Pause', 'function': '_dummy', 'position': (17, 1, 1, 1)},
+                                                             '_xycollector_popup_pause_pushbutton': {'text': 'Pause', 'function': '_pause', 'position': (17, 1, 1, 1)},
 
                                                              '_xycollector_popup_close_pushbutton': {'text': 'Close', 'function': '_close_xycollector', 'position': (17, 3, 1, 1)},
 
