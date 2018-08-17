@@ -21,8 +21,8 @@ class DAQ():
     def get_data2(self, visa_x=0, visa_y=1):
        with nidaqmx.Task() as task:
            task.ai_channels.add_ai_voltage_chan("Dev1/ai{0}, Dev1/ai{1}".format(int(visa_x),int(visa_y)))
-           task.timing.cfg_samp_clk_timing(rate = 50, sample_mode=AcquisitionType.FINITE,samps_per_chan=2)
-           data_time_stream = task.read(number_of_samples_per_channel=2)
+           task.timing.cfg_samp_clk_timing(rate = 10, sample_mode=AcquisitionType.FINITE)
+           data_time_stream = task.read()
        return data_time_stream[0],data_time_stream[1]
 
 
