@@ -11,28 +11,24 @@ class stepper_motor():
     def __init__(self, port):
         self.port = port
         self._connection = lab_serial(port=self.port)
+        self._send_command('DL2')
 
     def _send_command(self,msg):
-        if not msg.endswith('\r'):
-            msg +='\r'
+   ###     if not msg.endswith('\r'):
+      #      msg +='\r'
         self._connection.write(msg)
             
     def _query_motor(self, query, timeout = 1):
         self._send_command(query)
         response = self._connection.read()
         return response
-
         
     def move_to_position(self,x):
         # check that this is a valid position
-
         # convert physical units to stepper motor units
-
         # tell the motor what to do
         self._setup()
         self._send_command('FP{:d}'.format(int(x)))
-
-
         # check that the motor did what you wanted
         # IP, EP, commands to see
 
@@ -134,8 +130,8 @@ class stepper_motor():
         
   
 if __name__ == '__main__':
-    SM = stepper_motor('/dev/ttyUSB0')
-    SM.set_current(2)
+    SM = stepper_motor('COM4')
+#    SM.set_current(2)
 #    SM.finite_rotation(6000)
  #   angles, data = SM.take_pol_efficiency(1, 60, noise = 1)
  #   SM.plot_pol_efficiency_data(angles, data)
