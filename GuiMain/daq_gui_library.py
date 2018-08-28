@@ -103,11 +103,11 @@ class GuiTemplate(QtGui.QWidget):
         if combobox == '_daq_main_panel_daq_select_combobox':
             popup = str(self.sender().currentText())
 	    if popup == 'Pol Efficiency':
-                com_port = 'COM4'
+                com_port = 'COM6'
                 connection = '_pol_efficiency_popup_successful_connection_header_label'
 	    elif popup == 'Beam Mapper':
                 if beammapper == 1:
-	            com_port = 'COM4'
+	            com_port = 'COM6'
 		    connection = '_beam_mapper_popup_x_successful_connection_header_label'
 		    popup_combobox = '_beam_mapper_popup_x_current_com_port_combobox'
                     getattr(self, popup_combobox).setCurrentIndex(0)
@@ -118,7 +118,7 @@ class GuiTemplate(QtGui.QWidget):
                     getattr(self, popup_combobox).setCurrentIndex(1)
 	    elif popup == 'Single Channel Fts':
                  if single_channel_fts == 1:
-	            com_port = 'COM4'
+	            com_port = 'COM6'
 		    connection = '_single_channel_fts_popup_successful_connection_header_label'
 		    popup_combobox = '_single_channel_fts_popup_current_com_port_combobox'
                     getattr(self, popup_combobox).setCurrentIndex(0)
@@ -127,7 +127,7 @@ class GuiTemplate(QtGui.QWidget):
 		    connection = '_single_channel_fts_popup_grid_successful_connection_header_label'
 		    popup_combobox = '_single_channel_fts_popup_grid_current_com_port_combobox'
 	    elif popup == 'User Move Stepper':
-	        com_port = 'COM4'
+	        com_port = 'COM6'
 	        connection = '_user_move_stepper_popup_successful_connection_header_label'
 	else:
        	    com_port = self._get_com_port(combobox=combobox)
@@ -220,6 +220,8 @@ class GuiTemplate(QtGui.QWidget):
 
 
     def _draw_final_plot(self, x, y, stds=None, save_path=None,title='Result',legend=None):
+        print x
+        print y
         fig = plt.figure(figsize=(3,1.5))
         ax = fig.add_subplot(111)
         if stds is not None:
@@ -404,6 +406,11 @@ class GuiTemplate(QtGui.QWidget):
         ax.set_title('Bolometer Voltage', fontsize=10)
         ax.set_xlabel('Sample', fontsize=8)
         ax.set_ylabel('Bolometer Voltage', fontsize=8)
+        if len(self.ydata)>1:
+            yticks = np.linspace(min(self.ydata),max(self.ydata),5)
+            yticks = [round(x,2) for x in yticks]
+            ax.set_yticks(yticks)
+            ax.set_yticklabels(yticks,fontsize = 6)
         fig.savefig('temp_files/temp_yv.png')
         pl.close('all')
         image = QtGui.QPixmap('temp_files/temp_yv.png')
@@ -419,14 +426,15 @@ class GuiTemplate(QtGui.QWidget):
         ax.set_title('IV Curve', fontsize=10)
         ax.set_xlabel('Applied Voltage', fontsize=8)
         ax.set_ylabel('Bolometer Voltage', fontsize=8)
-#        if len(self.ydata)>1:
- #           yticks = np.linspace(min(self.ydata),max(self.ydata),5)
-  #          yticks = [round(x,2) for x in yticks]
-#            ax.set_yticks(yticks)
- #           ax.set_yticklabels(yticks,fontsize = 6)
-  #          xticks = np.linspace(min(self.xdata),max(self.xdata),5)
-   #         ax.set_xticks(xticks)
-    #        ax.set_xticklabels(xticks,fontsize = 6)                             
+        if len(self.ydata)>1:
+            yticks = np.linspace(min(self.ydata),max(self.ydata),5)
+            yticks = [round(x,2) for x in yticks]
+            ax.set_yticks(yticks)
+            ax.set_yticklabels(yticks,fontsize = 6)
+            xticks = np.linspace(min(self.xdata),max(self.xdata),5)
+            xticks = [round(s,2) for s in xticks]
+            ax.set_xticks(xticks)
+            ax.set_xticklabels(xticks,fontsize = 6)                             
        
         fig.savefig('temp_files/temp_iv.png')
         pl.close('all')
@@ -510,13 +518,18 @@ class GuiTemplate(QtGui.QWidget):
         getattr(self, '_pol_efficiency_popup_data_label').setPixmap(image)
 
     def take_pol_efficiency(self, scan_params, noise=10):
+        global continue_run
+        continue_run = True
         com_port = self._get_com_port('_pol_efficiency_popup_current_com_port_combobox')
         stepnum = (scan_params['ending_angle']-scan_params['starting_angle'])/scan_params['step_size']+1
         self.xdata = np.linspace(scan_params['starting_angle'],scan_params['ending_angle'],stepnum)
         self.ydata = []
         angles = []
         self.stds = []
-        for i, step in enumerate(self.xdata):
+        i = 0
+        while continue_run and i < len(self.xdata):
+            step = self.xdata[i]
+#        for i, step in enumerate(self.xdata):
             data_point = self.get_simulated_data(int, step, noise=noise)
             angles.append(step)
             if step != 0:
@@ -554,6 +567,8 @@ class GuiTemplate(QtGui.QWidget):
             getattr(self, '_pol_efficiency_popup_data_label').setPixmap(image)
             self.pol_efficiency_popup.repaint()
             getattr(self, '_pol_efficiency_popup_position_monitor_slider').setSliderPosition(step)
+            i += 1
+            root.update()
         getattr(self, '_pol_efficiency_popup_save_pushbutton').setEnabled(True)
 #        return steps, data
 
@@ -795,6 +810,8 @@ class GuiTemplate(QtGui.QWidget):
 
 
     def _run_fts(self):
+        global continue_run
+        continue_run = True
         scan_params = self._get_all_scan_params(popup='_single_channel_fts')
         linear_com_port = self._get_com_port('_single_channel_fts_popup_current_com_port_combobox')
         self._apodize()
@@ -802,7 +819,11 @@ class GuiTemplate(QtGui.QWidget):
         pause = int(scan_params['pause_time'])/1000
         #dummy_x, dummy_y = self.fts_daq.simulate_inteferogram(scan_params['starting_position'], scan_params['ending_position'],scan_params['step_size'])
         amplitude = self.fts_daq.read_inteferogram('SQ5_Pix101_90T_Spectra_09.if',1)
-        for i,position in enumerate( np.arange(scan_params['starting_position'], scan_params['ending_position'] + scan_params['step_size'], scan_params['step_size'])):
+        i = 0
+        helper = np.arange(scan_params['starting_position'], scan_params['ending_position'] + scan_params['step_size'], scan_params['step_size'])
+        while continue_run and i < len(helper):
+            position = helper[i]
+#        for i,position in enumerate( np.arange(scan_params['starting_position'], scan_params['ending_position'] + scan_params['step_size'], scan_params['step_size'])):
             getattr(self, 'sm_{0}'.format(linear_com_port)).move_to_position(position)
             time.sleep(pause)
             #data_time_stream, mean, min_, max_, std = self.daq.get_data(signal_channel=scan_params['signal_channel'], integration_time=scan_params['integration_time'],
@@ -839,6 +860,8 @@ class GuiTemplate(QtGui.QWidget):
             getattr(self, '_single_channel_fts_popup_interferogram_label').setPixmap(image)
             self.single_channel_fts_popup.repaint()
             getattr(self, '_single_channel_fts_popup_position_monitor_slider').setSliderPosition(position)
+            i += 1
+            root.update() 
         self.posFreqArray,self.FTArrayPosFreq = self.fts_analyzer.analyzeBolo(positions, data,apodization=self.apodization)
         image = QtGui.QPixmap('temp_files/temp_fft.png')
         image = image.scaled(600, 300)
@@ -935,6 +958,8 @@ class GuiTemplate(QtGui.QWidget):
                 getattr(self,'_beam_mapper_popup_n_points_y_label').setText(str(n_points_y))
 
     def _take_beam_map(self):
+        global continue_run
+        continue_run = True
         scan_params = self._get_all_scan_params(popup='_beam_mapper')
         x_grid = np.linspace(scan_params['start_x_position'], scan_params['end_x_position'],  scan_params['n_points_x'])
         y_grid = np.linspace(scan_params['start_y_position'], scan_params['end_y_position'],  scan_params['n_points_y'])
@@ -942,7 +967,10 @@ class GuiTemplate(QtGui.QWidget):
         Z_data = np.zeros(shape=X.shape)
         self.stds = np.zeros(shape=X.shape)
         X_sim, Y_sim, Z_sim = self.beam_map_daq.simulate_beam(scan_params)
-        for i, x_pos in enumerate(x_grid):
+        i = 0
+        while continue_run and i < len(x_grid):
+            x_pos = x_grid[i]
+#        for i, x_pos in enumerate(x_grid):
             for j, y_pos in enumerate(y_grid):
                 central_value = Z_sim[i][j]
                 data_time_stream, mean, min_, max_, std = self.real_daq.get_data(signal_channel=scan_params['signal_channel'], integration_time=scan_params['integration_time'],
@@ -966,8 +994,9 @@ class GuiTemplate(QtGui.QWidget):
                 getattr(self, '_beam_mapper_popup_x_position_label').setText('{0:.3f}'.format(x_pos))
                 getattr(self, '_beam_mapper_popup_y_position_label').setText('{0:.3f}'.format(y_pos))
                 getattr(self, '_beam_mapper_popup_data_std_label').setText('{0:.3f}'.format(std))
-
                 self.beam_mapper_popup.repaint()
+                i += 1
+                root.update()                
         self.X = X
         self.Y = Y
         self.Z_data = Z_data
