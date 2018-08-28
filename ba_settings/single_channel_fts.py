@@ -81,7 +81,7 @@ single_channel_fts_settings.single_channel_fts_build_dict = {
 
                                                              '_single_channel_fts_popup_start_pushbutton': {'text': 'Start', 'function': '_run_fts', 'position': (17, 0, 1, 1)},
 
-                                                             '_single_channel_fts_popup_pause_pushbutton': {'text': 'Pause', 'function': '_dummy', 'position': (17, 1, 1, 1)},
+                                                             '_single_channel_fts_popup_pause_pushbutton': {'text': 'Pause', 'function': '_pause', 'position': (17, 1, 1, 1)},
 
                                                              '_single_channel_fts_popup_done_pushbutton': {'text': 'Done', 'function': '_dummy', 'position': (17, 2, 1, 1)},
 
@@ -130,7 +130,7 @@ single_channel_fts_settings.combobox_entry_dict = {
                                                    '_single_channel_fts_popup_signal_channel_combobox': ['0', '1', '2', '3', '4', '5', '6', '7'],
                                                    '_single_channel_fts_popup_carrier_type_combobox': ['phone', 'e-mail'],
                                                    '_single_channel_fts_popup_apodization_type_combobox': ['BOXCAR', 'TRIAGNULAR'],
-                                                   '_single_channel_fts_popup_current_com_port_combobox': ['COM1', 'COM2', 'COM3', 'COM4'],
+                                                   '_single_channel_fts_popup_current_com_port_combobox': ['COM1', 'COM2', 'COM3', 'COM4','COM5','COM6'],
                                                    '_single_channel_fts_popup_grid_current_com_port_combobox': ['COM1', 'COM2', 'COM3', 'COM4'],
                                                    '_single_channel_fts_popup_sample_rate_combobox': ['50', '100', '250', '500', '1000','2000','3000','4000','5000','6000','7000','8000','9000','10000','20000','30000','40000','48000']
                                                    }
