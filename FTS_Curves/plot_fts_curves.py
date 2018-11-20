@@ -75,14 +75,20 @@ class FTSCurve():
         transmission = []
         with open('.\FTS_Curves\Simulations\PB2abcBands.csv', 'r') as file_handle:
             for line in file_handle.readlines()[1:]:
-                freq_value = float(line.split(',')[freq_column])
-                frequency.append(freq_value)
-                tran_value = float(line.split(',')[data_column])
-                transmission.append(tran_value)
+                print line
+                if len(line.split(',')[freq_column]) > 0:
+                    freq_value = float(line.split(',')[freq_column])
+                    frequency.append(freq_value)
+                    tran_value = float(line.split(',')[data_column])
+                    transmission.append(tran_value)
         if band == '150':
             color = 'c'
         elif band == '90':
             color = 'm'
+        elif band == '220':
+            color = 'g'
+        elif band == '270':
+            color = 'r'
         ax.plot(frequency, transmission, color=color, linestyle=':', lw=3, alpha=0.5, label='{0} GHz Sim'.format(band))
         return ax
 
@@ -244,8 +250,10 @@ class FTSCurve():
             fig = pl.figure()
             ax = fig.add_subplot(111)
             ax_was_none = True
+        else:
+            ax_was_none = False
         frequencies, transmissions = [], []
-        with open('../Atmospheric_Modeling/chajnantor.dat', 'r') as atm_file_handle:
+        with open('./Atmospheric_Modeling/chajnantor.dat', 'r') as atm_file_handle:
             for line in atm_file_handle.readlines():
                 frequency = float(line.split(', ')[0])
                 frequencies.append(frequency)
@@ -377,6 +385,12 @@ class FTSCurve():
                 custom_order = ['ATM Model', 'CO 110 GHz', 'CO 115 GHz', '90 GHz Sim', '90 GHz Bottom', '90 GHz Top', '150 GHz Sim', '150 GHz Bottom', '150 GHz Top']
                 custom_order = ['ATM Model', 'CO 110 GHz', 'CO 115 GHz', '90 GHz Sim', 'Pix 118 90 GHz Top', 'Pix 101 90 GHz Top',
                                 '150 GHz Sim', 'Pix 118 150 GHz Top', 'Pix 100 150 GHz Bottom']
+                custom_order = ['CO 110 GHz', 'CO 115 GHz', 'PB2C 220', 'PB2C 270']
+                custom_order = ['ATM Model', 'CO 110 GHz', 'CO 115 GHz', '90 GHz Sim', 'PB2-13-10 Witness', 'PB2-13-20 Witness', 'PB2-13-26 Witness']
+                custom_order = ['ATM Model', 'CO 110 GHz', 'CO 115 GHz', '150 GHz Sim', 'PB2-13-10 Witness', 'PB2-13-20 Witness', 'PB2-13-26 Witness']
+                custom_order = ['ATM Model', 'CO 110 GHz', 'CO 115 GHz', '90 GHz Sim', 'PB2-13-26 Wit-90', 'PB2-13-26 P101-90T',
+                                '150 GHz Sim', 'PB2-13-26 Wit-150', 'PB2-13-26 P100-150B']
+                custom_order = ['ATM Model', 'CO 110 GHz', 'CO 115 GHz', '220 GHz Sim', '270 GHz Sim', 'PB2-14-02 Ub-220B', 'PB2-14-02 Ub-270T']
                 fig, ax, add_atmosphere = self.plot_FFT_data(frequency_vector, divided_transmission_vector, color=color, title=title, label=label, xlim=xlim_plot,
                                                              fig=fig, add_atmosphere=add_atmosphere, add_90_sim=add_90_sim, add_150_sim=add_150_sim, add_220_sim=add_220_sim,
                                                              add_270_sim=add_270_sim, add_co_lines=add_co_lines, custom_order=custom_order)
