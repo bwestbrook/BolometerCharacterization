@@ -45,9 +45,9 @@ class BeamMapDAQ():
         Z_data = np.zeros(shape=X.shape)
         x_grid = np.linspace(scan_params['start_x_position'], scan_params['end_x_position'],  scan_params['n_points_x'])
         y_grid = np.linspace(scan_params['start_y_position'], scan_params['end_y_position'],  scan_params['n_points_y'])
-        with open('file.dat', 'wr') as fh:
+#        with open('file.dat', 'wr') as fh:
 
-        for i, x_pos in enumerate(x_grid):
+        '''for i, x_pos in enumerate(x_grid):
             for j, y_pos in enumerate(y_grid):
                 print x_pos, y_pos
                 line = '{0}, {1}, {2} {3}\n'.format(x_pos, y_pos, data, std_)
@@ -58,7 +58,7 @@ class BeamMapDAQ():
                 ax.pcolor(X, Y, Z)
                 fig.savefig('temp_beam.png')
                 pl.close('all')
-                import ipdb;ipdb.set_trace()
+                import ipdb;ipdb.set_trace()'''
 
     def test(self):
         print 'beam map DAQ'

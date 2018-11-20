@@ -12,6 +12,7 @@ from single_channel_fts import single_channel_fts_settings
 from pol_efficiency import pol_efficiency_settings
 from beam_mapper import beam_mapper_settings
 from final_plot import final_plot_settings
+from xycollector import xycollector_settings
 
 
 settings = Class()
@@ -46,7 +47,7 @@ list_of_extra_settings = [main_panel_settings, rtcurve_settings_popup_settings,
                           polcurve_settings_popup_settings, daq_main_panel_settings,
                           user_move_stepper_settings, single_channel_fts_settings,
                           beam_mapper_settings, pol_efficiency_settings, final_plot_settings,
-                          taucurve_settings_popup_settings]
+                          taucurve_settings_popup_settings, xycollector_settings]
 
 for extra_settings in list_of_extra_settings:
     for attribute in dir(extra_settings):
