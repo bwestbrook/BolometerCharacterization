@@ -199,7 +199,7 @@ class IVCurve():
         ax1.set_xlabel("Voltage ($\mu$V)", fontsize=12)
         ax2.set_ylabel("Power ($pW$)", fontsize=12)
         ax2.set_xlabel("Voltage ($\mu$V)", fontsize=12)
-        ax3.set_xlabel("Power ($pW$)", fontsize=12)
+        ax3.set_xlabel("Voltage ($\mu$V)", fontsize=12)
         ax3.set_ylabel("Res ($\Omega$)", fontsize=12)
         ax1.legend(bbox_to_anchor=(0.3, 0.1, 1, 1), numpoints=1)
         ax2.set_ylim(0, 1.1 * max(power_vector[plot_selector]))

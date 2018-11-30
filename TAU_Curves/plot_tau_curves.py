@@ -1,11 +1,14 @@
 import pylab as pl
 import numpy as np
 import sys
+from pprint import pprint
+from scipy.optimize import leastsq, curve_fit
 
-class TAUCurves():
+class TAUCurve():
 
-    def __init__(self):
+    def __init__(self, list_of_input_dicts):
         self.hi = 'hi'
+        self.input_dicts = list_of_input_dicts
 
     def load(self, path):
         with open(path, 'r') as fh:
@@ -24,25 +27,63 @@ class TAUCurves():
     def get_3db_point(self, freq_vector, amp_vector):
         amp_vector = np.asarray(amp_vector)
         freq_vector = np.asarray(freq_vector)
-        three_3b_value = np.max(amp_vector) / 2.0
+        three_3b_value = np.max(amp_vector) / np.sqrt(2.0)
         idx = (np.abs(amp_vector - three_3b_value)).argmin()
         tau_in_hertz = freq_vector[idx]
-        tau_in_ms = 1.0e3 / tau_in_hertz
-        #import ipdb;ipdb.set_trace()
-        return freq_vector, amp_vector, tau_in_hertz, tau_in_ms
+        tau_in_ms = 1.e3 / tau_in_hertz
+        return freq_vector, amp_vector, tau_in_hertz, tau_in_ms, idx
 
-    def plot(self, freq_vector, amp_vector, error_vector, tau_in_hertz='', color='', label=''):
-        print amp_vector[0] / 2.0
-        tau_in_ms = '{0:.3f} ms'.format(1.0e3 / tau_in_hertz)
-        label += ' {0} Hz {1}'.format(tau_in_hertz, tau_in_ms)
-        pl.semilogx(freq_vector, amp_vector / amp_vector[0], color=color)
-        pl.errorbar(freq_vector, amp_vector / amp_vector[0], yerr=error_vector, label=label, color=color)
-        title = 'V14-02 270GHz witness Tau data'
-        pl.axvline(tau_in_hertz, color=color, alpha=0.5, lw=2)
+    def arb_single_pol(self, omega_0):
+        def arb_roll_off(x):
+            value = np.sqrt(1.0 / (1 + (x / omega_0)^2))
+            return value
+        return arb_roll_off
+
+    def test_single_pol(self, x_val, amp_0, f_0):
+        amp = amp_0 * np.sqrt(1.0 / (1 + (x_val / f_0) ** 2))
+        return amp
+
+    def fit_single_pol(self, freq_vector, amp_vector, fit_params):
+        fit_params = curve_fit(self.test_single_pol, freq_vector, amp_vector, p0=fit_params)
+        return fit_params[0]
+
+    def plot(self, freq_vector, amp_vector, error_vector, idx, tau_in_hertz='', color='', label=''):
+        pl.semilogx(freq_vector, amp_vector / amp_vector[0], color='w', linestyle='None')
+        pl.errorbar(freq_vector, amp_vector / amp_vector[0], yerr=error_vector, label=label,
+                    marker='o', ms=5.0, linestyle='None', color=color)
         pl.xlabel('Modulation Frequency (Hz)')
         pl.ylabel('Normalized Amplitude')
-        pl.title(title)
-        pl.legend()
+
+    def run(self):
+        for input_dict in self.input_dicts:
+            title = input_dict['title']
+            freq_vector, amp_vector, error_vector = self.load(input_dict['data_path'])
+            freq_vector, amp_vector, tau_in_hertz, tau_in_ms, idx = self.get_3db_point(freq_vector, amp_vector)
+            label = 'Data'
+            color = input_dict['color']
+            self.plot(freq_vector, amp_vector, error_vector, idx,
+                      tau_in_hertz=tau_in_hertz, color=color)
+            f_0_guess = tau_in_hertz
+            amp_0_guess = 1.0
+            fit_params = self.fit_single_pol(freq_vector, amp_vector / amp_vector[0],
+                                             fit_params=[amp_0_guess, f_0_guess])
+            test_freq_vector = np.arange(5, 250, 0.1)
+            fit_amp = self.test_single_pol(test_freq_vector, fit_params[0], fit_params[1])
+            fit_3db_data = self.get_3db_point(test_freq_vector, fit_amp)
+            fit_3db_point_hz = fit_3db_data[2]
+            fit_3db_point = 1e3 / (2 * np.pi * fit_3db_point_hz)
+            fit_idx = fit_3db_data[-1]
+            pl.plot(test_freq_vector[fit_idx], fit_amp[fit_idx],
+                    marker='*', ms=15.0, color=color, alpha=0.5, lw=2)
+            label = '$\\tau$={0:.2f} ms ({1} Hz) @ $V_b$={2} $\mu$V'.format(fit_3db_point, fit_3db_point_hz,
+                                                                            input_dict['vbias'])
+            pl.plot(test_freq_vector, fit_amp, color=color, alpha=0.7, label=label)
+            title += '\n$\\tau$ vs $V_b$'
+            pl.title(title)
+            pl.ylim((0, 2.5))
+            #pl.legend(bbox_to_anchor=(0.15, 0.0, 1, 1))
+            pl.legend()
+        pl.show()
 
 if __name__ == '__main__':
     path_1 = sys.argv[1]
@@ -60,4 +101,3 @@ if __name__ == '__main__':
     freq_vector_3, amp_vector_3, error_vector_3 = load(path_3)
     freq_vector_3, amp_vector_3, tau_in_hertz_3, tau_in_ms_3 = get_3db_point(freq_vector_3, amp_vector_3)
     plot(freq_vector_3, amp_vector_3, error_vector_3, tau_in_hertz=tau_in_hertz_3, label=label_3, color='g')
-    pl.show()

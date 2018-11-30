@@ -21,7 +21,7 @@ class RTCurve():
         if plot:
             fig.subplots_adjust(left=0.08, right=0.70)
             axis = fig.get_axes()[0]
-            axis.legend(loc=2, bbox_to_anchor=(1.01, 1.0))
+            axis.legend()
             pl.show()
 
     def normalize_squid_output(self, sample_res_vector, input_dict):
