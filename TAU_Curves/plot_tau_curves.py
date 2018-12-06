@@ -67,7 +67,7 @@ class TAUCurve():
             amp_0_guess = 1.0
             fit_params = self.fit_single_pol(freq_vector, amp_vector / amp_vector[0],
                                              fit_params=[amp_0_guess, f_0_guess])
-            test_freq_vector = np.arange(5, 250, 0.1)
+            test_freq_vector = np.arange(1.0, 250, 0.1)
             fit_amp = self.test_single_pol(test_freq_vector, fit_params[0], fit_params[1])
             fit_3db_data = self.get_3db_point(test_freq_vector, fit_amp)
             fit_3db_point_hz = fit_3db_data[2]
