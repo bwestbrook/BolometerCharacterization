@@ -74,7 +74,7 @@ xycollector_settings.xycollector_combobox_entry_dict = {
                                                         '_xycollector_popup_daq_channel_x_combobox': ['0', '1', '2', '3', '4', '5', '6', '7'],
                                                         '_xycollector_popup_daq_channel_y_combobox': ['0', '1', '2', '3', '4', '5', '6', '7'],
                                                         '_xycollector_popup_squid_select_combobox': ['1', '2', '3', '4', '5', '6'],
-                                                        '_xycollector_popup_voltage_factor_combobox': ['e-5', 'e-4', 'e2', 'e3']
+                                                        '_xycollector_popup_voltage_factor_combobox': ['1e-5', '1e-4', '1e2', '1e3']
                                                        }
 
 

@@ -202,7 +202,8 @@ class GuiTemplate(QtGui.QWidget):
             print ylabel, len(ylabel), mode
             if mode == 'IV':
                 title = 'IV Curve'
-                y_conversion_factor = float(str(getattr(self, '_xycollector_popup_squid_conversion_label').text()))
+                y_conversion_factor = str(getattr(self, '_xycollector_popup_squid_conversion_label').text())
+                y_conversion_factor = float(y_conversion_factor.split(' ')[0])
                 x_conversion_factor = float(str(getattr(self, '_xycollector_popup_voltage_factor_combobox').currentText()))
                 if len(xlabel) == 0:
                     xlabel = '$V_{bias}$ ($\mu$V)'
@@ -230,6 +231,8 @@ class GuiTemplate(QtGui.QWidget):
         # Fill GUI in based on sender elif above
         getattr(self, '_final_plot_popup_x_label_lineedit').setText(xlabel)
         getattr(self, '_final_plot_popup_y_label_lineedit').setText(ylabel)
+        getattr(self, '_final_plot_popup_x_conversion_label').setText(str(x_conversion_factor))
+        getattr(self, '_final_plot_popup_y_conversion_label').setText('{0:.2f}'.format(y_conversion_factor))
         self.final_plot_popup.showMaximized()
         self.final_plot_popup.setWindowTitle('Result')
 
@@ -238,7 +241,8 @@ class GuiTemplate(QtGui.QWidget):
 
     def _draw_final_plot(self, x, y, stds=None, save_path=None, sender=None,
                          title='Result', xlabel='', ylabel='',
-                         left_m=0.1, right_m=0.95, top_m=0.80, bottom_m=0.20):
+                         left_m=0.1, right_m=0.95, top_m=0.80, bottom_m=0.20,
+                         x_conversion_factor=1.0, y_conversion_factor=1.0):
         print 'after send'
         print xlabel, ylabel, title
         print left_m, right_m, top_m, bottom_m
@@ -249,9 +253,9 @@ class GuiTemplate(QtGui.QWidget):
         fig = pl.figure(figsize=(width, height))
         ax = fig.add_subplot(111)
         if stds is not None:
-            ax.errorbar(x, y, yerr=stds)
+            ax.errorbar(1e6 * np.asarray(x) * x_conversion_factor, np.asarray(y) * y_conversion_factor, yerr=stds)
         else:
-            ax.plot(x, y)
+            ax.plot(1e6 * np.asarray(x) * x_conversion_factor, np.asarray(y) * y_conversion_factor)
         fig.subplots_adjust(left=left_m, right=right_m, top=top_m, bottom=bottom_m)
         ax.set_xlabel(xlabel, fontsize=14)
         ax.set_ylabel(ylabel, fontsize=14)
@@ -379,7 +383,7 @@ class GuiTemplate(QtGui.QWidget):
             self._draw_x(title='X data', xlabel='Sample', ylabel='Bias Voltage (V)')
             self._draw_y(title='Y data', xlabel='Sample', ylabel='SQUID Output Voltage (V)')
             self._draw_xycollector(title='IV Curve', xlabel='Bias Voltage ($\mu$V)', ylabel='SQUID Output Voltage (V)')
-            idx = getattr(self, '_xycollector_popup_voltage_factor_combobox').findText('e-5')
+            idx = getattr(self, '_xycollector_popup_voltage_factor_combobox').findText('1e-5')
             getattr(self, '_xycollector_popup_voltage_factor_combobox').setCurrentIndex(idx)
         elif run_mode == 'RT':
             self._draw_x(title='X data', xlabel='Sample', ylabel='GRT RES (V)')
@@ -559,7 +563,7 @@ class GuiTemplate(QtGui.QWidget):
             start_angle = scan_params['starting_angle']
             end_angle = scan_params['ending_angle']
             step_size = scan_params['step_size']
-            num_steps = (end_angle-start_angle)/step_size
+            num_steps = (end_angle - start_angle) / step_size
             getattr(self,'_pol_efficiency_popup_number_of_steps_label').setText(str(num_steps))
             getattr(self,'_pol_efficiency_popup_position_slider_min_label').setText(str(start_angle))
             getattr(self,'_pol_efficiency_popup_position_slider_max_label').setText(str(end_angle))
