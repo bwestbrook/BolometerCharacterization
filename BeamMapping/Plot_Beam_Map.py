@@ -393,20 +393,30 @@ if __name__ == '__main__':
     bolo_name = 'PB201326-P1118-150T'
     data_path = '../Data/2018_06_27/SQ2_2D_6by6in_0p25inStep_0p5inAp_Pix100_150B_Beammap03.dat'
     bolo_name = 'PB201326-P100-150B'
-# July 25th, 2018
+# July 25th - 26th, 2018
     #'PB201326-P118-150B'
-    data_path = '../Data/2018_07_25/Pix118_150B_BeamMap_0inX6in_Yscan_0p5inAp_0p025inStep_SQ5.dat'
-    data_path = '../Data/2018_07_25/Pix118_150B_BeamMap_6inX0in_Xscan_0p5inAp_0p025inStep_SQ5.dat'
-    data_path = '../Data/2018_07_25/Pix118_150B_BeamMap_6inX6in_0p5inAp_0p25inStep_SQ5.dat'
+    data_path = '../Data/2018_07_25/Pix118_150B_BeamMap_0inX6in_Yscan_0p5inAp_0p025inStep_SQ5.dat' #1D Y Scan
+    data_path = '../Data/2018_07_25/Pix118_150B_BeamMap_6inX0in_Xscan_0p5inAp_0p025inStep_SQ5.dat' #1D X Scan
+    data_path = '../Data/2018_07_25/Pix118_150B_BeamMap_6inX6in_0p5inAp_0p25inStep_SQ5.dat' #6x6 Low Res
+    data_path = '../Data/2018_07_26/Pix118_150B_BeamMap_4inX4in_0p25inAp_0p125inStep_SQ5.dat' # 4x4 Hi Res
     bolo_name = 'PB201326-P118-150B'
     #'PB201326-P118-090T'
-    data_path = '../Data/2018_07_25/Pix118_090T_BeamMap_6inX6in_0p5inAp_0p25inStep_SQ6.dat'
-    data_path = '../Data/2018_07_25/Pix118_090T_BeamMap_6inX0in_Xscan_0p5inAp_0p025inStep_SQ6.dat'
-    data_path = '../Data/2018_07_25/Pix118_090T_BeamMap_0inX6in_Yscan_0p5inAp_0p025inStep_SQ6.dat'
+    data_path = '../Data/2018_07_25/Pix118_090T_BeamMap_6inX0in_Xscan_0p5inAp_0p025inStep_SQ6.dat' #1D X Scan
+    data_path = '../Data/2018_07_25/Pix118_090T_BeamMap_0inX6in_Yscan_0p5inAp_0p025inStep_SQ6.dat' #1D Y Scan
+    data_path = '../Data/2018_07_25/Pix118_090T_BeamMap_6inX6in_0p5inAp_0p25inStep_SQ6.dat' #6x6 Low Res
+    data_path = '../Data/2018_07_26/Pix118_090T_BeamMap_4inX4in_0p25inAp_0p125inStep_SQ6.dat' # 4x4 Hi Res
     bolo_name = 'PB201326-P118-090T'
     #'PB201326-P101-150B'
-    data_path = '../Data/2018_07_25/Pix101_150B_BeamMap_6inX6in_0p5inAp_0p25inStep_SQ1.dat'
-    data_path = '../Data/2018_07_25/Pix101_150B_BeamMap_6inX0in_Xscan_0p5inAp_0p025inStep_SQ1.dat'
-    data_path = '../Data/2018_07_25/Pix101_150B_BeamMap_0inX6in_Yscan_0p5inAp_0p025inStep_SQ1.dat'
+    data_path = '../Data/2018_07_25/Pix101_150B_BeamMap_6inX0in_Xscan_0p5inAp_0p025inStep_SQ1.dat' #1D X Scan
+    data_path = '../Data/2018_07_25/Pix101_150B_BeamMap_0inX6in_Yscan_0p5inAp_0p025inStep_SQ1.dat' #1D Y Scan
+    data_path = '../Data/2018_07_25/Pix101_150B_BeamMap_6inX6in_0p5inAp_0p25inStep_SQ1.dat' #6x6 Low Res
     bolo_name = 'PB201326-P101-150B'
-    bm.run(data_path, test=False, is_1D=True, bolo_name=bolo_name)
+    #'PB201326-P069-150B'
+    data_path = '../Data/2018_07_26/Pix069_150B_BeamMap_6inX6in_X_0p5inAp_0p25inStep_SQ3.dat' # 6x6 Low Res
+    data_path = '../Data/2018_07_26/Pix069_150B_BeamMap_4inX4in_X_0p25inAp_0p125inStep_SQ3.dat' # 4x4 Hi Res
+    bolo_name = 'PB201326-P069-150B'
+    #'PB201326-P101-090T'
+    data_path = '../Data/2018_07_26/Pix101_090T_BeamMap_6inX6in_X_0p5inAp_0p25inStep_SQ2.dat' # 6x6 Lo Res
+    data_path = '../Data/2018_07_26/Pix101_090T_BeamMap_4inX4in_0p25inAp_0p125inStep_SQ2.dat' # 4x4 Hi Res
+    bolo_name = 'PB201326-P101-090T'
+    bm.run(data_path, test=False, is_1D=False, bolo_name=bolo_name)

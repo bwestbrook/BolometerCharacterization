@@ -7,10 +7,10 @@ main_panel_settings.main_panel_build_dict = {
                                              '_main_panel_welcome_label': {'text': 'Hello, please select an analysis type a file then click run',
                                                                            'position': (0, 0, 1, 1)},
                                              '_main_panel_select_files_pushbutton': {'text': 'Select File(s)', 'function': '_select_files',
-                                                                                     'height': 100, 'position': (1, 0, 1, 4)},
-                                             '_main_panel_selected_file_label': {'text': '', 'position': (2, 0, 1, 4)},
+                                                                                     'height': 100, 'position': (1, 0, 1, 5)},
+                                             '_main_panel_selected_file_label': {'text': '', 'position': (2, 0, 1, 5)},
                                              '_main_panel_clear_files_pushbutton': {'text': 'Clear Files', 'function': '_clear_files',
-                                                                                    'height': 100, 'position': (3, 0, 1, 4)},
+                                                                                    'height': 100, 'position': (3, 0, 1, 5)},
                                              '_main_panel_ivcurve_checkbox': {'text': 'IV_Curve', 'function': '_select_analysis_type',
                                                                               'position': (4, 0, 1, 1)},
                                              '_main_panel_rtcurve_checkbox': {'text': 'RT_Curve', 'function': '_select_analysis_type',
@@ -19,8 +19,10 @@ main_panel_settings.main_panel_build_dict = {
                                                                                'position': (4, 2, 1, 1)},
                                              '_main_panel_polcurve_checkbox': {'text': 'POL_Curve', 'function': '_select_analysis_type',
                                                                                'position': (4, 3, 1, 1)},
+                                             '_main_panel_taucurve_checkbox': {'text': 'TAU_Curve', 'function': '_select_analysis_type',
+                                                                               'position': (4, 4, 1, 1)},
                                              '_main_panel_run_pushbutton': {'text': 'Run', 'function': '_run_analysis', 'height': 200,
-                                                                            'position': (5, 0, 1, 4)},
+                                                                            'position': (5, 0, 1, 5)},
                                              '_main_panel_close_pushbutton': {'text': 'Close', 'function': '_close_main', 'height': 200,
-                                                                              'position': (6, 0, 1, 4)}
+                                                                              'position': (6, 0, 1, 5)}
                                              }

@@ -166,7 +166,8 @@ class IVCurve():
         print title
         print
         ax.set_title(title)
-        ax.legend(numpoints=1, loc=2, bbox_to_anchor=(1.01, 1), borderaxespad=0.0)
+        ax.legend(numpoints=1)
+        #, loc=2, bbox_to_anchor=(1.01, 1), borderaxespad=0.0)
         pl.show()
 
 
@@ -179,7 +180,7 @@ class IVCurve():
             bolo_current: bolo_current in Amps
         '''
         fig = pl.figure(figsize=(10, 5))
-        fig.subplots_adjust(left=0.1, right=0.8, bottom=0.11, hspace=0.66)
+        fig.subplots_adjust(left=0.1, right=0.97, bottom=0.11, hspace=0.66)
         ax1 = fig.add_subplot(311)
         ax2 = fig.add_subplot(312)
         ax3 = fig.add_subplot(313)
@@ -199,9 +200,10 @@ class IVCurve():
         ax1.set_xlabel("Voltage ($\mu$V)", fontsize=12)
         ax2.set_ylabel("Power ($pW$)", fontsize=12)
         ax2.set_xlabel("Voltage ($\mu$V)", fontsize=12)
-        ax3.set_xlabel("Power ($pW$)", fontsize=12)
+        ax3.set_xlabel("Voltage ($\mu$V)", fontsize=12)
         ax3.set_ylabel("Res ($\Omega$)", fontsize=12)
-        ax1.legend(bbox_to_anchor=(0.3, 0.1, 1, 1), numpoints=1)
+        #ax1.legend(bbox_to_anchor=(0.3, 0.1, 1, 1), numpoints=1)
+        ax1.legend(numpoints=1)
         ax2.set_ylim(0, 1.1 * max(power_vector[plot_selector]))
         #(max(power_vector[plot_selector]) - 0.8 * max(power_vector[plot_selector]),
         ax1.set_xlim((plot_clip[0], plot_clip[1]))

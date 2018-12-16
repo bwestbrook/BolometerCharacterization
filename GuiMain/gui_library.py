@@ -16,6 +16,7 @@ from RT_Curves.plot_rt_curves import RTCurve
 from IV_Curves.plot_iv_curves import IVCurve
 from FTS_Curves.plot_fts_curves import FTSCurve
 from POL_Curves.plot_pol_curves import POLCurve
+from TAU_Curves.plot_tau_curves import TAUCurve
 
 
 class GuiTemplate(QtGui.QWidget):
@@ -60,7 +61,8 @@ class GuiTemplate(QtGui.QWidget):
     def _select_analysis_type(self):
         sender_name = str(self.sender().whatsThis())
         checkboxes = ['_main_panel_polcurve_checkbox', '_main_panel_ivcurve_checkbox',
-                      '_main_panel_rtcurve_checkbox', '_main_panel_ftscurve_checkbox']
+                      '_main_panel_rtcurve_checkbox', '_main_panel_ftscurve_checkbox',
+                      '_main_panel_taucurve_checkbox']
         for checkbox in checkboxes:
             print sender_name, checkbox
             if sender_name == checkbox:
@@ -115,6 +117,89 @@ class GuiTemplate(QtGui.QWidget):
             if 'voltage_conversion_1e-4' in unique_widget_name:
                 getattr(self, unique_widget_name).setCheckState(True)
         return 1
+
+    #################################################
+    # Tau Curves 
+    #################################################
+
+    def _build_taucurve_settings_popup(self):
+        popup_name = '{0}_settings_popup'.format(self.analysis_type)
+        if hasattr(self, popup_name):
+            self._initialize_panel(popup_name)
+            self._build_panel(settings.taucurve_popup_build_dict)
+        else:
+            self._create_popup_window(popup_name)
+            self._build_panel(settings.taucurve_popup_build_dict)
+        getattr(self, popup_name).show()
+        row = 2
+        self.selected_files_col_dict = {}
+        color_dict = {0: 'r', 1: 'g', 2: 'c', 3: 'b', 4: 'y', 5: 'm'}
+        for i, selected_file in enumerate(self.selected_files):
+            print selected_file
+            col = 2 + i * 3
+            self.selected_files_col_dict[col] = selected_file
+            basename = os.path.basename(selected_file)
+            unique_widget_name = '_{0}_{1}_label'.format(popup_name, basename)
+            widget_settings = {'text': '{0}'.format(basename),
+                               'position': (row, col - 1, 1, 2)}
+            self._create_and_place_widget(unique_widget_name, **widget_settings)
+            row += 1
+            unique_widget_name = '_{0}_{1}_color_label'.format(popup_name, col)
+            widget_settings = {'text': 'Color', 'position': (row, col - 1, 1, 1)}
+            self._create_and_place_widget(unique_widget_name, **widget_settings)
+            unique_widget_name = '_{0}_{1}_color_lineedit'.format(popup_name, col)
+            color_text = color_dict[i]
+            widget_settings = {'text': color_text, 'position': (row, col, 1, 1)}
+            self._create_and_place_widget(unique_widget_name, **widget_settings)
+            row += 1
+            unique_widget_name = '_{0}_{1}_vbias_label'.format(popup_name, col)
+            widget_settings = {'text': 'V_bias', 'position': (row, col - 1, 1, 1)}
+            self._create_and_place_widget(unique_widget_name, **widget_settings)
+            unique_widget_name = '_{0}_{1}_vbias_lineedit'.format(popup_name, col)
+            widget_settings = {'text': '', 'position': (row, col, 1, 1)}
+            self._create_and_place_widget(unique_widget_name, **widget_settings)
+            row = 2
+
+    def _close_tau_popup(self):
+        self.taucurve_settings_popup.close()
+
+    def _build_tau_input_dicts(self):
+        list_of_input_dicts = []
+        tau_settings = ['vbias', 'color']
+        for col in sorted(self.selected_files_col_dict.keys()):
+            selected_file = self.selected_files_col_dict[col]
+            title_lineedit_name = '_taucurve_settings_popup_title_lineedit'
+            title = str(getattr(self, title_lineedit_name).text())
+            input_dict = {'data_path': selected_file, 'title': title}
+            for setting in tau_settings:
+                identity_string = '{0}_{1}'.format(col, setting)
+                for widget in [x for x in dir(self) if identity_string in x]:
+                    if 'checkbox' in widget and not 'invert' in widget:
+                        if getattr(self, widget).isChecked():
+                            setting_value = str(getattr(self, widget).text()).split(' ')[-1]
+                            input_dict[setting] = float(setting_value)
+                    elif 'checkbox' in widget and 'invert' in widget:
+                        invert_bool = getattr(self, widget).isChecked()
+                        input_dict['invert'] = invert_bool
+                    elif 'lineedit' in widget:
+                        widget_text = str(getattr(self, widget).text())
+                        if len(widget_text) == 0:
+                            widget_text = 'None'
+                            input_dict[setting] = widget_text
+                        elif self._isfloat(widget_text):
+                            input_dict[setting] = float(widget_text)
+                        else:
+                            input_dict[setting] = widget_text
+            list_of_input_dicts.append(copy(input_dict))
+        pprint(list_of_input_dicts)
+        #import ipdb;ipdb.set_trace()
+        return list_of_input_dicts
+
+    def _plot_taucurve(self):
+        selected_files = list(set(self.selected_files))
+        list_of_input_dicts = self._build_tau_input_dicts()
+        tau = TAUCurve(list_of_input_dicts)
+        tau.run()
 
     #################################################
     # RT Curves 

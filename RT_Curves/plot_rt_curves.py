@@ -19,9 +19,9 @@ class RTCurve():
             sample_res_vector = self.normalize_squid_output(sample_res_vector, input_dict)
             fig = self.plot_rt_curves(grt_temperature_vector, sample_res_vector, fig, input_dict)
         if plot:
-            fig.subplots_adjust(left=0.08, right=0.70)
+            fig.subplots_adjust(left=0.08, right=0.95)
             axis = fig.get_axes()[0]
-            axis.legend(loc=2, bbox_to_anchor=(1.01, 1.0))
+            axis.legend()
             pl.show()
 
     def normalize_squid_output(self, sample_res_vector, input_dict):
