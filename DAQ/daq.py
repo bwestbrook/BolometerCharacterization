@@ -16,7 +16,7 @@ class DAQ():
         if simulate:
             simulated_time_stream = self.simulate_time_stream(central_value, integration_time, sample_rate)
         else:
-            #self.daq_driver.get_buffer(signal_channel, integration_time, sample_rate)
+            self.daq_driver.get_buffer(signal_channel, integration_time, sample_rate)
             simulated_time_stream = np.random.rand(int(n_samples))
         mean = np.mean(simulated_time_stream)
         min_ = np.min(simulated_time_stream)

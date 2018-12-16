@@ -15,7 +15,8 @@ class BoloDAQ(GuiTemplate):
 
     def create_gui(self):
         qt_app = QtGui.QApplication([])
-        gui = GuiTemplate()
+        screen_resolution = qt_app.desktop().screenGeometry()
+        gui = GuiTemplate(screen_resolution)
         exit(qt_app.exec_())
 
     def run(self):
