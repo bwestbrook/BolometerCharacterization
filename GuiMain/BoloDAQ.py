@@ -5,10 +5,10 @@ from datetime import datetime
 from PyQt4 import QtGui
 #from gen_class import Class
 from libraries.gen_class import Class
-from daq_gui_library import GuiTemplate
+from daq_gui_library import DAQGuiTemplate
 
 
-class BoloDAQ(GuiTemplate):
+class BoloDAQ(DAQGuiTemplate):
 
     def __init__(self):
         self.hello = 'hello'
@@ -16,7 +16,7 @@ class BoloDAQ(GuiTemplate):
     def create_gui(self):
         qt_app = QtGui.QApplication([])
         screen_resolution = qt_app.desktop().screenGeometry()
-        gui = GuiTemplate(screen_resolution)
+        gui = DAQGuiTemplate(screen_resolution)
         exit(qt_app.exec_())
 
     def run(self):

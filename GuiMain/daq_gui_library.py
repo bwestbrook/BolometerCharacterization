@@ -14,6 +14,7 @@ from PyPDF2 import PdfFileMerger
 from pprint import pprint
 from copy import copy
 from PyQt4 import QtCore, QtGui
+from GuiMain.gui_library import GuiTemplate
 from libraries.gen_class import Class
 from ba_settings.all_settings import settings
 from RT_Curves.plot_rt_curves import RTCurve
@@ -33,11 +34,11 @@ from realDAQ.daq import DAQ
 continue_run = True
 root = Tk()
 
-class GuiTemplate(QtGui.QWidget):
+class DAQGuiTemplate(QtGui.QWidget):
 
 
     def __init__(self, screen_resolution):
-        super(GuiTemplate, self).__init__()
+        super(DAQGuiTemplate, self).__init__()
         self.grid = QtGui.QGridLayout()
         self.grid.setVerticalSpacing(0)
         self.setLayout(self.grid)
@@ -54,6 +55,12 @@ class GuiTemplate(QtGui.QWidget):
         self.real_daq = DAQ()
         self.screen_resolution = screen_resolution
         self.monitor_dpi = 120.0
+        import ipdb;ipdb.set_trace()
+        gui_template = GuiTemplate(screen_resolution)
+        for attribute in dir(gui_template):
+            if '__' not in attribute:
+                print attribute
+                setattr(self, attribute, getattr(gui_template, attribute))
 
     def __apply_settings__(self, settings):
         for setting in dir(settings):
@@ -220,7 +227,7 @@ class GuiTemplate(QtGui.QWidget):
             print 'Seding Off To Plotter'
             print xlabel, ylabel, title
             print left_m, right_m, top_m, bottom_m
-            self._draw_final_plot(self.xdata, self.ydata, stds=stds,
+            self._draw_final_plot(self.xdata, self.ydata, stds=stds, mode=mode,
                                   title=title, xlabel=xlabel, ylabel=ylabel,
                                   left_m=left_m, right_m=right_m, top_m=top_m, bottom_m=bottom_m,
                                   x_conversion_factor=x_conversion_factor, y_conversion_factor=y_conversion_factor)
@@ -239,35 +246,32 @@ class GuiTemplate(QtGui.QWidget):
     def _close_final_plot(self):
         self.final_plot_popup.close()
 
-    def _draw_final_plot(self, x, y, stds=None, save_path=None, sender=None,
+    def _draw_final_plot(self, x, y, stds=None, save_path=None, mode=None,
                          title='Result', xlabel='', ylabel='',
                          left_m=0.1, right_m=0.95, top_m=0.80, bottom_m=0.20,
                          x_conversion_factor=1.0, y_conversion_factor=1.0):
-        print 'after send'
-        print xlabel, ylabel, title
-        print left_m, right_m, top_m, bottom_m
         # Create Blank Plot Based on Monitor Size
         width = (0.8 * float(self.screen_resolution.width())) / self.monitor_dpi
         height = (0.5 * float(self.screen_resolution.height())) / self.monitor_dpi
         # Configure Plot based on plotting parameters
-        fig = pl.figure(figsize=(width, height))
-        ax = fig.add_subplot(111)
-        if stds is not None:
-            ax.errorbar(1e6 * np.asarray(x) * x_conversion_factor, np.asarray(y) * y_conversion_factor, yerr=stds)
-        else:
-            ax.plot(1e6 * np.asarray(x) * x_conversion_factor, np.asarray(y) * y_conversion_factor)
+        #fig = pl.figure(figsize=(width, height))
+        #ax = fig.add_subplot(111)
+        #if stds is not None:
+            #ax.errorbar(1e6 * np.asarray(x) * x_conversion_factor, np.asarray(y) * y_conversion_factor, yerr=stds)
+        #else:
+            #ax.plot(1e6 * np.asarray(x) * x_conversion_factor, np.asarray(y) * y_conversion_factor)
+        if mode == 'IV':
+            if not hasattr(self, 'ivcurve_settings_popup'):
+                self._create_popup_window('ivcurve_settings_popup')
+            else:
+                self._initialize_panel('ivcurve_settings_popup')
+            self._build_panel(settings.ivcurve_popup_build_dict)
+            plot_iv_curves = IVCurve(list_of_input_dicts)
+            plot_iv_curves.run()
         fig.subplots_adjust(left=left_m, right=right_m, top=top_m, bottom=bottom_m)
         ax.set_xlabel(xlabel, fontsize=14)
         ax.set_ylabel(ylabel, fontsize=14)
         ax.set_title(title, fontsize=16)
-        #yticks = np.linspace(min(y),max(y),5)
-        #yticks = [round(s,2) for s in yticks]
-        #xticks = np.linspace(x[0],x[len(y)-1],5)
-        #xticks = [round(s,2) for s in xticks]
-        #ax.set_xticks(xticks)
-        #ax.set_xticklabels(xticks,fontsize = 6)
-        #ax.set_yticks(yticks)
-        #ax.set_yticklabels(yticks,fontsize = 6)
         # Plot and display it in the GUI
         temp_save_path = 'temp_files/temp_final_plot.png'
         fig.savefig(temp_save_path)
