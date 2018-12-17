@@ -39,7 +39,7 @@ class IVCurve():
 
     def convert_IV_to_real_units(self, bias_voltage, squid_voltage, squid_conv=30.0, v_bias_multiplier=1e-4,
                                  determine_calibration=False, calibration_resistor_val=1.0,
-                                 clip=None, quick_plot=True, label=''):
+                                 clip=(0, 100), quick_plot=False, label=''):
         '''
         This loads the data as two vectors of data representing the bias voltage and squid out voltage
         Inputs:
@@ -69,8 +69,8 @@ class IVCurve():
             pl.show()
         return v_bias_real, i_bolo_real
 
-
-    def fit_and_remove_offset(self, x_vector, y_vector, v_bias_multiplier, n=1, clip=None, quick_plot=True, return_fit=False):
+    def fit_and_remove_offset(self, x_vector, y_vector, v_bias_multiplier,
+                              n=1, clip=None, quick_plot=True, return_fit=False):
         '''
         This function is necessary to correct the arbitrary offset and sometime negative sign
         which is naturally applied to the SQUID output.  It doesn't change the units, but ensures
@@ -209,7 +209,7 @@ class IVCurve():
         ax1.set_xlim((plot_clip[0], plot_clip[1]))
         ax2.set_xlim((plot_clip[0], plot_clip[1]))
         ax3.set_xlim((plot_clip[0], plot_clip[1]))
-        pl.show()
+        return fig
 
     def _ask_user_if_they_want_to_quit(self):
         '''
@@ -289,8 +289,8 @@ class IVCurve():
             fracrns.append(fracrn)
             spectra_paths.append(spectra_path)
             if not difference:
-                self.plot_all_curves(v_bias_real, i_bolo_real, label=label,
-                                     fit_clip=fit_clip, plot_clip=plot_clip)
+                 self.plot_all_curves(v_bias_real, i_bolo_real, label=label,
+                                      fit_clip=fit_clip, plot_clip=plot_clip)
 
         if difference:
             self.plot_differenced_ivs(v_biases, i_bolos, fracrns, colors, label_strs, spectra_paths)
