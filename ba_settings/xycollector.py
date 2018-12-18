@@ -27,8 +27,10 @@ xycollector_settings.xycollector_build_dict = {
                                                              '_xycollector_popup_voltage_factor_combobox': {'position': (4, 1, 1, 1)},
 
                                                              '_xycollector_popup_daq_integration_time_header_label': {'text': 'Integration Time (ms) [min 40ms]:', 'position': (5, 0, 1, 1)},
-                                                             '_xycollector_popup_daq_integration_time_lineedit': {'text': '50',  'function': '_force_min_time', 'position': (5, 1, 1, 1)},
+                                                             '_xycollector_popup_daq_integration_time_combobox': {'position': (5, 1, 1, 1)},
 
+                                                             '_xycollector_popup_daq_sample_rate_header_label': {'text': 'Sample Rate (Hz):', 'position': (5, 2, 1, 1)},
+                                                             '_xycollector_popup_daq_sample_rate_combobox': {'position': (5, 3, 1, 1)},
 # PLOT SETUP 
                                                              '_xycollector_popup_sample_name_header_label': {'text': 'Sample Label:', 'position': (6, 0, 1, 1)},
                                                              '_xycollector_popup_sample_name_lineedit': {'text': '', 'position': (6, 1, 1, 1)},
@@ -91,7 +93,9 @@ xycollector_settings.xycollector_combobox_entry_dict = {
                                                         '_xycollector_popup_daq_channel_x_combobox': ['0', '1', '2', '3', '4', '5', '6', '7'],
                                                         '_xycollector_popup_daq_channel_y_combobox': ['0', '1', '2', '3', '4', '5', '6', '7'],
                                                         '_xycollector_popup_squid_select_combobox': ['1', '2', '3', '4', '5', '6'],
-                                                        '_xycollector_popup_voltage_factor_combobox': ['1e-5', '1e-4', '1e2', '1e3']
+                                                        '_xycollector_popup_voltage_factor_combobox': ['1e-5', '1e-4', '1e2', '1e3'],
+                                                        '_xycollector_popup_daq_sample_rate_combobox': ['50', '500', '1000'],
+                                                        '_xycollector_popup_daq_integration_time_combobox': ['50', '100', '500', '1000']
                                                        }
 
 

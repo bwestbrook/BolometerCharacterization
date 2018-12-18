@@ -6,7 +6,7 @@ from nidaqmx.constants import AcquisitionType, Edge
 class DAQ():
 
 
-    def get_data(self, signal_channel=5, integration_time=50, sample_rate=50, central_value=1.0):
+    def get_data(self, signal_channel=5, integration_time=50, sample_rate=500, central_value=1.0):
         with nidaqmx.Task() as task:
             task.ai_channels.add_ai_voltage_chan("Dev2/ai{0}".format(int(signal_channel)))
             integration_time = int(integration_time)

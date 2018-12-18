@@ -233,18 +233,20 @@ class DAQGuiTemplate(QtGui.QWidget):
         message_box.setText(msg)
         message_box.exec_()
 
-    def _create_blank_fig(self, frac_sreen_width=0.5, frac_sreen_height=0.3):
+    def _create_blank_fig(self, frac_sreen_width=0.5, frac_sreen_height=0.3,
+                          left=0.12, right=0.98, top=0.8, bottom=0.23):
         width = (frac_sreen_width * float(self.screen_resolution.width())) / self.monitor_dpi
         height = (frac_sreen_height * float(self.screen_resolution.height())) / self.monitor_dpi
         fig = pl.figure(figsize=(width, height))
         ax = fig.add_subplot(111)
+        fig.subplots_adjust(left=left, right=right, top=top, bottom=bottom)
         return fig, ax
 
     #################################################
     # Final Plotting and Saving (Common to all DAQ Types)
     #################################################
 
-    def _adjust_final_plot_popup(self):
+    def _adjust_final_plot_popup(self, plot_type):
         if not hasattr(self, 'final_plot_popup'):
             self._create_popup_window('final_plot_popup')
         else:
@@ -258,8 +260,12 @@ class DAQGuiTemplate(QtGui.QWidget):
         self.parsed_data_path = self.raw_data_path.replace('.dat', '_calibrated.dat')
         getattr(self, '_final_plot_popup_plot_path_label').setText(self.plotted_data_path)
         getattr(self, '_final_plot_popup_data_path_label').setText(self.parsed_data_path)
-        squid_conversion = getattr(self, '_xycollector_popup_squid_conversion_label').text()
-        voltage_factor = getattr(self, '_xycollector_popup_voltage_factor_combobox').currentText()
+        if plot_type == 'IV':
+            squid_conversion = getattr(self, '_xycollector_popup_squid_conversion_label').text()
+            voltage_factor = getattr(self, '_xycollector_popup_voltage_factor_combobox').currentText()
+        else:
+            squid_conversion = '1.0'
+            voltage_factor = '1.0'
         getattr(self, '_final_plot_popup_x_conversion_label').setText(voltage_factor)
         getattr(self, '_final_plot_popup_y_conversion_label').setText(squid_conversion)
         self.final_plot_popup.setWindowTitle('Adjust Final Plot')
@@ -289,10 +295,15 @@ class DAQGuiTemplate(QtGui.QWidget):
                                                   fit_clip=fit_clip, plot_clip=data_clip)
             self.temp_plot_path = './temp_files/temp_iv_png.png'
             self.active_fig.savefig(self.temp_plot_path)
+            self._adjust_final_plot_popup('IV')
+        elif sender == '_time_constant_popup_save_pushbutton':
+            self.temp_plot_path = './temp_files/temp_iv_png.png'
+            self.active_fig.savefig(self.temp_plot_path)
+            self._adjust_final_plot_popup('tau')
         else:
             print sender
             print 'need to be configured'
-        self._adjust_final_plot_popup()
+            self._adjust_final_plot_popup('new')
 
     def _draw_final_plot(self, x, y, stds=None, save_path=None, mode=None,
                          title='Result', xlabel='', ylabel='',
@@ -406,6 +417,57 @@ class DAQGuiTemplate(QtGui.QWidget):
     # XY COLLECTOR
     #################################################
 
+    def _draw_x(self, title='', xlabel='', ylabel=''):
+        fig, ax = self._create_blank_fig()
+        ax.plot(self.xdata)
+        ax.set_title(title, fontsize=10)
+        ax.set_xlabel(xlabel, fontsize=10)
+        ax.set_ylabel(ylabel, fontsize=10)
+        save_path = 'temp_files/temp_xv.png'
+        fig.savefig(save_path)
+        pl.close('all')
+        image_to_display = QtGui.QPixmap(save_path)
+        getattr(self, '_xycollector_popup_xdata_label').setPixmap(image_to_display)
+
+    def _draw_y(self, title='', xlabel='', ylabel=''):
+        fig, ax = self._create_blank_fig()
+        ax.plot(self.ydata)
+        ax.set_title(title, fontsize=10)
+        ax.set_xlabel(xlabel, fontsize=10)
+        ax.set_ylabel(ylabel, fontsize=10)
+        if len(self.ydata)>1:
+            yticks = np.linspace(min(self.ydata),max(self.ydata),5)
+            yticks = [round(x,2) for x in yticks]
+            ax.set_yticks(yticks)
+            ax.set_yticklabels(yticks,fontsize = 6)
+        save_path = 'temp_files/temp_yv.png'
+        fig.savefig(save_path)
+        pl.close('all')
+        image_to_display = QtGui.QPixmap(save_path)
+        getattr(self, '_xycollector_popup_ydata_label').setPixmap(image_to_display)
+
+    def _draw_xycollector(self, title='', xlabel='', ylabel=''):
+        fig, ax = self._create_blank_fig()
+        ax.plot(self.xdata, self.ydata)
+        ax.set_title(title, fontsize=10)
+        ax.set_xlabel(xlabel, fontsize=10)
+        ax.set_ylabel(ylabel, fontsize=10)
+        if len(self.ydata)>1:
+            yticks = np.linspace(min(self.ydata),max(self.ydata),5)
+            yticks = [round(x,2) for x in yticks]
+            ax.set_yticks(yticks)
+            ax.set_yticklabels(yticks,fontsize = 6)
+            xticks = np.linspace(min(self.xdata),max(self.xdata),5)
+            xticks = [round(s,2) for s in xticks]
+            ax.set_xticks(xticks)
+            ax.set_xticklabels(xticks,fontsize = 6)
+        save_path = 'temp_files/temp_iv.png'
+        fig.savefig(save_path)
+        pl.close('all')
+        image_to_display = QtGui.QPixmap(save_path)
+        getattr(self, '_xycollector_popup_xydata_label').setPixmap(image_to_display)
+        self.repaint()
+
     def _get_iv_curve_params_from_xycollector(self):
         mode = str(getattr(self, '_xycollector_popup_mode_combobox').currentText())
         voltage_factor = float(str(getattr(self, '_xycollector_popup_voltage_factor_combobox').currentText()))
@@ -452,7 +514,7 @@ class DAQGuiTemplate(QtGui.QWidget):
         settings.xycollector_build_dict['_xycollector_popup_squid_select_combobox'].update({'width': width})
         settings.xycollector_build_dict['_xycollector_popup_voltage_factor_combobox'].update({'width': width})
         settings.xycollector_build_dict['_xycollector_popup_sample_name_lineedit'].update({'width': width})
-        settings.xycollector_build_dict['_xycollector_popup_daq_integration_time_lineedit'].update({'width': width})
+        settings.xycollector_build_dict['_xycollector_popup_daq_integration_time_combobox'].update({'width': width})
         #settings.xycollector_build_dict['_xycollector_popup_start_pushbutton'].update({'height': height})
         #settings.xycollector_build_dict['_xycollector_popup_pause_pushbutton'].update({'height': height})
         #settings.xycollector_build_dict['_xycollector_popup_save_pushbutton'].update({'height': height})
@@ -460,6 +522,39 @@ class DAQGuiTemplate(QtGui.QWidget):
 
     def _close_xycollector(self):
         self.xycollector_popup.close()
+
+    def _run_xycollector(self):
+        global continue_run
+        self._get_raw_data_save_path()
+        sender_text = str(self.sender().text())
+        self.sender().setFlat(True)
+        self.sender().setText('Taking Data')
+        continue_run = True
+        daq_channel_x = getattr(self,'_xycollector_popup_daq_channel_x_combobox').currentText()
+        daq_channel_y = getattr(self, '_xycollector_popup_daq_channel_y_combobox').currentText()
+        integration_time = int(float(str(getattr(self, '_xycollector_popup_daq_integration_time_combobox').currentText())))
+        sample_rate = int(float(str(getattr(self, '_xycollector_popup_daq_sample_rate_combobox').currentText())))
+        self.xdata, self.ydata, self.xstd, self.ystd = [], [], [], []
+        with open(self.raw_data_path, 'w') as data_handle:
+            while continue_run:
+                x_data, x_mean, x_min, x_max, x_std = self.real_daq.get_data(signal_channel=daq_channel_x,
+                                                                             integration_time=integration_time,
+                                                                             sample_rate=sample_rate)
+                y_data, y_mean, y_min, y_max, y_std = self.real_daq.get_data(signal_channel=daq_channel_y,
+                                                                             integration_time=integration_time,
+                                                                             sample_rate=sample_rate)
+                getattr(self, '_xycollector_popup_xdata_mean_label').setText('{0:.4f}'.format(x_mean))
+                getattr(self, '_xycollector_popup_xdata_std_label').setText('{0:.4f}'.format(x_std))
+                getattr(self, '_xycollector_popup_ydata_mean_label').setText('{0:.4f}'.format(y_mean))
+                getattr(self, '_xycollector_popup_ydata_std_label').setText('{0:.4f}'.format(y_std))
+                self.xdata.append(x_mean)
+                self.ydata.append(y_mean)
+                self.xstd.append(x_std)
+                self.ystd.append(y_std)
+                self._update_in_xy_mode()
+                data_line = '{0}\t{1}\t{2}\n'.format(x_mean, y_mean, y_std)
+                data_handle.write(data_line)
+                root.update()
 
     def _xycollector(self):
         if not hasattr(self, 'xycollector_popup'):
@@ -482,108 +577,20 @@ class DAQGuiTemplate(QtGui.QWidget):
         getattr(self, '_xycollector_popup_fit_clip_hi_lineedit').setText(str(self.ivcurve_plot_settings_dict['fit_clip_hi']))
         getattr(self, '_xycollector_popup_data_clip_lo_lineedit').setText(str(self.ivcurve_plot_settings_dict['data_clip_lo']))
         getattr(self, '_xycollector_popup_data_clip_hi_lineedit').setText(str(self.ivcurve_plot_settings_dict['data_clip_hi']))
+        getattr(self, '_xycollector_popup_daq_sample_rate_combobox').setCurrentIndex(2)
 
-    def _run_xycollector(self):
-        global continue_run
-        self._get_raw_data_save_path()
-        sender_text = str(self.sender().text())
-        self.sender().setFlat(True)
-        self.sender().setText('Taking Data')
-        continue_run = True
-        daq_channel_x = getattr(self,'_xycollector_popup_daq_channel_x_combobox').currentText()
-        daq_channel_y = getattr(self, '_xycollector_popup_daq_channel_y_combobox').currentText()
-        integration_time = int(float(str(getattr(self, '_xycollector_popup_daq_integration_time_lineedit').text())))
-        self.xdata, self.ydata, self.xstd, self.ystd = [], [], [], []
-        with open(self.raw_data_path, 'w') as data_handle:
-            while continue_run:
-                x_data, x_mean, x_min, x_max, x_std = self.real_daq.get_data(signal_channel=daq_channel_x,
-                                                                             integration_time=integration_time)
-                y_data, y_mean, y_min, y_max, y_std = self.real_daq.get_data(signal_channel=daq_channel_y,
-                                                                             integration_time=integration_time)
-                getattr(self, '_xycollector_popup_xdata_mean_label').setText('{0:.4f}'.format(x_mean))
-                getattr(self, '_xycollector_popup_xdata_std_label').setText('{0:.4f}'.format(x_std))
-                getattr(self, '_xycollector_popup_ydata_mean_label').setText('{0:.4f}'.format(y_mean))
-                getattr(self, '_xycollector_popup_ydata_std_label').setText('{0:.4f}'.format(y_std))
-                print 'x', x_mean, 'y', y_mean
-                self.xdata.append(x_mean)
-                self.ydata.append(y_mean)
-                self.xstd.append(x_std)
-                self.ystd.append(y_std)
-                self._update_in_xy_mode()
-                data_line = '{0}\t{1}\t{2}\n'.format(x_mean, y_mean, y_std)
-                data_handle.write(data_line)
-                root.update()
-
-    def _draw_x(self, title='', xlabel='', ylabel=''):
-        width = (0.5 * float(self.screen_resolution.width())) / self.monitor_dpi
-        height = (0.25 * float(self.screen_resolution.height())) / self.monitor_dpi
-        fig = pl.figure(figsize=(width, height))
-        ax = fig.add_subplot(111)
-        fig.subplots_adjust(left=0.1, right=0.95, top=0.90, bottom=0.2)
-        ax.plot(self.xdata)
-        ax.set_title(title, fontsize=10)
-        ax.set_xlabel(xlabel, fontsize=10)
-        ax.set_ylabel(ylabel, fontsize=10)
-        save_path = 'temp_files/temp_xv.png'
-        fig.savefig(save_path)
-        pl.close('all')
-        image_to_display = QtGui.QPixmap(save_path)
-        getattr(self, '_xycollector_popup_xdata_label').setPixmap(image_to_display)
-
-    def _draw_y(self, title='', xlabel='', ylabel=''):
-        width = (0.5 * float(self.screen_resolution.width())) / self.monitor_dpi
-        height = (0.25 * float(self.screen_resolution.height())) / self.monitor_dpi
-        fig = pl.figure(figsize=(width, height))
-        ax = fig.add_subplot(111)
-        fig.subplots_adjust(left=0.1, right=0.95, top=0.90, bottom=0.2)
-        ax.plot(self.ydata)
-        ax.set_title(title, fontsize=10)
-        ax.set_xlabel(xlabel, fontsize=10)
-        ax.set_ylabel(ylabel, fontsize=10)
-        if len(self.ydata)>1:
-            yticks = np.linspace(min(self.ydata),max(self.ydata),5)
-            yticks = [round(x,2) for x in yticks]
-            ax.set_yticks(yticks)
-            ax.set_yticklabels(yticks,fontsize = 6)
-        save_path = 'temp_files/temp_yv.png'
-        fig.savefig(save_path)
-        pl.close('all')
-        image_to_display = QtGui.QPixmap(save_path)
-        getattr(self, '_xycollector_popup_ydata_label').setPixmap(image_to_display)
-
-    def _draw_xycollector(self, title='', xlabel='', ylabel=''):
-        width = (0.5 * float(self.screen_resolution.width())) / self.monitor_dpi
-        height = (0.3 * float(self.screen_resolution.height())) / self.monitor_dpi
-        fig = pl.figure(figsize=(width, height))
-        ax = fig.add_subplot(111)
-        fig.subplots_adjust(left=0.1, right=0.95, top=0.90, bottom=0.2)
-        ax.plot(self.xdata, self.ydata)
-        ax.set_title(title, fontsize=10)
-        ax.set_xlabel(xlabel, fontsize=10)
-        ax.set_ylabel(ylabel, fontsize=10)
-        if len(self.ydata)>1:
-            yticks = np.linspace(min(self.ydata),max(self.ydata),5)
-            yticks = [round(x,2) for x in yticks]
-            ax.set_yticks(yticks)
-            ax.set_yticklabels(yticks,fontsize = 6)
-            xticks = np.linspace(min(self.xdata),max(self.xdata),5)
-            xticks = [round(s,2) for s in xticks]
-            ax.set_xticks(xticks)
-            ax.set_xticklabels(xticks,fontsize = 6)
-        save_path = 'temp_files/temp_iv.png'
-        fig.savefig(save_path)
-        pl.close('all')
-        image_to_display = QtGui.QPixmap(save_path)
-        getattr(self, '_xycollector_popup_xydata_label').setPixmap(image_to_display)
-        self.repaint()
 
     #################################################
     # TIME CONSTANT 
     #################################################
 
     def _plot_tau_data_point(self, ydata):
+        integration_time = int(float(str(getattr(self, '_time_constant_popup_daq_integration_time_combobox').currentText())))
+        sample_rate = int(float(str(getattr(self, '_time_constant_popup_daq_sample_rate_combobox').currentText())))
         fig, ax = self._create_blank_fig()
         ax.plot(ydata)
+        ax.set_ylabel('Channel Voltage Output (V)')
+        ax.set_xlabel('Time (ms)')
         temp_tau_save_path = './temp_files/temp_tau_data_point.png'
         fig.savefig(temp_tau_save_path)
         image_to_display = QtGui.QPixmap(temp_tau_save_path)
@@ -623,8 +630,9 @@ class DAQGuiTemplate(QtGui.QWidget):
         ax.legend()
         fig.savefig(self.plotted_data_path)
         image_to_display = QtGui.QPixmap(self.plotted_data_path)
-        print image_to_display.width()
         getattr(self, '_time_constant_popup_all_data_monitor_label').setPixmap(image_to_display)
+        self.temp_plot_path = self.plotted_data_path
+        self.active_fig = fig
 
     def _delete_last_point(self):
         if not hasattr(self, 'raw_data_path'):
@@ -658,9 +666,11 @@ class DAQGuiTemplate(QtGui.QWidget):
                 existing_lines = []
             # Grab new data
             daq_channel = getattr(self,'_time_constant_popup_daq_select_combobox').currentText()
-            integration_time = int(float(str(getattr(self, '_time_constant_popup_daq_integration_time_lineedit').text())))
+            integration_time = int(float(str(getattr(self, '_time_constant_popup_daq_integration_time_combobox').currentText())))
+            sample_rate = int(float(str(getattr(self, '_time_constant_popup_daq_sample_rate_combobox').currentText())))
             y_data, y_mean, y_min, y_max, y_std = self.real_daq.get_data(signal_channel=daq_channel,
-                                                                         integration_time=integration_time)
+                                                                         integration_time=integration_time,
+                                                                         sample_rate=sample_rate)
             frequency = float(str(getattr(self, '_time_constant_popup_frequency_select_combobox').currentText()))
             data_line = '{0}\t{1}\t{2}\n'.format(frequency, y_mean, y_std)
             # Append the data and rewrite to file
@@ -668,6 +678,8 @@ class DAQGuiTemplate(QtGui.QWidget):
             with open(self.raw_data_path, 'w') as data_handle:
                 for line in existing_lines:
                     data_handle.write(line)
+            getattr(self, '_time_constant_popup_data_point_mean_label').setText('{0:.3f}'.format(y_mean))
+            getattr(self, '_time_constant_popup_data_point_std_label').setText('{0:.3f}'.format(y_std))
             self._plot_tau_data_point(y_data)
             self._plot_time_constant()
 
@@ -680,6 +692,7 @@ class DAQGuiTemplate(QtGui.QWidget):
         for combobox_widget, entry_list in self.time_constant_comobobox_entry_dict.iteritems():
             self.populate_combobox(combobox_widget, entry_list)
         getattr(self, '_time_constant_popup_daq_select_combobox').setCurrentIndex(6)
+        getattr(self, '_time_constant_popup_daq_sample_rate_combobox').setCurrentIndex(2)
         self.time_constant_popup.showMaximized()
         self._plot_tau_data_point([])
 
