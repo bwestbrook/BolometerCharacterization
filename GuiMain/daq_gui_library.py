@@ -142,9 +142,13 @@ class DAQGuiTemplate(QtGui.QWidget):
     #################################################
 
     def _get_raw_data_save_path(self):
+        sender = str(self.sender().whatsThis())
         data_name = str(QtGui.QFileDialog.getSaveFileName(self, 'Raw Data Save Location', self.data_folder))
         self.raw_data_path = os.path.join(self.data_folder, data_name)
-        getattr(self, '_xycollector_popup_raw_data_path_label').setText(self.raw_data_path)
+        if 'xycollector' in sender:
+            getattr(self, '_xycollector_popup_raw_data_path_label').setText(self.raw_data_path)
+        if 'time_constant' in sender:
+            getattr(self, '_time_constant_popup_raw_data_path_label').setText(self.raw_data_path)
         self.plotted_data_path = self.raw_data_path.replace('.dat', '_plotted.png')
         self.parsed_data_path = self.raw_data_path.replace('.dat', '_calibrated.dat')
 
@@ -378,14 +382,11 @@ class DAQGuiTemplate(QtGui.QWidget):
                     for j, y in enumerate(self.y_grid):
                         f.write('{0},{1},{2},{3}\n'.format(x, y, zdata[j,i], stds[j,i]))
 
-
-
     #################################################
     #################################################
     # DAQ TYPE SPECFIC CODES
     #################################################
     #################################################
-
 
     #################################################
     # XY COLLECTOR
@@ -563,6 +564,42 @@ class DAQGuiTemplate(QtGui.QWidget):
         self.repaint()
 
     #################################################
+    # TIME CONSTANT 
+    #################################################
+
+    def _plot_time_constant(self):
+        print 'plot tau her'
+
+    def _close_time_constant(self):
+        self.time_constant_popup.close()
+
+    def _take_time_constant_data_point(self):
+        daq_channel = getattr(self,'_time_constant_popup_daq_select_header_combobox').currentText()
+        integration_time = int(float(str(getattr(self, '_time_constant_popup_daq_integration_time_lineedit').text())))
+        self.xdata, self.ydata, self.xstd, self.ystd = [], [], [], []
+        if os.path.exists(self.raw_data_path): 
+            with open(self.raw_data_path, 'r') as data_handle:
+                existing_lines = data_handle.readlines()
+        y_data, y_mean, y_min, y_max, y_std = self.real_daq.get_data(signal_channel=daq_channel,
+                                                                     integration_time=integration_time)
+        frequency = float(str(getattr(self, '_time_constant_popup_frequency_select_header_combobox').currentText()))
+        data_line = '{0}\t{1}\t{2}\n'.format(frequency, y_mean, y_std)
+        existing_lines.append(data_line)
+        with open(self.raw_data_path, 'w') as data_handle:
+            for line in existing_lines:
+                data_handle.write(line)
+
+    def _time_constant(self):
+        if not hasattr(self, 'time_constant_popup'):
+            self._create_popup_window('time_constant_popup')
+        else:
+            self._initialize_panel('time_constant_popup')
+        self._build_panel(settings.time_constant_popup_build_dict)
+        for combobox_widget, entry_list in self.time_constant_comobobox_entry_dict.iteritems():
+            self.populate_combobox(combobox_widget, entry_list)
+        self.time_constant_popup.show()
+
+    #################################################
     # POL EFFICIENCY
     #################################################
 
@@ -714,7 +751,6 @@ class DAQGuiTemplate(QtGui.QWidget):
         return scan_params
 
 
-   
     #################################################
     # USER MOVE STEPPER
     #################################################
@@ -731,13 +767,12 @@ class DAQGuiTemplate(QtGui.QWidget):
         for combobox_widget, entry_list in self.user_move_stepper_combobox_entry_dict.iteritems():
             self.populate_combobox(combobox_widget, entry_list)
         current_string, position_string, velocity_string = self._connect_to_com_port()
-       	getattr(self, '_user_move_stepper_popup_current_act_label').setText(current_string)
+        getattr(self, '_user_move_stepper_popup_current_act_label').setText(current_string)
         getattr(self,'_user_move_stepper_popup_velocity_act_label').setText(velocity_string)
         getattr(self,'_user_move_stepper_popup_current_position_label').setText(position_string)
         self._update_stepper_position()
         self.user_move_stepper_popup.showMaximized()
         self.user_move_stepper_popup.setWindowTitle('User Move Stepper')
-
 
     def _add_comports_to_user_move_stepper(self):
         for i, com_port in enumerate(settings.com_ports):
@@ -758,13 +793,11 @@ class DAQGuiTemplate(QtGui.QWidget):
         actual =  getattr(self, 'sm_{0}'.format(com_port)).get_motor_current().strip('CC=')
         getattr(self,'_user_move_stepper_popup_current_act_label').setText(str(actual))
 
-
     def _move_stepper(self):
         move_to_pos = int(str(getattr(self, '_user_move_stepper_popup_move_to_position_lineedit').text()))
         com_port = self._get_com_port('_user_move_stepper_popup_current_com_port_combobox')
         getattr(self, 'sm_{0}'.format(com_port)).move_to_position(move_to_pos)
         self._update_stepper_position()
-
 
     def _reset_stepper_zero(self):
         com_port = self._get_com_port()
@@ -777,27 +810,12 @@ class DAQGuiTemplate(QtGui.QWidget):
         stepper_position = self.stepper.stepper_position_dict[com_port]
         return stepper_position
 
-
     def _update_stepper_position(self):
         com_port = self._get_com_port('_user_move_stepper_popup_current_com_port_combobox')
         stepper_position = getattr(self, 'sm_{0}'.format(com_port)).get_position().strip('SP=')
         header_str = '{0} Current Position:'.format(com_port)
         getattr(self, '_user_move_stepper_popup_current_position_header_label').setText(header_str)
         getattr(self, '_user_move_stepper_popup_current_position_label').setText(str(stepper_position))
-    #################################################
-    # SINGLE CHANNEL FTS BILLS
-    #################################################
-
-    def _close_time_constant(self):
-        self.time_constant_popup.close()
-
-    def _time_constant(self):
-        if not hasattr(self, 'time_constant_popup'):
-            self._create_popup_window('time_constant_popup')
-        else:
-            self._initialize_panel('time_constant_popup')
-        self._build_panel(settings.time_constant_popup_build_dict)
-        self.time_constant_popup.show()
 
     #################################################
     # SINGLE CHANNEL FTS BILLS
@@ -960,7 +978,7 @@ class DAQGuiTemplate(QtGui.QWidget):
             #                                                            sample_rate=scan_params['sample_rate'],central_value = amplitude[i])
 
             data_time_stream, mean, min_, max_, std = self.real_daq.get_data(signal_channel=scan_params['signal_channel'], integration_time=scan_params['integration_time'],
-                                     sample_rate=scan_params['sample_rate'],central_value = amplitude[i])
+                                                                             sample_rate=scan_params['sample_rate'],central_value = amplitude[i])
             self.stds.append(std)
             getattr(self, '_single_channel_fts_popup_std_label').setText('{0:.3f}'.format(std))
             getattr(self, '_single_channel_fts_popup_mean_label').setText('{0:.3f}'.format(mean))
