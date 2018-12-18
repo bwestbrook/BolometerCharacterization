@@ -22,12 +22,13 @@ from IV_Curves.plot_iv_curves import IVCurve
 from FTS_Curves.plot_fts_curves import FTSCurve
 from FTS_Curves.numerical_processing import Fourier
 from POL_Curves.plot_pol_curves import POLCurve
+from TAU_Curves.plot_tau_curves import TAUCurve
 from FTS_DAQ.fts_daq import FTSDAQ
 from BeamMapping.beam_map_daq import BeamMapDAQ
 from Motor_Driver.stepper_motor import stepper_motor
 from FTS_DAQ.analyzeFTS import FTSanalyzer
-from DAQ.daq import DAQ
-#from realDAQ.daq import DAQ
+#from DAQ.daq import DAQ
+from realDAQ.daq import DAQ
 
 
 #Global variables
@@ -227,6 +228,18 @@ class DAQGuiTemplate(QtGui.QWidget):
         if value < min_value:
             self.sender().setText(str(40))
 
+    def _quick_message(self, msg=''):
+        message_box = QtGui.QMessageBox()
+        message_box.setText(msg)
+        message_box.exec_()
+
+    def _create_blank_fig(self, frac_sreen_width=0.5, frac_sreen_height=0.3):
+        width = (frac_sreen_width * float(self.screen_resolution.width())) / self.monitor_dpi
+        height = (frac_sreen_height * float(self.screen_resolution.height())) / self.monitor_dpi
+        fig = pl.figure(figsize=(width, height))
+        ax = fig.add_subplot(111)
+        return fig, ax
+
     #################################################
     # Final Plotting and Saving (Common to all DAQ Types)
     #################################################
@@ -381,6 +394,7 @@ class DAQGuiTemplate(QtGui.QWidget):
                 for i, x in enumerate(self.x_grid):
                     for j, y in enumerate(self.y_grid):
                         f.write('{0},{1},{2},{3}\n'.format(x, y, zdata[j,i], stds[j,i]))
+
 
     #################################################
     #################################################
@@ -567,27 +581,95 @@ class DAQGuiTemplate(QtGui.QWidget):
     # TIME CONSTANT 
     #################################################
 
-    def _plot_time_constant(self):
-        print 'plot tau her'
+    def _plot_tau_data_point(self, ydata):
+        fig, ax = self._create_blank_fig()
+        ax.plot(ydata)
+        temp_tau_save_path = './temp_files/temp_tau_data_point.png'
+        fig.savefig(temp_tau_save_path)
+        image_to_display = QtGui.QPixmap(temp_tau_save_path)
+        getattr(self, '_time_constant_popup_data_point_monitor_label').setPixmap(image_to_display)
+
+    def _plot_time_constant(self, real_data=True):
+        # Grab input from the Time Constant Popup
+        vbias = str(getattr(self, '_time_constant_popup_voltage_bias_lineedit').text())
+        bolo_name = str(getattr(self, '_time_constant_popup_bolo_name_lineedit').text())
+        # Use The Tc library to plot the restul
+        fig, ax = self._create_blank_fig()
+        tc = TAUCurve([])
+        color = 'r'
+        freq_vector, amp_vector, error_vector = tc.load(self.raw_data_path)
+        freq_vector, amp_vector, tau_in_hertz, tau_in_ms, idx = tc.get_3db_point(freq_vector, amp_vector)
+        fig, ax = tc.plot(freq_vector, amp_vector, error_vector, idx, fig=fig, ax=ax,
+                          tau_in_hertz=tau_in_hertz, color=color)
+        f_0_guess = tau_in_hertz
+        amp_0_guess = 1.0
+        if len(freq_vector) >= 2 and ((max(freq_vector) - min(freq_vector)) >=2):
+            print 'fittting'
+            fit_params = tc.fit_single_pol(freq_vector, amp_vector / amp_vector[0],
+                                           fit_params=[amp_0_guess, f_0_guess])
+            test_freq_vector = np.arange(1.0, 250, 0.1)
+            fit_amp = tc.test_single_pol(test_freq_vector, fit_params[0], fit_params[1])
+            fit_3db_data = tc.get_3db_point(test_freq_vector, fit_amp)
+            fit_3db_point_hz = fit_3db_data[2]
+            fit_3db_point = 1e3 / (2 * np.pi * fit_3db_point_hz)
+            fit_idx = fit_3db_data[-1]
+            fig.subplots_adjust(left=0.1, right=0.95, top=0.90, bottom=0.2)
+            ax.plot(test_freq_vector[fit_idx], fit_amp[fit_idx],
+                    marker='*', ms=15.0, color=color, alpha=0.5, lw=2)
+            label = '$\\tau$={0:.2f} ms ({1} Hz) @ $V_b$={2} $\mu$V'.format(fit_3db_point, fit_3db_point_hz, vbias)
+            ax.plot(test_freq_vector, fit_amp, color=color, alpha=0.7, label=label)
+        title = '{0}\n$\\tau$ vs $V_b$'.format(bolo_name)
+        ax.set_title(title)
+        ax.legend()
+        fig.savefig(self.plotted_data_path)
+        image_to_display = QtGui.QPixmap(self.plotted_data_path)
+        print image_to_display.width()
+        getattr(self, '_time_constant_popup_all_data_monitor_label').setPixmap(image_to_display)
+
+    def _delete_last_point(self):
+        if not hasattr(self, 'raw_data_path'):
+            self._quick_message(msg='Please set a data Path First')
+        else:
+            if os.path.exists(self.raw_data_path):
+                with open(self.raw_data_path, 'r') as data_handle:
+                    existing_lines = data_handle.readlines()
+            if len(existing_lines) == 0:
+                self._quick_message(msg='You must take at least one data point to delete the last one!')
+            else:
+                with open(self.raw_data_path, 'w') as data_handle:
+                    for line in existing_lines[:-1]:
+                        data_handle.write(line)
+                self._plot_time_constant()
 
     def _close_time_constant(self):
         self.time_constant_popup.close()
 
     def _take_time_constant_data_point(self):
-        daq_channel = getattr(self,'_time_constant_popup_daq_select_header_combobox').currentText()
-        integration_time = int(float(str(getattr(self, '_time_constant_popup_daq_integration_time_lineedit').text())))
-        self.xdata, self.ydata, self.xstd, self.ystd = [], [], [], []
-        if os.path.exists(self.raw_data_path): 
-            with open(self.raw_data_path, 'r') as data_handle:
-                existing_lines = data_handle.readlines()
-        y_data, y_mean, y_min, y_max, y_std = self.real_daq.get_data(signal_channel=daq_channel,
-                                                                     integration_time=integration_time)
-        frequency = float(str(getattr(self, '_time_constant_popup_frequency_select_header_combobox').currentText()))
-        data_line = '{0}\t{1}\t{2}\n'.format(frequency, y_mean, y_std)
-        existing_lines.append(data_line)
-        with open(self.raw_data_path, 'w') as data_handle:
-            for line in existing_lines:
-                data_handle.write(line)
+        if not hasattr(self, 'raw_data_path'):
+            self._quick_message(msg='Please set a data Path First')
+            self._get_raw_data_save_path()
+            self._take_time_constant_data_point()
+        else:
+            # check if the file exists and append it
+            if os.path.exists(self.raw_data_path):
+                with open(self.raw_data_path, 'r') as data_handle:
+                    existing_lines = data_handle.readlines()
+            else:
+                existing_lines = []
+            # Grab new data
+            daq_channel = getattr(self,'_time_constant_popup_daq_select_combobox').currentText()
+            integration_time = int(float(str(getattr(self, '_time_constant_popup_daq_integration_time_lineedit').text())))
+            y_data, y_mean, y_min, y_max, y_std = self.real_daq.get_data(signal_channel=daq_channel,
+                                                                         integration_time=integration_time)
+            frequency = float(str(getattr(self, '_time_constant_popup_frequency_select_combobox').currentText()))
+            data_line = '{0}\t{1}\t{2}\n'.format(frequency, y_mean, y_std)
+            # Append the data and rewrite to file
+            existing_lines.append(data_line)
+            with open(self.raw_data_path, 'w') as data_handle:
+                for line in existing_lines:
+                    data_handle.write(line)
+            self._plot_tau_data_point(y_data)
+            self._plot_time_constant()
 
     def _time_constant(self):
         if not hasattr(self, 'time_constant_popup'):
@@ -597,7 +679,9 @@ class DAQGuiTemplate(QtGui.QWidget):
         self._build_panel(settings.time_constant_popup_build_dict)
         for combobox_widget, entry_list in self.time_constant_comobobox_entry_dict.iteritems():
             self.populate_combobox(combobox_widget, entry_list)
-        self.time_constant_popup.show()
+        getattr(self, '_time_constant_popup_daq_select_combobox').setCurrentIndex(6)
+        self.time_constant_popup.showMaximized()
+        self._plot_tau_data_point([])
 
     #################################################
     # POL EFFICIENCY
