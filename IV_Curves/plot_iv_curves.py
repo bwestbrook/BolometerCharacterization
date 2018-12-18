@@ -37,7 +37,8 @@ class IVCurve():
 
 ## Mathematical Operations
 
-    def convert_IV_to_real_units(self, bias_voltage, squid_voltage, squid_conv=30.0, v_bias_multiplier=1e-4,
+    def convert_IV_to_real_units(self, bias_voltage, squid_voltage, stds=None,
+                                 squid_conv=30.0, v_bias_multiplier=1e-4,
                                  determine_calibration=False, calibration_resistor_val=1.0,
                                  clip=(0, 100), quick_plot=False, label=''):
         '''
@@ -64,10 +65,14 @@ class IVCurve():
             squid_conv = self.determine_squid_transimpedance(v_bias_real, corrected_squid_voltage,
                                                              calibration_resistor_val)
         i_bolo_real = corrected_squid_voltage * squid_conv # in uA
+        if stds is not None:
+            i_bolo_real_std = stds * squid_conv
+        else:
+            i_bolo_real_std = np.zeros(len(v_bias_real))
         if quick_plot:
             pl.plot(v_bias_real, i_bolo_real)
             pl.show()
-        return v_bias_real, i_bolo_real
+        return v_bias_real, i_bolo_real, i_bolo_real_std
 
     def fit_and_remove_offset(self, x_vector, y_vector, v_bias_multiplier,
                               n=1, clip=None, quick_plot=True, return_fit=False):

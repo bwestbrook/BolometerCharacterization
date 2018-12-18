@@ -12,11 +12,11 @@ final_plot_settings.final_plot_build_dict = {                '_common_settings':
 
                                                              '_final_plot_popup_data_path_pushbutton': {'text': 'Change Data Save Path:', 'function': '_get_parsed_data_save_path',
                                                                                                         'position': (2, 0, 1, 1)},
-                                                             '_final_plot_popup_data_path_label': {'text': '', 'position': (2, 1, 1, 1)},
+                                                             '_final_plot_popup_data_path_label': {'text': '', 'font': 'med',  'position': (2, 1, 1, 1)},
 
                                                              '_final_plot_popup_plot_path_pushbutton': {'text': 'Change Plot Save Path:', 'function': '_get_plotted_data_save_path',
                                                                                                         'position': (2, 2, 1, 1)},
-                                                             '_final_plot_popup_plot_path_label': {'text': '', 'position': (2, 3, 1, 1)},
+                                                             '_final_plot_popup_plot_path_label': {'text': '', 'font': 'med', 'position': (2, 3, 1, 1)},
 
                                                              '_final_plot_popup_x_label_header_label': {'text': 'X Label:', 'position': (3, 0, 1, 1)},
                                                              '_final_plot_popup_x_label_lineedit': {'text': '', 'position': (3, 1, 1, 1)},

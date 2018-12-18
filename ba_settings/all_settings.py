@@ -8,6 +8,7 @@ from POL_popup import polcurve_settings_popup_settings
 from TAU_popup import taucurve_settings_popup_settings
 from daq_main_panel import daq_main_panel_settings
 from user_move_stepper import user_move_stepper_settings
+from time_constant import time_constant_settings
 from single_channel_fts import single_channel_fts_settings
 from pol_efficiency import pol_efficiency_settings
 from beam_mapper import beam_mapper_settings
@@ -47,7 +48,9 @@ list_of_extra_settings = [main_panel_settings, rtcurve_settings_popup_settings,
                           polcurve_settings_popup_settings, daq_main_panel_settings,
                           user_move_stepper_settings, single_channel_fts_settings,
                           beam_mapper_settings, pol_efficiency_settings, final_plot_settings,
-                          taucurve_settings_popup_settings, xycollector_settings]
+                          taucurve_settings_popup_settings, xycollector_settings,
+                          time_constant_settings]
+
 
 for extra_settings in list_of_extra_settings:
     for attribute in dir(extra_settings):
