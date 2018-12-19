@@ -58,7 +58,7 @@ class DAQGuiTemplate(QtGui.QWidget):
         self.monitor_dpi = 120.0
         self.today = datetime.now()
         self.today_str = datetime.strftime(self.today, '%Y_%m_%d')
-        self.data_folder = './{0}'.format(self.today_str)
+        self.data_folder = './Data/{0}'.format(self.today_str)
         self.squid_channels = settings.xycollector_combobox_entry_dict['_xycollector_popup_squid_select_combobox']
         self.voltage_conversion_list = settings.xycollector_combobox_entry_dict['_xycollector_popup_voltage_factor_combobox']
         if not os.path.exists(self.data_folder):
@@ -263,6 +263,10 @@ class DAQGuiTemplate(QtGui.QWidget):
         if plot_type == 'IV':
             squid_conversion = getattr(self, '_xycollector_popup_squid_conversion_label').text()
             voltage_factor = getattr(self, '_xycollector_popup_voltage_factor_combobox').currentText()
+        elif plot_type == 'tau':
+            #squid_conversion = getattr(self, '_time_constant_popup_take_data_point_pushbutton').text()
+            squid_conversion = '1.0'
+            voltage_factor = '1.0'
         else:
             squid_conversion = '1.0'
             voltage_factor = '1.0'
@@ -368,7 +372,9 @@ class DAQGuiTemplate(QtGui.QWidget):
         for i, axis in enumerate(self.active_fig.axes):
             if i == 0:
                 self.active_fig.axes[0].set_title(title)
+        if len(self.active_fig.axes) == 1:
             axis.set_xlabel(xlabel)
+            axis.set_ylabel(ylabel)
         self.active_fig.savefig(self.plotted_data_path)
         image = QtGui.QPixmap(self.plotted_data_path)
         getattr(self,  '_final_plot_popup_result_label').setPixmap(image)
@@ -435,11 +441,11 @@ class DAQGuiTemplate(QtGui.QWidget):
         ax.set_title(title, fontsize=10)
         ax.set_xlabel(xlabel, fontsize=10)
         ax.set_ylabel(ylabel, fontsize=10)
-        if len(self.ydata)>1:
-            yticks = np.linspace(min(self.ydata),max(self.ydata),5)
-            yticks = [round(x,2) for x in yticks]
-            ax.set_yticks(yticks)
-            ax.set_yticklabels(yticks,fontsize = 6)
+        #if len(self.ydata)>1:
+            #yticks = np.linspace(min(self.ydata),max(self.ydata),5)
+            #yticks = [round(x,2) for x in yticks]
+            #ax.set_yticks(yticks)
+            #ax.set_yticklabels(yticks,fontsize = 6)
         save_path = 'temp_files/temp_yv.png'
         fig.savefig(save_path)
         pl.close('all')
@@ -452,15 +458,15 @@ class DAQGuiTemplate(QtGui.QWidget):
         ax.set_title(title, fontsize=10)
         ax.set_xlabel(xlabel, fontsize=10)
         ax.set_ylabel(ylabel, fontsize=10)
-        if len(self.ydata)>1:
-            yticks = np.linspace(min(self.ydata),max(self.ydata),5)
-            yticks = [round(x,2) for x in yticks]
-            ax.set_yticks(yticks)
-            ax.set_yticklabels(yticks,fontsize = 6)
-            xticks = np.linspace(min(self.xdata),max(self.xdata),5)
-            xticks = [round(s,2) for s in xticks]
-            ax.set_xticks(xticks)
-            ax.set_xticklabels(xticks,fontsize = 6)
+        #if len(self.ydata)>1:
+            #yticks = np.linspace(min(self.ydata),max(self.ydata),5)
+            #yticks = [round(x,2) for x in yticks]
+            #ax.set_yticks(yticks)
+            #ax.set_yticklabels(yticks,fontsize = 6)
+            #xticks = np.linspace(min(self.xdata),max(self.xdata),5)
+            #xticks = [round(s,2) for s in xticks]
+            #ax.set_xticks(xticks)
+            #ax.set_xticklabels(xticks,fontsize = 6)
         save_path = 'temp_files/temp_iv.png'
         fig.savefig(save_path)
         pl.close('all')
@@ -543,6 +549,15 @@ class DAQGuiTemplate(QtGui.QWidget):
                 y_data, y_mean, y_min, y_max, y_std = self.real_daq.get_data(signal_channel=daq_channel_y,
                                                                              integration_time=integration_time,
                                                                              sample_rate=sample_rate)
+                if x_mean < 0.0:
+                    x_mean *= -1
+                    x_data = x_data -2 * x_data
+                if daq_channel_x in ['0', '1']:
+                    x_data = x_data + 1.377
+                    x_mean += 1.377
+                if daq_channel_y in ['0', '1']:
+                    y_data = y_data + 1.377
+                    y_mean += 1.377
                 getattr(self, '_xycollector_popup_xdata_mean_label').setText('{0:.4f}'.format(x_mean))
                 getattr(self, '_xycollector_popup_xdata_std_label').setText('{0:.4f}'.format(x_std))
                 getattr(self, '_xycollector_popup_ydata_mean_label').setText('{0:.4f}'.format(y_mean))

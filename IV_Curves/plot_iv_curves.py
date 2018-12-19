@@ -94,18 +94,21 @@ class IVCurve():
         scaled_x_vector *= 1e6 # This is now in uV
         if clip is not None:
             selector = np.logical_and(clip[0] < scaled_x_vector, scaled_x_vector < clip[1])
-        fit_vals = np.polyfit(x_vector[selector], y_vector[selector], n)
-        poly_fit = np.polyval(fit_vals, x_vector[selector])
-        offset_removed = y_vector - fit_vals[1]
-        if fit_vals[0] < 0:
-            offset_removed = -1 * offset_removed
-        if quick_plot and False:
-            x_vector_2 = np.arange(-1, 3, 0.5)
-            poly_fit = np.polyval(fit_vals, x_vector_2)
-            pl.plot(x_vector, y_vector)
-            pl.plot(x_vector, offset_removed)
-            pl.plot(x_vector_2, poly_fit)
-            pl.show()
+        if len(scaled_x_vector[selector]) > 2:
+            fit_vals = np.polyfit(x_vector[selector], y_vector[selector], n)
+            offset_removed = y_vector - fit_vals[1]
+            if fit_vals[0] < 0:
+                offset_removed = -1 * offset_removed
+            if quick_plot and False:
+                poly_fit = np.polyval(fit_vals, x_vector[selector])
+                x_vector_2 = np.arange(-1, 3, 0.5)
+                poly_fit = np.polyval(fit_vals, x_vector_2)
+                pl.plot(x_vector, y_vector)
+                pl.plot(x_vector, offset_removed)
+                pl.plot(x_vector_2, poly_fit)
+                pl.show()
+        else:
+            offset_removed = y_vector
         return offset_removed
 
     def determine_squid_transimpedance(self, v_bias_real, corrected_squid_voltage, calibration_resistor_val):
@@ -176,7 +179,8 @@ class IVCurve():
         pl.show()
 
 
-    def plot_all_curves(self, bolo_voltage_bias, bolo_current, label='', fit_clip=None, plot_clip=None):
+    def plot_all_curves(self, bolo_voltage_bias, bolo_current, label='', fit_clip=None, plot_clip=None,
+                        show_plot=False):
         '''
         This function creates an x-y scatter plot with V_bias on the x-axis and
         bolo curent on the y-axis.  The resistance value is reported as text annotation
@@ -191,16 +195,20 @@ class IVCurve():
         ax3 = fig.add_subplot(313)
         fit_selector = np.logical_and(fit_clip[0] < bolo_voltage_bias, bolo_voltage_bias < fit_clip[1])
         plot_selector = np.logical_and(plot_clip[0] < bolo_voltage_bias, bolo_voltage_bias < plot_clip[1])
-        fit_vals = np.polyfit(bolo_voltage_bias[fit_selector], bolo_current[fit_selector], 1)
-        v_fit_x_vector = np.arange(fit_clip[0], fit_clip[1], 0.2)
-        selector_2 = np.logical_and(fit_clip[0] < v_fit_x_vector, v_fit_x_vector < fit_clip[1])
-        poly_fit = np.polyval(fit_vals, v_fit_x_vector[selector_2])
+        add_fit = False
+        if len(bolo_voltage_bias[fit_selector]) > 2:
+            fit_vals = np.polyfit(bolo_voltage_bias[fit_selector], bolo_current[fit_selector], 1)
+            v_fit_x_vector = np.arange(fit_clip[0], fit_clip[1], 0.2)
+            selector_2 = np.logical_and(fit_clip[0] < v_fit_x_vector, v_fit_x_vector < fit_clip[1])
+            poly_fit = np.polyval(fit_vals, v_fit_x_vector[selector_2])
+            add_fit = True
         resistance_vector = bolo_voltage_bias / bolo_current
         power_vector = bolo_voltage_bias * bolo_current
         ax1.plot(bolo_voltage_bias[plot_selector], bolo_current[plot_selector], '.', label=label)
         ax2.plot(bolo_voltage_bias[plot_selector], power_vector[plot_selector], 'g')
         ax3.plot(bolo_voltage_bias[plot_selector], resistance_vector[plot_selector], 'g')
-        ax1.plot(v_fit_x_vector[selector_2], poly_fit, label='Fit: {0:.2f}$\Omega$'.format(1.0 / fit_vals[0]))
+        if add_fit:
+            ax1.plot(v_fit_x_vector[selector_2], poly_fit, label='Fit: {0:.2f}$\Omega$'.format(1.0 / fit_vals[0]))
         ax1.set_ylabel("Current ($\mu$A)", fontsize=12)
         ax1.set_xlabel("Voltage ($\mu$V)", fontsize=12)
         ax2.set_ylabel("Power ($pW$)", fontsize=12)
@@ -214,6 +222,8 @@ class IVCurve():
         ax1.set_xlim((plot_clip[0], plot_clip[1]))
         ax2.set_xlim((plot_clip[0], plot_clip[1]))
         ax3.set_xlim((plot_clip[0], plot_clip[1]))
+        if show_plot:
+            pl.show()
         return fig
 
     def _ask_user_if_they_want_to_quit(self):
@@ -281,12 +291,12 @@ class IVCurve():
             plot_clip = (input_dict['v_plot_lo'], input_dict['v_plot_hi'])
             if len(input_dict['label']) == 0:
                 labels = os.path.basename(data_path)
-            v_bias_real, i_bolo_real = self.convert_IV_to_real_units(bias_voltage, squid_voltage,
-                                                                     squid_conv=input_dict['squid_conversion'],
-                                                                     v_bias_multiplier=input_dict['voltage_conversion'],
-                                                                     calibration_resistor_val=input_dict['calibration_resistance'],
-                                                                     determine_calibration=input_dict['calibrate'],
-                                                                     clip=fit_clip, label=label)
+            v_bias_real, i_bolo_real, i_bolo_std = self.convert_IV_to_real_units(bias_voltage, squid_voltage,
+                                                                                 squid_conv=input_dict['squid_conversion'],
+                                                                                 v_bias_multiplier=input_dict['voltage_conversion'],
+                                                                                 calibration_resistor_val=input_dict['calibration_resistance'],
+                                                                                 determine_calibration=input_dict['calibrate'],
+                                                                                 clip=fit_clip, label=label)
             v_biases.append(v_bias_real)
             i_bolos.append(i_bolo_real)
             label_strs.append(label)
@@ -295,7 +305,8 @@ class IVCurve():
             spectra_paths.append(spectra_path)
             if not difference:
                  self.plot_all_curves(v_bias_real, i_bolo_real, label=label,
-                                      fit_clip=fit_clip, plot_clip=plot_clip)
+                                      fit_clip=fit_clip, plot_clip=plot_clip,
+                                      show_plot=True)
 
         if difference:
             self.plot_differenced_ivs(v_biases, i_bolos, fracrns, colors, label_strs, spectra_paths)

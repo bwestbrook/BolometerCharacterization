@@ -39,5 +39,5 @@ ivcurve_settings_popup_settings.ivcurve_plot_settings_dict = {
                                                               'fit_clip_lo': 3.0,
                                                               'fit_clip_hi': 8.0,
                                                               'data_clip_lo': 0.0,
-                                                              'data_clip_hi': 15.0,
+                                                              'data_clip_hi': 100.0,
                                                               }
