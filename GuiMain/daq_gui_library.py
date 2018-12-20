@@ -309,12 +309,12 @@ class DAQGuiTemplate(QtGui.QWidget):
             ivc = IVCurve([])
             mode, squid, squid_conversion, voltage_factor, label, temp, fit_clip, data_clip, e_bars = self._get_iv_curve_params_from_xycollector()
             title = '{0} @ {1}'.format(label, temp)
-            v_bias_real, i_bolo_real, i_bolo_std, pturn = ivc.convert_IV_to_real_units(np.asarray(self.xdata), np.asarray(self.ydata),
-                                                                                       stds=np.asarray(self.ystd),
-                                                                                       squid_conv=squid_conversion,
-                                                                                       v_bias_multiplier=voltage_factor,
-                                                                                       determine_calibration=False,
-                                                                                       clip=fit_clip, label=label)
+            v_bias_real, i_bolo_real, i_bolo_std = ivc.convert_IV_to_real_units(np.asarray(self.xdata), np.asarray(self.ydata),
+                                                                                stds=np.asarray(self.ystd),
+                                                                                squid_conv=squid_conversion,
+                                                                                v_bias_multiplier=voltage_factor,
+                                                                                determine_calibration=False,
+                                                                                clip=fit_clip, label=label)
             with open(self.parsed_data_path, 'w') as parsed_data_handle:
                 for i, v_bias in enumerate(v_bias_real):
                     i_bolo = i_bolo_real[i]
@@ -322,7 +322,7 @@ class DAQGuiTemplate(QtGui.QWidget):
                     parsed_data_handle.write(parsed_data_line)
             self.active_fig = ivc.plot_all_curves(v_bias_real, i_bolo_real, stds=i_bolo_std, label=label,
                                                   fit_clip=fit_clip, plot_clip=data_clip, title=title,
-                                                  pturn=pturn)
+                                                  pturn=True)
             self.temp_plot_path = './temp_files/temp_iv_png.png'
             self.active_fig.savefig(self.temp_plot_path)
             self._adjust_final_plot_popup('IV', xlabel='Voltage ($\mu$V)', title=title)
