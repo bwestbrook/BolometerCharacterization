@@ -14,7 +14,9 @@ ivcurve_settings_popup_settings.ivcurve_popup_build_dict = {
                                                                                                                    'alignment': 'Center', 'position': (5, 0, 1, 1)},
                                                             '_ivcurve_settings_popup_voltage_conversion_factor_label': {'text': 'Vol Conv Factor', 'position': (6, 0, 1, 2)},
                                                             '_ivcurve_settings_popup_plot_label_label': {'text': 'Plot Label', 'position': (7, 0, 1, 1)},
+
                                                             '_ivcurve_settings_popup_v_fit_low_label': {'text': 'V Fit Lo',
+
                                                                                                          'position': (8, 0, 1, 1)},
                                                             '_ivcurve_settings_popup_v_fit_high_label': {'text': 'V Fit Hi',
                                                                                                           'position': (9, 0, 1, 1)},
@@ -36,8 +38,8 @@ ivcurve_settings_popup_settings.ivcurve_popup_build_dict = {
                                                            }
 
 ivcurve_settings_popup_settings.ivcurve_plot_settings_dict = {
-                                                              'fit_clip_lo': 3.0,
-                                                              'fit_clip_hi': 8.0,
-                                                              'data_clip_lo': 0.0,
-                                                              'data_clip_hi': 100.0,
+                                                              'fit_clip_lo': 5.0,
+                                                              'fit_clip_hi': 10.0,
+                                                              'data_clip_lo': 1.0,
+                                                              'data_clip_hi': 25.0,
                                                               }

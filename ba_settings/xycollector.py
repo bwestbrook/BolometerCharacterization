@@ -17,7 +17,7 @@ xycollector_settings.xycollector_build_dict = {
                                                              '_xycollector_popup_daq_channel_y_header_label': {'text': 'DAQ Channel Y:', 'position': (2, 2, 1, 1)},
                                                              '_xycollector_popup_daq_channel_y_combobox': { 'position': (2, 3, 1, 1)},
 
-                                                             '_xycollector_popup_squid_header_label': {'text': 'SQUID:', 'position': (3, 0, 1, 1)},
+                                                             '_xycollector_popup_squid_header_label': {'text': 'SQUID:', 'position': (3, 0, 1, 1), 'color': 'red'},
                                                              '_xycollector_popup_squid_select_combobox': {'function': '_update_squid_calibration', 'position': (3, 1, 1, 1)},
 
                                                              '_xycollector_popup_squid_conversion_header_label': {'text': 'SQUID Calibration:', 'position': (3, 2, 1, 1)},
@@ -35,22 +35,25 @@ xycollector_settings.xycollector_build_dict = {
                                                              '_xycollector_popup_sample_name_header_label': {'text': 'Sample Label:', 'position': (6, 0, 1, 1)},
                                                              '_xycollector_popup_sample_name_lineedit': {'text': '', 'position': (6, 1, 1, 1)},
 
-                                                             '_xycollector_popup_raw_data_path_header_label': {'text': 'Raw Data Path:', 'position': (6, 2, 1, 1)},
-                                                             '_xycollector_popup_raw_data_path_label': {'text': 'Start Taking Data To Set Raw Data Path', 'position': (6, 3, 1, 1), 'font': 'med'},
+                                                             '_xycollector_popup_sample_temp_header_label': {'text': 'Sample Temp:', 'position': (6, 2, 1, 1)},
+                                                             '_xycollector_popup_sample_temp_lineedit': {'text': '', 'position': (6, 3, 1, 1), 'font': 'med'},
 
-                                                             '_xycollector_popup_fit_clip_lo_header_label': {'text': 'Fit Clip Low:', 'position': (7, 0, 1, 1)},
-                                                             '_xycollector_popup_fit_clip_lo_lineedit': {'text': '', 'position': (7, 1, 1, 1)},
+                                                             '_xycollector_popup_raw_data_path_header_label': {'text': 'Raw Data Path:', 'position': (7, 0, 1, 1)},
+                                                             '_xycollector_popup_raw_data_path_label': {'text': 'Start Taking Data To Set Raw Data Path', 'position': (7, 1, 1, 3), 'font': 'med'},
 
-                                                             '_xycollector_popup_fit_clip_hi_header_label': {'text': 'Fit Clip Hi:', 'position': (7, 2, 1, 1)},
-                                                             '_xycollector_popup_fit_clip_hi_lineedit': {'text': '', 'position': (7, 3, 1, 1)},
+                                                             '_xycollector_popup_fit_clip_lo_header_label': {'text': 'Fit Clip Low:', 'position': (8, 0, 1, 1)},
+                                                             '_xycollector_popup_fit_clip_lo_lineedit': {'text': '', 'position': (8, 1, 1, 1)},
 
-                                                             '_xycollector_popup_data_clip_lo_header_label': {'text': 'Data Clip Low:', 'position': (8, 0, 1, 1)},
-                                                             '_xycollector_popup_data_clip_lo_lineedit': {'text': '', 'position': (8, 1, 1, 1)},
+                                                             '_xycollector_popup_fit_clip_hi_header_label': {'text': 'Fit Clip Hi:', 'position': (8, 2, 1, 1)},
+                                                             '_xycollector_popup_fit_clip_hi_lineedit': {'text': '', 'position': (8, 3, 1, 1)},
 
-                                                             '_xycollector_popup_data_clip_hi_header_label': {'text': 'Data Clip Hi:', 'position': (8, 2, 1, 1)},
-                                                             '_xycollector_popup_data_clip_hi_lineedit': {'text': '', 'position': (8, 3, 1, 1)},
+                                                             '_xycollector_popup_data_clip_lo_header_label': {'text': 'Data Clip Low:', 'position': (9, 0, 1, 1)},
+                                                             '_xycollector_popup_data_clip_lo_lineedit': {'text': '', 'position': (9, 1, 1, 1)},
 
-                                                             '_xycollector_popup_include_errorbars_checkbox': {'text': 'Include Error Bars:', 'position': (9, 0, 1, 1)},
+                                                             '_xycollector_popup_data_clip_hi_header_label': {'text': 'Data Clip Hi:', 'position': (9, 2, 1, 1)},
+                                                             '_xycollector_popup_data_clip_hi_lineedit': {'text': '', 'position': (9, 3, 1, 1)},
+
+                                                             '_xycollector_popup_include_errorbars_checkbox': {'text': 'Include Error Bars:', 'position': (10, 0, 1, 1)},
 # CONTROL BUTTONS 
                                                              '_xycollector_popup_control_buttons_label': {'text': 'CONTROLS', 'font': 'huge', 'color': 'blue',
                                                                                                           'alignment': 'Center', 'position': (12, 0, 1, 4)},

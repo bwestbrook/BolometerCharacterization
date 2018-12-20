@@ -72,7 +72,9 @@ class IVCurve():
         if quick_plot:
             pl.plot(v_bias_real, i_bolo_real)
             pl.show()
-        return v_bias_real, i_bolo_real, i_bolo_real_std
+        idx = np.where(i_bolo_real == min(i_bolo_real))[0][0]
+        pturn = i_bolo_real[idx] * v_bias_real[idx]
+        return v_bias_real, i_bolo_real, i_bolo_real_std, pturn
 
     def fit_and_remove_offset(self, x_vector, y_vector, v_bias_multiplier,
                               n=1, clip=None, quick_plot=True, return_fit=False):
@@ -179,8 +181,8 @@ class IVCurve():
         pl.show()
 
 
-    def plot_all_curves(self, bolo_voltage_bias, bolo_current, label='', fit_clip=None, plot_clip=None,
-                        show_plot=False):
+    def plot_all_curves(self, bolo_voltage_bias, bolo_current, stds=None, label='', fit_clip=None, plot_clip=None,
+                        show_plot=False, title='', pturn=None):
         '''
         This function creates an x-y scatter plot with V_bias on the x-axis and
         bolo curent on the y-axis.  The resistance value is reported as text annotation
@@ -205,6 +207,11 @@ class IVCurve():
         resistance_vector = bolo_voltage_bias / bolo_current
         power_vector = bolo_voltage_bias * bolo_current
         ax1.plot(bolo_voltage_bias[plot_selector], bolo_current[plot_selector], '.', label=label)
+        if stds is not None:
+            ax1.errorbar(bolo_voltage_bias[plot_selector], bolo_current[plot_selector], yerr=stds[plot_selector],
+                         label='error', marker='.', linestyle='None', alpha=0.25)
+        if pturn is not None:
+            ax1.plot(bolo_voltage_bias[0], bolo_current[1], label='Pturn = {0} pW'.format(pturn))
         ax2.plot(bolo_voltage_bias[plot_selector], power_vector[plot_selector], 'g')
         ax3.plot(bolo_voltage_bias[plot_selector], resistance_vector[plot_selector], 'g')
         if add_fit:
@@ -216,6 +223,7 @@ class IVCurve():
         ax3.set_xlabel("Voltage ($\mu$V)", fontsize=12)
         ax3.set_ylabel("Res ($\Omega$)", fontsize=12)
         #ax1.legend(bbox_to_anchor=(0.3, 0.1, 1, 1), numpoints=1)
+        ax1.set_title(title)
         ax1.legend(numpoints=1)
         ax2.set_ylim(0, 1.1 * max(power_vector[plot_selector]))
         #(max(power_vector[plot_selector]) - 0.8 * max(power_vector[plot_selector]),
@@ -291,12 +299,12 @@ class IVCurve():
             plot_clip = (input_dict['v_plot_lo'], input_dict['v_plot_hi'])
             if len(input_dict['label']) == 0:
                 labels = os.path.basename(data_path)
-            v_bias_real, i_bolo_real, i_bolo_std = self.convert_IV_to_real_units(bias_voltage, squid_voltage,
-                                                                                 squid_conv=input_dict['squid_conversion'],
-                                                                                 v_bias_multiplier=input_dict['voltage_conversion'],
-                                                                                 calibration_resistor_val=input_dict['calibration_resistance'],
-                                                                                 determine_calibration=input_dict['calibrate'],
-                                                                                 clip=fit_clip, label=label)
+            v_bias_real, i_bolo_real, i_bolo_std, p_turn = self.convert_IV_to_real_units(bias_voltage, squid_voltage,
+                                                                                         squid_conv=input_dict['squid_conversion'],
+                                                                                         v_bias_multiplier=input_dict['voltage_conversion'],
+                                                                                         calibration_resistor_val=input_dict['calibration_resistance'],
+                                                                                         determine_calibration=input_dict['calibrate'],
+                                                                                         clip=fit_clip, label=label)
             v_biases.append(v_bias_real)
             i_bolos.append(i_bolo_real)
             label_strs.append(label)

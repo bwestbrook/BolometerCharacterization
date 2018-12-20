@@ -28,10 +28,10 @@ final_plot_settings.final_plot_build_dict = {                '_common_settings':
 
                                                              '_final_plot_popup_subplots_margins_header_label': {'text': 'Subplot Margins (L, R, T, B):', 'position': (4, 0, 1, 1)},
 
-                                                             '_final_plot_popup_subplots_left_margin_lineedit': {'text': '0.1', 'position': (4, 1, 1, 1)},
-                                                             '_final_plot_popup_subplots_right_margin_lineedit': {'text': '0.95', 'position': (4, 2, 1, 1)},
+                                                             '_final_plot_popup_subplots_left_margin_lineedit': {'text': '0.12', 'position': (4, 1, 1, 1)},
+                                                             '_final_plot_popup_subplots_right_margin_lineedit': {'text': '0.98', 'position': (4, 2, 1, 1)},
                                                              '_final_plot_popup_subplots_top_margin_lineedit': {'text': '0.80', 'position': (4, 3, 1, 1)},
-                                                             '_final_plot_popup_subplots_bottom_margin_lineedit': {'text': '0.20', 'position': (4, 4, 1, 1)},
+                                                             '_final_plot_popup_subplots_bottom_margin_lineedit': {'text': '0.23', 'position': (4, 4, 1, 1)},
 
                                                              '_final_plot_popup_x_conversion_header_label': {'text': 'X data Conversion Factor:', 'aligment': 'Right',
                                                                                                              'position': (5, 0, 1, 1)},

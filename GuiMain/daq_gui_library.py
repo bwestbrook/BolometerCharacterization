@@ -144,12 +144,30 @@ class DAQGuiTemplate(QtGui.QWidget):
 
     def _get_raw_data_save_path(self):
         sender = str(self.sender().whatsThis())
-        data_name = str(QtGui.QFileDialog.getSaveFileName(self, 'Raw Data Save Location', self.data_folder))
-        self.raw_data_path = os.path.join(self.data_folder, data_name)
         if 'xycollector' in sender:
-            getattr(self, '_xycollector_popup_raw_data_path_label').setText(self.raw_data_path)
+            #iv_params = mode, squid, squid_conversion, voltage_factor, label, temp, fit_clip, data_clip, e_bars
+            iv_params = self._get_iv_curve_params_from_xycollector()
+            squid = iv_params[1]
+            label = iv_params[4]
+            temp = iv_params[5]
+            suggested_file_name = 'SQ{0}_{1}_IVCurve_{2}_'.format(squid, label, temp.replace('.', 'p'))
+            indicies = []
+            last_index = '00'
+            for file_name in os.listdir(self.data_folder):
+                if suggested_file_name in file_name and '.dat' in file_name:
+                    appendix = file_name.split(suggested_file_name)[1]
+                    if len(appendix) == 6:
+                        last_index = appendix.replace('.dat', '')
+            new_index = '{0}'.format(int(last_index) + 1).zfill(2)
+            suggested_file_name = '{0}{1}.dat'.format(suggested_file_name, new_index)
+            path = os.path.join(self.data_folder, suggested_file_name)
+            set_to_widget = '_xycollector_popup_raw_data_path_label'
         if 'time_constant' in sender:
-            getattr(self, '_time_constant_popup_raw_data_path_label').setText(self.raw_data_path)
+            path = os.path.join(self.data_folder, 'test.dat')
+            set_to_widget = '_time_constant_popup_raw_data_path_label'
+        data_name = str(QtGui.QFileDialog.getSaveFileName(self, 'Raw Data Save Location', path, '.dat'))
+        self.raw_data_path = os.path.join(self.data_folder, data_name)
+        getattr(self, set_to_widget).setText(self.raw_data_path)
         self.plotted_data_path = self.raw_data_path.replace('.dat', '_plotted.png')
         self.parsed_data_path = self.raw_data_path.replace('.dat', '_calibrated.dat')
 
@@ -246,7 +264,7 @@ class DAQGuiTemplate(QtGui.QWidget):
     # Final Plotting and Saving (Common to all DAQ Types)
     #################################################
 
-    def _adjust_final_plot_popup(self, plot_type):
+    def _adjust_final_plot_popup(self, plot_type, title=None, xlabel=None, ylabel=None):
         if not hasattr(self, 'final_plot_popup'):
             self._create_popup_window('final_plot_popup')
         else:
@@ -260,6 +278,12 @@ class DAQGuiTemplate(QtGui.QWidget):
         self.parsed_data_path = self.raw_data_path.replace('.dat', '_calibrated.dat')
         getattr(self, '_final_plot_popup_plot_path_label').setText(self.plotted_data_path)
         getattr(self, '_final_plot_popup_data_path_label').setText(self.parsed_data_path)
+        if title is not None:
+            getattr(self, '_final_plot_popup_plot_title_lineedit').setText(title)
+        if xlabel is not None:
+            getattr(self, '_final_plot_popup_x_label_lineedit').setText(xlabel)
+        if ylabel is not None:
+            getattr(self, '_final_plot_popup_y_label_lineedit').setText(ylabel)
         if plot_type == 'IV':
             squid_conversion = getattr(self, '_xycollector_popup_squid_conversion_label').text()
             voltage_factor = getattr(self, '_xycollector_popup_voltage_factor_combobox').currentText()
@@ -283,23 +307,25 @@ class DAQGuiTemplate(QtGui.QWidget):
             sender = str(self.sender().whatsThis())
         if sender == '_xycollector_popup_save_pushbutton':
             ivc = IVCurve([])
-            mode, squid, squid_conversion, voltage_factor, label, fit_clip, data_clip = self._get_iv_curve_params_from_xycollector()
-            v_bias_real, i_bolo_real, i_bolo_std = ivc.convert_IV_to_real_units(np.asarray(self.xdata), np.asarray(self.ydata),
-                                                                                stds=np.asarray(self.ystd),
-                                                                                squid_conv=squid_conversion,
-                                                                                v_bias_multiplier=voltage_factor,
-                                                                                determine_calibration=False,
-                                                                                clip=fit_clip, label=label)
+            mode, squid, squid_conversion, voltage_factor, label, temp, fit_clip, data_clip, e_bars = self._get_iv_curve_params_from_xycollector()
+            title = '{0} @ {1}'.format(label, temp)
+            v_bias_real, i_bolo_real, i_bolo_std, pturn = ivc.convert_IV_to_real_units(np.asarray(self.xdata), np.asarray(self.ydata),
+                                                                                       stds=np.asarray(self.ystd),
+                                                                                       squid_conv=squid_conversion,
+                                                                                       v_bias_multiplier=voltage_factor,
+                                                                                       determine_calibration=False,
+                                                                                       clip=fit_clip, label=label)
             with open(self.parsed_data_path, 'w') as parsed_data_handle:
                 for i, v_bias in enumerate(v_bias_real):
                     i_bolo = i_bolo_real[i]
                     parsed_data_line = '{0}\t{1}\t{2}\n'.format(v_bias, i_bolo, i_bolo_std)
                     parsed_data_handle.write(parsed_data_line)
-            self.active_fig = ivc.plot_all_curves(v_bias_real, i_bolo_real, label=label,
-                                                  fit_clip=fit_clip, plot_clip=data_clip)
+            self.active_fig = ivc.plot_all_curves(v_bias_real, i_bolo_real, stds=i_bolo_std, label=label,
+                                                  fit_clip=fit_clip, plot_clip=data_clip, title=title,
+                                                  pturn=pturn)
             self.temp_plot_path = './temp_files/temp_iv_png.png'
             self.active_fig.savefig(self.temp_plot_path)
-            self._adjust_final_plot_popup('IV')
+            self._adjust_final_plot_popup('IV', xlabel='Voltage ($\mu$V)', title=title)
         elif sender == '_time_constant_popup_save_pushbutton':
             self.temp_plot_path = './temp_files/temp_iv_png.png'
             self.active_fig.savefig(self.temp_plot_path)
@@ -436,8 +462,11 @@ class DAQGuiTemplate(QtGui.QWidget):
         getattr(self, '_xycollector_popup_xdata_label').setPixmap(image_to_display)
 
     def _draw_y(self, title='', xlabel='', ylabel=''):
+        e_bars = getattr(self, '_xycollector_popup_include_errorbars_checkbox').isChecked()
         fig, ax = self._create_blank_fig()
         ax.plot(self.ydata)
+        if e_bars:
+            ax.errorbar(range(len(self.ydata)), self.ydata, self.ystd, marker='.', linestyle='None')
         ax.set_title(title, fontsize=10)
         ax.set_xlabel(xlabel, fontsize=10)
         ax.set_ylabel(ylabel, fontsize=10)
@@ -453,8 +482,11 @@ class DAQGuiTemplate(QtGui.QWidget):
         getattr(self, '_xycollector_popup_ydata_label').setPixmap(image_to_display)
 
     def _draw_xycollector(self, title='', xlabel='', ylabel=''):
+        e_bars = getattr(self, '_xycollector_popup_include_errorbars_checkbox').isChecked()
         fig, ax = self._create_blank_fig()
         ax.plot(self.xdata, self.ydata)
+        if e_bars:
+            ax.errorbar(self.xdata, self.ydata, self.ystd, marker='.', linestyle='None')
         ax.set_title(title, fontsize=10)
         ax.set_xlabel(xlabel, fontsize=10)
         ax.set_ylabel(ylabel, fontsize=10)
@@ -485,9 +517,11 @@ class DAQGuiTemplate(QtGui.QWidget):
         fit_clip_hi = float(str(getattr(self, '_xycollector_popup_fit_clip_hi_lineedit').text()))
         data_clip_lo = float(str(getattr(self, '_xycollector_popup_data_clip_lo_lineedit').text()))
         data_clip_hi = float(str(getattr(self, '_xycollector_popup_data_clip_hi_lineedit').text()))
+        e_bars = getattr(self, '_xycollector_popup_include_errorbars_checkbox').isChecked()
+        temp = str(getattr(self, '_xycollector_popup_sample_temp_lineedit').text())
         fit_clip = (fit_clip_lo, fit_clip_hi)
         data_clip = (data_clip_lo, data_clip_hi)
-        return mode, squid, squid_conversion, voltage_factor, label, fit_clip, data_clip
+        return mode, squid, squid_conversion, voltage_factor, label, temp, fit_clip, data_clip, e_bars
 
     def _update_in_xy_mode(self):
         run_mode = str(getattr(self, '_xycollector_popup_mode_combobox').currentText())
@@ -582,8 +616,8 @@ class DAQGuiTemplate(QtGui.QWidget):
             self.populate_combobox(combobox_widget, entry_list)
         self.xycollector_popup.showMaximized()
         self.xycollector_popup.setWindowTitle('XY COLLECTOR')
-        getattr(self, '_xycollector_popup_daq_channel_x_combobox').setCurrentIndex(6)
-        getattr(self, '_xycollector_popup_daq_channel_y_combobox').setCurrentIndex(7)
+        getattr(self, '_xycollector_popup_daq_channel_x_combobox').setCurrentIndex(2)
+        getattr(self, '_xycollector_popup_daq_channel_y_combobox').setCurrentIndex(3)
         self.xdata = []
         self.ydata = []
         self._update_in_xy_mode()
@@ -593,6 +627,7 @@ class DAQGuiTemplate(QtGui.QWidget):
         getattr(self, '_xycollector_popup_data_clip_lo_lineedit').setText(str(self.ivcurve_plot_settings_dict['data_clip_lo']))
         getattr(self, '_xycollector_popup_data_clip_hi_lineedit').setText(str(self.ivcurve_plot_settings_dict['data_clip_hi']))
         getattr(self, '_xycollector_popup_daq_sample_rate_combobox').setCurrentIndex(2)
+        getattr(self, '_xycollector_popup_include_errorbars_checkbox').setChecked(True)
 
 
     #################################################
