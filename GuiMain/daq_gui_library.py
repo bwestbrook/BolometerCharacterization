@@ -48,7 +48,6 @@ class DAQGuiTemplate(QtGui.QWidget):
         self.data_folder = './data'
         self.selected_files = []
         self.current_stepper_position = 100
-        self.daq_main_panel_widget.show()
         self.daq = DAQ()
         self.user_desktop_path = os.path.expanduser('~')
         self.fts_analyzer = FTSanalyzer()
@@ -59,10 +58,11 @@ class DAQGuiTemplate(QtGui.QWidget):
         self.today = datetime.now()
         self.today_str = datetime.strftime(self.today, '%Y_%m_%d')
         self.data_folder = './Data/{0}'.format(self.today_str)
-        self.squid_channels = settings.xycollector_combobox_entry_dict['_xycollector_popup_squid_select_combobox']
-        self.voltage_conversion_list = settings.xycollector_combobox_entry_dict['_xycollector_popup_voltage_factor_combobox']
+        self.squid_channels = settings.xy_collector_combobox_entry_dict['_xy_collector_popup_squid_select_combobox']
+        self.voltage_conversion_list = settings.xy_collector_combobox_entry_dict['_xy_collector_popup_voltage_factor_combobox']
         if not os.path.exists(self.data_folder):
             os.makedirs(self.data_folder)
+        self.daq_main_panel_widget.showMaximized()
 
     def __apply_settings__(self, settings):
         for setting in dir(settings):
@@ -72,13 +72,15 @@ class DAQGuiTemplate(QtGui.QWidget):
     def _create_main_window(self, name):
         self._create_popup_window(name)
         self._build_panel(settings.daq_main_panel_build_dict)
-        self._add_daq_types_to_combobox()
 
     def _close_main(self):
         self.daq_main_panel_widget.close()
         sys.exit()
 
     def _dummy(self):
+        print 'Dummy Function'
+
+    def _final_plot(self):
         print 'Dummy Function'
 
     #################################################
@@ -144,9 +146,9 @@ class DAQGuiTemplate(QtGui.QWidget):
 
     def _get_raw_data_save_path(self):
         sender = str(self.sender().whatsThis())
-        if 'xycollector' in sender:
+        if 'xy_collector' in sender:
             #iv_params = mode, squid, squid_conversion, voltage_factor, label, temp, fit_clip, data_clip, e_bars
-            iv_params = self._get_iv_curve_params_from_xycollector()
+            iv_params = self._get_iv_curve_params_from_xy_collector()
             squid = iv_params[1]
             label = iv_params[4]
             temp = iv_params[5]
@@ -161,7 +163,7 @@ class DAQGuiTemplate(QtGui.QWidget):
             new_index = '{0}'.format(int(last_index) + 1).zfill(2)
             suggested_file_name = '{0}{1}.dat'.format(suggested_file_name, new_index)
             path = os.path.join(self.data_folder, suggested_file_name)
-            set_to_widget = '_xycollector_popup_raw_data_path_label'
+            set_to_widget = '_xy_collector_popup_raw_data_path_label'
         if 'time_constant' in sender:
             path = os.path.join(self.data_folder, 'test.dat')
             set_to_widget = '_time_constant_popup_raw_data_path_label'
@@ -181,14 +183,8 @@ class DAQGuiTemplate(QtGui.QWidget):
         self.parsed_data_path = os.path.join(self.data_folder, data_name)
         getattr(self, '_final_plot_popup_data_path_label').setText(self.parsed_data_path)
 
-    def _add_daq_types_to_combobox(self):
-        for daq_function in settings.daq_functions:
-            daq_combo_box_string = ' '.join(daq_function.split('_'))[1:].title()
-            entry = QtCore.QString(daq_combo_box_string)
-            getattr(self, '_daq_main_panel_daq_select_combobox').addItem(entry)
-
     def _launch_daq(self):
-        function_name = '_'.join(str(' ' + self.sender().currentText()).split(' ')).lower()
+        function_name = '_'.join(str(' ' + self.sender().text()).split(' ')).lower()
         getattr(self, function_name)()
 
     def populate_combobox(self, unique_combobox_name, entries):
@@ -230,10 +226,10 @@ class DAQGuiTemplate(QtGui.QWidget):
     def _stop(self):
         global continue_run
         print self.sender().whatsThis()
-        if 'xycollector' in str(self.sender().whatsThis()):
+        if 'xy_collector' in str(self.sender().whatsThis()):
             print 'made it'
-            getattr(self, '_xycollector_popup_start_pushbutton').setFlat(False)
-            getattr(self, '_xycollector_popup_start_pushbutton').setText('Start')
+            getattr(self, '_xy_collector_popup_start_pushbutton').setFlat(False)
+            getattr(self, '_xy_collector_popup_start_pushbutton').setText('Start')
             self.repaint()
         continue_run = False
 
@@ -285,8 +281,8 @@ class DAQGuiTemplate(QtGui.QWidget):
         if ylabel is not None:
             getattr(self, '_final_plot_popup_y_label_lineedit').setText(ylabel)
         if plot_type == 'IV':
-            squid_conversion = getattr(self, '_xycollector_popup_squid_conversion_label').text()
-            voltage_factor = getattr(self, '_xycollector_popup_voltage_factor_combobox').currentText()
+            squid_conversion = getattr(self, '_xy_collector_popup_squid_conversion_label').text()
+            voltage_factor = getattr(self, '_xy_collector_popup_voltage_factor_combobox').currentText()
         elif plot_type == 'tau':
             #squid_conversion = getattr(self, '_time_constant_popup_take_data_point_pushbutton').text()
             squid_conversion = '1.0'
@@ -305,9 +301,9 @@ class DAQGuiTemplate(QtGui.QWidget):
     def _save_plots_and_data(self, sender=None):
         if sender is not None:
             sender = str(self.sender().whatsThis())
-        if sender == '_xycollector_popup_save_pushbutton':
+        if sender == '_xy_collector_popup_save_pushbutton':
             ivc = IVCurve([])
-            mode, squid, squid_conversion, voltage_factor, label, temp, fit_clip, data_clip, e_bars = self._get_iv_curve_params_from_xycollector()
+            mode, squid, squid_conversion, voltage_factor, label, temp, fit_clip, data_clip, e_bars = self._get_iv_curve_params_from_xy_collector()
             title = '{0} @ {1}'.format(label, temp)
             v_bias_real, i_bolo_real, i_bolo_std = ivc.convert_IV_to_real_units(np.asarray(self.xdata), np.asarray(self.ydata),
                                                                                 stds=np.asarray(self.ystd),
@@ -459,10 +455,10 @@ class DAQGuiTemplate(QtGui.QWidget):
         fig.savefig(save_path)
         pl.close('all')
         image_to_display = QtGui.QPixmap(save_path)
-        getattr(self, '_xycollector_popup_xdata_label').setPixmap(image_to_display)
+        getattr(self, '_xy_collector_popup_xdata_label').setPixmap(image_to_display)
 
     def _draw_y(self, title='', xlabel='', ylabel=''):
-        e_bars = getattr(self, '_xycollector_popup_include_errorbars_checkbox').isChecked()
+        e_bars = getattr(self, '_xy_collector_popup_include_errorbars_checkbox').isChecked()
         fig, ax = self._create_blank_fig()
         ax.plot(self.ydata)
         if e_bars:
@@ -479,10 +475,10 @@ class DAQGuiTemplate(QtGui.QWidget):
         fig.savefig(save_path)
         pl.close('all')
         image_to_display = QtGui.QPixmap(save_path)
-        getattr(self, '_xycollector_popup_ydata_label').setPixmap(image_to_display)
+        getattr(self, '_xy_collector_popup_ydata_label').setPixmap(image_to_display)
 
-    def _draw_xycollector(self, title='', xlabel='', ylabel=''):
-        e_bars = getattr(self, '_xycollector_popup_include_errorbars_checkbox').isChecked()
+    def _draw_xy_collector(self, title='', xlabel='', ylabel=''):
+        e_bars = getattr(self, '_xy_collector_popup_include_errorbars_checkbox').isChecked()
         fig, ax = self._create_blank_fig()
         ax.plot(self.xdata, self.ydata)
         if e_bars:
@@ -503,77 +499,77 @@ class DAQGuiTemplate(QtGui.QWidget):
         fig.savefig(save_path)
         pl.close('all')
         image_to_display = QtGui.QPixmap(save_path)
-        getattr(self, '_xycollector_popup_xydata_label').setPixmap(image_to_display)
+        getattr(self, '_xy_collector_popup_xydata_label').setPixmap(image_to_display)
         self.repaint()
 
-    def _get_iv_curve_params_from_xycollector(self):
-        mode = str(getattr(self, '_xycollector_popup_mode_combobox').currentText())
-        voltage_factor = float(str(getattr(self, '_xycollector_popup_voltage_factor_combobox').currentText()))
-        squid = str(getattr(self, '_xycollector_popup_squid_select_combobox').currentText())
-        squid_conversion = str(getattr(self, '_xycollector_popup_squid_conversion_label').text())
+    def _get_iv_curve_params_from_xy_collector(self):
+        mode = str(getattr(self, '_xy_collector_popup_mode_combobox').currentText())
+        voltage_factor = float(str(getattr(self, '_xy_collector_popup_voltage_factor_combobox').currentText()))
+        squid = str(getattr(self, '_xy_collector_popup_squid_select_combobox').currentText())
+        squid_conversion = str(getattr(self, '_xy_collector_popup_squid_conversion_label').text())
         squid_conversion = float(squid_conversion.split(' ')[0])
-        label = str(getattr(self, '_xycollector_popup_sample_name_lineedit').text())
-        fit_clip_lo = float(str(getattr(self, '_xycollector_popup_fit_clip_lo_lineedit').text()))
-        fit_clip_hi = float(str(getattr(self, '_xycollector_popup_fit_clip_hi_lineedit').text()))
-        data_clip_lo = float(str(getattr(self, '_xycollector_popup_data_clip_lo_lineedit').text()))
-        data_clip_hi = float(str(getattr(self, '_xycollector_popup_data_clip_hi_lineedit').text()))
-        e_bars = getattr(self, '_xycollector_popup_include_errorbars_checkbox').isChecked()
-        temp = str(getattr(self, '_xycollector_popup_sample_temp_lineedit').text())
+        label = str(getattr(self, '_xy_collector_popup_sample_name_lineedit').text())
+        fit_clip_lo = float(str(getattr(self, '_xy_collector_popup_fit_clip_lo_lineedit').text()))
+        fit_clip_hi = float(str(getattr(self, '_xy_collector_popup_fit_clip_hi_lineedit').text()))
+        data_clip_lo = float(str(getattr(self, '_xy_collector_popup_data_clip_lo_lineedit').text()))
+        data_clip_hi = float(str(getattr(self, '_xy_collector_popup_data_clip_hi_lineedit').text()))
+        e_bars = getattr(self, '_xy_collector_popup_include_errorbars_checkbox').isChecked()
+        temp = str(getattr(self, '_xy_collector_popup_sample_temp_lineedit').text())
         fit_clip = (fit_clip_lo, fit_clip_hi)
         data_clip = (data_clip_lo, data_clip_hi)
         return mode, squid, squid_conversion, voltage_factor, label, temp, fit_clip, data_clip, e_bars
 
     def _update_in_xy_mode(self):
-        run_mode = str(getattr(self, '_xycollector_popup_mode_combobox').currentText())
+        run_mode = str(getattr(self, '_xy_collector_popup_mode_combobox').currentText())
         if run_mode == 'IV':
             self._draw_x(title='X data', xlabel='Sample', ylabel='Bias Voltage (V)')
             self._draw_y(title='Y data', xlabel='Sample', ylabel='SQUID Output Voltage (V)')
-            self._draw_xycollector(title='IV Curve', xlabel='Bias Voltage ($\mu$V)', ylabel='SQUID Output Voltage (V)')
-            #idx = getattr(self, '_xycollector_popup_voltage_factor_combobox').findText('1e-5')
-            #getattr(self, '_xycollector_popup_voltage_factor_combobox').setCurrentIndex(idx)
+            self._draw_xy_collector(title='IV Curve', xlabel='Bias Voltage ($\mu$V)', ylabel='SQUID Output Voltage (V)')
+            #idx = getattr(self, '_xy_collector_popup_voltage_factor_combobox').findText('1e-5')
+            #getattr(self, '_xy_collector_popup_voltage_factor_combobox').setCurrentIndex(idx)
         elif run_mode == 'RT':
             self._draw_x(title='X data', xlabel='Sample', ylabel='GRT RES (V)')
             self._draw_y(title='Y data', xlabel='Sample', ylabel='SQUID Output Voltage (V)')
-            self._draw_xycollector(title='RT Curve', xlabel='GRT Res (V)', ylabel='SQUID Output Voltage (V)')
-            #idx = getattr(self, '_xycollector_popup_voltage_factor_combobox').findText('1')
-            #getattr(self, '_xycollector_popup_voltage_factor_combobox').setCurrentIndex(idx)
+            self._draw_xy_collector(title='RT Curve', xlabel='GRT Res (V)', ylabel='SQUID Output Voltage (V)')
+            #idx = getattr(self, '_xy_collector_popup_voltage_factor_combobox').findText('1')
+            #getattr(self, '_xy_collector_popup_voltage_factor_combobox').setCurrentIndex(idx)
         else:
-            self._draw_xycollector()
+            self._draw_xy_collector()
 
     def _update_squid_calibration(self):
-        selected_squid = str(getattr(self, '_xycollector_popup_squid_select_combobox').currentText())
+        selected_squid = str(getattr(self, '_xy_collector_popup_squid_select_combobox').currentText())
         squid_calibration = settings.squid_calibration_dict[selected_squid]
         squid_str = '{0} (uA/V)'.format(squid_calibration)
-        selected_squid = str(getattr(self, '_xycollector_popup_squid_conversion_label').setText(squid_str))
+        selected_squid = str(getattr(self, '_xy_collector_popup_squid_conversion_label').setText(squid_str))
 
-    def _update_xycollector_buttons_sizes(self):
+    def _update_xy_collector_buttons_sizes(self):
         width = 0.1 * float(self.screen_resolution.width())
         height = 0.1 * float(self.screen_resolution.height())
-        settings.xycollector_build_dict['_xycollector_popup_daq_channel_x_combobox'].update({'width': width})
-        settings.xycollector_build_dict['_xycollector_popup_daq_channel_y_combobox'].update({'width': width})
-        settings.xycollector_build_dict['_xycollector_popup_squid_select_combobox'].update({'width': width})
-        settings.xycollector_build_dict['_xycollector_popup_voltage_factor_combobox'].update({'width': width})
-        settings.xycollector_build_dict['_xycollector_popup_sample_name_lineedit'].update({'width': width})
-        settings.xycollector_build_dict['_xycollector_popup_daq_integration_time_combobox'].update({'width': width})
-        #settings.xycollector_build_dict['_xycollector_popup_start_pushbutton'].update({'height': height})
-        #settings.xycollector_build_dict['_xycollector_popup_pause_pushbutton'].update({'height': height})
-        #settings.xycollector_build_dict['_xycollector_popup_save_pushbutton'].update({'height': height})
-        #settings.xycollector_build_dict['_xycollector_popup_close_pushbutton'].update({'height': height})
+        settings.xy_collector_build_dict['_xy_collector_popup_daq_channel_x_combobox'].update({'width': width})
+        settings.xy_collector_build_dict['_xy_collector_popup_daq_channel_y_combobox'].update({'width': width})
+        settings.xy_collector_build_dict['_xy_collector_popup_squid_select_combobox'].update({'width': width})
+        settings.xy_collector_build_dict['_xy_collector_popup_voltage_factor_combobox'].update({'width': width})
+        settings.xy_collector_build_dict['_xy_collector_popup_sample_name_lineedit'].update({'width': width})
+        settings.xy_collector_build_dict['_xy_collector_popup_daq_integration_time_combobox'].update({'width': width})
+        #settings.xy_collector_build_dict['_xy_collector_popup_start_pushbutton'].update({'height': height})
+        #settings.xy_collector_build_dict['_xy_collector_popup_pause_pushbutton'].update({'height': height})
+        #settings.xy_collector_build_dict['_xy_collector_popup_save_pushbutton'].update({'height': height})
+        #settings.xy_collector_build_dict['_xy_collector_popup_close_pushbutton'].update({'height': height})
 
-    def _close_xycollector(self):
-        self.xycollector_popup.close()
+    def _close_xy_collector(self):
+        self.xy_collector_popup.close()
 
-    def _run_xycollector(self):
+    def _run_xy_collector(self):
         global continue_run
         self._get_raw_data_save_path()
         sender_text = str(self.sender().text())
         self.sender().setFlat(True)
         self.sender().setText('Taking Data')
         continue_run = True
-        daq_channel_x = getattr(self,'_xycollector_popup_daq_channel_x_combobox').currentText()
-        daq_channel_y = getattr(self, '_xycollector_popup_daq_channel_y_combobox').currentText()
-        integration_time = int(float(str(getattr(self, '_xycollector_popup_daq_integration_time_combobox').currentText())))
-        sample_rate = int(float(str(getattr(self, '_xycollector_popup_daq_sample_rate_combobox').currentText())))
+        daq_channel_x = getattr(self,'_xy_collector_popup_daq_channel_x_combobox').currentText()
+        daq_channel_y = getattr(self, '_xy_collector_popup_daq_channel_y_combobox').currentText()
+        integration_time = int(float(str(getattr(self, '_xy_collector_popup_daq_integration_time_combobox').currentText())))
+        sample_rate = int(float(str(getattr(self, '_xy_collector_popup_daq_sample_rate_combobox').currentText())))
         self.xdata, self.ydata, self.xstd, self.ystd = [], [], [], []
         with open(self.raw_data_path, 'w') as data_handle:
             while continue_run:
@@ -592,10 +588,10 @@ class DAQGuiTemplate(QtGui.QWidget):
                 if daq_channel_y in ['0', '1']:
                     y_data = y_data + 1.377
                     y_mean += 1.377
-                getattr(self, '_xycollector_popup_xdata_mean_label').setText('{0:.4f}'.format(x_mean))
-                getattr(self, '_xycollector_popup_xdata_std_label').setText('{0:.4f}'.format(x_std))
-                getattr(self, '_xycollector_popup_ydata_mean_label').setText('{0:.4f}'.format(y_mean))
-                getattr(self, '_xycollector_popup_ydata_std_label').setText('{0:.4f}'.format(y_std))
+                getattr(self, '_xy_collector_popup_xdata_mean_label').setText('{0:.4f}'.format(x_mean))
+                getattr(self, '_xy_collector_popup_xdata_std_label').setText('{0:.4f}'.format(x_std))
+                getattr(self, '_xy_collector_popup_ydata_mean_label').setText('{0:.4f}'.format(y_mean))
+                getattr(self, '_xy_collector_popup_ydata_std_label').setText('{0:.4f}'.format(y_std))
                 self.xdata.append(x_mean)
                 self.ydata.append(y_mean)
                 self.xstd.append(x_std)
@@ -605,29 +601,29 @@ class DAQGuiTemplate(QtGui.QWidget):
                 data_handle.write(data_line)
                 root.update()
 
-    def _xycollector(self):
-        if not hasattr(self, 'xycollector_popup'):
-            self._create_popup_window('xycollector_popup')
+    def _xy_collector(self):
+        if not hasattr(self, 'xy_collector_popup'):
+            self._create_popup_window('xy_collector_popup')
         else:
-            self._initialize_panel('xycollector_popup')
-        self._update_xycollector_buttons_sizes()
-        self._build_panel(settings.xycollector_build_dict)
-        for combobox_widget, entry_list in self.xycollector_combobox_entry_dict.iteritems():
+            self._initialize_panel('xy_collector_popup')
+        self._update_xy_collector_buttons_sizes()
+        self._build_panel(settings.xy_collector_build_dict)
+        for combobox_widget, entry_list in self.xy_collector_combobox_entry_dict.iteritems():
             self.populate_combobox(combobox_widget, entry_list)
-        self.xycollector_popup.showMaximized()
-        self.xycollector_popup.setWindowTitle('XY COLLECTOR')
-        getattr(self, '_xycollector_popup_daq_channel_x_combobox').setCurrentIndex(2)
-        getattr(self, '_xycollector_popup_daq_channel_y_combobox').setCurrentIndex(3)
+        self.xy_collector_popup.showMaximized()
+        self.xy_collector_popup.setWindowTitle('XY COLLECTOR')
+        getattr(self, '_xy_collector_popup_daq_channel_x_combobox').setCurrentIndex(2)
+        getattr(self, '_xy_collector_popup_daq_channel_y_combobox').setCurrentIndex(3)
         self.xdata = []
         self.ydata = []
         self._update_in_xy_mode()
         self._update_squid_calibration()
-        getattr(self, '_xycollector_popup_fit_clip_lo_lineedit').setText(str(self.ivcurve_plot_settings_dict['fit_clip_lo']))
-        getattr(self, '_xycollector_popup_fit_clip_hi_lineedit').setText(str(self.ivcurve_plot_settings_dict['fit_clip_hi']))
-        getattr(self, '_xycollector_popup_data_clip_lo_lineedit').setText(str(self.ivcurve_plot_settings_dict['data_clip_lo']))
-        getattr(self, '_xycollector_popup_data_clip_hi_lineedit').setText(str(self.ivcurve_plot_settings_dict['data_clip_hi']))
-        getattr(self, '_xycollector_popup_daq_sample_rate_combobox').setCurrentIndex(2)
-        getattr(self, '_xycollector_popup_include_errorbars_checkbox').setChecked(True)
+        getattr(self, '_xy_collector_popup_fit_clip_lo_lineedit').setText(str(self.ivcurve_plot_settings_dict['fit_clip_lo']))
+        getattr(self, '_xy_collector_popup_fit_clip_hi_lineedit').setText(str(self.ivcurve_plot_settings_dict['fit_clip_hi']))
+        getattr(self, '_xy_collector_popup_data_clip_lo_lineedit').setText(str(self.ivcurve_plot_settings_dict['data_clip_lo']))
+        getattr(self, '_xy_collector_popup_data_clip_hi_lineedit').setText(str(self.ivcurve_plot_settings_dict['data_clip_hi']))
+        getattr(self, '_xy_collector_popup_daq_sample_rate_combobox').setCurrentIndex(2)
+        getattr(self, '_xy_collector_popup_include_errorbars_checkbox').setChecked(True)
 
 
     #################################################
