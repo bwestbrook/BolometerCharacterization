@@ -190,9 +190,11 @@ class IVCurve():
         '''
         fig = pl.figure(figsize=(10, 5))
         fig.subplots_adjust(left=0.1, right=0.97, bottom=0.11, hspace=0.66)
-        ax1 = fig.add_subplot(311)
-        ax2 = fig.add_subplot(312)
-        ax3 = fig.add_subplot(313)
+        ax1 = fig.add_subplot(221)
+        ax2 = fig.add_subplot(222)
+        ax3 = fig.add_subplot(223)
+        ax4 = fig.add_subplot(224)
+        ax2.set_axis_off()
         fit_selector = np.logical_and(fit_clip[0] < bolo_voltage_bias, bolo_voltage_bias < fit_clip[1])
         plot_selector = np.logical_and(plot_clip[0] < bolo_voltage_bias, bolo_voltage_bias < plot_clip[1])
         add_fit = False
@@ -209,27 +211,44 @@ class IVCurve():
             ax1.errorbar(bolo_voltage_bias[plot_selector], bolo_current[plot_selector], yerr=stds[plot_selector],
                          label='error', marker='.', linestyle='None', alpha=0.25)
         if pturn:
-            idx = np.where(bolo_current[plot_selector] == min(bolo_current[plot_selector]))[0][0]
-            pturn_pw = bolo_current[idx] * bolo_voltage_bias[idx]
-            ax1.plot(bolo_voltage_bias[idx], bolo_current[idx], '*', markersize=10.0, color='g', label='Pturn = {0:.2f} pW'.format(pturn_pw))
-        ax2.plot(bolo_voltage_bias[plot_selector], power_vector[plot_selector], 'g')
-        ax3.plot(bolo_voltage_bias[plot_selector], resistance_vector[plot_selector], 'g')
+            pt_idx = np.where(bolo_current[plot_selector] == min(bolo_current[plot_selector]))[0][0]
+            pl_idx = np.where(bolo_voltage_bias[plot_selector] == min(bolo_voltage_bias[plot_selector]))[0][0]
+            pturn_pw = bolo_current[plot_selector][pt_idx] * bolo_voltage_bias[plot_selector][pt_idx]
+            plast_pw = bolo_current[plot_selector][pl_idx] * bolo_voltage_bias[plot_selector][pl_idx]
+            ax1.plot(bolo_voltage_bias[plot_selector][pt_idx], bolo_current[plot_selector][pt_idx],
+                     '*', markersize=10.0, color='g', label='Pturn = {0:.2f} pW'.format(pturn_pw))
+            ax1.plot(bolo_voltage_bias[plot_selector][pl_idx], bolo_current[plot_selector][pl_idx],
+                     '*', markersize=10.0, color='m', label='Plast = {0:.2f} pW'.format(plast_pw))
+        ax3.plot(bolo_voltage_bias[plot_selector], resistance_vector[plot_selector], 'b', label='Res ($\Omega$)')
+        #ax4.plot(bolo_voltage_bias[power_selector], power_vector[power_selector], resitance_vector[plot_selector], 'r', label='Power (pW)')
+        power_selector = np.logical_and(0 < power_vector, power_vector < 0.25 * np.max(power_vector))
+        ax4.plot(resistance_vector[power_selector], power_vector[power_selector], 'r', label='Power (pW)')
         if add_fit:
             ax1.plot(v_fit_x_vector[selector_2], poly_fit, label='Fit: {0:.2f}$\Omega$'.format(1.0 / fit_vals[0]))
-        ax1.set_ylabel("Current ($\mu$A)", fontsize=12)
+        # Label the axis
         ax1.set_xlabel("Voltage ($\mu$V)", fontsize=12)
-        ax2.set_ylabel("Power ($pW$)", fontsize=12)
-        ax2.set_xlabel("Voltage ($\mu$V)", fontsize=12)
+        ax1.set_ylabel("Current ($\mu$A)", fontsize=12)
         ax3.set_xlabel("Voltage ($\mu$V)", fontsize=12)
         ax3.set_ylabel("Res ($\Omega$)", fontsize=12)
-        #ax1.legend(bbox_to_anchor=(0.3, 0.1, 1, 1), numpoints=1)
-        ax1.set_title(title)
-        ax1.legend(numpoints=1)
-        ax2.set_ylim(0, 1.1 * max(power_vector[plot_selector]))
+        ax4.set_xlabel("Res ($\Omega$)", fontsize=12)
+        ax4.set_ylabel("Power ($pW$)", fontsize=12)
+        # Set the titles
+        ax1.set_title('IV of {0}'.format(title))
+        ax3.set_title('RV of {0}'.format(title))
+        ax4.set_title('PR of {0}'.format(title))
+        # Grab all the labels and combine them 
+        handles, labels = ax1.get_legend_handles_labels()
+        handles += ax3.get_legend_handles_labels()[0]
+        labels += ax3.get_legend_handles_labels()[1]
+        handles += ax4.get_legend_handles_labels()[0]
+        labels += ax4.get_legend_handles_labels()[1]
+        ax2.legend(handles, labels, numpoints=1, mode="expand", bbox_to_anchor=(0, 0.1, 1, 1))
+        #ax4.set_ylim(0, 0.5 * max(power_vector[plot_selector]))
+        #ax4.set_xlim(0, 1.1 * max(power_vector[plot_selector]))
         #(max(power_vector[plot_selector]) - 0.8 * max(power_vector[plot_selector]),
         ax1.set_xlim((plot_clip[0], plot_clip[1]))
-        ax2.set_xlim((plot_clip[0], plot_clip[1]))
         ax3.set_xlim((plot_clip[0], plot_clip[1]))
+        #ax4.set_xlim((plot_clip[0], plot_clip[1]))
         if show_plot:
             pl.show()
         return fig

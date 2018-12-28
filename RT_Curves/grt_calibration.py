@@ -16,8 +16,8 @@ def resistance_to_temp(resistance, serial_number):
         elif not type(resistance) is list:
             resistance = pl.asarray([float(resistance)])
 	else:
-	    print 'Please supply a single number (can be formatted as string, int, float) or a list of such values'
-	    exit()
+            print 'Please supply a single number (can be formatted as string, int, float) or a list of such values'
+            exit()
     serial_number = int(serial_number)
     temperature_array = pl.zeros(resistance.size)
     for j, resistance_value in enumerate(resistance):
@@ -26,7 +26,7 @@ def resistance_to_temp(resistance, serial_number):
         x = ((z - z_lower) - (z_upper - z)) / (z_upper - z_lower)
         temperature = 0.
         for i, coefficient in enumerate(a_coefficients):
-	    temperature += coefficient * pl.cos(i * pl.arccos(x))
+            temperature += coefficient * pl.cos(i * pl.arccos(x))
 	temperature_array[j] = copy(temperature)
     return temperature_array
 
@@ -43,19 +43,19 @@ def make_calibration_curve(serial_number, r_low=2.0, r_upper=2000, r_resolution=
     pl.xlabel('GRT Resistance ($\Omega$)', fontsize=16)
     pl.subplots_adjust(bottom=0.14)
     if np.nanmax(temperature_array) > 1.5:
-    	pl.ylabel('GRT Temperature (K)', fontsize=16)
+        pl.ylabel('GRT Temperature (K)', fontsize=16)
     else:
-    	pl.ylabel('GRT Temperature (mK)', fontsize=16)
+        pl.ylabel('GRT Temperature (mK)', fontsize=16)
         pl.xlim(np.nanmin(resistance_array), np.nanmax(resistance_array))
 	temperature_array *= 1e3
     if plot_type == 'loglog':
         pl.loglog(resistance_array, temperature_array)
 	pl.grid(which='both')
-    	save_string = "LogLog_Calibration_Curve_for_GRT_{0}.png".format(serial_number)
+        save_string = "LogLog_Calibration_Curve_for_GRT_{0}.png".format(serial_number)
     elif plot_type == 'linear':
         pl.plot(resistance_array, temperature_array)
 	pl.grid()
-    	save_string = "Linear_Calibration_Curve_for_GRT_{0}.png".format(serial_number)
+        save_string = "Linear_Calibration_Curve_for_GRT_{0}.png".format(serial_number)
     pl.savefig(save_string)
     pl.show()
 
@@ -116,17 +116,18 @@ def _return_chebychev_coefficients_and_impedance_limits(z, serial_number):
 if __name__ == '__main__':
     if len(sys.argv) == 3:
         serial_number = sys.argv[1]
-    	resistance_array = sys.argv[2]
+        resistance_array = sys.argv[2]
 	make_plot = False
 	compute_temp = True
     elif len(sys.argv) == 2:
         serial_number = sys.argv[1]
-    	resistance_array = [50.0, '75.3', 1000]
+        resistance_array = [50.0, '75.3', 1000]
 	make_plot = True
 	compute_temp = False
     elif len(sys.argv) == 1:
         serial_number = 29268
-    	resistance_array = [50.0, '75.3', 1000]
+        resistance_array = [300.0, 310, 320]
+        resistance_array = [110.0, 310, 320]
 	make_plot = True
 	compute_temp = True
     else:

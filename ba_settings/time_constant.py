@@ -49,9 +49,9 @@ time_constant_settings.time_constant_popup_build_dict = {
                                                          '_time_constant_popup_all_data_monitor_label': {'text': '', 'position': (7, 5, 4, 4)}, # Final Plot
                                                          }
 
-time_constant_settings.time_constant_comobobox_entry_dict = {
-                                                             '_time_constant_popup_frequency_select_combobox': ['2', '4', '8', '16', '32', '64', '128', '256'],
-                                                             '_time_constant_popup_daq_select_combobox': ['0', '1', '2', '3', '4', '5', '6', '7'],
-                                                             '_time_constant_popup_daq_sample_rate_combobox': ['50', '500', '1000'],
-                                                             '_time_constant_popup_daq_integration_time_combobox': ['50', '500', '1000', '10000', '200000'],
+time_constant_settings.time_constant_combobox_entry_dict = {
+                                                            '_time_constant_popup_frequency_select_combobox': ['2', '4', '8', '16', '32', '64', '128', '256'],
+                                                            '_time_constant_popup_daq_select_combobox': ['0', '1', '2', '3', '4', '5', '6', '7'],
+                                                            '_time_constant_popup_daq_sample_rate_combobox': ['50', '500', '1000'],
+                                                            '_time_constant_popup_daq_integration_time_combobox': ['50', '500', '1000', '10000', '200000'],
                                                              }

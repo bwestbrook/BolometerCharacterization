@@ -17,8 +17,9 @@ xy_collector_settings.xy_collector_build_dict = {
                                                              '_xy_collector_popup_daq_channel_y_header_label': {'text': 'DAQ Channel Y:', 'position': (2, 2, 1, 1)},
                                                              '_xy_collector_popup_daq_channel_y_combobox': { 'position': (2, 3, 1, 1)},
 
-                                                             '_xy_collector_popup_squid_header_label': {'text': 'SQUID:', 'position': (3, 0, 1, 1), 'color': 'red'},
-                                                             '_xy_collector_popup_squid_select_combobox': {'function': '_update_squid_calibration', 'position': (3, 1, 1, 1)},
+                                                             '_xy_collector_popup_squid_header_label': {'text': 'SQUID:', 'position': (3, 0, 1, 1), 'font': 'huge', 'color': 'red'},
+                                                             '_xy_collector_popup_squid_select_combobox': {'function': '_update_squid_calibration', 'font': 'huge', 'color': 'red',
+                                                                                                           'position': (3, 1, 1, 1)},
 
                                                              '_xy_collector_popup_squid_conversion_header_label': {'text': 'SQUID Calibration:', 'position': (3, 2, 1, 1)},
                                                              '_xy_collector_popup_squid_conversion_label': {'position': (3, 3, 1, 1)},
@@ -54,10 +55,15 @@ xy_collector_settings.xy_collector_build_dict = {
                                                              '_xy_collector_popup_data_clip_hi_lineedit': {'text': '', 'position': (9, 3, 1, 1)},
 
                                                              '_xy_collector_popup_include_errorbars_checkbox': {'text': 'Include Error Bars:', 'position': (10, 0, 1, 1)},
+
+                                                             '_xy_collector_popup_invert_output_checkbox': {'text': 'Invert Output:', 'position': (10, 1, 1, 1)},
+
+                                                             '_xy_collector_popup_sample_res_header_label': {'text': 'Sample Res RT (Ohms):', 'position': (11, 0, 1, 1)},
+                                                             '_xy_collector_popup_sample_res_lineedit': {'text': '', 'position': (11, 1, 1, 1)},
 # CONTROL BUTTONS 
                                                              '_xy_collector_popup_control_buttons_label': {'text': 'CONTROLS', 'font': 'huge', 'color': 'blue',
                                                                                                           'alignment': 'Center', 'position': (12, 0, 1, 4)},
-                                                             '_xy_collector_popup_start_pushbutton': {'text': 'Start', 'function': '_run_xy_collector', 'position': (13, 0, 1, 2)},
+                                                             '_xy_collector_popup_start_pushbutton': {'text': 'Start', 'font': 'huge', 'function': '_run_xy_collector', 'position': (13, 0, 1, 2)},
 
                                                              '_xy_collector_popup_pause_pushbutton': {'text': 'Stop', 'function': '_stop', 'position': (13, 2, 1, 2)},
 

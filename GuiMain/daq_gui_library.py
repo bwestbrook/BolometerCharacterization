@@ -1,4 +1,5 @@
 import sys
+import json
 import os
 import subprocess
 import shutil
@@ -46,6 +47,7 @@ class DAQGuiTemplate(QtGui.QWidget):
         self.__apply_settings__(settings)
         self._create_main_window('daq_main_panel_widget')
         self.data_folder = './data'
+        self.sample_dict_folder = './Sample_Dicts'
         self.selected_files = []
         self.current_stepper_position = 100
         self.daq = DAQ()
@@ -144,15 +146,25 @@ class DAQGuiTemplate(QtGui.QWidget):
     # Generica Control Function (Common to all DAQ Types)
     #################################################
 
+    def _set_sample_dict_path(self):
+        sample_dict_path = str(QtGui.QFileDialog.getOpenFileName(self, directory=self.sample_dict_folder, filter='*.json'))
+        with open(sample_dict_path, 'r') as sample_dict_file_handle:
+            self.sample_dict = json.load(sample_dict_file_handle)
+        getattr(self, '_daq_main_panel_set_sample_dict_path_label').setText(sample_dict_path)
+
     def _get_raw_data_save_path(self):
         sender = str(self.sender().whatsThis())
         if 'xy_collector' in sender:
+            run_mode = str(getattr(self, '_xy_collector_popup_mode_combobox').currentText())
             #iv_params = mode, squid, squid_conversion, voltage_factor, label, temp, fit_clip, data_clip, e_bars
             iv_params = self._get_iv_curve_params_from_xy_collector()
             squid = iv_params[1]
             label = iv_params[4]
             temp = iv_params[5]
-            suggested_file_name = 'SQ{0}_{1}_IVCurve_{2}_'.format(squid, label, temp.replace('.', 'p'))
+            if run_mode == 'IV':
+                suggested_file_name = 'SQ{0}_{1}_IVCurve_{2}_'.format(squid, label, temp.replace('.', 'p'))
+            elif run_mode == 'RT':
+                suggested_file_name = 'SQ{0}_{1}_RTCurve_{2}_'.format(squid, label, temp.replace('.', 'p'))
             indicies = []
             last_index = '00'
             for file_name in os.listdir(self.data_folder):
@@ -230,7 +242,11 @@ class DAQGuiTemplate(QtGui.QWidget):
             print 'made it'
             getattr(self, '_xy_collector_popup_start_pushbutton').setFlat(False)
             getattr(self, '_xy_collector_popup_start_pushbutton').setText('Start')
-            self.repaint()
+            getattr(self, '_xy_collector_popup_save_pushbutton').setFlat(False)
+        elif 'multimeter' in str(self.sender().whatsThis()):
+            getattr(self, '_multimeter_popup_get_data_pushbutton').setFlat(False)
+            getattr(self, '_multimeter_popup_get_data_pushbutton').setText('Get Data')
+        self.repaint()
         continue_run = False
 
     def _pause(self):
@@ -302,26 +318,11 @@ class DAQGuiTemplate(QtGui.QWidget):
         if sender is not None:
             sender = str(self.sender().whatsThis())
         if sender == '_xy_collector_popup_save_pushbutton':
-            ivc = IVCurve([])
             mode, squid, squid_conversion, voltage_factor, label, temp, fit_clip, data_clip, e_bars = self._get_iv_curve_params_from_xy_collector()
-            title = '{0} @ {1}'.format(label, temp)
-            v_bias_real, i_bolo_real, i_bolo_std = ivc.convert_IV_to_real_units(np.asarray(self.xdata), np.asarray(self.ydata),
-                                                                                stds=np.asarray(self.ystd),
-                                                                                squid_conv=squid_conversion,
-                                                                                v_bias_multiplier=voltage_factor,
-                                                                                determine_calibration=False,
-                                                                                clip=fit_clip, label=label)
-            with open(self.parsed_data_path, 'w') as parsed_data_handle:
-                for i, v_bias in enumerate(v_bias_real):
-                    i_bolo = i_bolo_real[i]
-                    parsed_data_line = '{0}\t{1}\t{2}\n'.format(v_bias, i_bolo, i_bolo_std)
-                    parsed_data_handle.write(parsed_data_line)
-            self.active_fig = ivc.plot_all_curves(v_bias_real, i_bolo_real, stds=i_bolo_std, label=label,
-                                                  fit_clip=fit_clip, plot_clip=data_clip, title=title,
-                                                  pturn=True)
-            self.temp_plot_path = './temp_files/temp_iv_png.png'
-            self.active_fig.savefig(self.temp_plot_path)
-            self._adjust_final_plot_popup('IV', xlabel='Voltage ($\mu$V)', title=title)
+            if mode == 'IV':
+                self._final_iv_plot()
+            elif mode == 'RT':
+                self._final_rt_plot()
         elif sender == '_time_constant_popup_save_pushbutton':
             self.temp_plot_path = './temp_files/temp_iv_png.png'
             self.active_fig.savefig(self.temp_plot_path)
@@ -330,6 +331,46 @@ class DAQGuiTemplate(QtGui.QWidget):
             print sender
             print 'need to be configured'
             self._adjust_final_plot_popup('new')
+
+    def _final_rt_plot(self):
+        mode, squid, squid_conversion, voltage_factor, label, temp, fit_clip, data_clip, e_bars = self._get_iv_curve_params_from_xy_collector()
+        rtc = RTCurve([])
+        invert = getattr(self, '_xy_collector_popup_invert_output_checkbox').isChecked()
+        normal_res = float(str(getattr(self, '_xy_collector_popup_sample_res_lineedit').text()))
+        title = '{0} @ {1}'.format(label, temp)
+        xlim = [np.min(self.xdata), np.max(self.xdata)]
+        input_dict = {'invert': invert, 'normal_res': normal_res, 'label': label, 
+                      'title': title, 'xlim': xlim}
+        sample_res_vector = rtc.normalize_squid_output(self.ydata, input_dict)
+        print self.xdata, sample_res_vector
+        self.active_fig = rtc.plot_rt_curves(self.xdata, sample_res_vector, in_millikelvin=True, fig=None, input_dict=input_dict)
+        self.ydata = sample_res_vector
+        self.temp_plot_path = './temp_files/temp_rt_png.png'
+        self.active_fig.savefig(self.temp_plot_path)
+        self._adjust_final_plot_popup('RT', xlabel='Sample Temp (mK)', ylabel='Sample Res ($\Omega$)', title=title)
+
+
+    def _final_iv_plot(self):
+        mode, squid, squid_conversion, voltage_factor, label, temp, fit_clip, data_clip, e_bars = self._get_iv_curve_params_from_xy_collector()
+        ivc = IVCurve([])
+        title = '{0} @ {1}'.format(label, temp)
+        v_bias_real, i_bolo_real, i_bolo_std = ivc.convert_IV_to_real_units(np.asarray(self.xdata), np.asarray(self.ydata),
+                                                                            stds=np.asarray(self.ystd),
+                                                                            squid_conv=squid_conversion,
+                                                                            v_bias_multiplier=voltage_factor,
+                                                                            determine_calibration=False,
+                                                                            clip=fit_clip, label=label)
+        with open(self.parsed_data_path, 'w') as parsed_data_handle:
+            for i, v_bias in enumerate(v_bias_real):
+                i_bolo = i_bolo_real[i]
+                parsed_data_line = '{0}\t{1}\t{2}\n'.format(v_bias, i_bolo, i_bolo_std)
+                parsed_data_handle.write(parsed_data_line)
+        self.active_fig = ivc.plot_all_curves(v_bias_real, i_bolo_real, stds=i_bolo_std, label=label,
+                                              fit_clip=fit_clip, plot_clip=data_clip, title=title,
+                                              pturn=True)
+        self.temp_plot_path = './temp_files/temp_iv_png.png'
+        self.active_fig.savefig(self.temp_plot_path)
+        self._adjust_final_plot_popup('IV', xlabel='Voltage ($\mu$V)', title=title)
 
     def _draw_final_plot(self, x, y, stds=None, save_path=None, mode=None,
                          title='Result', xlabel='', ylabel='',
@@ -442,6 +483,77 @@ class DAQGuiTemplate(QtGui.QWidget):
     #################################################
 
     #################################################
+    # MULTIMETER
+    #################################################
+
+    def _update_multimeter(self, channel='1', title='', xlabel='', ylabel=''):
+        fig, ax = self._create_blank_fig()
+        grt_serial = str(getattr(self, '_multimeter_popup_grt_serial_{0}_combobox'.format(channel)).currentText())
+        if len(grt_serial) > 1:
+            rtc = RTCurve([])
+            voltage_factor = 1e3
+            temp_data = 1e3 * rtc.resistance_to_temp_grt(self.mm_data * voltage_factor, serial_number=grt_serial)
+            ax.plot(temp_data)
+            temp_data_std = np.std(temp_data)
+            temp_data_mean = np.mean(temp_data)
+            getattr(self, '_multimeter_popup_data_point_mean_{0}_label'.format(channel)).setText('{0:.4f}'.format(temp_data_mean))
+            getattr(self, '_multimeter_popup_data_point_std_{0}_label'.format(channel)).setText('{0:.4f}'.format(temp_data_std))
+        else:
+            ax.plot(self.mm_data)
+            getattr(self, '_multimeter_popup_data_point_mean_{0}_label'.format(channel)).setText('{0:.4f}'.format(self.mm_mean))
+            getattr(self, '_multimeter_popup_data_point_std_{0}_label'.format(channel)).setText('{0:.4f}'.format(self.mm_data_std))
+        ax.set_title(title, fontsize=10)
+        ax.set_xlabel(xlabel, fontsize=10)
+        ax.set_ylabel('CH{0} Output'.format(channel), fontsize=10)
+        save_path = 'temp_files/temp_mm.png'
+        fig.savefig(save_path)
+        pl.close('all')
+        image_to_display = QtGui.QPixmap(save_path)
+        getattr(self, '_multimeter_popup_data_point_monitor_{0}_label'.format(channel)).setPixmap(image_to_display)
+        self.repaint()
+
+    def _take_multimeter_data_point(self):
+        global continue_run
+        continue_run = True
+        daq_channel_1 = getattr(self,'_multimeter_popup_daq_channel_1_combobox').currentText()
+        integration_time_1 = int(float(str(getattr(self, '_multimeter_popup_daq_integration_time_1_combobox').currentText())))
+        sample_rate_1 = int(float(str(getattr(self, '_multimeter_popup_daq_sample_rate_1_combobox').currentText())))
+        daq_channel_2 = getattr(self,'_multimeter_popup_daq_channel_2_combobox').currentText()
+        integration_time_2 = int(float(str(getattr(self, '_multimeter_popup_daq_integration_time_2_combobox').currentText())))
+        sample_rate_2 = int(float(str(getattr(self, '_multimeter_popup_daq_sample_rate_2_combobox').currentText())))
+        getattr(self, '_multimeter_popup_get_data_pushbutton').setFlat(True)
+        getattr(self, '_multimeter_popup_get_data_pushbutton').setText('Acquiring Data')
+        while continue_run:
+            self.mm_data, self.mm_mean, self.mm_data_min, self.mm_data_max, self.mm_data_std = self.real_daq.get_data(signal_channel=daq_channel_1,
+                                                                                                                      integration_time=integration_time_1,
+                                                                                                                      sample_rate=sample_rate_1)
+            self._update_multimeter(channel='1')
+            self.mm_data, self.mm_mean, self.mm_data_min, self.mm_data_max, self.mm_data_std = self.real_daq.get_data(signal_channel=daq_channel_2,
+                                                                                                                      integration_time=integration_time_2,
+                                                                                                                      sample_rate=sample_rate_2)
+            self._update_multimeter(channel='2')
+            root.update()
+
+    def _multimeter(self):
+        if not hasattr(self, 'multimeter_popup'):
+            self._create_popup_window('multimeter_popup')
+        else:
+            self._initialize_panel('multimeter_popup')
+        self._build_panel(settings.multimeter_popup_build_dict)
+        for combobox_widget, entry_list in self.multimeter_combobox_entry_dict.iteritems():
+            self.populate_combobox(combobox_widget, entry_list)
+        getattr(self, '_multimeter_popup_daq_channel_1_combobox').setCurrentIndex(2)
+        getattr(self, '_multimeter_popup_daq_channel_2_combobox').setCurrentIndex(3)
+        getattr(self, '_multimeter_popup_daq_sample_rate_1_combobox').setCurrentIndex(2)
+        getattr(self, '_multimeter_popup_daq_sample_rate_2_combobox').setCurrentIndex(2)
+        getattr(self, '_multimeter_popup_daq_integration_time_1_combobox').setCurrentIndex(0)
+        getattr(self, '_multimeter_popup_daq_integration_time_2_combobox').setCurrentIndex(0)
+        self.multimeter_popup.showMaximized()
+
+    def _close_multimeter(self):
+        self.multimeter_popup.close()
+
+    #################################################
     # XY COLLECTOR
     #################################################
 
@@ -466,11 +578,6 @@ class DAQGuiTemplate(QtGui.QWidget):
         ax.set_title(title, fontsize=10)
         ax.set_xlabel(xlabel, fontsize=10)
         ax.set_ylabel(ylabel, fontsize=10)
-        #if len(self.ydata)>1:
-            #yticks = np.linspace(min(self.ydata),max(self.ydata),5)
-            #yticks = [round(x,2) for x in yticks]
-            #ax.set_yticks(yticks)
-            #ax.set_yticklabels(yticks,fontsize = 6)
         save_path = 'temp_files/temp_yv.png'
         fig.savefig(save_path)
         pl.close('all')
@@ -486,15 +593,6 @@ class DAQGuiTemplate(QtGui.QWidget):
         ax.set_title(title, fontsize=10)
         ax.set_xlabel(xlabel, fontsize=10)
         ax.set_ylabel(ylabel, fontsize=10)
-        #if len(self.ydata)>1:
-            #yticks = np.linspace(min(self.ydata),max(self.ydata),5)
-            #yticks = [round(x,2) for x in yticks]
-            #ax.set_yticks(yticks)
-            #ax.set_yticklabels(yticks,fontsize = 6)
-            #xticks = np.linspace(min(self.xdata),max(self.xdata),5)
-            #xticks = [round(s,2) for s in xticks]
-            #ax.set_xticks(xticks)
-            #ax.set_xticklabels(xticks,fontsize = 6)
         save_path = 'temp_files/temp_iv.png'
         fig.savefig(save_path)
         pl.close('all')
@@ -525,14 +623,19 @@ class DAQGuiTemplate(QtGui.QWidget):
             self._draw_x(title='X data', xlabel='Sample', ylabel='Bias Voltage (V)')
             self._draw_y(title='Y data', xlabel='Sample', ylabel='SQUID Output Voltage (V)')
             self._draw_xy_collector(title='IV Curve', xlabel='Bias Voltage ($\mu$V)', ylabel='SQUID Output Voltage (V)')
-            #idx = getattr(self, '_xy_collector_popup_voltage_factor_combobox').findText('1e-5')
-            #getattr(self, '_xy_collector_popup_voltage_factor_combobox').setCurrentIndex(idx)
+            if len(self.xdata) == 0:
+                getattr(self, '_xy_collector_popup_voltage_factor_combobox').setCurrentIndex(0)
         elif run_mode == 'RT':
-            self._draw_x(title='X data', xlabel='Sample', ylabel='GRT RES (V)')
+            if len(self.xdata) == 0:
+                getattr(self, '_xy_collector_popup_voltage_factor_combobox').setCurrentIndex(3)
+                getattr(self, '_xy_collector_popup_invert_output_checkbox').setChecked(True)
+                getattr(self, '_xy_collector_popup_sample_temp_lineedit').setText('Hi2Lo')
+                getattr(self, '_xy_collector_popup_sample_res_lineedit').setText('1.0')
+                getattr(self, '_xy_collector_popup_daq_channel_x_combobox').setCurrentIndex(5)
+                getattr(self, '_xy_collector_popup_daq_channel_y_combobox').setCurrentIndex(3)
+            self._draw_x(title='X data', xlabel='Sample', ylabel='GRT Temp (mK)')
             self._draw_y(title='Y data', xlabel='Sample', ylabel='SQUID Output Voltage (V)')
-            self._draw_xy_collector(title='RT Curve', xlabel='GRT Res (V)', ylabel='SQUID Output Voltage (V)')
-            #idx = getattr(self, '_xy_collector_popup_voltage_factor_combobox').findText('1')
-            #getattr(self, '_xy_collector_popup_voltage_factor_combobox').setCurrentIndex(idx)
+            self._draw_xy_collector(title='RT Curve', xlabel='GRT Temp (mK)', ylabel='SQUID Output Voltage (V)')
         else:
             self._draw_xy_collector()
 
@@ -540,7 +643,9 @@ class DAQGuiTemplate(QtGui.QWidget):
         selected_squid = str(getattr(self, '_xy_collector_popup_squid_select_combobox').currentText())
         squid_calibration = settings.squid_calibration_dict[selected_squid]
         squid_str = '{0} (uA/V)'.format(squid_calibration)
-        selected_squid = str(getattr(self, '_xy_collector_popup_squid_conversion_label').setText(squid_str))
+        getattr(self, '_xy_collector_popup_squid_conversion_label').setText(squid_str)
+        if len(self.sample_dict) > 0 and selected_squid in self.sample_dict:
+            getattr(self, '_xy_collector_popup_sample_name_lineedit').setText(self.sample_dict[selected_squid])
 
     def _update_xy_collector_buttons_sizes(self):
         width = 0.1 * float(self.screen_resolution.width())
@@ -561,44 +666,55 @@ class DAQGuiTemplate(QtGui.QWidget):
 
     def _run_xy_collector(self):
         global continue_run
+        continue_run = True
         self._get_raw_data_save_path()
         sender_text = str(self.sender().text())
         self.sender().setFlat(True)
+        getattr(self, '_xy_collector_popup_save_pushbutton').setFlat(True)
         self.sender().setText('Taking Data')
-        continue_run = True
         daq_channel_x = getattr(self,'_xy_collector_popup_daq_channel_x_combobox').currentText()
         daq_channel_y = getattr(self, '_xy_collector_popup_daq_channel_y_combobox').currentText()
         integration_time = int(float(str(getattr(self, '_xy_collector_popup_daq_integration_time_combobox').currentText())))
         sample_rate = int(float(str(getattr(self, '_xy_collector_popup_daq_sample_rate_combobox').currentText())))
-        self.xdata, self.ydata, self.xstd, self.ystd = [], [], [], []
+        self.xdata, self.ydata, self.xstd, self.ystd = np.asarray([]), np.asarray([]), np.asarray([]), np.asarray([])
+        run_mode = str(getattr(self, '_xy_collector_popup_mode_combobox').currentText())
+        if run_mode == 'RT':
+            rtc = RTCurve([])
+            voltage_factor = float(str(getattr(self, '_xy_collector_popup_voltage_factor_combobox').currentText()))
         with open(self.raw_data_path, 'w') as data_handle:
             while continue_run:
                 x_data, x_mean, x_min, x_max, x_std = self.real_daq.get_data(signal_channel=daq_channel_x,
                                                                              integration_time=integration_time,
                                                                              sample_rate=sample_rate)
+                if run_mode == 'RT':
+                    print 'before', x_data, x_mean, voltage_factor
+                    print x_mean * voltage_factor
+                    if 3.0 < x_mean * voltage_factor < 600:
+                        x_data = 1e3 * rtc.resistance_to_temp_grt(x_data * voltage_factor, serial_number=29268)
+                    else:
+                        x_data = [np.nan]
+                    x_mean = np.mean(x_data)
+                    x_min = np.min(x_data)
+                    x_max = np.max(x_data)
+                    x_std = np.std(x_data)
+                    print 'after', x_mean
                 y_data, y_mean, y_min, y_max, y_std = self.real_daq.get_data(signal_channel=daq_channel_y,
                                                                              integration_time=integration_time,
                                                                              sample_rate=sample_rate)
-                if x_mean < 0.0:
+                if run_mode == 'IV' and x_mean < 0.0:
                     x_mean *= -1
                     x_data = x_data -2 * x_data
-                if daq_channel_x in ['0', '1']:
-                    x_data = x_data + 1.377
-                    x_mean += 1.377
-                if daq_channel_y in ['0', '1']:
-                    y_data = y_data + 1.377
-                    y_mean += 1.377
+                self.xdata = np.append(self.xdata, x_mean)
+                self.ydata = np.append(self.ydata, y_mean)
+                self.xstd = np.append(self.xstd, x_std)
+                self.ystd = np.append(self.ystd, y_std)
                 getattr(self, '_xy_collector_popup_xdata_mean_label').setText('{0:.4f}'.format(x_mean))
                 getattr(self, '_xy_collector_popup_xdata_std_label').setText('{0:.4f}'.format(x_std))
                 getattr(self, '_xy_collector_popup_ydata_mean_label').setText('{0:.4f}'.format(y_mean))
                 getattr(self, '_xy_collector_popup_ydata_std_label').setText('{0:.4f}'.format(y_std))
-                self.xdata.append(x_mean)
-                self.ydata.append(y_mean)
-                self.xstd.append(x_std)
-                self.ystd.append(y_std)
-                self._update_in_xy_mode()
                 data_line = '{0}\t{1}\t{2}\n'.format(x_mean, y_mean, y_std)
                 data_handle.write(data_line)
+                self._update_in_xy_mode()
                 root.update()
 
     def _xy_collector(self):
@@ -614,8 +730,10 @@ class DAQGuiTemplate(QtGui.QWidget):
         self.xy_collector_popup.setWindowTitle('XY COLLECTOR')
         getattr(self, '_xy_collector_popup_daq_channel_x_combobox').setCurrentIndex(2)
         getattr(self, '_xy_collector_popup_daq_channel_y_combobox').setCurrentIndex(3)
-        self.xdata = []
-        self.ydata = []
+        self.xdata = np.asarray([])
+        self.ydata = np.asarray([])
+        self.xstd = np.asarray([])
+        self.ystd = np.asarray([])
         self._update_in_xy_mode()
         self._update_squid_calibration()
         getattr(self, '_xy_collector_popup_fit_clip_lo_lineedit').setText(str(self.ivcurve_plot_settings_dict['fit_clip_lo']))
@@ -657,7 +775,6 @@ class DAQGuiTemplate(QtGui.QWidget):
         f_0_guess = tau_in_hertz
         amp_0_guess = 1.0
         if len(freq_vector) >= 2 and ((max(freq_vector) - min(freq_vector)) >=2):
-            print 'fittting'
             fit_params = tc.fit_single_pol(freq_vector, amp_vector / amp_vector[0],
                                            fit_params=[amp_0_guess, f_0_guess])
             test_freq_vector = np.arange(1.0, 250, 0.1)
@@ -735,7 +852,7 @@ class DAQGuiTemplate(QtGui.QWidget):
         else:
             self._initialize_panel('time_constant_popup')
         self._build_panel(settings.time_constant_popup_build_dict)
-        for combobox_widget, entry_list in self.time_constant_comobobox_entry_dict.iteritems():
+        for combobox_widget, entry_list in self.time_constant_combobox_entry_dict.iteritems():
             self.populate_combobox(combobox_widget, entry_list)
         getattr(self, '_time_constant_popup_daq_select_combobox').setCurrentIndex(6)
         getattr(self, '_time_constant_popup_daq_sample_rate_combobox').setCurrentIndex(2)

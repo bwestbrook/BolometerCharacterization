@@ -9,6 +9,7 @@ class RTCurve():
         self.list_of_input_dicts = list_of_input_dicts
         self.xlim = (200, 1000)
         self.ylim = (0, 2.5)
+        self.grt_list = [25070, 25312, 29268]
 
     def run(self, plot=True):
         if plot:
@@ -17,7 +18,8 @@ class RTCurve():
             grt_res_vector, sample_res_vector = self.load_data(input_dict)
             grt_temperature_vector = self.resistance_to_temp_grt(grt_res_vector, input_dict['grt_serial'])
             sample_res_vector = self.normalize_squid_output(sample_res_vector, input_dict)
-            fig = self.plot_rt_curves(grt_temperature_vector, sample_res_vector, fig, input_dict)
+            fig = None
+            fig = self.plot_rt_curves(grt_temperature_vector, sample_res_vector, fig=fig, input_dict=input_dict)
         if plot:
             fig.subplots_adjust(left=0.08, right=0.95)
             axis = fig.get_axes()[0]
@@ -52,21 +54,28 @@ class RTCurve():
             pl.show()
         return np.asarray(grt_res_vector), np.asarray(sample_res_vector)
 
-    def resistance_to_temp_grt(self, grt_res_vector, serial_number):
+    def resistance_to_temp_grt(self, grt_res_vector, serial_number='29268'):
         grt_temperature_vector = resistance_to_temp(grt_res_vector, serial_number)
         return grt_temperature_vector
 
-    def plot_rt_curves(self, grt_temperature_vector, sample_res_vector, fig, input_dict):
+    def plot_rt_curves(self, grt_temperature_vector, sample_res_vector, in_millikelvin=False,
+                       fig=None, input_dict={}):
         if fig is None:
             fig = pl.figure(figsize=(10, 5))
             axis = fig.add_subplot(111)
         else:
             axis = fig.get_axes()[0]
-        axis.plot(grt_temperature_vector * 1e3, sample_res_vector, label=input_dict['label'])
+        if in_millikelvin:
+            axis.plot(grt_temperature_vector, sample_res_vector, label=input_dict['label'])
+        else:
+            axis.plot(grt_temperature_vector * 1e3, sample_res_vector, label=input_dict['label'])
         axis.set_xlabel('Temperature (mK)')
         axis.set_ylabel('Sample Resistance ($\Omega$)')
         axis.set_title('Res vs. Temp')
-        axis.set_xlim(self.xlim)
+        if 'xlim' in input_dict:
+            axis.set_xlim(input_dict['xlim'])
+        else:
+            axis.set_xlim(self.xlim)
         if 'normal_res' in input_dict:
             upper = input_dict['normal_res'] * 1.1
             ylim = (0, upper)
