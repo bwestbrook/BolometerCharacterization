@@ -54,22 +54,22 @@ xy_collector_settings.xy_collector_build_dict = {
                                                              '_xy_collector_popup_data_clip_hi_header_label': {'text': 'Data Clip Hi:', 'position': (9, 2, 1, 1)},
                                                              '_xy_collector_popup_data_clip_hi_lineedit': {'text': '', 'position': (9, 3, 1, 1)},
 
-                                                             '_xy_collector_popup_include_errorbars_checkbox': {'text': 'Include Error Bars:', 'position': (10, 0, 1, 1)},
+                                                             '_xy_collector_popup_include_errorbars_checkbox': {'text': 'Include Error Bars:', 'position': (11, 0, 1, 1)},
 
-                                                             '_xy_collector_popup_invert_output_checkbox': {'text': 'Invert Output:', 'position': (10, 1, 1, 1)},
+                                                             '_xy_collector_popup_invert_output_checkbox': {'text': 'Invert Output:', 'position': (11, 1, 1, 1)},
 
-                                                             '_xy_collector_popup_sample_res_header_label': {'text': 'Sample Res RT (Ohms):', 'position': (11, 0, 1, 1)},
-                                                             '_xy_collector_popup_sample_res_lineedit': {'text': '', 'position': (11, 1, 1, 1)},
+                                                             '_xy_collector_popup_sample_res_header_label': {'text': 'Sample Res RT (Ohms):', 'position': (12, 0, 1, 1)},
+                                                             '_xy_collector_popup_sample_res_lineedit': {'text': '', 'position': (12, 1, 1, 1)},
 # CONTROL BUTTONS 
                                                              '_xy_collector_popup_control_buttons_label': {'text': 'CONTROLS', 'font': 'huge', 'color': 'blue',
-                                                                                                          'alignment': 'Center', 'position': (12, 0, 1, 4)},
-                                                             '_xy_collector_popup_start_pushbutton': {'text': 'Start', 'font': 'huge', 'function': '_run_xy_collector', 'position': (13, 0, 1, 2)},
+                                                                                                          'alignment': 'Center', 'position': (13, 0, 1, 4)},
+                                                             '_xy_collector_popup_start_pushbutton': {'text': 'Start', 'font': 'huge', 'function': '_run_xy_collector', 'position': (14, 0, 1, 2)},
 
-                                                             '_xy_collector_popup_pause_pushbutton': {'text': 'Stop', 'function': '_stop', 'position': (13, 2, 1, 2)},
+                                                             '_xy_collector_popup_pause_pushbutton': {'text': 'Stop', 'function': '_stop', 'position': (14, 2, 1, 2)},
 
-                                                             '_xy_collector_popup_save_pushbutton': {'text': 'Make and Save Plots and Data', 'function': '_save_plots_and_data', 'position': (14, 0, 1, 4)},
+                                                             '_xy_collector_popup_save_pushbutton': {'text': 'Make and Save Plots and Data', 'function': '_save_plots_and_data', 'position': (15, 0, 1, 4)},
 
-                                                             '_xy_collector_popup_close_pushbutton': {'text': 'Close', 'function': '_close_xy_collector', 'position': (15, 0, 1, 4)},
+                                                             '_xy_collector_popup_close_pushbutton': {'text': 'Close', 'function': '_close_xy_collector', 'position': (16, 0, 1, 4)},
 
 # VISUAL DATA MONITORING
                                                              '_xy_collector_popup_data_monitor_label': {'text': 'VISUAL DATA MONITOR', 'font': 'huge', 'color': 'blue',

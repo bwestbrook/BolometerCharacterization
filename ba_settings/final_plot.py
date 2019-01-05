@@ -47,11 +47,10 @@ final_plot_settings.final_plot_build_dict = {                '_common_settings':
 
 
 # Contrl Buttons Labels 
-                                                             '_final_plot_popup_replot_pushbutton': {'text': 'Replot', 'function': '_replot', 'position': (8, 0, 1, 6)},
-
-                                                             '_final_plot_popup_save_pushbutton': {'text': 'Save', 'function': '_save_final_plot', 'position': (9, 0, 1, 6)},
-
-                                                             '_final_plot_popup_close_pushbutton': {'text': 'Close', 'function': '_close_final_plot', 'position': (10, 0, 1, 6)},
+                                                             '_final_plot_popup_load_pushbutton': {'text': 'Load', 'function': '_load_plot_data', 'position': (8, 0, 1, 6)},
+                                                             '_final_plot_popup_replot_pushbutton': {'text': 'Replot', 'function': '_replot', 'position': (9, 0, 1, 6)},
+                                                             '_final_plot_popup_save_pushbutton': {'text': 'Save', 'function': '_save_final_plot', 'position': (10, 0, 1, 6)},
+                                                             '_final_plot_popup_close_pushbutton': {'text': 'Close', 'function': '_close_final_plot', 'position': (11, 0, 1, 6)},
 
 
 }

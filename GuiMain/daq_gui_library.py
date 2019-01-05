@@ -146,11 +146,26 @@ class DAQGuiTemplate(QtGui.QWidget):
     # Generica Control Function (Common to all DAQ Types)
     #################################################
 
+    def _create_sample_dict_path(self):
+        self.sample_dict = {}
+        for i in range(1, 7):
+            widget = '_daq_main_panel_set_sample_{0}_lineedit'.format(i)
+            sample_name = str(getattr(self, widget).text())
+            self.sample_dict[str(i)] = sample_name
+        sample_dict_path = './Sample_Dicts/{0}.json'.format(self.today_str)
+        with open(sample_dict_path, 'w') as sample_dict_file_handle:
+            json.dump(self.sample_dict, sample_dict_file_handle)
+        getattr(self, '_daq_main_panel_set_sample_dict_path_label').setText('Set Path @ {0}'.format(sample_dict_path))
+
     def _set_sample_dict_path(self):
         sample_dict_path = str(QtGui.QFileDialog.getOpenFileName(self, directory=self.sample_dict_folder, filter='*.json'))
         with open(sample_dict_path, 'r') as sample_dict_file_handle:
             self.sample_dict = json.load(sample_dict_file_handle)
         getattr(self, '_daq_main_panel_set_sample_dict_path_label').setText(sample_dict_path)
+        getattr(self, '_daq_main_panel_set_sample_dict_path_label').setText('Set Path @ {0}'.format(sample_dict_path))
+        for i in range(1, 7):
+            widget = '_daq_main_panel_set_sample_{0}_lineedit'.format(i)
+            sample_name = getattr(self, widget).setText(self.sample_dict[str(i)])
 
     def _get_raw_data_save_path(self):
         sender = str(self.sender().whatsThis())
@@ -162,9 +177,9 @@ class DAQGuiTemplate(QtGui.QWidget):
             label = iv_params[4]
             temp = iv_params[5]
             if run_mode == 'IV':
-                suggested_file_name = 'SQ{0}_{1}_IVCurve_{2}_'.format(squid, label, temp.replace('.', 'p'))
+                suggested_file_name = 'SQ{0}_{1}_IVCurve_Raw_{2}_'.format(squid, label, temp.replace('.', 'p'))
             elif run_mode == 'RT':
-                suggested_file_name = 'SQ{0}_{1}_RTCurve_{2}_'.format(squid, label, temp.replace('.', 'p'))
+                suggested_file_name = 'SQ{0}_{1}_RTCurve_Raw_{2}_'.format(squid, label, temp.replace('.', 'p'))
             indicies = []
             last_index = '00'
             for file_name in os.listdir(self.data_folder):
@@ -180,10 +195,15 @@ class DAQGuiTemplate(QtGui.QWidget):
             path = os.path.join(self.data_folder, 'test.dat')
             set_to_widget = '_time_constant_popup_raw_data_path_label'
         data_name = str(QtGui.QFileDialog.getSaveFileName(self, 'Raw Data Save Location', path, '.dat'))
-        self.raw_data_path = os.path.join(self.data_folder, data_name)
-        getattr(self, set_to_widget).setText(self.raw_data_path)
-        self.plotted_data_path = self.raw_data_path.replace('.dat', '_plotted.png')
-        self.parsed_data_path = self.raw_data_path.replace('.dat', '_calibrated.dat')
+        if len(data_name) > 0:
+            self.raw_data_path = os.path.join(self.data_folder, data_name)
+            getattr(self, set_to_widget).setText(self.raw_data_path)
+            self.plotted_data_path = self.raw_data_path.replace('.dat', '_plotted.png')
+            self.parsed_data_path = self.raw_data_path.replace('.dat', '_calibrated.dat')
+        else:
+            self.raw_data_path = None
+            self.plotted_data_path = None
+            self.parsed_data_path = None
 
     def _get_plotted_data_save_path(self):
         data_name = str(QtGui.QFileDialog.getSaveFileName(self, 'Plotted Data Save Location', self.data_folder))
@@ -276,6 +296,26 @@ class DAQGuiTemplate(QtGui.QWidget):
     # Final Plotting and Saving (Common to all DAQ Types)
     #################################################
 
+    def _load_plot_data(self):
+        #data_folder = './Data/{0}'.format(self.today_str)
+        #if not os.path.exists(data_folder):
+            #data_folder = './Data'
+        #data_folder = './Data/{0}'.format(self.today_str)
+        #if not os.path.exists(data_folder):
+        data_folder = './Data'
+        self.raw_data_path = str(QtGui.QFileDialog.getOpenFileName(self, directory=data_folder))
+        self.parsed_data_path = self.raw_data_path.replace('.dat', '_calibrated.dat')
+        self.plotted_data_path = self.raw_data_path.replace('.dat', '_plotted.png')
+        mode, squid, squid_conversion, voltage_factor, label, temp, fit_clip, data_clip, e_bars = self._get_iv_curve_params_from_xy_collector()
+        self.xdata, self.ydata, self.ystd = [], [], []
+        with open(self.raw_data_path, 'r') as data_file_handle:
+            for line in data_file_handle.readlines():
+                line = line.replace('\n', '')
+                self.xdata.append(float(line.split('\t')[0]))
+                self.ydata.append(float(line.split('\t')[1]))
+                self.ystd.append(float(line.split('\t')[2]))
+        self._final_iv_plot()
+
     def _adjust_final_plot_popup(self, plot_type, title=None, xlabel=None, ylabel=None):
         if not hasattr(self, 'final_plot_popup'):
             self._create_popup_window('final_plot_popup')
@@ -284,30 +324,31 @@ class DAQGuiTemplate(QtGui.QWidget):
         self._build_panel(settings.final_plot_build_dict)
         # Fill GUI in based on sender elif above
         # Add the actual plot and save paths to the new popup
-        image = QtGui.QPixmap(self.temp_plot_path)
-        getattr(self,  '_final_plot_popup_result_label').setPixmap(image)
-        self.plotted_data_path = self.raw_data_path.replace('.dat', '_plotted.png')
-        self.parsed_data_path = self.raw_data_path.replace('.dat', '_calibrated.dat')
-        getattr(self, '_final_plot_popup_plot_path_label').setText(self.plotted_data_path)
-        getattr(self, '_final_plot_popup_data_path_label').setText(self.parsed_data_path)
-        if title is not None:
-            getattr(self, '_final_plot_popup_plot_title_lineedit').setText(title)
-        if xlabel is not None:
-            getattr(self, '_final_plot_popup_x_label_lineedit').setText(xlabel)
-        if ylabel is not None:
-            getattr(self, '_final_plot_popup_y_label_lineedit').setText(ylabel)
-        if plot_type == 'IV':
-            squid_conversion = getattr(self, '_xy_collector_popup_squid_conversion_label').text()
-            voltage_factor = getattr(self, '_xy_collector_popup_voltage_factor_combobox').currentText()
-        elif plot_type == 'tau':
-            #squid_conversion = getattr(self, '_time_constant_popup_take_data_point_pushbutton').text()
-            squid_conversion = '1.0'
-            voltage_factor = '1.0'
-        else:
-            squid_conversion = '1.0'
-            voltage_factor = '1.0'
-        getattr(self, '_final_plot_popup_x_conversion_label').setText(voltage_factor)
-        getattr(self, '_final_plot_popup_y_conversion_label').setText(squid_conversion)
+        if hasattr(self, 'temp_plot_path'):
+            image = QtGui.QPixmap(self.temp_plot_path)
+            getattr(self,  '_final_plot_popup_result_label').setPixmap(image)
+            self.plotted_data_path = self.raw_data_path.replace('.dat', '_plotted.png')
+            self.parsed_data_path = self.raw_data_path.replace('.dat', '_calibrated.dat')
+            getattr(self, '_final_plot_popup_plot_path_label').setText(self.plotted_data_path)
+            getattr(self, '_final_plot_popup_data_path_label').setText(self.parsed_data_path)
+            if title is not None:
+                getattr(self, '_final_plot_popup_plot_title_lineedit').setText(title)
+            if xlabel is not None:
+                getattr(self, '_final_plot_popup_x_label_lineedit').setText(xlabel)
+            if ylabel is not None:
+                getattr(self, '_final_plot_popup_y_label_lineedit').setText(ylabel)
+            if plot_type == 'IV':
+                squid_conversion = getattr(self, '_xy_collector_popup_squid_conversion_label').text()
+                voltage_factor = getattr(self, '_xy_collector_popup_voltage_factor_combobox').currentText()
+            elif plot_type == 'tau':
+                #squid_conversion = getattr(self, '_time_constant_popup_take_data_point_pushbutton').text()
+                squid_conversion = '1.0'
+                voltage_factor = '1.0'
+            else:
+                squid_conversion = '1.0'
+                voltage_factor = '1.0'
+            getattr(self, '_final_plot_popup_x_conversion_label').setText(voltage_factor)
+            getattr(self, '_final_plot_popup_y_conversion_label').setText(squid_conversion)
         self.final_plot_popup.setWindowTitle('Adjust Final Plot')
         self.final_plot_popup.showMaximized()
 
@@ -360,16 +401,17 @@ class DAQGuiTemplate(QtGui.QWidget):
                                                                             v_bias_multiplier=voltage_factor,
                                                                             determine_calibration=False,
                                                                             clip=fit_clip, label=label)
-        with open(self.parsed_data_path, 'w') as parsed_data_handle:
-            for i, v_bias in enumerate(v_bias_real):
-                i_bolo = i_bolo_real[i]
-                parsed_data_line = '{0}\t{1}\t{2}\n'.format(v_bias, i_bolo, i_bolo_std)
-                parsed_data_handle.write(parsed_data_line)
-        self.active_fig = ivc.plot_all_curves(v_bias_real, i_bolo_real, stds=i_bolo_std, label=label,
-                                              fit_clip=fit_clip, plot_clip=data_clip, title=title,
-                                              pturn=True)
-        self.temp_plot_path = './temp_files/temp_iv_png.png'
-        self.active_fig.savefig(self.temp_plot_path)
+        if hasattr(self, 'parsed_data_path'):
+            with open(self.parsed_data_path, 'w') as parsed_data_handle:
+                for i, v_bias in enumerate(v_bias_real):
+                    i_bolo = i_bolo_real[i]
+                    parsed_data_line = '{0}\t{1}\t{2}\n'.format(v_bias, i_bolo, i_bolo_std)
+                    parsed_data_handle.write(parsed_data_line)
+            self.active_fig = ivc.plot_all_curves(v_bias_real, i_bolo_real, stds=i_bolo_std, label=label,
+                                                  fit_clip=fit_clip, plot_clip=data_clip, title=title,
+                                                  pturn=True)
+            self.temp_plot_path = './temp_files/temp_iv_png.png'
+            self.active_fig.savefig(self.temp_plot_path)
         self._adjust_final_plot_popup('IV', xlabel='Voltage ($\mu$V)', title=title)
 
     def _draw_final_plot(self, x, y, stds=None, save_path=None, mode=None,
@@ -644,7 +686,7 @@ class DAQGuiTemplate(QtGui.QWidget):
         squid_calibration = settings.squid_calibration_dict[selected_squid]
         squid_str = '{0} (uA/V)'.format(squid_calibration)
         getattr(self, '_xy_collector_popup_squid_conversion_label').setText(squid_str)
-        if len(self.sample_dict) > 0 and selected_squid in self.sample_dict:
+        if hasattr(self, 'sample_dict') > 0 and selected_squid in self.sample_dict:
             getattr(self, '_xy_collector_popup_sample_name_lineedit').setText(self.sample_dict[selected_squid])
 
     def _update_xy_collector_buttons_sizes(self):
@@ -668,54 +710,55 @@ class DAQGuiTemplate(QtGui.QWidget):
         global continue_run
         continue_run = True
         self._get_raw_data_save_path()
-        sender_text = str(self.sender().text())
-        self.sender().setFlat(True)
-        getattr(self, '_xy_collector_popup_save_pushbutton').setFlat(True)
-        self.sender().setText('Taking Data')
-        daq_channel_x = getattr(self,'_xy_collector_popup_daq_channel_x_combobox').currentText()
-        daq_channel_y = getattr(self, '_xy_collector_popup_daq_channel_y_combobox').currentText()
-        integration_time = int(float(str(getattr(self, '_xy_collector_popup_daq_integration_time_combobox').currentText())))
-        sample_rate = int(float(str(getattr(self, '_xy_collector_popup_daq_sample_rate_combobox').currentText())))
-        self.xdata, self.ydata, self.xstd, self.ystd = np.asarray([]), np.asarray([]), np.asarray([]), np.asarray([])
-        run_mode = str(getattr(self, '_xy_collector_popup_mode_combobox').currentText())
-        if run_mode == 'RT':
-            rtc = RTCurve([])
-            voltage_factor = float(str(getattr(self, '_xy_collector_popup_voltage_factor_combobox').currentText()))
-        with open(self.raw_data_path, 'w') as data_handle:
-            while continue_run:
-                x_data, x_mean, x_min, x_max, x_std = self.real_daq.get_data(signal_channel=daq_channel_x,
-                                                                             integration_time=integration_time,
-                                                                             sample_rate=sample_rate)
-                if run_mode == 'RT':
-                    print 'before', x_data, x_mean, voltage_factor
-                    print x_mean * voltage_factor
-                    if 3.0 < x_mean * voltage_factor < 600:
-                        x_data = 1e3 * rtc.resistance_to_temp_grt(x_data * voltage_factor, serial_number=29268)
-                    else:
-                        x_data = [np.nan]
-                    x_mean = np.mean(x_data)
-                    x_min = np.min(x_data)
-                    x_max = np.max(x_data)
-                    x_std = np.std(x_data)
-                    print 'after', x_mean
-                y_data, y_mean, y_min, y_max, y_std = self.real_daq.get_data(signal_channel=daq_channel_y,
-                                                                             integration_time=integration_time,
-                                                                             sample_rate=sample_rate)
-                if run_mode == 'IV' and x_mean < 0.0:
-                    x_mean *= -1
-                    x_data = x_data -2 * x_data
-                self.xdata = np.append(self.xdata, x_mean)
-                self.ydata = np.append(self.ydata, y_mean)
-                self.xstd = np.append(self.xstd, x_std)
-                self.ystd = np.append(self.ystd, y_std)
-                getattr(self, '_xy_collector_popup_xdata_mean_label').setText('{0:.4f}'.format(x_mean))
-                getattr(self, '_xy_collector_popup_xdata_std_label').setText('{0:.4f}'.format(x_std))
-                getattr(self, '_xy_collector_popup_ydata_mean_label').setText('{0:.4f}'.format(y_mean))
-                getattr(self, '_xy_collector_popup_ydata_std_label').setText('{0:.4f}'.format(y_std))
-                data_line = '{0}\t{1}\t{2}\n'.format(x_mean, y_mean, y_std)
-                data_handle.write(data_line)
-                self._update_in_xy_mode()
-                root.update()
+        if self.raw_data_path is not None:
+            sender_text = str(self.sender().text())
+            self.sender().setFlat(True)
+            getattr(self, '_xy_collector_popup_save_pushbutton').setFlat(True)
+            self.sender().setText('Taking Data')
+            daq_channel_x = getattr(self,'_xy_collector_popup_daq_channel_x_combobox').currentText()
+            daq_channel_y = getattr(self, '_xy_collector_popup_daq_channel_y_combobox').currentText()
+            integration_time = int(float(str(getattr(self, '_xy_collector_popup_daq_integration_time_combobox').currentText())))
+            sample_rate = int(float(str(getattr(self, '_xy_collector_popup_daq_sample_rate_combobox').currentText())))
+            self.xdata, self.ydata, self.xstd, self.ystd = np.asarray([]), np.asarray([]), np.asarray([]), np.asarray([])
+            run_mode = str(getattr(self, '_xy_collector_popup_mode_combobox').currentText())
+            if run_mode == 'RT':
+                rtc = RTCurve([])
+                voltage_factor = float(str(getattr(self, '_xy_collector_popup_voltage_factor_combobox').currentText()))
+            with open(self.raw_data_path, 'w') as data_handle:
+                while continue_run:
+                    x_data, x_mean, x_min, x_max, x_std = self.real_daq.get_data(signal_channel=daq_channel_x,
+                                                                                 integration_time=integration_time,
+                                                                                 sample_rate=sample_rate)
+                    if run_mode == 'RT':
+                        print 'before', x_data, x_mean, voltage_factor
+                        print x_mean * voltage_factor
+                        if 3.0 < x_mean * voltage_factor < 600:
+                            x_data = 1e3 * rtc.resistance_to_temp_grt(x_data * voltage_factor, serial_number=29268)
+                        else:
+                            x_data = [np.nan]
+                        x_mean = np.mean(x_data)
+                        x_min = np.min(x_data)
+                        x_max = np.max(x_data)
+                        x_std = np.std(x_data)
+                        print 'after', x_mean
+                    y_data, y_mean, y_min, y_max, y_std = self.real_daq.get_data(signal_channel=daq_channel_y,
+                                                                                 integration_time=integration_time,
+                                                                                 sample_rate=sample_rate)
+                    if run_mode == 'IV' and x_mean < 0.0:
+                        x_mean *= -1
+                        x_data = x_data -2 * x_data
+                    self.xdata = np.append(self.xdata, x_mean)
+                    self.ydata = np.append(self.ydata, y_mean)
+                    self.xstd = np.append(self.xstd, x_std)
+                    self.ystd = np.append(self.ystd, y_std)
+                    getattr(self, '_xy_collector_popup_xdata_mean_label').setText('{0:.4f}'.format(x_mean))
+                    getattr(self, '_xy_collector_popup_xdata_std_label').setText('{0:.4f}'.format(x_std))
+                    getattr(self, '_xy_collector_popup_ydata_mean_label').setText('{0:.4f}'.format(y_mean))
+                    getattr(self, '_xy_collector_popup_ydata_std_label').setText('{0:.4f}'.format(y_std))
+                    data_line = '{0}\t{1}\t{2}\n'.format(x_mean, y_mean, y_std)
+                    data_handle.write(data_line)
+                    self._update_in_xy_mode()
+                    root.update()
 
     def _xy_collector(self):
         if not hasattr(self, 'xy_collector_popup'):

@@ -246,8 +246,9 @@ class IVCurve():
         #ax4.set_ylim(0, 0.5 * max(power_vector[plot_selector]))
         #ax4.set_xlim(0, 1.1 * max(power_vector[plot_selector]))
         #(max(power_vector[plot_selector]) - 0.8 * max(power_vector[plot_selector]),
-        ax1.set_xlim((plot_clip[0], plot_clip[1]))
-        ax3.set_xlim((plot_clip[0], plot_clip[1]))
+        xlim_range = max(plot_clip) - min(plot_clip)
+        ax1.set_xlim((plot_clip[0] - 0.1 * xlim_range, plot_clip[1] + 0.1 * xlim_range))
+        ax3.set_xlim((plot_clip[0] - 0.1 * xlim_range, plot_clip[1] + 0.1 * xlim_range))
         #ax4.set_xlim((plot_clip[0], plot_clip[1]))
         if show_plot:
             pl.show()
