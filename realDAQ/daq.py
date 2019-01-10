@@ -1,14 +1,25 @@
 import nidaqmx
+import os
+import sys
+import glob
+import serial
 import time
+import pywinusb
 import numpy as np
 from nidaqmx.constants import AcquisitionType, Edge
 
 class DAQ():
 
 
-    def get_data(self, signal_channel=5, integration_time=50, sample_rate=500, central_value=1.0):
+    def get_data(self, signal_channel=3, integration_time=50, sample_rate=500, central_value=1.0):
+        active_devices = self.get_active_devices()
         with nidaqmx.Task() as task:
-            task.ai_channels.add_ai_voltage_chan("Dev4/ai{0}".format(int(signal_channel)))
+            if len(active_devices) == 1:
+                device = active_devices[0]
+            else:
+                print 'Found multiple devices when trying to get data'
+            voltage_chan_str = '{0}/ai{1}'.format(device, signal_channel)
+            task.ai_channels.add_ai_voltage_chan(voltage_chan_str)
             integration_time = int(integration_time)
             sample_rate = int(sample_rate)
             num = int(integration_time * sample_rate / 1000)
@@ -29,6 +40,18 @@ class DAQ():
             data_time_stream = task.read()
         return data_time_stream[0], data_time_stream[1]
 
+    def get_active_devices(self):
+        active_devices = []
+        with nidaqmx.Task() as task:
+            for i in range(16):
+                device = 'Dev{0}'.format(i)
+                try:
+                    task.ai_channels.add_ai_voltage_chan("{0}/ai0".format(device))
+                    active_devices.append(device)
+                except nidaqmx.DaqError:
+                    print '{0} not present'.format(device)
+        return active_devices
+
 if __name__ == '__main__':
     daq = DAQ()
-    daq.get_data2()
+    daq.get_data()

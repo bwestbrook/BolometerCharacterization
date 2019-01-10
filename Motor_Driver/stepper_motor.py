@@ -1,4 +1,6 @@
 from lab_code.lab_serial import lab_serial
+import sys
+import serial
 import time
 import numpy as np
 from operator import mul, div
@@ -14,8 +16,8 @@ class stepper_motor():
         self._send_command('DL2')
 
     def _send_command(self, msg):
-   ###     if not msg.endswith('\r'):
-      #      msg +='\r'
+        ###     if not msg.endswith('\r'):
+        #msg +='\r'
         self._connection.write(msg)
 
     def _query_motor(self, query, timeout=1):
@@ -64,7 +66,7 @@ class stepper_motor():
 
     def finite_rotation(self, step_size):
         degrees = step_size*2500/6
-#        degrees = step_size
+        # degrees = step_size
         self._setup()
         self._send_command('DI{:d}'.format(int(degrees)))
         self._send_command('FL')
@@ -125,9 +127,36 @@ class stepper_motor():
         plt.legend()
         plt.show()
 
+    def get_active_serial_ports(self):
+        """ Lists serial port names
+
+            :raises EnvironmentError:
+                On unsupported or unknown platforms
+            :returns:
+                A list of the serial ports available on the system
+        """
+        if sys.platform.startswith('win'):
+            ports = ['COM%s' % (i + 1) for i in range(256)]
+        elif sys.platform.startswith('linux') or sys.platform.startswith('cygwin'):
+            # this excludes your current terminal "/dev/tty"
+            ports = glob.glob('/dev/tty[A-Za-z]*')
+        elif sys.platform.startswith('darwin'):
+            ports = glob.glob('/dev/tty.*')
+        else:
+            raise EnvironmentError('Unsupported platform')
+
+        active_ports = []
+        for port in ports:
+            try:
+                s = serial.Serial(port)
+                s.close()
+                active_ports.append(port)
+            except (OSError, serial.SerialException):
+                pass
+        return active_ports
 
 if __name__ == '__main__':
-    SM = stepper_motor('COM8')
+    SM = stepper_motor('COM3')
     # SM.set_current(2)
     # SM.finite_rotation(6000)
     # angles, data = SM.take_pol_efficiency(1, 60, noise = 1)

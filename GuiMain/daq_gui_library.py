@@ -1,4 +1,5 @@
 import sys
+import serial
 import json
 import os
 import subprocess
@@ -65,6 +66,7 @@ class DAQGuiTemplate(QtGui.QWidget):
         if not os.path.exists(self.data_folder):
             os.makedirs(self.data_folder)
         self.daq_main_panel_widget.showMaximized()
+        self.active_ports = self.get_active_serial_ports()
 
     def __apply_settings__(self, settings):
         for setting in dir(settings):
@@ -89,6 +91,33 @@ class DAQGuiTemplate(QtGui.QWidget):
     # Stepper Motor and Com ports
     #################################################
 
+    def get_active_serial_ports(self):
+        """ Lists serial port names
+
+            :raises EnvironmentError:
+                On unsupported or unknown platforms
+            :returns:
+                A list of the serial ports available on the system
+        """
+        if sys.platform.startswith('win'):
+            ports = ['COM%s' % (i + 1) for i in range(256)]
+        elif sys.platform.startswith('linux') or sys.platform.startswith('cygwin'):
+            # this excludes your current terminal "/dev/tty"
+            ports = glob.glob('/dev/tty[A-Za-z]*')
+        elif sys.platform.startswith('darwin'):
+            ports = glob.glob('/dev/tty.*')
+        else:
+            raise EnvironmentError('Unsupported platform')
+
+        active_ports = []
+        for port in ports:
+            try:
+                s = serial.Serial(port)
+                s.close()
+                active_ports.append(port)
+            except (OSError, serial.SerialException):
+                pass
+        return active_ports
     def _connect_to_com_port(self, beammapper=None, single_channel_fts=None):
         combobox = str(self.sender().whatsThis())
         print self.sender()
@@ -1089,8 +1118,8 @@ class DAQGuiTemplate(QtGui.QWidget):
         else:
             self._initialize_panel('user_move_stepper_popup')
         self._build_panel(settings.user_move_stepper_build_dict)
-        for combobox_widget, entry_list in self.user_move_stepper_combobox_entry_dict.iteritems():
-            self.populate_combobox(combobox_widget, entry_list)
+        #for combobox_widget, entry_list in self.user_move_stepper_combobox_entry_dict.iteritems():
+        self.populate_combobox('_user_move_stepper_popup_com_ports_combobox', self.active_ports)
         current_string, position_string, velocity_string = self._connect_to_com_port()
         getattr(self, '_user_move_stepper_popup_current_act_label').setText(current_string)
         getattr(self,'_user_move_stepper_popup_velocity_act_label').setText(velocity_string)
