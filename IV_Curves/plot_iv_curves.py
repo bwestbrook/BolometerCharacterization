@@ -222,7 +222,7 @@ class IVCurve():
         ax3.plot(bolo_voltage_bias[plot_selector], resistance_vector[plot_selector], 'b', label='Res ($\Omega$)')
         #ax4.plot(bolo_voltage_bias[power_selector], power_vector[power_selector], resitance_vector[plot_selector], 'r', label='Power (pW)')
         power_selector = np.logical_and(0 < power_vector, power_vector < 0.25 * np.max(power_vector))
-        ax4.plot(resistance_vector[power_selector], power_vector[power_selector], 'r', label='Power (pW)')
+        ax4.plot(resistance_vector[plot_selector], power_vector[plot_selector], 'r', label='Power (pW)')
         if add_fit:
             ax1.plot(v_fit_x_vector[selector_2], poly_fit, label='Fit: {0:.2f}$\Omega$'.format(1.0 / fit_vals[0]))
         # Label the axis

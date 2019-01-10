@@ -531,9 +531,11 @@ class DAQGuiTemplate(QtGui.QWidget):
     def _update_multimeter(self, channel='1', title='', xlabel='', ylabel=''):
         fig, ax = self._create_blank_fig()
         grt_serial = str(getattr(self, '_multimeter_popup_grt_serial_{0}_combobox'.format(channel)).currentText())
+        grt_range = str(getattr(self, '_multimeter_popup_grt_range_{0}_combobox'.format(channel)).currentText())
         if len(grt_serial) > 1:
             rtc = RTCurve([])
-            voltage_factor = 1e3
+            voltage_factor = float(self.multimeter_voltage_factor_range_dict[grt_range])
+            print np.mean(voltage_factor * self.mm_data), grt_serial, voltage_factor
             temp_data = 1e3 * rtc.resistance_to_temp_grt(self.mm_data * voltage_factor, serial_number=grt_serial)
             ax.plot(temp_data)
             temp_data_std = np.std(temp_data)
@@ -590,6 +592,8 @@ class DAQGuiTemplate(QtGui.QWidget):
         getattr(self, '_multimeter_popup_daq_sample_rate_2_combobox').setCurrentIndex(2)
         getattr(self, '_multimeter_popup_daq_integration_time_1_combobox').setCurrentIndex(0)
         getattr(self, '_multimeter_popup_daq_integration_time_2_combobox').setCurrentIndex(0)
+        getattr(self, '_multimeter_popup_grt_range_1_combobox').setCurrentIndex(3)
+        getattr(self, '_multimeter_popup_grt_range_2_combobox').setCurrentIndex(3)
         self.multimeter_popup.showMaximized()
 
     def _close_multimeter(self):
