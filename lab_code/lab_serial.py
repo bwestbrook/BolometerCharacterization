@@ -5,23 +5,25 @@ import serial
 import time
 
 #DEFAULT_PORT = '/dev/ttyUSB0'
-DEFAULT_PORT = 'COM4'
+DEFAULT_PORT = 'COM3'
 
 class lab_serial(object):
     def __init__(self, port=DEFAULT_PORT, verbose=True):
         self.port = port
-        self.verbose = verbose
-        self.ser = serial.Serial(port = self.port,
+        self.verbose = verbose#
+        self.ser = serial.Serial(port=self.port,
                                  baudrate = 9600,
-                                 bytesize = serial.EIGHTBITS,
-                                 parity = serial.PARITY_NONE,
-                                 stopbits = serial.STOPBITS_TWO,
-                                 timeout = 10,
-                                 xonxoff = False,
-                                 rtscts = False,
-                                 dsrdtr = True,
-                                 writeTimeout = 1)
-        
+                                 timeout = 3)
+        #self.ser = serial.Serial(port=self.port,
+                                 #baudrate = 9600,
+                                 #bytesize = serial.EIGHTBITS,
+                                 #parity = serial.PARITY_NONE,
+                                 #stopbits = serial.STOPBITS_TWO,
+                                 #timeout = 10,
+                                 #xonxoff = False,
+                                 #rtscts = False,
+                                 #dsrdtr = True,
+                                 #writeTimeout = 1)
         if not self.ser.isOpen():
             self.ser.open() # sometimes it's already open
         if self.ser.isOpen():
@@ -32,7 +34,7 @@ class lab_serial(object):
 
         self.ser.flushInput()
         self.ser.flushOutput()
-
+        import ipdb;ipdb.set_trace()
 
     def write(self, string):
         """
@@ -42,26 +44,20 @@ class lab_serial(object):
             string += '\r\n'
         self.ser.write(string.encode()) # unicode not supported for serial module in python 3
 
-
-
     def read(self):
         "Returns a properly decoded string of the bytes read from the port"
         return self.ser.readline().decode('utf-8').strip('\r\n')
-
 
     def write_read(self, string, wait_time=0.1):
         self.write(string)
         time.sleep(wait_time)
         return self.read()
 
-
     def is_open(self):
         return self.ser.isOpen()
 
-
     def close(self):
         self.ser.close()
-
 
     def reopen(self):
         if self.is_open():
@@ -70,7 +66,6 @@ class lab_serial(object):
             self.__init__(port=self.port, verbose=self.verbose) # careful in case I start adding extra functionality to the constructor
 
 
-'''if __name__ == '__main__':
-
-    LS = lab_serial()'''
-#    import ipdb;ipdb.set_trace()
+if __name__ == '__main__':
+    LS = lab_serial()
+    import ipdb;ipdb.set_trace()

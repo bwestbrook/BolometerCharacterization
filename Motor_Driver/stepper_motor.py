@@ -20,7 +20,7 @@ class stepper_motor():
         #msg +='\r'
         self._connection.write(msg)
 
-    def _query_motor(self, query, timeout=1):
+    def _query_motor(self, query, timeout=0.5):
         self._send_command(query)
         response = self._connection.read()
         return response
