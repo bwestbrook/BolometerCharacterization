@@ -38,9 +38,9 @@ multimeter_settings.multimeter_popup_build_dict = {
                                                          '_multimeter_popup_grt_range_2_combobox': {'position': (8, 3, 1, 1)},
 
                                                          # CONTROLS 
-                                                         '_multimeter_popup_get_data_pushbutton': {'text': 'Get DAQ Output', 'function': '_take_multimeter_data_point', 'position': (10, 0, 1, 8)},
-                                                         '_multimeter_popup_stop_pushbutton': {'text': 'Stop', 'function': '_stop', 'position': (11, 0, 1, 8)},
-                                                         '_multimeter_popup_take_close_pushbutton': {'text': 'Close', 'function': '_close_multimeter', 'position': (12, 0, 1, 8)},
+                                                         '_multimeter_popup_get_data_pushbutton': {'text': 'Get DAQ Output', 'function': '_take_multimeter_data_point', 'position': (10, 0, 1, 10)},
+                                                         '_multimeter_popup_stop_pushbutton': {'text': 'Stop', 'function': '_stop', 'position': (11, 0, 1, 10)},
+                                                         '_multimeter_popup_take_close_pushbutton': {'text': 'Close', 'function': '_close_multimeter', 'position': (12, 0, 1, 10)},
 
                                                          # DATA MONITOR 
                                                          '_multimeter_popup_data_monitor_header_label': {'text': 'VISUAL DATA MONITOR', 'alignment': 'Center', 'color': 'Blue', 'position': (0, 6, 1, 4)},

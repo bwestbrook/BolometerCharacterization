@@ -89,53 +89,56 @@ class DAQGuiTemplate(QtGui.QWidget):
     # Stepper Motor and Com ports
     #################################################
 
-    def _connect_to_com_port(self, beammapper=None,single_channel_fts=None):
+    def _connect_to_com_port(self, beammapper=None, single_channel_fts=None):
         combobox = str(self.sender().whatsThis())
-        if combobox == '_daq_main_panel_daq_select_combobox':
-            popup = str(self.sender().currentText())
-            if popup == 'Pol Efficiency':
-                com_port = 'COM6'
-                connection = '_pol_efficiency_popup_successful_connection_header_label'
-            elif popup == 'Beam Mapper':
-                if beammapper == 1:
-                    com_port = 'COM6'
-                    connection = '_beam_mapper_popup_x_successful_connection_header_label'
-                    popup_combobox = '_beam_mapper_popup_x_current_com_port_combobox'
-                    getattr(self, popup_combobox).setCurrentIndex(0)
-		elif beammapper == 2:
-                    com_port = 'COM2'
-                    connection = '_beam_mapper_popup_y_successful_connection_header_label'
-                    popup_combobox = '_beam_mapper_popup_y_current_com_port_combobox'
-                    getattr(self, popup_combobox).setCurrentIndex(1)
-            elif popup == 'Single Channel Fts':
-                 if single_channel_fts == 1:
-                    com_port = 'COM6'
-                    connection = '_single_channel_fts_popup_successful_connection_header_label'
-                    popup_combobox = '_single_channel_fts_popup_current_com_port_combobox'
-                    getattr(self, popup_combobox).setCurrentIndex(0)
-            elif single_channel_fts == 2:
-                    com_port = 'COM2'
-                    connection = '_single_channel_fts_popup_grid_successful_connection_header_label'
-                    popup_combobox = '_single_channel_fts_popup_grid_current_com_port_combobox'
-            elif popup == 'User Move Stepper':
-                com_port = 'COM6'
-                connection = '_user_move_stepper_popup_successful_connection_header_label'
-	else:
+        print self.sender()
+        print self.sender().whatsThis()
+        current_string, position_string,velocity_string = '0','0','0'
+        if type(self.sender()) == QtGui.QComboBox:
             com_port = self._get_com_port(combobox=combobox)
             connection = combobox.replace('current_com_port_combobox','successful_connection_header_label')
+            if com_port in ['COM1', 'COM8','COM2','COM3']:
+                if not hasattr(self, 'sm_{0}'.format(com_port)):
+                    setattr(self, 'sm_{0}'.format(com_port), stepper_motor(com_port))
+                    import ipdb;ipdb.set_trace()
+                    current_string = getattr(self, 'sm_{0}'.format(com_port)).get_motor_current().strip('CC=')
+                    position_string = getattr(self, 'sm_{0}'.format(com_port)).get_position().strip('SP=')
+                    velocity_string = getattr(self, 'sm_{0}'.format(com_port)).get_velocity().strip('VE=')
+                else:
+                    current_string, position_string,velocity_string = '0','0','0'
+            getattr(self,connection).setText('Successful Connection to '+ com_port +'!' )
+        else:
+            print 'not a combobox'
+            #popup = str(self.sender().currentText())
+            #if popup == 'Pol Efficiency':
+                #com_port = 'COM6'
+                #connection = '_pol_efficiency_popup_successful_connection_header_label'
+            #elif popup == 'Beam Mapper':
+                #if beammapper == 1:
+                    #com_port = 'COM6'
+                    #connection = '_beam_mapper_popup_x_successful_connection_header_label'
+                    #popup_combobox = '_beam_mapper_popup_x_current_com_port_combobox'
+                    #getattr(self, popup_combobox).setCurrentIndex(0)
+		#elif beammapper == 2:
+                    #com_port = 'COM2'
+                    #connection = '_beam_mapper_popup_y_successful_connection_header_label'
+                    #popup_combobox = '_beam_mapper_popup_y_current_com_port_combobox'
+                    #getattr(self, popup_combobox).setCurrentIndex(1)
+            #elif popup == 'Single Channel Fts':
+                 #if single_channel_fts == 1:
+                    #com_port = 'COM6'
+                    #connection = '_single_channel_fts_popup_successful_connection_header_label'
+                    #popup_combobox = '_single_channel_fts_popup_current_com_port_combobox'
+                    #getattr(self, popup_combobox).setCurrentIndex(0)
+            #elif single_channel_fts == 2:
+                    #com_port = 'COM2'
+                    #connection = '_single_channel_fts_popup_grid_successful_connection_header_label'
+                    #popup_combobox = '_single_channel_fts_popup_grid_current_com_port_combobox'
+            #elif popup == 'User Move Stepper':
+                #com_port = 'COM6'
+                #connection = '_user_move_stepper_popup_successful_connection_header_label'
         #port_number = int(com_port.strip('COM')) - 1
         #init_string = '/dev/ttyUSB{0}'.format(port_number)
-        if com_port not in ['COM1','COM2','COM3']:
-            if not hasattr(self, 'sm_{0}'.format(com_port)):
-                setattr(self, 'sm_{0}'.format(com_port), stepper_motor(com_port))
-                current_string = getattr(self, 'sm_{0}'.format(com_port)).get_motor_current().strip('CC=')
-                position_string = getattr(self, 'sm_{0}'.format(com_port)).get_position().strip('SP=')
-                velocity_string = getattr(self, 'sm_{0}'.format(com_port)).get_velocity().strip('VE=')
-            else:
-                current_string, position_string,velocity_string = '0','0','0'
-        else:
-            current_string, position_string,velocity_string = '0','0','0'
-        getattr(self,connection).setText('Successful Connection to '+ com_port +'!' )
         return current_string, position_string, velocity_string
 
     def _get_com_port(self, combobox):
@@ -171,15 +174,15 @@ class DAQGuiTemplate(QtGui.QWidget):
         sender = str(self.sender().whatsThis())
         if 'xy_collector' in sender:
             run_mode = str(getattr(self, '_xy_collector_popup_mode_combobox').currentText())
-            #iv_params = mode, squid, squid_conversion, voltage_factor, label, temp, fit_clip, data_clip, e_bars
-            iv_params = self._get_iv_curve_params_from_xy_collector()
-            squid = iv_params[1]
-            label = iv_params[4]
-            temp = iv_params[5]
+            plot_params = self._get_params_from_xy_collector()
+            squid = plot_params['squid']
+            label = plot_params['label']
+            temp = plot_params['temp']
+            drift = plot_params['drift']
             if run_mode == 'IV':
                 suggested_file_name = 'SQ{0}_{1}_IVCurve_Raw_{2}_'.format(squid, label, temp.replace('.', 'p'))
             elif run_mode == 'RT':
-                suggested_file_name = 'SQ{0}_{1}_RTCurve_Raw_{2}_'.format(squid, label, temp.replace('.', 'p'))
+                suggested_file_name = 'SQ{0}_{1}_RTCurve_Raw_{2}_'.format(squid, label, drift)
             indicies = []
             last_index = '00'
             for file_name in os.listdir(self.data_folder):
@@ -197,7 +200,6 @@ class DAQGuiTemplate(QtGui.QWidget):
         data_name = str(QtGui.QFileDialog.getSaveFileName(self, 'Raw Data Save Location', path, '.dat'))
         if len(data_name) > 0:
             self.raw_data_path = os.path.join(self.data_folder, data_name)
-            getattr(self, set_to_widget).setText(self.raw_data_path)
             self.plotted_data_path = self.raw_data_path.replace('.dat', '_plotted.png')
             self.parsed_data_path = self.raw_data_path.replace('.dat', '_calibrated.dat')
         else:
@@ -259,7 +261,6 @@ class DAQGuiTemplate(QtGui.QWidget):
         global continue_run
         print self.sender().whatsThis()
         if 'xy_collector' in str(self.sender().whatsThis()):
-            print 'made it'
             getattr(self, '_xy_collector_popup_start_pushbutton').setFlat(False)
             getattr(self, '_xy_collector_popup_start_pushbutton').setText('Start')
             getattr(self, '_xy_collector_popup_save_pushbutton').setFlat(False)
@@ -306,7 +307,7 @@ class DAQGuiTemplate(QtGui.QWidget):
         self.raw_data_path = str(QtGui.QFileDialog.getOpenFileName(self, directory=data_folder))
         self.parsed_data_path = self.raw_data_path.replace('.dat', '_calibrated.dat')
         self.plotted_data_path = self.raw_data_path.replace('.dat', '_plotted.png')
-        mode, squid, squid_conversion, voltage_factor, label, temp, fit_clip, data_clip, e_bars = self._get_iv_curve_params_from_xy_collector()
+        plot_params = self._get_params_from_xy_collector()
         self.xdata, self.ydata, self.ystd = [], [], []
         with open(self.raw_data_path, 'r') as data_file_handle:
             for line in data_file_handle.readlines():
@@ -314,7 +315,12 @@ class DAQGuiTemplate(QtGui.QWidget):
                 self.xdata.append(float(line.split('\t')[0]))
                 self.ydata.append(float(line.split('\t')[1]))
                 self.ystd.append(float(line.split('\t')[2]))
-        self._final_iv_plot()
+        if plot_params['mode'] == 'IV':
+            self._final_iv_plot()
+        elif plot_params['mode'] == 'RT':
+            self._final_rt_plot()
+        else:
+            print 'bad mode found {0}'.format(mode)
 
     def _adjust_final_plot_popup(self, plot_type, title=None, xlabel=None, ylabel=None):
         if not hasattr(self, 'final_plot_popup'):
@@ -359,10 +365,10 @@ class DAQGuiTemplate(QtGui.QWidget):
         if sender is not None:
             sender = str(self.sender().whatsThis())
         if sender == '_xy_collector_popup_save_pushbutton':
-            mode, squid, squid_conversion, voltage_factor, label, temp, fit_clip, data_clip, e_bars = self._get_iv_curve_params_from_xy_collector()
-            if mode == 'IV':
+            plot_params = self._get_params_from_xy_collector()
+            if plot_params['mode'] == 'IV':
                 self._final_iv_plot()
-            elif mode == 'RT':
+            elif plot_params['mode'] == 'RT':
                 self._final_rt_plot()
         elif sender == '_time_constant_popup_save_pushbutton':
             self.temp_plot_path = './temp_files/temp_iv_png.png'
@@ -374,27 +380,36 @@ class DAQGuiTemplate(QtGui.QWidget):
             self._adjust_final_plot_popup('new')
 
     def _final_rt_plot(self):
-        mode, squid, squid_conversion, voltage_factor, label, temp, fit_clip, data_clip, e_bars = self._get_iv_curve_params_from_xy_collector()
+        plot_params = self._get_params_from_xy_collector()
         rtc = RTCurve([])
         invert = getattr(self, '_xy_collector_popup_invert_output_checkbox').isChecked()
         normal_res = float(str(getattr(self, '_xy_collector_popup_sample_res_lineedit').text()))
-        title = '{0} @ {1}'.format(label, temp)
-        xlim = [np.min(self.xdata), np.max(self.xdata)]
-        input_dict = {'invert': invert, 'normal_res': normal_res, 'label': label, 
-                      'title': title, 'xlim': xlim}
-        sample_res_vector = rtc.normalize_squid_output(self.ydata, input_dict)
-        print self.xdata, sample_res_vector
-        self.active_fig = rtc.plot_rt_curves(self.xdata, sample_res_vector, in_millikelvin=True, fig=None, input_dict=input_dict)
-        self.ydata = sample_res_vector
-        self.temp_plot_path = './temp_files/temp_rt_png.png'
-        self.active_fig.savefig(self.temp_plot_path)
+        title = '{0} R vs. T'.format(plot_params['label'])
+        label = '{0}-{1}'.format(plot_params['label'], plot_params['drift'])
+        data_clip = plot_params['data_clip']
+        if len(self.xdata) > 2:
+            xlim_range = max(data_clip) - min(data_clip)
+            xlim = (data_clip[0] - 0.01 * xlim_range, data_clip[1] + 0.01 * xlim_range)
+            input_dict = {'invert': invert, 'normal_res': normal_res, 'label': label,
+                          'title': title, 'xlim': xlim}
+            sample_res_vector = rtc.normalize_squid_output(self.ydata, input_dict)
+            selector = np.logical_and(np.asarray(self.xdata) > data_clip[0], np.asarray(self.xdata) < data_clip[1])
+            self.active_fig = rtc.plot_rt_curves(np.asarray(self.xdata)[selector], np.asarray(sample_res_vector)[selector],
+                                                 in_millikelvin=True, fig=None, input_dict=input_dict)
+            self.temp_plot_path = './temp_files/temp_rt_png.png'
+            self.active_fig.savefig(self.temp_plot_path)
         self._adjust_final_plot_popup('RT', xlabel='Sample Temp (mK)', ylabel='Sample Res ($\Omega$)', title=title)
 
 
     def _final_iv_plot(self):
-        mode, squid, squid_conversion, voltage_factor, label, temp, fit_clip, data_clip, e_bars = self._get_iv_curve_params_from_xy_collector()
+        plot_params = self._get_params_from_xy_collector()
+        label = plot_params['label']
+        fit_clip = plot_params['fit_clip']
+        data_clip = plot_params['data_clip']
+        voltage_factor = plot_params['voltage_factor']
+        squid_conversion = plot_params['squid_conversion']
         ivc = IVCurve([])
-        title = '{0} @ {1}'.format(label, temp)
+        title = '{0} @ {1}'.format(plot_params['label'], plot_params['temp'])
         v_bias_real, i_bolo_real, i_bolo_std = ivc.convert_IV_to_real_units(np.asarray(self.xdata), np.asarray(self.ydata),
                                                                             stds=np.asarray(self.ystd),
                                                                             squid_conv=squid_conversion,
@@ -535,7 +550,6 @@ class DAQGuiTemplate(QtGui.QWidget):
         if len(grt_serial) > 1:
             rtc = RTCurve([])
             voltage_factor = float(self.multimeter_voltage_factor_range_dict[grt_range])
-            print np.mean(voltage_factor * self.mm_data), grt_serial, voltage_factor
             temp_data = 1e3 * rtc.resistance_to_temp_grt(self.mm_data * voltage_factor, serial_number=grt_serial)
             ax.plot(temp_data)
             temp_data_std = np.std(temp_data)
@@ -646,7 +660,7 @@ class DAQGuiTemplate(QtGui.QWidget):
         getattr(self, '_xy_collector_popup_xydata_label').setPixmap(image_to_display)
         self.repaint()
 
-    def _get_iv_curve_params_from_xy_collector(self):
+    def _get_params_from_xy_collector(self):
         mode = str(getattr(self, '_xy_collector_popup_mode_combobox').currentText())
         voltage_factor = float(str(getattr(self, '_xy_collector_popup_voltage_factor_combobox').currentText()))
         squid = str(getattr(self, '_xy_collector_popup_squid_select_combobox').currentText())
@@ -658,10 +672,13 @@ class DAQGuiTemplate(QtGui.QWidget):
         data_clip_lo = float(str(getattr(self, '_xy_collector_popup_data_clip_lo_lineedit').text()))
         data_clip_hi = float(str(getattr(self, '_xy_collector_popup_data_clip_hi_lineedit').text()))
         e_bars = getattr(self, '_xy_collector_popup_include_errorbars_checkbox').isChecked()
-        temp = str(getattr(self, '_xy_collector_popup_sample_temp_lineedit').text())
+        temp = str(getattr(self, '_xy_collector_popup_sample_temp_combobox').currentText())
+        drift = str(getattr(self, '_xy_collector_popup_sample_drift_direction_combobox').currentText())
         fit_clip = (fit_clip_lo, fit_clip_hi)
         data_clip = (data_clip_lo, data_clip_hi)
-        return mode, squid, squid_conversion, voltage_factor, label, temp, fit_clip, data_clip, e_bars
+        return {'mode': mode, 'squid': squid, 'squid_conversion': squid_conversion,
+                'voltage_factor': voltage_factor, 'label': label, 'temp': temp, 'drift': drift,
+                'fit_clip': fit_clip, 'data_clip': data_clip, 'e_bars': e_bars}
 
     def _update_in_xy_mode(self):
         run_mode = str(getattr(self, '_xy_collector_popup_mode_combobox').currentText())
@@ -675,10 +692,12 @@ class DAQGuiTemplate(QtGui.QWidget):
             if len(self.xdata) == 0:
                 getattr(self, '_xy_collector_popup_voltage_factor_combobox').setCurrentIndex(3)
                 getattr(self, '_xy_collector_popup_invert_output_checkbox').setChecked(True)
-                getattr(self, '_xy_collector_popup_sample_temp_lineedit').setText('Hi2Lo')
                 getattr(self, '_xy_collector_popup_sample_res_lineedit').setText('1.0')
                 getattr(self, '_xy_collector_popup_daq_channel_x_combobox').setCurrentIndex(5)
                 getattr(self, '_xy_collector_popup_daq_channel_y_combobox').setCurrentIndex(3)
+                getattr(self, '_xy_collector_popup_voltage_factor_combobox').setCurrentIndex(1)
+                getattr(self, '_xy_collector_popup_data_clip_lo_lineedit').setText(str(250))
+                getattr(self, '_xy_collector_popup_data_clip_hi_lineedit').setText(str(600))
             self._draw_x(title='X data', xlabel='Sample', ylabel='GRT Temp (mK)')
             self._draw_y(title='Y data', xlabel='Sample', ylabel='SQUID Output Voltage (V)')
             self._draw_xy_collector(title='RT Curve', xlabel='GRT Temp (mK)', ylabel='SQUID Output Voltage (V)')
@@ -727,15 +746,14 @@ class DAQGuiTemplate(QtGui.QWidget):
             run_mode = str(getattr(self, '_xy_collector_popup_mode_combobox').currentText())
             if run_mode == 'RT':
                 rtc = RTCurve([])
-                voltage_factor = float(str(getattr(self, '_xy_collector_popup_voltage_factor_combobox').currentText()))
+                grt_range = str(getattr(self, '_xy_collector_popup_grt_range_combobox').currentText())
+                voltage_factor = float(self.multimeter_voltage_factor_range_dict[grt_range])
             with open(self.raw_data_path, 'w') as data_handle:
                 while continue_run:
                     x_data, x_mean, x_min, x_max, x_std = self.real_daq.get_data(signal_channel=daq_channel_x,
                                                                                  integration_time=integration_time,
                                                                                  sample_rate=sample_rate)
                     if run_mode == 'RT':
-                        print 'before', x_data, x_mean, voltage_factor
-                        print x_mean * voltage_factor
                         if 3.0 < x_mean * voltage_factor < 600:
                             x_data = 1e3 * rtc.resistance_to_temp_grt(x_data * voltage_factor, serial_number=29268)
                         else:
@@ -744,7 +762,6 @@ class DAQGuiTemplate(QtGui.QWidget):
                         x_min = np.min(x_data)
                         x_max = np.max(x_data)
                         x_std = np.std(x_data)
-                        print 'after', x_mean
                     y_data, y_mean, y_min, y_max, y_std = self.real_daq.get_data(signal_channel=daq_channel_y,
                                                                                  integration_time=integration_time,
                                                                                  sample_rate=sample_rate)
@@ -788,6 +805,7 @@ class DAQGuiTemplate(QtGui.QWidget):
         getattr(self, '_xy_collector_popup_data_clip_lo_lineedit').setText(str(self.ivcurve_plot_settings_dict['data_clip_lo']))
         getattr(self, '_xy_collector_popup_data_clip_hi_lineedit').setText(str(self.ivcurve_plot_settings_dict['data_clip_hi']))
         getattr(self, '_xy_collector_popup_daq_sample_rate_combobox').setCurrentIndex(2)
+        getattr(self, '_xy_collector_popup_grt_range_combobox').setCurrentIndex(3)
         getattr(self, '_xy_collector_popup_include_errorbars_checkbox').setChecked(True)
 
 
@@ -1077,7 +1095,7 @@ class DAQGuiTemplate(QtGui.QWidget):
         getattr(self, '_user_move_stepper_popup_current_act_label').setText(current_string)
         getattr(self,'_user_move_stepper_popup_velocity_act_label').setText(velocity_string)
         getattr(self,'_user_move_stepper_popup_current_position_label').setText(position_string)
-        self._update_stepper_position()
+        #self._update_stepper_position()
         self.user_move_stepper_popup.showMaximized()
         self.user_move_stepper_popup.setWindowTitle('User Move Stepper')
 

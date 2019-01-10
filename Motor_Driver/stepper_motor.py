@@ -13,17 +13,17 @@ class stepper_motor():
         self._connection = lab_serial(port=self.port)
         self._send_command('DL2')
 
-    def _send_command(self,msg):
+    def _send_command(self, msg):
    ###     if not msg.endswith('\r'):
       #      msg +='\r'
         self._connection.write(msg)
-            
-    def _query_motor(self, query, timeout = 1):
+
+    def _query_motor(self, query, timeout=1):
         self._send_command(query)
         response = self._connection.read()
         return response
-        
-    def move_to_position(self,x):
+
+    def move_to_position(self, x):
         # check that this is a valid position
         # convert physical units to stepper motor units
         # tell the motor what to do
@@ -42,7 +42,7 @@ class stepper_motor():
 
     def get_position(self):
         return self._query_motor('SP')
-    
+
     def get_velocity(self):
         velocity = self._query_motor('VE')
         return velocity
@@ -68,8 +68,6 @@ class stepper_motor():
         self._setup()
         self._send_command('DI{:d}'.format(int(degrees)))
         self._send_command('FL')
-
-
 
     def _setup(self):
         self._send_command('PM2')
@@ -97,8 +95,8 @@ class stepper_motor():
                 time.sleep(pause)
             print step, i, data[i]
         data = np.array(data)
-        self.write_file(steps,data) 
-        return steps, data 
+        self.write_file(steps,data)
+        return steps, data
 
     def write_file(self,xdata,ydata):
         with open('rawdata.csv','w') as f:
@@ -110,7 +108,7 @@ class stepper_motor():
     def read_file(self, filename):
         x, y = np.loadtxt(filename, unpack=True)
         return x,y
-                
+
     def plot_pol_efficiency_data(self,angles, data):
         def func(x,b):
             return np.sin(x*np.pi/180+b)
@@ -127,12 +125,11 @@ class stepper_motor():
         plt.legend()
         plt.show()
 
-        
-  
+
 if __name__ == '__main__':
-    SM = stepper_motor('COM4')
-#    SM.set_current(2)
-#    SM.finite_rotation(6000)
- #   angles, data = SM.take_pol_efficiency(1, 60, noise = 1)
- #   SM.plot_pol_efficiency_data(angles, data)
-   
+    SM = stepper_motor('COM8')
+    # SM.set_current(2)
+    # SM.finite_rotation(6000)
+    # angles, data = SM.take_pol_efficiency(1, 60, noise = 1)
+    # SM.plot_pol_efficiency_data(angles, data)
+    import ipdb;ipdb.set_trace()

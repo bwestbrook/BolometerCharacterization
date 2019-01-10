@@ -28,7 +28,7 @@ class RTCurve():
 
     def normalize_squid_output(self, sample_res_vector, input_dict):
         if input_dict['invert']:
-            sample_res_vector *= -1
+            sample_res_vector = list(np.asarray(sample_res_vector) * -1)
         if 'normal_res' in input_dict:
             if np.min(sample_res_vector) < 0:
                 sample_res_vector += np.abs(np.min(sample_res_vector))
@@ -71,7 +71,11 @@ class RTCurve():
             axis.plot(grt_temperature_vector * 1e3, sample_res_vector, label=input_dict['label'])
         axis.set_xlabel('Temperature (mK)')
         axis.set_ylabel('Sample Resistance ($\Omega$)')
-        axis.set_title('Res vs. Temp')
+        axis.legend()
+        if 'title' in input_dict:
+            axis.set_title(input_dict['title'])
+        else:
+            axis.set_title('Res vs. Temp')
         if 'xlim' in input_dict:
             axis.set_xlim(input_dict['xlim'])
         else:

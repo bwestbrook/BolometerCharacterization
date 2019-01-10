@@ -36,6 +36,6 @@ class Stepper():
 if __name__ == '__main__':
     print sys.argv
     com_port = sys.argv[1]
-    move_to = sys.argv[2]
+    #move_to = sys.argv[2]
     stepper = Stepper(com_port)
-    stepper.move_to(move_to)
+    #stepper.move_to(move_to)
