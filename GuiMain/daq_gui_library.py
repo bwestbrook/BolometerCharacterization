@@ -67,6 +67,8 @@ class DAQGuiTemplate(QtGui.QWidget):
             os.makedirs(self.data_folder)
         self.daq_main_panel_widget.showMaximized()
         self.active_ports = self.get_active_serial_ports()
+        print 'no active ports, check the hardware!'
+        #exit()
 
     def __apply_settings__(self, settings):
         for setting in dir(settings):
@@ -139,6 +141,7 @@ class DAQGuiTemplate(QtGui.QWidget):
         if 'user_move_stepper' in str(self.sender().whatsThis()):
             getattr(self, '_user_move_stepper_popup_current_position_label').setText('{0} (steps)'.format(position_string))
             getattr(self, '_user_move_stepper_popup_move_to_position_lineedit').setText('{0}'.format(position_string))
+            getattr(self, '_user_move_stepper_popup_stepper_slider').setSliderPosition(int(position_string))
             getattr(self, '_user_move_stepper_popup_actual_current_label').setText('{0} (A)'.format(current_string))
             getattr(self, '_user_move_stepper_popup_set_current_to_lineedit').setText('{0}'.format(current_string))
             getattr(self, '_user_move_stepper_popup_actual_velocity_label').setText('{0} (mm/s)'.format(velocity_string))
@@ -1143,25 +1146,31 @@ class DAQGuiTemplate(QtGui.QWidget):
 
     def _move_stepper(self):
         move_to_pos = int(str(getattr(self, '_user_move_stepper_popup_move_to_position_lineedit').text()))
+        current_pos = str(getattr(self, '_user_move_stepper_popup_current_position_label').text())
+        current_pos = int(current_pos.replace(' (steps)', ''))
+        move_delta = move_to_pos - current_pos
+        print move_delta, move_to_pos, current_pos
         com_port = self._get_com_port('_user_move_stepper_popup_com_ports_combobox')
         getattr(self, 'sm_{0}'.format(com_port)).move_to_position(move_to_pos)
         self._update_stepper_position()
 
     def _reset_stepper_zero(self):
-        com_port = self._get_com_port()
-        self.stepper.stepper_position_dict[com_port] = 0
+        com_port = self._get_com_port('_user_move_stepper_popup_com_ports_combobox')
+        getattr(self, 'sm_{0}'.format(com_port)).reset_zero()
+        stepper_position = getattr(self, 'sm_{0}'.format(com_port)).get_position().replace('SP=')
         self._update_stepper_position()
-        getattr(self, '_user_move_stepper_popup_lineedit').setText(str(0))
+        getattr(self, '_user_move_stepper_popup_move_to_position_lineedit').setText('0')
 
     def _get_stepper_position(self):
-        com_port = self._get_com_port()
+        com_port = self._get_com_port('_user_move_stepper_popup_com_ports_combobox')
         stepper_position = self.stepper.stepper_position_dict[com_port]
         return stepper_position
 
     def _update_stepper_position(self):
         com_port = self._get_com_port('_user_move_stepper_popup_com_ports_combobox')
         stepper_position = getattr(self, 'sm_{0}'.format(com_port)).get_position().strip('SP=')
-        header_str = '{0} Current Position: {1}'.format(com_port, stepper_position)
+        header_str = '{0} (steps)'.format(stepper_position)
+        getattr(self, '_user_move_stepper_popup_stepper_slider').setSliderPosition(int(stepper_position))
         getattr(self, '_user_move_stepper_popup_current_position_label').setText(header_str)
 
     #################################################

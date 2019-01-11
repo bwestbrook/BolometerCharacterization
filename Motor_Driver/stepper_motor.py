@@ -13,7 +13,12 @@ class stepper_motor():
     def __init__(self, port):
         self.port = port
         self._connection = lab_serial(port=self.port)
-        self._send_command('DL2')
+        self._setup()
+
+    def _setup(self):
+        self._send_command('PM2') # set for SCL ready code when turned on
+        self._send_command('ME') # Motor is enabled 
+        self._send_command('DL1') # Set limit to be normally open
 
     def _send_command(self, msg):
         ###     if not msg.endswith('\r'):
@@ -23,16 +28,23 @@ class stepper_motor():
     def _query_motor(self, query, timeout=0.5):
         self._send_command(query)
         response = self._connection.read()
+        print response
         return response
 
     def move_to_position(self, x):
         # check that this is a valid position
         # convert physical units to stepper motor units
         # tell the motor what to do
-        self._setup()
-        self._send_command('FP{:d}'.format(int(x)))
+        #import ipdb;ipdb.set_trace()
+        self._send_command("DI{:d}".format(int(x)))
+        response = self._query_motor("DI")
+        self._send_command('FP')
         # check that the motor did what you wanted
         # IP, EP, commands to see
+
+    def reset_zero(self):
+        self._send_command('SP0')
+        self._send_command('SP')
 
     def get_motor_current(self):
         current = self._query_motor('CC')
@@ -73,10 +85,6 @@ class stepper_motor():
         self._setup()
         self._send_command('DI{:d}'.format(int(degrees)))
         self._send_command('FL')
-
-    def _setup(self):
-        self._send_command('PM2')
-        self._send_command('ME')
 
     def get_simulated_data(self, datatype, current_position, noise=10):
         '''
