@@ -56,13 +56,16 @@ class stepper_motor():
     def set_current(self,current):
         self._send_command('CC{:f}'.format(current))
 
-    def set_speed(self, speed):
+    def set_acceleration(self, acceleration):
+        self._send_command('AC{:f}'.format(acceleration))
+
+    def set_velocity(self, velocity):
         """
-        Set the desired speed (angular speed of the HWP itself, not the servo)
+        Set the desired velocity (angular velocity of the HWP itself, not the servo)
         Arguments:
-            speed (float) - angular speed in Hz
+            velocity (float) - angular velocity in Hz
         """
-        self._send_command('VE{:f}'.format(speed))
+        self._send_command('VE{:f}'.format(velocity))
 
     def finite_rotation(self, step_size):
         degrees = step_size*2500/6

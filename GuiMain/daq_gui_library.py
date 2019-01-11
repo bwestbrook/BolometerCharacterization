@@ -109,7 +109,7 @@ class DAQGuiTemplate(QtGui.QWidget):
         else:
             raise EnvironmentError('Unsupported platform')
 
-        active_ports = []
+        active_ports = ['']
         for port in ports:
             try:
                 s = serial.Serial(port)
@@ -118,57 +118,34 @@ class DAQGuiTemplate(QtGui.QWidget):
             except (OSError, serial.SerialException):
                 pass
         return active_ports
+
     def _connect_to_com_port(self, beammapper=None, single_channel_fts=None):
         combobox = str(self.sender().whatsThis())
-        print self.sender()
-        print self.sender().whatsThis()
-        current_string, position_string,velocity_string = '0','0','0'
+        current_string, position_string, velocity_string, acceleration_string = 'NA', 'NA', 'NA', 'NA'
         if type(self.sender()) == QtGui.QComboBox:
             com_port = self._get_com_port(combobox=combobox)
-            connection = combobox.replace('current_com_port_combobox','successful_connection_header_label')
-            if com_port in ['COM1', 'COM8','COM2','COM3']:
+            connection = combobox.replace('com_ports_combobox','successful_connection_header_label')
+            possible_com_ports = ['COM{0}'.format(x) for x in range(1, 9)]
+            if com_port in possible_com_ports:
                 if not hasattr(self, 'sm_{0}'.format(com_port)):
                     setattr(self, 'sm_{0}'.format(com_port), stepper_motor(com_port))
-                    import ipdb;ipdb.set_trace()
                     current_string = getattr(self, 'sm_{0}'.format(com_port)).get_motor_current().strip('CC=')
                     position_string = getattr(self, 'sm_{0}'.format(com_port)).get_position().strip('SP=')
                     velocity_string = getattr(self, 'sm_{0}'.format(com_port)).get_velocity().strip('VE=')
-                else:
-                    current_string, position_string,velocity_string = '0','0','0'
-            getattr(self,connection).setText('Successful Connection to '+ com_port +'!' )
+                    acceleration_string = getattr(self, 'sm_{0}'.format(com_port)).get_acceleration().strip('AC=')
+            getattr(self, connection).setText('Successful Connection to '+ com_port +'!' )
         else:
-            print 'not a combobox'
-            #popup = str(self.sender().currentText())
-            #if popup == 'Pol Efficiency':
-                #com_port = 'COM6'
-                #connection = '_pol_efficiency_popup_successful_connection_header_label'
-            #elif popup == 'Beam Mapper':
-                #if beammapper == 1:
-                    #com_port = 'COM6'
-                    #connection = '_beam_mapper_popup_x_successful_connection_header_label'
-                    #popup_combobox = '_beam_mapper_popup_x_current_com_port_combobox'
-                    #getattr(self, popup_combobox).setCurrentIndex(0)
-		#elif beammapper == 2:
-                    #com_port = 'COM2'
-                    #connection = '_beam_mapper_popup_y_successful_connection_header_label'
-                    #popup_combobox = '_beam_mapper_popup_y_current_com_port_combobox'
-                    #getattr(self, popup_combobox).setCurrentIndex(1)
-            #elif popup == 'Single Channel Fts':
-                 #if single_channel_fts == 1:
-                    #com_port = 'COM6'
-                    #connection = '_single_channel_fts_popup_successful_connection_header_label'
-                    #popup_combobox = '_single_channel_fts_popup_current_com_port_combobox'
-                    #getattr(self, popup_combobox).setCurrentIndex(0)
-            #elif single_channel_fts == 2:
-                    #com_port = 'COM2'
-                    #connection = '_single_channel_fts_popup_grid_successful_connection_header_label'
-                    #popup_combobox = '_single_channel_fts_popup_grid_current_com_port_combobox'
-            #elif popup == 'User Move Stepper':
-                #com_port = 'COM6'
-                #connection = '_user_move_stepper_popup_successful_connection_header_label'
-        #port_number = int(com_port.strip('COM')) - 1
-        #init_string = '/dev/ttyUSB{0}'.format(port_number)
-        return current_string, position_string, velocity_string
+            print 'Not a combobox sender, no connection made'
+        if 'user_move_stepper' in str(self.sender().whatsThis()):
+            getattr(self, '_user_move_stepper_popup_current_position_label').setText('{0} (steps)'.format(position_string))
+            getattr(self, '_user_move_stepper_popup_move_to_position_lineedit').setText('{0}'.format(position_string))
+            getattr(self, '_user_move_stepper_popup_actual_current_label').setText('{0} (A)'.format(current_string))
+            getattr(self, '_user_move_stepper_popup_set_current_to_lineedit').setText('{0}'.format(current_string))
+            getattr(self, '_user_move_stepper_popup_actual_velocity_label').setText('{0} (mm/s)'.format(velocity_string))
+            getattr(self, '_user_move_stepper_popup_set_velocity_to_lineedit').setText('{0}'.format(velocity_string))
+            getattr(self, '_user_move_stepper_popup_actual_acceleration_label').setText('{0} (mm/s/s)'.format(acceleration_string))
+            getattr(self, '_user_move_stepper_popup_set_acceleration_to_lineedit').setText('{0}'.format(acceleration_string))
+        return current_string, position_string, velocity_string, acceleration_string
 
     def _get_com_port(self, combobox):
         com_port = str(getattr(self, combobox).currentText())
@@ -1029,7 +1006,7 @@ class DAQGuiTemplate(QtGui.QWidget):
     def take_pol_efficiency(self, scan_params, noise=10):
         global continue_run
         continue_run = True
-        com_port = self._get_com_port('_pol_efficiency_popup_current_com_port_combobox')
+        com_port = self._get_com_port('_pol_efficiency_popup_com_ports_combobox')
         stepnum = (scan_params['ending_angle']-scan_params['starting_angle'])/scan_params['step_size']+1
         self.xdata = np.linspace(scan_params['starting_angle'],scan_params['ending_angle'],stepnum)
         self.ydata = []
@@ -1104,6 +1081,13 @@ class DAQGuiTemplate(QtGui.QWidget):
                 scan_params[pol_efficiency_setting] = value
         return scan_params
 
+    def _is_float(self, value):
+        try:
+            float(value)
+            is_float = True
+        except ValueError:
+            is_float = False
+        return is_float
 
     #################################################
     # USER MOVE STEPPER
@@ -1118,38 +1102,48 @@ class DAQGuiTemplate(QtGui.QWidget):
         else:
             self._initialize_panel('user_move_stepper_popup')
         self._build_panel(settings.user_move_stepper_build_dict)
-        #for combobox_widget, entry_list in self.user_move_stepper_combobox_entry_dict.iteritems():
         self.populate_combobox('_user_move_stepper_popup_com_ports_combobox', self.active_ports)
-        current_string, position_string, velocity_string = self._connect_to_com_port()
-        getattr(self, '_user_move_stepper_popup_current_act_label').setText(current_string)
-        getattr(self,'_user_move_stepper_popup_velocity_act_label').setText(velocity_string)
-        getattr(self,'_user_move_stepper_popup_current_position_label').setText(position_string)
-        #self._update_stepper_position()
-        self.user_move_stepper_popup.showMaximized()
+        getattr(self, '_user_move_stepper_popup_com_ports_combobox').setCurrentIndex(3)
         self.user_move_stepper_popup.setWindowTitle('User Move Stepper')
+        self.user_move_stepper_popup.showMaximized()
 
     def _add_comports_to_user_move_stepper(self):
         for i, com_port in enumerate(settings.com_ports):
             com_port_entry = QtCore.QString(com_port)
-            getattr(self, '_user_move_stepper_popup_current_com_port_combobox').addItem(com_port_entry)
+            getattr(self, '_user_move_stepper_popup_com_ports_combobox').addItem(com_port_entry)
+
+    def _set_acceleration(self):
+        com_port = self._get_com_port('_user_move_stepper_popup_com_ports_combobox')
+        acceleration =  str(getattr(self, '_user_move_stepper_popup_set_acceleration_to_lineedit').text())
+        getattr(self, 'sm_{0}'.format(com_port)).set_acceleration(float(acceleration))
+        actual = getattr(self, 'sm_{0}'.format(com_port)).get_acceleration().strip('AC=')
+        getattr(self,'_user_move_stepper_popup_actual_acceleration_label').setText('{0} (mm/s/s)'.format(str(actual)))
 
     def _set_velocity(self):
-        com_port = self._get_com_port('_user_move_stepper_popup_current_com_port_combobox')
-        speed =  str(getattr(self, '_user_move_stepper_popup_velocity_set_lineedit').text())
-        getattr(self, 'sm_{0}'.format(com_port)).set_speed(float(speed))
+        com_port = self._get_com_port('_user_move_stepper_popup_com_ports_combobox')
+        velocity =  str(getattr(self, '_user_move_stepper_popup_set_velocity_to_lineedit').text())
+        getattr(self, 'sm_{0}'.format(com_port)).set_velocity(float(velocity))
         actual = getattr(self, 'sm_{0}'.format(com_port)).get_velocity().strip('VE=')
-        getattr(self,'_user_move_stepper_popup_velocity_act_label').setText(str(actual))
+        getattr(self,'_user_move_stepper_popup_actual_velocity_label').setText('{0} (mm/s/s)'.format(str(actual)))
 
     def _set_current(self):
-        com_port = self._get_com_port('_user_move_stepper_popup_current_com_port_combobox')
-        current =  getattr(self, '_user_move_stepper_popup_current_set_lineedit').text()
+        com_port = self._get_com_port('_user_move_stepper_popup_com_ports_combobox')
+        current =  getattr(self, '_user_move_stepper_popup_set_current_to_lineedit').text()
         getattr(self, 'sm_{0}'.format(com_port)).set_current(float(current))
         actual =  getattr(self, 'sm_{0}'.format(com_port)).get_motor_current().strip('CC=')
-        getattr(self,'_user_move_stepper_popup_current_act_label').setText(str(actual))
+        getattr(self,'_user_move_stepper_popup_actual_current_label').setText('{0} (mm/s/s)'.format(str(actual)))
+
+    def _limit_current(self):
+        value = str(self.sender().text())
+        if self._is_float(value):
+            value = float(str(self.sender().text()))
+            if value > 4.0:
+                value = 4.0
+                self.sender().setText(str(value))
 
     def _move_stepper(self):
         move_to_pos = int(str(getattr(self, '_user_move_stepper_popup_move_to_position_lineedit').text()))
-        com_port = self._get_com_port('_user_move_stepper_popup_current_com_port_combobox')
+        com_port = self._get_com_port('_user_move_stepper_popup_com_ports_combobox')
         getattr(self, 'sm_{0}'.format(com_port)).move_to_position(move_to_pos)
         self._update_stepper_position()
 
@@ -1165,11 +1159,10 @@ class DAQGuiTemplate(QtGui.QWidget):
         return stepper_position
 
     def _update_stepper_position(self):
-        com_port = self._get_com_port('_user_move_stepper_popup_current_com_port_combobox')
+        com_port = self._get_com_port('_user_move_stepper_popup_com_ports_combobox')
         stepper_position = getattr(self, 'sm_{0}'.format(com_port)).get_position().strip('SP=')
-        header_str = '{0} Current Position:'.format(com_port)
-        getattr(self, '_user_move_stepper_popup_current_position_header_label').setText(header_str)
-        getattr(self, '_user_move_stepper_popup_current_position_label').setText(str(stepper_position))
+        header_str = '{0} Current Position: {1}'.format(com_port, stepper_position)
+        getattr(self, '_user_move_stepper_popup_current_position_label').setText(header_str)
 
     #################################################
     # SINGLE CHANNEL FTS BILLS
@@ -1283,7 +1276,7 @@ class DAQGuiTemplate(QtGui.QWidget):
         slider = '_single_channel_fts_popup_position_monitor_slider'
         getattr(self, slider).setMinimum(scan_params['starting_position'])
         getattr(self, slider).setMaximum(scan_params['ending_position'])
-        com_port = self._get_com_port('_single_channel_fts_popup_current_com_port_combobox')
+        com_port = self._get_com_port('_single_channel_fts_popup_com_ports_combobox')
         motor_position = 0
         getattr(self, slider).setSliderPosition(motor_position)
         getattr(self, slider).sliderPressed.connect(self._dummy)
@@ -1306,7 +1299,7 @@ class DAQGuiTemplate(QtGui.QWidget):
 
 
     def _rotate_grid(self):
-        polar_com_port = self._get_com_port('_single_channel_fts_popup_grid_current_com_port_combobox')
+        polar_com_port = self._get_com_port('_single_channel_fts_popup_grid_com_ports_combobox')
         angle = getattr(self,'_single_channel_fts_popup_desired_grid_angle_lineedit').text()
         getattr(self, 'sm_{0}'.format(polar_com_port)).finite_rotation(int(angle))
 
@@ -1315,7 +1308,7 @@ class DAQGuiTemplate(QtGui.QWidget):
         global continue_run
         continue_run = True
         scan_params = self._get_all_scan_params(popup='_single_channel_fts')
-        linear_com_port = self._get_com_port('_single_channel_fts_popup_current_com_port_combobox')
+        linear_com_port = self._get_com_port('_single_channel_fts_popup_com_ports_combobox')
         self._apodize()
         positions, data, self.stds = [], [], []
         pause = int(scan_params['pause_time'])/1000

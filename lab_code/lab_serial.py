@@ -34,7 +34,6 @@ class lab_serial(object):
 
         self.ser.flushInput()
         self.ser.flushOutput()
-        import ipdb;ipdb.set_trace()
 
     def write(self, string):
         """
