@@ -179,6 +179,17 @@ class DAQGuiTemplate(QtGui.QWidget):
             widget = '_daq_main_panel_set_sample_{0}_lineedit'.format(i)
             sample_name = getattr(self, widget).setText(self.sample_dict[str(i)])
 
+    def _add_index_to_suggested_file_name(self, suggested_file_name):
+        last_index = '00'
+        for file_name in os.listdir(self.data_folder):
+            if suggested_file_name in file_name and '.dat' in file_name:
+                appendix = file_name.split(suggested_file_name)[1]
+                if len(appendix) == 6:
+                    last_index = appendix.replace('.dat', '')
+        new_index = '{0}'.format(int(last_index) + 1).zfill(2)
+        suggested_file_name = '{0}{1}.dat'.format(suggested_file_name, new_index)
+        return suggested_file_name
+
     def _get_raw_data_save_path(self):
         sender = str(self.sender().whatsThis())
         if 'xy_collector' in sender:
@@ -186,26 +197,24 @@ class DAQGuiTemplate(QtGui.QWidget):
             plot_params = self._get_params_from_xy_collector()
             squid = plot_params['squid']
             label = plot_params['label']
-            temp = plot_params['temp']
+            temp = plot_params['temp'].replace('.', 'p')
             drift = plot_params['drift']
+            optical_load = plot_params['optical_load']
             if run_mode == 'IV':
-                suggested_file_name = 'SQ{0}_{1}_IVCurve_Raw_{2}_'.format(squid, label, temp.replace('.', 'p'))
+                suggested_file_name = 'SQ{0}_{1}_IVCurve_at_Tbath_{2}_w_{3}_Load_Raw_'.format(squid, label, temp, optical_load)
             elif run_mode == 'RT':
-                suggested_file_name = 'SQ{0}_{1}_RTCurve_Raw_{2}_'.format(squid, label, drift)
-            indicies = []
-            last_index = '00'
-            for file_name in os.listdir(self.data_folder):
-                if suggested_file_name in file_name and '.dat' in file_name:
-                    appendix = file_name.split(suggested_file_name)[1]
-                    if len(appendix) == 6:
-                        last_index = appendix.replace('.dat', '')
-            new_index = '{0}'.format(int(last_index) + 1).zfill(2)
-            suggested_file_name = '{0}{1}.dat'.format(suggested_file_name, new_index)
+                suggested_file_name = 'SQ{0}_{1}_RTCurve_{2}_Raw_'.format(squid, label, drift)
+            suggested_file_name = self._add_index_to_suggested_file_name(suggested_file_name)
             path = os.path.join(self.data_folder, suggested_file_name)
-            set_to_widget = '_xy_collector_popup_raw_data_path_label'
-        if 'time_constant' in sender:
-            path = os.path.join(self.data_folder, 'test.dat')
-            set_to_widget = '_time_constant_popup_raw_data_path_label'
+        elif 'time_constant' in sender:
+            plot_params = self._get_params_from_time_constant()
+            squid = plot_params['squid']
+            label = plot_params['label']
+            signal_voltage = plot_params['signal_voltage'].replace('.', 'p')
+            voltage_bias = plot_params['voltage_bias'].replace('.', 'p')
+            suggested_file_name = 'SQ{0}_{1}_TauCurve_Vbias_of_{2}uV_w_Vsignal_of_{3}V_Raw_'.format(squid, label, voltage_bias, signal_voltage)
+            suggested_file_name = self._add_index_to_suggested_file_name(suggested_file_name)
+            path = os.path.join(self.data_folder, suggested_file_name)
         data_name = str(QtGui.QFileDialog.getSaveFileName(self, 'Raw Data Save Location', path, '.dat'))
         if len(data_name) > 0:
             self.raw_data_path = os.path.join(self.data_folder, data_name)
@@ -418,7 +427,7 @@ class DAQGuiTemplate(QtGui.QWidget):
         voltage_factor = plot_params['voltage_factor']
         squid_conversion = plot_params['squid_conversion']
         ivc = IVCurve([])
-        title = '{0} @ {1}'.format(plot_params['label'], plot_params['temp'])
+        title = '{0} @ {1} w {2} Load'.format(plot_params['label'], plot_params['temp'], plot_params['optical_load'])
         v_bias_real, i_bolo_real, i_bolo_std = ivc.convert_IV_to_real_units(np.asarray(self.xdata), np.asarray(self.ydata),
                                                                             stds=np.asarray(self.ystd),
                                                                             squid_conv=squid_conversion,
@@ -623,6 +632,25 @@ class DAQGuiTemplate(QtGui.QWidget):
         self.multimeter_popup.close()
 
     #################################################
+    # COSMIC RAYS
+    #################################################
+
+    def _close_cosmic_rays(self):
+        self.cosmic_rays_popup.close()
+
+    def _cosmic_rays(self):
+        if not hasattr(self, 'cosmic_rays_popup'):
+            self._create_popup_window('cosmic_rays_popup')
+        else:
+            self._initialize_panel('cosmic_rays_popup')
+        self._update_xy_collector_buttons_sizes()
+        self._build_panel(settings.cosmic_rays_build_dict)
+        for combobox_widget, entry_list in self.cosmic_rays_combobox_entry_dict.iteritems():
+            self.populate_combobox(combobox_widget, entry_list)
+        self.cosmic_rays_popup.showMaximized()
+        print 'hello'
+
+    #################################################
     # XY COLLECTOR
     #################################################
 
@@ -683,11 +711,13 @@ class DAQGuiTemplate(QtGui.QWidget):
         e_bars = getattr(self, '_xy_collector_popup_include_errorbars_checkbox').isChecked()
         temp = str(getattr(self, '_xy_collector_popup_sample_temp_combobox').currentText())
         drift = str(getattr(self, '_xy_collector_popup_sample_drift_direction_combobox').currentText())
+        optical_load = str(getattr(self, '_xy_collector_popup_optical_load_combobox').currentText())
         fit_clip = (fit_clip_lo, fit_clip_hi)
         data_clip = (data_clip_lo, data_clip_hi)
         return {'mode': mode, 'squid': squid, 'squid_conversion': squid_conversion,
                 'voltage_factor': voltage_factor, 'label': label, 'temp': temp, 'drift': drift,
-                'fit_clip': fit_clip, 'data_clip': data_clip, 'e_bars': e_bars}
+                'fit_clip': fit_clip, 'data_clip': data_clip, 'e_bars': e_bars,
+                'optical_load': optical_load}
 
     def _update_in_xy_mode(self):
         run_mode = str(getattr(self, '_xy_collector_popup_mode_combobox').currentText())
@@ -714,12 +744,21 @@ class DAQGuiTemplate(QtGui.QWidget):
             self._draw_xy_collector()
 
     def _update_squid_calibration(self):
-        selected_squid = str(getattr(self, '_xy_collector_popup_squid_select_combobox').currentText())
-        squid_calibration = settings.squid_calibration_dict[selected_squid]
-        squid_str = '{0} (uA/V)'.format(squid_calibration)
-        getattr(self, '_xy_collector_popup_squid_conversion_label').setText(squid_str)
-        if hasattr(self, 'sample_dict') > 0 and selected_squid in self.sample_dict:
-            getattr(self, '_xy_collector_popup_sample_name_lineedit').setText(self.sample_dict[selected_squid])
+        combobox = self.sender()
+        if type(combobox) == QtGui.QComboBox:
+            selected_squid = str(combobox.currentText())
+            if selected_squid == '':
+                squid_calibration = 'NaN'
+            else:
+                squid_calibration = settings.squid_calibration_dict[selected_squid]
+            squid_str = '{0} (uA/V)'.format(squid_calibration)
+            if 'xy_collector' in str(combobox.whatsThis()):
+                getattr(self, '_xy_collector_popup_squid_conversion_label').setText(squid_str)
+                if hasattr(self, 'sample_dict') > 0 and selected_squid in self.sample_dict:
+                    getattr(self, '_xy_collector_popup_sample_name_lineedit').setText(self.sample_dict[selected_squid])
+            elif 'time_constant' in str(combobox.whatsThis()):
+                if hasattr(self, 'sample_dict') > 0 and selected_squid in self.sample_dict:
+                    getattr(self, '_time_constant_popup_sample_name_lineedit').setText(self.sample_dict[selected_squid])
 
     def _update_xy_collector_buttons_sizes(self):
         width = 0.1 * float(self.screen_resolution.width())
@@ -836,8 +875,10 @@ class DAQGuiTemplate(QtGui.QWidget):
 
     def _plot_time_constant(self, real_data=True):
         # Grab input from the Time Constant Popup
-        vbias = str(getattr(self, '_time_constant_popup_voltage_bias_lineedit').text())
-        bolo_name = str(getattr(self, '_time_constant_popup_bolo_name_lineedit').text())
+        plot_params = self._get_params_from_time_constant()
+        label = plot_params['label']
+        voltage_bias = plot_params['voltage_bias']
+        signal_voltage = plot_params['signal_voltage']
         # Use The Tc library to plot the restul
         fig, ax = self._create_blank_fig()
         tc = TAUCurve([])
@@ -860,9 +901,10 @@ class DAQGuiTemplate(QtGui.QWidget):
             fig.subplots_adjust(left=0.1, right=0.95, top=0.90, bottom=0.2)
             ax.plot(test_freq_vector[fit_idx], fit_amp[fit_idx],
                     marker='*', ms=15.0, color=color, alpha=0.5, lw=2)
-            label = '$\\tau$={0:.2f} ms ({1} Hz) @ $V_b$={2} $\mu$V'.format(fit_3db_point, fit_3db_point_hz, vbias)
+            label = '$\\tau$={0:.2f} ms ({1} Hz) @ $V_b$={2}$\mu$V $V_S$={3}$V$'.format(fit_3db_point, fit_3db_point_hz,
+                                                                                         voltage_bias, signal_voltage)
             ax.plot(test_freq_vector, fit_amp, color=color, alpha=0.7, label=label)
-        title = '{0}\n$\\tau$ vs $V_b$'.format(bolo_name)
+        title = 'Response Amplitude vs Frequency\n{0}'.format(plot_params['label'])
         ax.set_title(title)
         ax.legend()
         fig.savefig(self.plotted_data_path)
@@ -889,12 +931,23 @@ class DAQGuiTemplate(QtGui.QWidget):
     def _close_time_constant(self):
         self.time_constant_popup.close()
 
+    def _get_params_from_time_constant(self):
+        squid = str(getattr(self, '_time_constant_popup_squid_select_combobox').currentText())
+        label = str(getattr(self, '_time_constant_popup_sample_name_lineedit').text())
+        voltage_bias = str(getattr(self, '_time_constant_popup_signal_voltage_lineedit').text())
+        signal_voltage = str(getattr(self, '_time_constant_popup_voltage_bias_lineedit').text())
+        frequency = str(getattr(self, '_time_constant_popup_frequency_select_combobox').currentText())
+        return {'squid': squid, 'voltage_bias': voltage_bias,
+                'signal_voltage': signal_voltage, 'label': label,
+                'frequency': frequency}
+
     def _take_time_constant_data_point(self):
-        if not hasattr(self, 'raw_data_path'):
-            self._quick_message(msg='Please set a data Path First')
-            self._get_raw_data_save_path()
-            self._take_time_constant_data_point()
+        if hasattr(self, 'raw_data_path') and self.raw_data_path is not None:
+            print 'Active Data Path Found'
+            print self.raw_data_path
         else:
+            self._get_raw_data_save_path()
+        if self.raw_data_path is not None:
             # check if the file exists and append it
             if os.path.exists(self.raw_data_path):
                 with open(self.raw_data_path, 'r') as data_handle:
@@ -930,8 +983,8 @@ class DAQGuiTemplate(QtGui.QWidget):
             self.populate_combobox(combobox_widget, entry_list)
         getattr(self, '_time_constant_popup_daq_select_combobox').setCurrentIndex(6)
         getattr(self, '_time_constant_popup_daq_sample_rate_combobox').setCurrentIndex(2)
-        self.time_constant_popup.showMaximized()
         self._plot_tau_data_point([])
+        self.time_constant_popup.showMaximized()
 
     #################################################
     # POL EFFICIENCY

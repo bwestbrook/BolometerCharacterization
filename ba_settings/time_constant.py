@@ -20,14 +20,19 @@ time_constant_settings.time_constant_popup_build_dict = {
                                                          '_time_constant_popup_daq_sample_rate_combobox': {'position': (3, 3, 1, 1)},
 
                                                          # DATA SETUP 
-                                                         '_time_constant_popup_raw_data_path_pushbutton': {'text': 'Set Data Path', 'function': '_get_raw_data_save_path', 'position': (4, 0, 1, 1)},
-                                                         '_time_constant_popup_raw_data_path_label': {'text': 'You must set a data path', 'font': 'med', 'position': (4, 1, 1, 1)},
 
-                                                         '_time_constant_popup_bolo_name_header_label': {'text': 'Bolo Name:', 'position': (5, 0, 1, 1)},
-                                                         '_time_constant_popup_bolo_name_lineedit': {'text': 'Test Bolo', 'position': (5, 1, 1, 1)},
+                                                         '_time_constant_popup_squid_header_label': {'text': 'SQUID:', 'position': (4, 0, 1, 1), 'font': 'huge', 'color': 'red'},
+                                                         '_time_constant_popup_squid_select_combobox': {'function': '_update_squid_calibration', 'font': 'huge', 'color': 'red',
+                                                                                                        'position': (4, 1, 1, 1)},
+
+                                                         '_time_constant_popup_sample_name_header_label': {'text': 'Sample Name:', 'position': (4, 2, 1, 1)},
+                                                         '_time_constant_popup_sample_name_lineedit': {'position': (4, 3, 1, 1)},
+
+                                                         '_time_constant_popup_signal_votlage_header_label': {'text': 'Signal Voltage (Vpp):', 'position': (5, 0, 1, 1)},
+                                                         '_time_constant_popup_signal_voltage_lineedit': {'text': '3.64', 'position': (5, 1, 1, 1)},
 
                                                          '_time_constant_popup_voltage_bias_header_label': {'text': 'Voltage Bias (uV):', 'position': (5, 2, 1, 1)},
-                                                         '_time_constant_popup_voltage_bias_lineedit': {'text': '4.0', 'position': (5, 3, 1, 1)},
+                                                         '_time_constant_popup_voltage_bias_lineedit': {'text': '4.4', 'position': (5, 3, 1, 1)},
 
                                                          # CONTROLS 
                                                          '_time_constant_popup_take_data_point_pushbutton': {'text': 'Take Data', 'function': '_take_time_constant_data_point', 'position': (7, 0, 1, 4)},
@@ -54,4 +59,5 @@ time_constant_settings.time_constant_combobox_entry_dict = {
                                                             '_time_constant_popup_daq_select_combobox': ['0', '1', '2', '3', '4', '5', '6', '7'],
                                                             '_time_constant_popup_daq_sample_rate_combobox': ['50', '500', '1000'],
                                                             '_time_constant_popup_daq_integration_time_combobox': ['50', '500', '1000', '10000', '200000'],
+                                                            '_time_constant_popup_squid_select_combobox': ['', '1', '2', '3', '4', '5', '6']
                                                              }

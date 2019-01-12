@@ -14,7 +14,7 @@ from pol_efficiency import pol_efficiency_settings
 from beam_mapper import beam_mapper_settings
 from final_plot import final_plot_settings
 from xy_collector import xy_collector_settings
-from xy_collector import xy_collector_settings
+from cosmic_rays import cosmic_ray_settings
 from multimeter import multimeter_settings
 
 
@@ -51,7 +51,7 @@ list_of_extra_settings = [main_panel_settings, rtcurve_settings_popup_settings,
                           user_move_stepper_settings, single_channel_fts_settings,
                           beam_mapper_settings, pol_efficiency_settings, final_plot_settings,
                           taucurve_settings_popup_settings, xy_collector_settings,
-                          time_constant_settings, multimeter_settings]
+                          time_constant_settings, multimeter_settings, cosmic_rays_settings]
 
 
 for extra_settings in list_of_extra_settings:

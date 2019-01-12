@@ -42,8 +42,11 @@ xy_collector_settings.xy_collector_build_dict = {
                                                              '_xy_collector_popup_plotting_output_label': {'text': 'Plotting/Output', 'font': 'large', 'color': 'blue',
                                                                                                            'alignment': 'Center', 'position': (6, 0, 1, 4)},
 
-                                                             '_xy_collector_popup_sample_name_header_label': {'text': 'Sample Label:', 'position': (7, 0, 1, 1)},
+                                                             '_xy_collector_popup_sample_name_header_label': {'text': 'Sample Name:', 'position': (7, 0, 1, 1)},
                                                              '_xy_collector_popup_sample_name_lineedit': {'text': '', 'position': (7, 1, 1, 1)},
+
+                                                             '_xy_collector_popup_optical_load_header_label': {'text': 'Optical Load:', 'position': (7, 2, 1, 1)},
+                                                             '_xy_collector_popup_optical_load_combobox': {'position': (7, 3, 1, 1)},
 
                                                              '_xy_collector_popup_sample_drift_direction_label': {'text': 'Stage Drift :', 'position': (8, 0, 1, 1)},
                                                              '_xy_collector_popup_sample_drift_direction_combobox': {'position': (8, 1, 1, 1), 'font': 'med'},
@@ -63,12 +66,13 @@ xy_collector_settings.xy_collector_build_dict = {
                                                              '_xy_collector_popup_data_clip_hi_header_label': {'text': 'Data Clip Hi:', 'position': (10, 2, 1, 1)},
                                                              '_xy_collector_popup_data_clip_hi_lineedit': {'text': '', 'position': (10, 3, 1, 1)},
 
-                                                             '_xy_collector_popup_include_errorbars_checkbox': {'text': 'Include Error Bars:', 'position': (11, 0, 1, 1)},
+                                                             '_xy_collector_popup_sample_res_header_label': {'text': 'Sample Res RT (Ohms):', 'position': (11, 0, 1, 1)},
+                                                             '_xy_collector_popup_sample_res_lineedit': {'text': '', 'position': (11, 1, 1, 1)},
 
-                                                             '_xy_collector_popup_invert_output_checkbox': {'text': 'Invert Output:', 'position': (11, 1, 1, 1)},
+                                                             '_xy_collector_popup_include_errorbars_checkbox': {'text': 'Include Error Bars:', 'position': (11, 2, 1, 1)},
 
-                                                             '_xy_collector_popup_sample_res_header_label': {'text': 'Sample Res RT (Ohms):', 'position': (11, 2, 1, 1)},
-                                                             '_xy_collector_popup_sample_res_lineedit': {'text': '', 'position': (11, 3, 1, 1)},
+                                                             '_xy_collector_popup_invert_output_checkbox': {'text': 'Invert Output:', 'position': (11, 3, 1, 1)},
+
 # CONTROL BUTTONS 
                                                              '_xy_collector_popup_control_buttons_label': {'text': 'CONTROLS', 'font': 'large', 'color': 'blue',
                                                                                                           'alignment': 'Center', 'position': (13, 0, 1, 4)},
@@ -111,15 +115,13 @@ xy_collector_settings.xy_collector_combobox_entry_dict = {
                                                           '_xy_collector_popup_mode_combobox': ['IV', 'RT', 'Discrete'],
                                                           '_xy_collector_popup_daq_channel_x_combobox': ['0', '1', '2', '3', '4', '5', '6', '7'],
                                                           '_xy_collector_popup_daq_channel_y_combobox': ['0', '1', '2', '3', '4', '5', '6', '7'],
-                                                          '_xy_collector_popup_squid_select_combobox': ['1', '2', '3', '4', '5', '6'],
+                                                          '_xy_collector_popup_squid_select_combobox': ['', '1', '2', '3', '4', '5', '6'],
                                                           '_xy_collector_popup_voltage_factor_combobox': ['1e-5', '1e-4'],
                                                           '_xy_collector_popup_daq_sample_rate_combobox': ['50', '500', '1000'],
                                                           '_xy_collector_popup_daq_integration_time_combobox': ['50', '100', '500', '1000'],
                                                           '_xy_collector_popup_grt_range_combobox': ['2', '20', '200', '2K', '20K', '200K', '2M'],
                                                           '_xy_collector_popup_sample_temp_combobox': ['1.2K', '1.0K', '310mK', '260mK'],
-                                                          '_xy_collector_popup_sample_drift_direction_combobox': ['Hi2Lo', 'Lo2Hi']
-                                                           }
-
-
-
+                                                          '_xy_collector_popup_sample_drift_direction_combobox': ['Hi2Lo', 'Lo2Hi'],
+                                                          '_xy_collector_popup_optical_load_combobox': ['Dark', '77K', '300K']
+                                                         }
 

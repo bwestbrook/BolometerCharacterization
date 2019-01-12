@@ -20,8 +20,8 @@ single_channel_fts_settings.single_channel_fts_build_dict = {
                                                              '_single_channel_fts_popup_grid_successful_connection_header_label': {'text': '', 'function': '_connect_to_com_port', 'position': (3, 0, 1, 2)},
                                                              '_single_channel_fts_popup_desired_grid_angle_header_label': {'text': 'Desired Grid Angle:', 'position': (2, 2, 1, 1)},
                                                              '_single_channel_fts_popup_desired_grid_angle_lineedit': {'text': '0',  'position': (2, 3, 1, 1)},
-    
-                                                             '_single_channel_fts_popup_move_grid_pushbutton': {'text': 'Move', 'function': '_rotate_grid', 'position': (2, 4, 1, 1)},    
+
+                                                             '_single_channel_fts_popup_move_grid_pushbutton': {'text': 'Move', 'function': '_rotate_grid', 'position': (2, 4, 1, 1)},
 # SCAN SETUP 
                                                              '_single_channel_fts_popup_scan_setup_label': {'text': 'SCAN SETUP', 'font': 'huge', 'color': 'blue', 'alignment': 'Center', 'position': (4, 0, 1, 4)},
 
