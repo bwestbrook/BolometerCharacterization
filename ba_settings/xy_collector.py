@@ -30,7 +30,7 @@ xy_collector_settings.xy_collector_build_dict = {
                                                              '_xy_collector_popup_grt_range_header_label': {'text': 'GRT Range:', 'position': (4, 2, 1, 1)},
                                                              '_xy_collector_popup_grt_range_combobox': {'position': (4, 3, 1, 1)},
 
-                                                             '_xy_collector_popup_daq_integration_time_header_label': {'text': 'Integration Time (ms) [min 40ms]:', 'position': (5, 0, 1, 1)},
+                                                             '_xy_collector_popup_daq_integration_time_header_label': {'text': 'Integration Time (ms):', 'position': (5, 0, 1, 1)},
                                                              '_xy_collector_popup_daq_integration_time_combobox': {'position': (5, 1, 1, 1)},
 
                                                              '_xy_collector_popup_daq_sample_rate_header_label': {'text': 'Sample Rate (Hz):', 'position': (5, 2, 1, 1)},

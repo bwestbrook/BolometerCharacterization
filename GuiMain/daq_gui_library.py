@@ -205,7 +205,7 @@ class DAQGuiTemplate(QtGui.QWidget):
             elif run_mode == 'RT':
                 suggested_file_name = 'SQ{0}_{1}_RTCurve_{2}_Raw_'.format(squid, label, drift)
             suggested_file_name = self._add_index_to_suggested_file_name(suggested_file_name)
-            path = os.path.join(self.data_folder, suggested_file_name)
+            paths = [os.path.join(self.data_folder, suggested_file_name)]
         elif 'time_constant' in sender:
             plot_params = self._get_params_from_time_constant()
             squid = plot_params['squid']
@@ -214,16 +214,32 @@ class DAQGuiTemplate(QtGui.QWidget):
             voltage_bias = plot_params['voltage_bias'].replace('.', 'p')
             suggested_file_name = 'SQ{0}_{1}_TauCurve_Vbias_of_{2}uV_w_Vsignal_of_{3}V_Raw_'.format(squid, label, voltage_bias, signal_voltage)
             suggested_file_name = self._add_index_to_suggested_file_name(suggested_file_name)
-            path = os.path.join(self.data_folder, suggested_file_name)
-        data_name = str(QtGui.QFileDialog.getSaveFileName(self, 'Raw Data Save Location', path, '.dat'))
-        if len(data_name) > 0:
-            self.raw_data_path = os.path.join(self.data_folder, data_name)
-            self.plotted_data_path = self.raw_data_path.replace('.dat', '_plotted.png')
-            self.parsed_data_path = self.raw_data_path.replace('.dat', '_calibrated.dat')
-        else:
-            self.raw_data_path = None
-            self.plotted_data_path = None
-            self.parsed_data_path = None
+            paths = [os.path.join(self.data_folder, suggested_file_name)]
+        elif 'cosmic_rays' in sender:
+            plot_params = self._get_params_from_cosmic_rays()
+            paths = []
+            for i in range(1, 3):
+                squid = plot_params['squid_{0}'.format(i)]
+                label = plot_params['label_{0}'.format(i)]
+                integration_time = int(plot_params['integration_time_{0}'.format(i)]) / 1000
+                suggested_file_name = 'SQ{0}_{1}_CR_Timestream_{2}s_Raw_'.format(squid, label, integration_time)
+                suggested_file_name = self._add_index_to_suggested_file_name(suggested_file_name)
+                path = os.path.join(self.data_folder, suggested_file_name)
+                paths.append(path)
+        self.raw_data_path = []
+        self.parsed_data_path = []
+        self.plotted_data_path = []
+        for path in paths:
+            data_name = str(QtGui.QFileDialog.getSaveFileName(self, 'Raw Data Save Location', path, '.dat'))
+            if len(data_name) > 0:
+                full_path = os.path.join(self.data_folder, data_name)
+                self.raw_data_path.append(full_path)
+                self.plotted_data_path.append(full_path.replace('.dat', '_plotted.png'))
+                self.parsed_data_path.append(full_path.replace('.dat', '_calibrated.dat'))
+            else:
+                self.raw_data_path = None
+                self.plotted_data_path = None
+                self.parsed_data_path = None
 
     def _get_plotted_data_save_path(self):
         data_name = str(QtGui.QFileDialog.getSaveFileName(self, 'Plotted Data Save Location', self.data_folder))
@@ -311,6 +327,33 @@ class DAQGuiTemplate(QtGui.QWidget):
         fig.subplots_adjust(left=left, right=right, top=top, bottom=bottom)
         return fig, ax
 
+    def _update_squid_calibration(self):
+        combobox = self.sender()
+        if type(combobox) == QtGui.QComboBox:
+            selected_squid = str(combobox.currentText())
+            if selected_squid == '':
+                squid_calibration = 'NaN'
+            else:
+                squid_calibration = settings.squid_calibration_dict[selected_squid]
+            squid_str = '{0} (uA/V)'.format(squid_calibration)
+            if 'xy_collector' in str(combobox.whatsThis()):
+                getattr(self, '_xy_collector_popup_squid_conversion_label').setText(squid_str)
+                if hasattr(self, 'sample_dict') > 0 and selected_squid in self.sample_dict:
+                    getattr(self, '_xy_collector_popup_sample_name_lineedit').setText(self.sample_dict[selected_squid])
+            elif 'time_constant' in str(combobox.whatsThis()):
+                if hasattr(self, 'sample_dict') > 0 and selected_squid in self.sample_dict:
+                    getattr(self, '_time_constant_popup_sample_name_lineedit').setText(self.sample_dict[selected_squid])
+            elif 'cosmic_rays' in str(combobox.whatsThis()):
+                if hasattr(self, 'sample_dict') > 0 and selected_squid in self.sample_dict:
+                    whats_this_str = str(combobox.whatsThis())
+                    if '1' in whats_this_str:
+                        channel = '1'
+                    elif '2' in whats_this_str:
+                        channel = '2'
+                    widget_name = whats_this_str.replace('squid_{0}_select_combobox'.format(channel),
+                                                         'sample_{0}_name_lineedit'.format(channel))
+                    getattr(self, widget_name).setText(self.sample_dict[selected_squid])
+
     #################################################
     # Final Plotting and Saving (Common to all DAQ Types)
     #################################################
@@ -322,12 +365,12 @@ class DAQGuiTemplate(QtGui.QWidget):
         #data_folder = './Data/{0}'.format(self.today_str)
         #if not os.path.exists(data_folder):
         data_folder = './Data'
-        self.raw_data_path = str(QtGui.QFileDialog.getOpenFileName(self, directory=data_folder))
-        self.parsed_data_path = self.raw_data_path.replace('.dat', '_calibrated.dat')
-        self.plotted_data_path = self.raw_data_path.replace('.dat', '_plotted.png')
+        self.raw_data_path = [str(QtGui.QFileDialog.getOpenFileName(self, directory=data_folder))]
+        self.parsed_data_path = [self.raw_data_path[0].replace('.dat', '_calibrated.dat')]
+        self.plotted_data_path = [self.raw_data_path[0].replace('.dat', '_plotted.png')]
         plot_params = self._get_params_from_xy_collector()
         self.xdata, self.ydata, self.ystd = [], [], []
-        with open(self.raw_data_path, 'r') as data_file_handle:
+        with open(self.raw_data_path[0], 'r') as data_file_handle:
             for line in data_file_handle.readlines():
                 line = line.replace('\n', '')
                 self.xdata.append(float(line.split('\t')[0]))
@@ -351,8 +394,8 @@ class DAQGuiTemplate(QtGui.QWidget):
         if hasattr(self, 'temp_plot_path'):
             image = QtGui.QPixmap(self.temp_plot_path)
             getattr(self,  '_final_plot_popup_result_label').setPixmap(image)
-            self.plotted_data_path = self.raw_data_path.replace('.dat', '_plotted.png')
-            self.parsed_data_path = self.raw_data_path.replace('.dat', '_calibrated.dat')
+            self.plotted_data_path = self.raw_data_path[0].replace('.dat', '_plotted.png')
+            self.parsed_data_path = self.raw_data_path[0].replace('.dat', '_calibrated.dat')
             getattr(self, '_final_plot_popup_plot_path_label').setText(self.plotted_data_path)
             getattr(self, '_final_plot_popup_data_path_label').setText(self.parsed_data_path)
             if title is not None:
@@ -389,9 +432,12 @@ class DAQGuiTemplate(QtGui.QWidget):
             elif plot_params['mode'] == 'RT':
                 self._final_rt_plot()
         elif sender == '_time_constant_popup_save_pushbutton':
-            self.temp_plot_path = './temp_files/temp_iv_png.png'
+            self.temp_plot_path = './temp_files/temp_tau_png.png'
             self.active_fig.savefig(self.temp_plot_path)
-            self._adjust_final_plot_popup('tau')
+            title = str(self.active_fig.axes[0].title).split(',')[-1].replace(')', '')
+            xlabel = self.active_fig.axes[0].get_xlabel()
+            ylabel = self.active_fig.axes[0].get_ylabel()
+            self._adjust_final_plot_popup('tau', title=title, xlabel=xlabel, ylabel=ylabel)
         else:
             print sender
             print 'need to be configured'
@@ -435,7 +481,7 @@ class DAQGuiTemplate(QtGui.QWidget):
                                                                             determine_calibration=False,
                                                                             clip=fit_clip, label=label)
         if hasattr(self, 'parsed_data_path'):
-            with open(self.parsed_data_path, 'w') as parsed_data_handle:
+            with open(self.parsed_data_path[0], 'w') as parsed_data_handle:
                 for i, v_bias in enumerate(v_bias_real):
                     i_bolo = i_bolo_real[i]
                     parsed_data_line = '{0}\t{1}\t{2}\n'.format(v_bias, i_bolo, i_bolo_std)
@@ -638,6 +684,50 @@ class DAQGuiTemplate(QtGui.QWidget):
     def _close_cosmic_rays(self):
         self.cosmic_rays_popup.close()
 
+    def _get_params_from_cosmic_rays(self):
+        params = {}
+        for i in range(1, 3):
+            squid = str(getattr(self, '_cosmic_rays_popup_squid_{0}_select_combobox'.format(i)).currentText())
+            label = str(getattr(self, '_cosmic_rays_popup_sample_{0}_name_lineedit'.format(i)).text())
+            integration_time = str(getattr(self, '_cosmic_rays_popup_daq_{0}_integration_time_combobox'.format(i)).currentText())
+            sample_rate = str(getattr(self, '_cosmic_rays_popup_daq_{0}_sample_rate_combobox'.format(i)).currentText())
+            daq_channel = str(getattr(self, '_cosmic_rays_popup_daq_channel_{0}_combobox'.format(i)).currentText())
+            params.update({'squid_{0}'.format(i): squid})
+            params.update({'label_{0}'.format(i): label})
+            params.update({'sample_rate_{0}'.format(i): sample_rate})
+            params.update({'daq_channel_{0}'.format(i): daq_channel})
+            params.update({'integration_time_{0}'.format(i): integration_time})
+        return params
+
+    def _run_cosmic_rays(self):
+        self._get_raw_data_save_path()
+        if self.raw_data_path is not None:
+            params = self._get_params_from_cosmic_rays()
+            for i in range(len(self.raw_data_path)):
+                setattr(self, 'data_{0}'.format(i), self.raw_data_path[i])
+            daq_channel_1 = params['daq_channel_1']
+            integration_time_1 = params['integration_time_1']
+            sample_rate_1 = params['sample_rate_1']
+            daq_channel_2 = params['daq_channel_2']
+            integration_time_2 = params['integration_time_2']
+            sample_rate_2 = params['sample_rate_2']
+            data_1, mean_1, min_1, max_1, std_1 = self.real_daq.get_data(signal_channel=daq_channel_1,
+                                                                         integration_time=integration_time_1,
+                                                                         sample_rate=sample_rate_1)
+            data_2, mean_2, min_2, max_2, std_2 = self.real_daq.get_data(signal_channel=daq_channel_2,
+                                                                         integration_time=integration_time_2,
+                                                                         sample_rate=sample_rate_2)
+            print data_1, data_2
+            print mean_1, mean_2
+            getattr(self, '_cosmic_rays_popup_data_1_std_label').setText('{0:.3f}'.format(std_1))
+            getattr(self, '_cosmic_rays_popup_data_2_std_label').setText('{0:.3f}'.format(std_2))
+            getattr(self, '_cosmic_rays_popup_data_1_mean_label').setText('{0:.3f}'.format(mean_1))
+            getattr(self, '_cosmic_rays_popup_data_2_mean_label').setText('{0:.3f}'.format(mean_2))
+            self._draw_cr_timestream(data_1, '1', title='CR Timestream', ylabel='SQUID Output Voltage', xlabel='Time (ms)')
+            self._draw_cr_timestream(data_2, '2', title='CR Timestream', ylabel='SQUID Output Voltage', xlabel='Time (ms)')
+        delattr(self, 'raw_data_path')
+
+
     def _cosmic_rays(self):
         if not hasattr(self, 'cosmic_rays_popup'):
             self._create_popup_window('cosmic_rays_popup')
@@ -648,7 +738,24 @@ class DAQGuiTemplate(QtGui.QWidget):
         for combobox_widget, entry_list in self.cosmic_rays_combobox_entry_dict.iteritems():
             self.populate_combobox(combobox_widget, entry_list)
         self.cosmic_rays_popup.showMaximized()
+        for i in range(1, 3):
+            getattr(self, '_cosmic_rays_popup_daq_{0}_sample_rate_combobox'.format(i)).setCurrentIndex(2)
+            getattr(self, '_cosmic_rays_popup_daq_{0}_integration_time_combobox'.format(i)).setCurrentIndex(0)
+        getattr(self, '_cosmic_rays_popup_daq_channel_1_combobox').setCurrentIndex(2)
+        getattr(self, '_cosmic_rays_popup_daq_channel_2_combobox').setCurrentIndex(3)
         print 'hello'
+
+    def _draw_cr_timestream(self, data, channel, title='', xlabel='', ylabel=''):
+        fig, ax = self._create_blank_fig()
+        ax.plot(data)
+        ax.set_title(title, fontsize=10)
+        ax.set_xlabel(xlabel, fontsize=10)
+        ax.set_ylabel(ylabel, fontsize=10)
+        save_path = 'temp_files/temp_cr.png'
+        fig.savefig(save_path)
+        pl.close('all')
+        image_to_display = QtGui.QPixmap(save_path)
+        getattr(self, '_cosmic_rays_popup_data_{0}_label'.format(channel)).setPixmap(image_to_display)
 
     #################################################
     # XY COLLECTOR
@@ -702,7 +809,10 @@ class DAQGuiTemplate(QtGui.QWidget):
         voltage_factor = float(str(getattr(self, '_xy_collector_popup_voltage_factor_combobox').currentText()))
         squid = str(getattr(self, '_xy_collector_popup_squid_select_combobox').currentText())
         squid_conversion = str(getattr(self, '_xy_collector_popup_squid_conversion_label').text())
-        squid_conversion = float(squid_conversion.split(' ')[0])
+        if len(squid_conversion) > 0:
+            squid_conversion = float(squid_conversion.split(' ')[0])
+        else:
+            squid_conversion = 1.0
         label = str(getattr(self, '_xy_collector_popup_sample_name_lineedit').text())
         fit_clip_lo = float(str(getattr(self, '_xy_collector_popup_fit_clip_lo_lineedit').text()))
         fit_clip_hi = float(str(getattr(self, '_xy_collector_popup_fit_clip_hi_lineedit').text()))
@@ -743,22 +853,6 @@ class DAQGuiTemplate(QtGui.QWidget):
         else:
             self._draw_xy_collector()
 
-    def _update_squid_calibration(self):
-        combobox = self.sender()
-        if type(combobox) == QtGui.QComboBox:
-            selected_squid = str(combobox.currentText())
-            if selected_squid == '':
-                squid_calibration = 'NaN'
-            else:
-                squid_calibration = settings.squid_calibration_dict[selected_squid]
-            squid_str = '{0} (uA/V)'.format(squid_calibration)
-            if 'xy_collector' in str(combobox.whatsThis()):
-                getattr(self, '_xy_collector_popup_squid_conversion_label').setText(squid_str)
-                if hasattr(self, 'sample_dict') > 0 and selected_squid in self.sample_dict:
-                    getattr(self, '_xy_collector_popup_sample_name_lineedit').setText(self.sample_dict[selected_squid])
-            elif 'time_constant' in str(combobox.whatsThis()):
-                if hasattr(self, 'sample_dict') > 0 and selected_squid in self.sample_dict:
-                    getattr(self, '_time_constant_popup_sample_name_lineedit').setText(self.sample_dict[selected_squid])
 
     def _update_xy_collector_buttons_sizes(self):
         width = 0.1 * float(self.screen_resolution.width())
@@ -781,7 +875,7 @@ class DAQGuiTemplate(QtGui.QWidget):
         global continue_run
         continue_run = True
         self._get_raw_data_save_path()
-        if self.raw_data_path is not None:
+        if self.raw_data_path[0] is not None:
             sender_text = str(self.sender().text())
             self.sender().setFlat(True)
             getattr(self, '_xy_collector_popup_save_pushbutton').setFlat(True)
@@ -796,7 +890,7 @@ class DAQGuiTemplate(QtGui.QWidget):
                 rtc = RTCurve([])
                 grt_range = str(getattr(self, '_xy_collector_popup_grt_range_combobox').currentText())
                 voltage_factor = float(self.multimeter_voltage_factor_range_dict[grt_range])
-            with open(self.raw_data_path, 'w') as data_handle:
+            with open(self.raw_data_path[0], 'w') as data_handle:
                 while continue_run:
                     x_data, x_mean, x_min, x_max, x_std = self.real_daq.get_data(signal_channel=daq_channel_x,
                                                                                  integration_time=integration_time,
@@ -883,7 +977,7 @@ class DAQGuiTemplate(QtGui.QWidget):
         fig, ax = self._create_blank_fig()
         tc = TAUCurve([])
         color = 'r'
-        freq_vector, amp_vector, error_vector = tc.load(self.raw_data_path)
+        freq_vector, amp_vector, error_vector = tc.load(self.raw_data_path[0])
         freq_vector, amp_vector, tau_in_hertz, tau_in_ms, idx = tc.get_3db_point(freq_vector, amp_vector)
         fig, ax = tc.plot(freq_vector, amp_vector, error_vector, idx, fig=fig, ax=ax,
                           tau_in_hertz=tau_in_hertz, color=color)
@@ -907,8 +1001,8 @@ class DAQGuiTemplate(QtGui.QWidget):
         title = 'Response Amplitude vs Frequency\n{0}'.format(plot_params['label'])
         ax.set_title(title)
         ax.legend()
-        fig.savefig(self.plotted_data_path)
-        image_to_display = QtGui.QPixmap(self.plotted_data_path)
+        fig.savefig(self.plotted_data_path[0])
+        image_to_display = QtGui.QPixmap(self.plotted_data_path[0])
         getattr(self, '_time_constant_popup_all_data_monitor_label').setPixmap(image_to_display)
         self.temp_plot_path = self.plotted_data_path
         self.active_fig = fig
@@ -917,13 +1011,13 @@ class DAQGuiTemplate(QtGui.QWidget):
         if not hasattr(self, 'raw_data_path'):
             self._quick_message(msg='Please set a data Path First')
         else:
-            if os.path.exists(self.raw_data_path):
-                with open(self.raw_data_path, 'r') as data_handle:
+            if os.path.exists(self.raw_data_path[0]):
+                with open(self.raw_data_path[0], 'r') as data_handle:
                     existing_lines = data_handle.readlines()
             if len(existing_lines) == 0:
                 self._quick_message(msg='You must take at least one data point to delete the last one!')
             else:
-                with open(self.raw_data_path, 'w') as data_handle:
+                with open(self.raw_data_path[0], 'w') as data_handle:
                     for line in existing_lines[:-1]:
                         data_handle.write(line)
                 self._plot_time_constant()
@@ -944,13 +1038,13 @@ class DAQGuiTemplate(QtGui.QWidget):
     def _take_time_constant_data_point(self):
         if hasattr(self, 'raw_data_path') and self.raw_data_path is not None:
             print 'Active Data Path Found'
-            print self.raw_data_path
+            print self.raw_data_path[0]
         else:
             self._get_raw_data_save_path()
         if self.raw_data_path is not None:
             # check if the file exists and append it
-            if os.path.exists(self.raw_data_path):
-                with open(self.raw_data_path, 'r') as data_handle:
+            if os.path.exists(self.raw_data_path[0]):
+                with open(self.raw_data_path[0], 'r') as data_handle:
                     existing_lines = data_handle.readlines()
             else:
                 existing_lines = []
@@ -965,7 +1059,7 @@ class DAQGuiTemplate(QtGui.QWidget):
             data_line = '{0}\t{1}\t{2}\n'.format(frequency, y_mean, y_std)
             # Append the data and rewrite to file
             existing_lines.append(data_line)
-            with open(self.raw_data_path, 'w') as data_handle:
+            with open(self.raw_data_path[0], 'w') as data_handle:
                 for line in existing_lines:
                     data_handle.write(line)
             getattr(self, '_time_constant_popup_data_point_mean_label').setText('{0:.3f}'.format(y_mean))

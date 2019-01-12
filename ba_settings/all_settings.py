@@ -14,7 +14,7 @@ from pol_efficiency import pol_efficiency_settings
 from beam_mapper import beam_mapper_settings
 from final_plot import final_plot_settings
 from xy_collector import xy_collector_settings
-from cosmic_rays import cosmic_ray_settings
+from cosmic_rays import cosmic_rays_settings
 from multimeter import multimeter_settings
 
 
