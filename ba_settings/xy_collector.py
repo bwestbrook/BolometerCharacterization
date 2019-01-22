@@ -113,14 +113,16 @@ xy_collector_settings.xy_collector_build_dict = {
 
 xy_collector_settings.xy_collector_combobox_entry_dict = {
                                                           '_xy_collector_popup_mode_combobox': ['IV', 'RT', 'Discrete'],
-                                                          '_xy_collector_popup_daq_channel_x_combobox': ['0', '1', '2', '3', '4', '5', '6', '7'],
-                                                          '_xy_collector_popup_daq_channel_y_combobox': ['0', '1', '2', '3', '4', '5', '6', '7'],
+                                                          '_xy_collector_popup_daq_channel_x_combobox': ['0', '1', '2', '3'],
+                                                          '_xy_collector_popup_daq_channel_y_combobox': ['0', '1', '2', '3'],
                                                           '_xy_collector_popup_squid_select_combobox': ['', '1', '2', '3', '4', '5', '6'],
                                                           '_xy_collector_popup_voltage_factor_combobox': ['1e-5', '1e-4'],
                                                           '_xy_collector_popup_daq_sample_rate_combobox': ['50', '500', '1000'],
                                                           '_xy_collector_popup_daq_integration_time_combobox': ['50', '100', '500', '1000'],
                                                           '_xy_collector_popup_grt_range_combobox': ['2', '20', '200', '2K', '20K', '200K', '2M'],
-                                                          '_xy_collector_popup_sample_temp_combobox': ['1.2K', '1.0K', '310mK', '260mK'],
+                                                          '_xy_collector_popup_sample_temp_combobox': ['1.2K', '1.0K', '900mK', '800mK', '700mK',
+                                                                                                       '600mK', '500mK', '400mK', '350mK', '325mK',
+                                                                                                       '300mK', '275mK', '260mK', '250mK'],
                                                           '_xy_collector_popup_sample_drift_direction_combobox': ['Hi2Lo', 'Lo2Hi'],
                                                           '_xy_collector_popup_optical_load_combobox': ['Dark', '77K', '300K']
                                                          }

@@ -10,8 +10,7 @@ from nidaqmx.constants import AcquisitionType, Edge
 class DAQ():
 
 
-    def get_data(self, signal_channel=3, integration_time=50, sample_rate=500, central_value=1.0):
-        active_devices = self.get_active_devices()
+    def get_data(self, signal_channel=3, integration_time=50, sample_rate=500, central_value=1.0, active_devices=[]):
         with nidaqmx.Task() as task:
             if len(active_devices) == 1:
                 device = active_devices[0]
@@ -20,6 +19,7 @@ class DAQ():
                 print 'Found multiple devices when trying to get data'
                 print 'Chose {0}'.format(device)
             voltage_chan_str = '{0}/ai{1}'.format(device, signal_channel)
+            print voltage_chan_str
             task.ai_channels.add_ai_voltage_chan(voltage_chan_str)
             integration_time = int(integration_time)
             sample_rate = int(sample_rate)

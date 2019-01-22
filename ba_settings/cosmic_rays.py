@@ -29,10 +29,9 @@ cosmic_rays_settings.cosmic_rays_build_dict = {
                                                              '_cosmic_rays_popup_daq_2_sample_rate_header_label': {'text': 'Sample Rate 2 (Hz):', 'position': (4, 2, 1, 1)},
                                                              '_cosmic_rays_popup_daq_2_sample_rate_combobox': {'position': (4, 3, 1, 1)},
 
+                                                             '_cosmic_rays_popup_daq_channel_3_header_label': {'text': 'DAQ Channel 3:', 'position': (5, 0, 1, 1)},
+                                                             '_cosmic_rays_popup_daq_channel_3_combobox': { 'position': (5, 1, 1, 1)},
 # PLOT SETUP 
-                                                             #'_cosmic_rays_popup_raw_data_path_header_label': {'text': 'Raw Data Path:', 'position': (7, 0, 1, 1)},
-                                                             #'_cosmic_rays_popup_raw_data_path_label': {'text': 'Start Taking Data To Set Raw Data Path', 'position': (7, 1, 1, 3), 'font': 'med'},
-
                                                              '_cosmic_rays_popup_plotting_output_label': {'text': 'Plotting/Output', 'font': 'large', 'color': 'blue',
                                                                                                            'alignment': 'Center', 'position': (6, 0, 1, 4)},
 
@@ -50,34 +49,6 @@ cosmic_rays_settings.cosmic_rays_build_dict = {
                                                              '_cosmic_rays_popup_sample_2_name_header_label': {'text': 'Sample 2 Name:', 'position': (8, 2, 1, 1)},
                                                              '_cosmic_rays_popup_sample_2_name_lineedit': {'text': '', 'position': (8, 3, 1, 1)},
 
-                                                             #'_cosmic_rays_popup_optical_load_header_label': {'text': 'Optical Load:', 'position': (7, 2, 1, 1)},
-                                                             #'_cosmic_rays_popup_optical_load_combobox': {'position': (7, 3, 1, 1)},
-#
-                                                             #'_cosmic_rays_popup_sample_drift_direction_label': {'text': 'Stage Drift :', 'position': (8, 0, 1, 1)},
-                                                             #'_cosmic_rays_popup_sample_drift_direction_combobox': {'position': (8, 1, 1, 1), 'font': 'med'},
-#
-                                                             #'_cosmic_rays_popup_sample_temp_header_label': {'text': 'Sample Temp:', 'position': (8, 2, 1, 1)},
-                                                             #'_cosmic_rays_popup_sample_temp_combobox': {'position': (8, 3, 1, 1), 'font': 'med'},
-#
-                                                             #'_cosmic_rays_popup_fit_clip_lo_header_label': {'text': 'Fit Clip Low:', 'position': (9, 0, 1, 1)},
-                                                             #'_cosmic_rays_popup_fit_clip_lo_lineedit': {'text': '', 'position': (9, 1, 1, 1)},
-#
-                                                             #'_cosmic_rays_popup_fit_clip_hi_header_label': {'text': 'Fit Clip Hi:', 'position': (9, 2, 1, 1)},
-                                                             #'_cosmic_rays_popup_fit_clip_hi_lineedit': {'text': '', 'position': (9, 3, 1, 1)},
-#
-                                                             #'_cosmic_rays_popup_data_clip_lo_header_label': {'text': 'Data Clip Low:', 'position': (10, 0, 1, 1)},
-                                                             #'_cosmic_rays_popup_data_clip_lo_lineedit': {'text': '', 'position': (10, 1, 1, 1)},
-#
-                                                             #'_cosmic_rays_popup_data_clip_hi_header_label': {'text': 'Data Clip Hi:', 'position': (10, 2, 1, 1)},
-                                                             ##'_cosmic_rays_popup_data_clip_hi_lineedit': {'text': '', 'position': (10, 3, 1, 1)},
-
-                                                             #'_cosmic_rays_popup_sample_res_header_label': {'text': 'Sample Res RT (Ohms):', 'position': (11, 0, 1, 1)},
-                                                             #'_cosmic_rays_popup_sample_res_lineedit': {'text': '', 'position': (11, 1, 1, 1)},
-#
-                                                             #'_cosmic_rays_popup_include_errorbars_checkbox': {'text': 'Include Error Bars:', 'position': (11, 2, 1, 1)},
-
-                                                             #'_cosmic_rays_popup_invert_output_checkbox': {'text': 'Invert Output:', 'position': (11, 3, 1, 1)},
-
 # CONTROL BUTTONS 
                                                              '_cosmic_rays_popup_control_buttons_label': {'text': 'CONTROLS', 'font': 'large', 'color': 'blue',
                                                                                                           'alignment': 'Center', 'position': (13, 0, 1, 4)},
@@ -86,7 +57,7 @@ cosmic_rays_settings.cosmic_rays_build_dict = {
 
                                                              '_cosmic_rays_popup_pause_pushbutton': {'text': 'Stop', 'function': '_stop', 'position': (14, 2, 1, 2)},
 
-                                                             '_cosmic_rays_popup_save_pushbutton': {'text': 'Make and Save Plots and Data', 'function': '_save_plots_and_data', 'position': (15, 0, 1, 4)},
+                                                             '_cosmic_rays_popup_save_pushbutton': {'text': 'Save Plots and Data', 'function': '_save_plots_and_data', 'position': (15, 0, 1, 4)},
 
                                                              '_cosmic_rays_popup_close_pushbutton': {'text': 'Close', 'function': '_close_cosmic_rays', 'position': (16, 0, 1, 4)},
 
@@ -116,14 +87,15 @@ cosmic_rays_settings.cosmic_rays_build_dict = {
 
 
 cosmic_rays_settings.cosmic_rays_combobox_entry_dict = {
-                                                          '_cosmic_rays_popup_daq_channel_1_combobox': ['0', '1', '2', '3', '4', '5', '6', '7'],
-                                                          '_cosmic_rays_popup_daq_1_sample_rate_combobox': ['50', '500', '1000'],
+                                                          '_cosmic_rays_popup_daq_channel_1_combobox': ['0', '1', '2', '3'],
+                                                          '_cosmic_rays_popup_daq_1_sample_rate_combobox': ['50', '500', '1000', '5000'],
                                                           '_cosmic_rays_popup_daq_1_integration_time_combobox': ['1000', '10000', '20000', '30000', '600000'],
                                                           '_cosmic_rays_popup_squid_1_select_combobox': ['', '1', '2', '3', '4', '5', '6'],
-                                                          '_cosmic_rays_popup_daq_channel_2_combobox': ['0', '1', '2', '3', '4', '5', '6', '7'],
-                                                          '_cosmic_rays_popup_daq_2_sample_rate_combobox': ['50', '500', '1000'],
+                                                          '_cosmic_rays_popup_daq_channel_2_combobox': ['0', '1', '2', '3'],
+                                                          '_cosmic_rays_popup_daq_2_sample_rate_combobox': ['50', '500', '1000', '5000'],
                                                           '_cosmic_rays_popup_daq_2_integration_time_combobox': ['1000', '10000', '20000', '30000', '600000'],
                                                           '_cosmic_rays_popup_squid_2_select_combobox': ['', '1', '2', '3', '4', '5', '6'],
+                                                          '_cosmic_rays_popup_daq_channel_3_combobox': ['0', '1', '2', '3'],
                                                           #'_cosmic_rays_popup_grt_range_combobox': ['2', '20', '200', '2K', '20K', '200K', '2M'],
                                                           #'_cosmic_rays_popup_sample_temp_combobox': ['1.2K', '1.0K', '310mK', '260mK'],
                                                           #'_cosmic_rays_popup_sample_drift_direction_combobox': ['Hi2Lo', 'Lo2Hi'],
