@@ -19,7 +19,6 @@ class DAQ():
                 print 'Found multiple devices when trying to get data'
                 print 'Chose {0}'.format(device)
             voltage_chan_str = '{0}/ai{1}'.format(device, signal_channel)
-            print voltage_chan_str
             task.ai_channels.add_ai_voltage_chan(voltage_chan_str)
             integration_time = int(integration_time)
             sample_rate = int(sample_rate)

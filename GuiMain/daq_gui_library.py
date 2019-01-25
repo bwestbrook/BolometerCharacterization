@@ -1,4 +1,5 @@
 import sys
+import smtplib
 import serial
 import json
 import os
@@ -6,7 +7,6 @@ import subprocess
 import shutil
 import time
 import numpy as np
-import datetime
 import pylab as pl
 import matplotlib.pyplot as plt
 import time
@@ -544,7 +544,11 @@ class DAQGuiTemplate(QtGui.QWidget):
         plot_params = self._get_params_from_xy_collector()
         rtc = RTCurve([])
         invert = getattr(self, '_xy_collector_popup_invert_output_checkbox').isChecked()
-        normal_res = float(str(getattr(self, '_xy_collector_popup_sample_res_lineedit').text()))
+        normal_res = str(getattr(self, '_xy_collector_popup_sample_res_lineedit').text())
+        if self._is_float(normal_res):
+            normal_res = float(normal_res)
+        else:
+            normal_res = 1.0
         title = '{0} R vs. T'.format(plot_params['label'])
         label = '{0}-{1}'.format(plot_params['label'], plot_params['drift'])
         data_clip = plot_params['data_clip']
@@ -662,6 +666,7 @@ class DAQGuiTemplate(QtGui.QWidget):
 
     def _save_final_plot(self):
         self.active_fig.savefig(self.plotted_data_path)
+        self.quick_message('Saved png to {0}'.format(self.plotted_data_path))
         if False:
             if self.is_beam:
                 self._draw_beammaper_final(str(plot_path))
@@ -704,7 +709,42 @@ class DAQGuiTemplate(QtGui.QWidget):
     # MULTIMETER
     #################################################
 
+    def _multimeter(self):
+        '''
+        Opens the panel
+        '''
+        if not hasattr(self, 'multimeter_popup'):
+            self._create_popup_window('multimeter_popup')
+        else:
+            self._initialize_panel('multimeter_popup')
+        self._build_panel(settings.multimeter_popup_build_dict)
+        for combobox_widget, entry_list in self.multimeter_combobox_entry_dict.iteritems():
+            self.populate_combobox(combobox_widget, entry_list)
+        getattr(self, '_multimeter_popup_daq_channel_1_combobox').setCurrentIndex(2)
+        getattr(self, '_multimeter_popup_daq_channel_2_combobox').setCurrentIndex(3)
+        getattr(self, '_multimeter_popup_daq_sample_rate_1_combobox').setCurrentIndex(2)
+        getattr(self, '_multimeter_popup_daq_sample_rate_2_combobox').setCurrentIndex(2)
+        getattr(self, '_multimeter_popup_daq_integration_time_1_combobox').setCurrentIndex(0)
+        getattr(self, '_multimeter_popup_daq_integration_time_2_combobox').setCurrentIndex(0)
+        getattr(self, '_multimeter_popup_grt_range_1_combobox').setCurrentIndex(3)
+        getattr(self, '_multimeter_popup_grt_range_2_combobox').setCurrentIndex(3)
+        self.multimeter_popup.showMaximized()
+
+    def _close_multimeter(self):
+        '''
+        Closes the panel with a warning if data is being collected
+        '''
+        global continue_run
+        if continue_run:
+            self._quick_message('Taking data!!!\nPlease stop taking data before closing XY Collector!')
+        else:
+            self.multimeter_popup.close()
+            continue_run = False
+
     def _update_multimeter(self, channel='1', title='', xlabel='', ylabel=''):
+        '''
+        Updates the panel with DAQ output
+        '''
         fig, ax = self._create_blank_fig()
         grt_serial = str(getattr(self, '_multimeter_popup_grt_serial_{0}_combobox'.format(channel)).currentText())
         grt_range = str(getattr(self, '_multimeter_popup_grt_range_{0}_combobox'.format(channel)).currentText())
@@ -745,34 +785,17 @@ class DAQGuiTemplate(QtGui.QWidget):
         while continue_run:
             self.mm_data, self.mm_mean, self.mm_data_min, self.mm_data_max, self.mm_data_std = self.real_daq.get_data(signal_channel=daq_channel_1,
                                                                                                                       integration_time=integration_time_1,
-                                                                                                                      sample_rate=sample_rate_1)
+                                                                                                                      sample_rate=sample_rate_1,
+                                                                                                                      active_devices=self.active_devices)
+
             self._update_multimeter(channel='1')
             self.mm_data, self.mm_mean, self.mm_data_min, self.mm_data_max, self.mm_data_std = self.real_daq.get_data(signal_channel=daq_channel_2,
                                                                                                                       integration_time=integration_time_2,
-                                                                                                                      sample_rate=sample_rate_2)
+                                                                                                                      sample_rate=sample_rate_2,
+                                                                                                                      active_devices=self.active_devices)
             self._update_multimeter(channel='2')
             root.update()
 
-    def _multimeter(self):
-        if not hasattr(self, 'multimeter_popup'):
-            self._create_popup_window('multimeter_popup')
-        else:
-            self._initialize_panel('multimeter_popup')
-        self._build_panel(settings.multimeter_popup_build_dict)
-        for combobox_widget, entry_list in self.multimeter_combobox_entry_dict.iteritems():
-            self.populate_combobox(combobox_widget, entry_list)
-        getattr(self, '_multimeter_popup_daq_channel_1_combobox').setCurrentIndex(2)
-        getattr(self, '_multimeter_popup_daq_channel_2_combobox').setCurrentIndex(3)
-        getattr(self, '_multimeter_popup_daq_sample_rate_1_combobox').setCurrentIndex(2)
-        getattr(self, '_multimeter_popup_daq_sample_rate_2_combobox').setCurrentIndex(2)
-        getattr(self, '_multimeter_popup_daq_integration_time_1_combobox').setCurrentIndex(0)
-        getattr(self, '_multimeter_popup_daq_integration_time_2_combobox').setCurrentIndex(0)
-        getattr(self, '_multimeter_popup_grt_range_1_combobox').setCurrentIndex(3)
-        getattr(self, '_multimeter_popup_grt_range_2_combobox').setCurrentIndex(3)
-        self.multimeter_popup.showMaximized()
-
-    def _close_multimeter(self):
-        self.multimeter_popup.close()
 
     #################################################
     # COSMIC RAYS
@@ -831,7 +854,6 @@ class DAQGuiTemplate(QtGui.QWidget):
             self._create_popup_window('cosmic_rays_popup')
         else:
             self._initialize_panel('cosmic_rays_popup')
-        self._update_xy_collector_buttons_sizes()
         self._build_panel(settings.cosmic_rays_build_dict)
         for combobox_widget, entry_list in self.cosmic_rays_combobox_entry_dict.iteritems():
             self.populate_combobox(combobox_widget, entry_list)
@@ -859,7 +881,52 @@ class DAQGuiTemplate(QtGui.QWidget):
     # XY COLLECTOR
     #################################################
 
+    def _close_xy_collector(self):
+        '''
+        Closes the panel with a warning if data is being collected
+        '''
+        global continue_run
+        if continue_run:
+            self._quick_message('Taking data!!!\nPlease stop taking data before closing XY Collector!')
+        else:
+            self.xy_collector_popup.close()
+            continue_run = False
+
+    def _xy_collector(self):
+        '''
+        Opens the panel and sets som defaults
+        '''
+        if not hasattr(self, 'xy_collector_popup'):
+            self._create_popup_window('xy_collector_popup')
+        else:
+            self._initialize_panel('xy_collector_popup')
+        self._build_panel(settings.xy_collector_build_dict)
+        for combobox_widget, entry_list in self.xy_collector_combobox_entry_dict.iteritems():
+            self.populate_combobox(combobox_widget, entry_list)
+        self.xy_collector_popup.showMaximized()
+        self.xy_collector_popup.setWindowTitle('XY COLLECTOR')
+        getattr(self, '_xy_collector_popup_daq_channel_x_combobox').setCurrentIndex(2)
+        getattr(self, '_xy_collector_popup_daq_channel_y_combobox').setCurrentIndex(3)
+        self.xdata = np.asarray([])
+        self.ydata = np.asarray([])
+        self.xstd = np.asarray([])
+        self.ystd = np.asarray([])
+        self._update_in_xy_mode()
+        self._update_squid_calibration()
+        getattr(self, '_xy_collector_popup_fit_clip_lo_lineedit').setText(str(self.ivcurve_plot_settings_dict['fit_clip_lo']))
+        getattr(self, '_xy_collector_popup_fit_clip_hi_lineedit').setText(str(self.ivcurve_plot_settings_dict['fit_clip_hi']))
+        getattr(self, '_xy_collector_popup_data_clip_lo_lineedit').setText(str(self.ivcurve_plot_settings_dict['data_clip_lo']))
+        getattr(self, '_xy_collector_popup_data_clip_hi_lineedit').setText(str(self.ivcurve_plot_settings_dict['data_clip_hi']))
+        getattr(self, '_xy_collector_popup_daq_sample_rate_combobox').setCurrentIndex(2)
+        getattr(self, '_xy_collector_popup_sample_temp_combobox').setCurrentIndex(3)
+        getattr(self, '_xy_collector_popup_grt_range_combobox').setCurrentIndex(3)
+        getattr(self, '_xy_collector_popup_include_errorbars_checkbox').setChecked(True)
+
+
     def _draw_x(self, title='', xlabel='', ylabel=''):
+        '''
+        Draws the x timestream and paints it to the panel
+        '''
         fig, ax = self._create_blank_fig()
         ax.plot(self.xdata)
         ax.set_title(title, fontsize=10)
@@ -872,6 +939,9 @@ class DAQGuiTemplate(QtGui.QWidget):
         getattr(self, '_xy_collector_popup_xdata_label').setPixmap(image_to_display)
 
     def _draw_y(self, title='', xlabel='', ylabel=''):
+        '''
+        Draws the Y timestream and paints it to the panel
+        '''
         e_bars = getattr(self, '_xy_collector_popup_include_errorbars_checkbox').isChecked()
         fig, ax = self._create_blank_fig()
         ax.plot(self.ydata)
@@ -887,6 +957,9 @@ class DAQGuiTemplate(QtGui.QWidget):
         getattr(self, '_xy_collector_popup_ydata_label').setPixmap(image_to_display)
 
     def _draw_xy_collector(self, title='', xlabel='', ylabel=''):
+        '''
+        Draws the X-Y scatter plott and paints it to the panel
+        '''
         e_bars = getattr(self, '_xy_collector_popup_include_errorbars_checkbox').isChecked()
         fig, ax = self._create_blank_fig()
         ax.plot(self.xdata, self.ydata)
@@ -903,6 +976,9 @@ class DAQGuiTemplate(QtGui.QWidget):
         self.repaint()
 
     def _get_params_from_xy_collector(self):
+        '''
+        Collects the parameters from the panel
+        '''
         mode = str(getattr(self, '_xy_collector_popup_mode_combobox').currentText())
         voltage_factor = float(str(getattr(self, '_xy_collector_popup_voltage_factor_combobox').currentText()))
         squid = str(getattr(self, '_xy_collector_popup_squid_select_combobox').currentText())
@@ -928,6 +1004,9 @@ class DAQGuiTemplate(QtGui.QWidget):
                 'optical_load': optical_load}
 
     def _update_in_xy_mode(self):
+        '''
+        Updats the panel with new defaults
+        '''
         run_mode = str(getattr(self, '_xy_collector_popup_mode_combobox').currentText())
         if run_mode == 'IV':
             self._draw_x(title='X data', xlabel='Sample', ylabel='Bias Voltage (V)')
@@ -951,29 +1030,15 @@ class DAQGuiTemplate(QtGui.QWidget):
         else:
             self._draw_xy_collector()
 
-
-    def _update_xy_collector_buttons_sizes(self):
-        width = 0.1 * float(self.screen_resolution.width())
-        height = 0.1 * float(self.screen_resolution.height())
-        settings.xy_collector_build_dict['_xy_collector_popup_daq_channel_x_combobox'].update({'width': width})
-        settings.xy_collector_build_dict['_xy_collector_popup_daq_channel_y_combobox'].update({'width': width})
-        settings.xy_collector_build_dict['_xy_collector_popup_squid_select_combobox'].update({'width': width})
-        settings.xy_collector_build_dict['_xy_collector_popup_voltage_factor_combobox'].update({'width': width})
-        settings.xy_collector_build_dict['_xy_collector_popup_sample_name_lineedit'].update({'width': width})
-        settings.xy_collector_build_dict['_xy_collector_popup_daq_integration_time_combobox'].update({'width': width})
-        #settings.xy_collector_build_dict['_xy_collector_popup_start_pushbutton'].update({'height': height})
-        #settings.xy_collector_build_dict['_xy_collector_popup_pause_pushbutton'].update({'height': height})
-        #settings.xy_collector_build_dict['_xy_collector_popup_save_pushbutton'].update({'height': height})
-        #settings.xy_collector_build_dict['_xy_collector_popup_close_pushbutton'].update({'height': height})
-
-    def _close_xy_collector(self):
-        self.xy_collector_popup.close()
-
     def _run_xy_collector(self):
+        '''
+        Starts the data collection
+        '''
         global continue_run
         continue_run = True
         self._get_raw_data_save_path()
         if self.raw_data_path[0] is not None:
+            start_time = datetime.now()
             sender_text = str(self.sender().text())
             self.sender().setFlat(True)
             getattr(self, '_xy_collector_popup_save_pushbutton').setFlat(True)
@@ -984,15 +1049,32 @@ class DAQGuiTemplate(QtGui.QWidget):
             sample_rate = int(float(str(getattr(self, '_xy_collector_popup_daq_sample_rate_combobox').currentText())))
             self.xdata, self.ydata, self.xstd, self.ystd = np.asarray([]), np.asarray([]), np.asarray([]), np.asarray([])
             run_mode = str(getattr(self, '_xy_collector_popup_mode_combobox').currentText())
+            first_x_point = 1.0
+            last_time = start_time
             if run_mode == 'RT':
                 rtc = RTCurve([])
                 grt_range = str(getattr(self, '_xy_collector_popup_grt_range_combobox').currentText())
                 voltage_factor = float(self.multimeter_voltage_factor_range_dict[grt_range])
+                first_x_point = 600
             with open(self.raw_data_path[0], 'w') as data_handle:
                 while continue_run:
+                    data_time = datetime.now()
+                    tot_elapsed_time = data_time - start_time
+                    data_point_elapsed_time = last_time - data_time
+                    tot_time_str = str(tot_elapsed_time.seconds)
+                    data_point_time_str = str(data_point_elapsed_time.microseconds * 1e-6) # s
+                    #print data_point_time_str
                     x_data, x_mean, x_min, x_max, x_std = self.real_daq.get_data(signal_channel=daq_channel_x,
                                                                                  integration_time=integration_time,
-                                                                                 sample_rate=sample_rate)
+                                                                                 sample_rate=sample_rate,
+                                                                                 active_devices=self.active_devices)
+                    y_data, y_mean, y_min, y_max, y_std = self.real_daq.get_data(signal_channel=daq_channel_y,
+                                                                                 integration_time=integration_time,
+                                                                                 sample_rate=sample_rate,
+                                                                                 active_devices=self.active_devices)
+                    if run_mode == 'IV' and x_mean < 0.0:
+                        x_mean *= -1
+                        x_data = x_data -2 * x_data
                     if run_mode == 'RT':
                         if 3.0 < x_mean * voltage_factor < 600:
                             x_data = 1e3 * rtc.resistance_to_temp_grt(x_data * voltage_factor, serial_number=29268)
@@ -1002,12 +1084,12 @@ class DAQGuiTemplate(QtGui.QWidget):
                         x_min = np.min(x_data)
                         x_max = np.max(x_data)
                         x_std = np.std(x_data)
-                    y_data, y_mean, y_min, y_max, y_std = self.real_daq.get_data(signal_channel=daq_channel_y,
-                                                                                 integration_time=integration_time,
-                                                                                 sample_rate=sample_rate)
-                    if run_mode == 'IV' and x_mean < 0.0:
-                        x_mean *= -1
-                        x_data = x_data -2 * x_data
+                    delta_x = x_mean - first_x_point
+                    slew_rate = '{0:.2f} mK/s'.format(delta_x / float(data_point_time_str))
+                    if run_mode == 'IV':
+                        slew_rate = slew_rate.replace('mK', 'uV')
+                    getattr(self, '_xy_collector_popup_data_time_label').setText(tot_time_str)
+                    getattr(self, '_xy_collector_popup_data_rate_label').setText(slew_rate)
                     self.xdata = np.append(self.xdata, x_mean)
                     self.ydata = np.append(self.ydata, y_mean)
                     self.xstd = np.append(self.xstd, x_std)
@@ -1019,34 +1101,9 @@ class DAQGuiTemplate(QtGui.QWidget):
                     data_line = '{0}\t{1}\t{2}\n'.format(x_mean, y_mean, y_std)
                     data_handle.write(data_line)
                     self._update_in_xy_mode()
+                    first_x_point = x_mean
+                    last_time = data_time
                     root.update()
-
-    def _xy_collector(self):
-        if not hasattr(self, 'xy_collector_popup'):
-            self._create_popup_window('xy_collector_popup')
-        else:
-            self._initialize_panel('xy_collector_popup')
-        self._update_xy_collector_buttons_sizes()
-        self._build_panel(settings.xy_collector_build_dict)
-        for combobox_widget, entry_list in self.xy_collector_combobox_entry_dict.iteritems():
-            self.populate_combobox(combobox_widget, entry_list)
-        self.xy_collector_popup.showMaximized()
-        self.xy_collector_popup.setWindowTitle('XY COLLECTOR')
-        getattr(self, '_xy_collector_popup_daq_channel_x_combobox').setCurrentIndex(2)
-        getattr(self, '_xy_collector_popup_daq_channel_y_combobox').setCurrentIndex(3)
-        self.xdata = np.asarray([])
-        self.ydata = np.asarray([])
-        self.xstd = np.asarray([])
-        self.ystd = np.asarray([])
-        self._update_in_xy_mode()
-        self._update_squid_calibration()
-        getattr(self, '_xy_collector_popup_fit_clip_lo_lineedit').setText(str(self.ivcurve_plot_settings_dict['fit_clip_lo']))
-        getattr(self, '_xy_collector_popup_fit_clip_hi_lineedit').setText(str(self.ivcurve_plot_settings_dict['fit_clip_hi']))
-        getattr(self, '_xy_collector_popup_data_clip_lo_lineedit').setText(str(self.ivcurve_plot_settings_dict['data_clip_lo']))
-        getattr(self, '_xy_collector_popup_data_clip_hi_lineedit').setText(str(self.ivcurve_plot_settings_dict['data_clip_hi']))
-        getattr(self, '_xy_collector_popup_daq_sample_rate_combobox').setCurrentIndex(2)
-        getattr(self, '_xy_collector_popup_grt_range_combobox').setCurrentIndex(3)
-        getattr(self, '_xy_collector_popup_include_errorbars_checkbox').setChecked(True)
 
 
     #################################################
@@ -1121,7 +1178,15 @@ class DAQGuiTemplate(QtGui.QWidget):
                 self._plot_time_constant()
 
     def _close_time_constant(self):
-        self.time_constant_popup.close()
+        '''
+        Closes the panel with a warning if data is being collected
+        '''
+        global continue_run
+        if continue_run:
+            self._quick_message('Taking data!!!\nPlease stop taking data before closing Time Constant!')
+        else:
+            self.time_constant_popup.close()
+            continue_run = False
 
     def _get_params_from_time_constant(self):
         squid = str(getattr(self, '_time_constant_popup_squid_select_combobox').currentText())
@@ -1184,7 +1249,15 @@ class DAQGuiTemplate(QtGui.QWidget):
 
 
     def _close_pol_efficiency(self):
-        self.pol_efficiency_popup.close()
+        '''
+        Closes the panel with a warning if data is being collected
+        '''
+        global continue_run
+        if continue_run:
+            self._quick_message('Taking data!!!\nPlease stop taking data before closing Pol Efficiency!')
+        else:
+            self.pol_efficiency_popup.close()
+            continue_run = False
 
     def _pol_efficiency(self):
         if not hasattr(self, 'pol_efficiency_popup'):
@@ -1218,9 +1291,6 @@ class DAQGuiTemplate(QtGui.QWidget):
             getattr(self, '_pol_efficiency_popup_position_monitor_slider').setMinimum(start_angle)
             getattr(self, '_pol_efficiency_popup_position_monitor_slider').setMaximum(end_angle)
         self.pol_efficiency_popup.repaint()
-
-    def _close_pol_efficiency(self):
-        self.pol_efficiency_popup.close()
 
     def _run_pol_efficiency(self):
         scan_params = self._get_all_pol_efficiency_scan_params()
@@ -1341,6 +1411,9 @@ class DAQGuiTemplate(QtGui.QWidget):
     #################################################
 
     def _close_user_move_stepper(self):
+        '''
+        Closes the panel
+        '''
         self.user_move_stepper_popup.close()
 
     def _user_move_stepper(self):
@@ -1420,7 +1493,15 @@ class DAQGuiTemplate(QtGui.QWidget):
     #################################################
 
     def _close_single_channel_fts(self):
-        self.single_channel_fts_popup.close()
+        '''
+        Closes the panel with a warning if data is being collected
+        '''
+        global continue_run
+        if continue_run:
+            self._quick_message('Taking data!!!\nPlease stop taking data before closing single channel FTS!')
+        else:
+            self.single_channel_fts_popup.close()
+            continue_run = False
 
     def _single_channel_fts(self):
         '''
@@ -1443,7 +1524,6 @@ class DAQGuiTemplate(QtGui.QWidget):
         getattr(self, '_single_channel_fts_popup_grid_sm_com_port_combobox').setCurrentIndex(1)
         getattr(self, '_single_channel_fts_popup_fts_sm_com_port_combobox').setCurrentIndex(2)
         self._update_single_channel_fts()
-        #self. _blank_fts_plot()
         self._plot_interferogram()
         self._draw_time_stream(set_to_widget='_single_channel_fts_popup_time_stream_label')
         self.single_channel_fts_popup.showMaximized()
@@ -1562,6 +1642,9 @@ class DAQGuiTemplate(QtGui.QWidget):
         self.starting_position = scan_params['starting_position']
 
     def _plot_interferogram(self, positions=[], amplitudes=[], stds=[]):
+        '''
+        Plots the collected data as an XY scatter (position, amplitude) and paints it to the panel
+        '''
         fig, ax = self._create_blank_fig()
         ax.set_xlabel('Mirror Position (cm)',fontsize = 10)
         ax.set_ylabel('Amplitude',fontsize = 10)
@@ -1573,19 +1656,10 @@ class DAQGuiTemplate(QtGui.QWidget):
         image = QtGui.QPixmap('temp_files/temp_int.png')
         getattr(self, '_single_channel_fts_popup_interferogram_label').setPixmap(image)
 
-    def _blank_fts_plot(self):
-        data = [0]*5
-        fig, ax = self._create_blank_fig()
-        ax.plot(data)
-        ax.set_xlabel('Mirror Position (m)',fontsize = 10)
-        ax.set_ylabel('Amplitude',fontsize = 10)
-        ax.set_title('Interferogram')
-        fig.savefig('temp_files/temp_int.png')
-        pl.close('all')
-        image = QtGui.QPixmap('temp_files/temp_int.png')
-        getattr(self, '_single_channel_fts_popup_interferogram_label').setPixmap(image)
-
     def _rotate_grid(self):
+        '''
+        Rotates the Pol Gride to the desired angle
+        '''
         polar_com_port = self._get_com_port('_single_channel_fts_popup_grid_com_ports_combobox')
         angle = getattr(self,'_single_channel_fts_popup_desired_grid_angle_lineedit').text()
         getattr(self, 'sm_{0}'.format(polar_com_port)).finite_rotation(int(angle))
@@ -1672,15 +1746,22 @@ class DAQGuiTemplate(QtGui.QWidget):
 
     def _close_beam_mapper(self):
         '''
-        Description: Closes the Beam Mapper popup window
-        Input: None
-        Output: None
+        Closes the panel with a warning if data is being collected
         '''
+        global continue_run
+        if continue_run:
+            self._quick_message('Taking data!!!\nPlease stop taking data before closing single channel FTS!')
+        else:
+            self.single_channel_fts_popup.close()
+            continue_run = False
 
         self.beam_mapper_popup.close()
 
     def _beam_mapper(self):
-        self.beam_map_daq = BeamMapDAQ()
+        '''
+        Opens the panel
+        '''
+        #self.beam_map_daq = BeamMapDAQ()
         if not hasattr(self, 'beam_mapper_popup'):
             self._create_popup_window('beam_mapper_popup')
         else:
@@ -1698,6 +1779,9 @@ class DAQGuiTemplate(QtGui.QWidget):
 
 
     def _get_all_beam_mapper_scan_params(self):
+        '''
+        Collects the parameters from the panel
+        '''
         scan_params = {}
         for beam_map_setting in settings.beam_map_int_settings:
             pull_from_widget_name = '_beam_mapper_popup_{0}_lineedit'.format(beam_map_setting)
@@ -1717,6 +1801,9 @@ class DAQGuiTemplate(QtGui.QWidget):
         return scan_params
 
     def _get_grid(self, scan_params):
+        '''
+        Sets up a gride to place data points into base on specfied params
+        '''
         x_total = scan_params['end_x_position'] - scan_params['start_x_position']
         x_steps = scan_params['step_size_x']
         n_points_x = (scan_params['end_x_position']-scan_params['start_x_position'])/scan_params['step_size_x']
@@ -1731,13 +1818,10 @@ class DAQGuiTemplate(QtGui.QWidget):
         scan_params['y_total'] = y_total
         return scan_params
 
-    def _create_beam_grid(self, scan_params):
-        fig = pl.figure(figsize=(3,3))
-        ax = fig.add_subplot(111)
-        #fig.savefig('temp_files/temp_beam_map.png')
-        pl.close('all')
-
     def _initialize_beam_mapper(self):
+        '''
+        Updates the panel based on inputs of desired grid
+        '''
         if len(str(self.sender().whatsThis())) == 0:
             return None
         else:
@@ -1753,6 +1837,9 @@ class DAQGuiTemplate(QtGui.QWidget):
                 getattr(self,'_beam_mapper_popup_n_points_y_label').setText(str(n_points_y))
 
     def _take_beam_map(self):
+        '''
+        Executes a data taking run
+        '''
         global continue_run
         continue_run = True
         scan_params = self._get_all_scan_params(popup='_beam_mapper')

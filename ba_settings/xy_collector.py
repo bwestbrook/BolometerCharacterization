@@ -97,6 +97,9 @@ xy_collector_settings.xy_collector_build_dict = {
                                                              '_xy_collector_popup_xdata_std_header_label': {'text': 'STD', 'alignment': 'Right', 'position': (6, 6, 1, 1)},
                                                              '_xy_collector_popup_xdata_std_label': {'alignment': 'Left', 'position': (6, 7, 1, 1)},
 
+                                                             '_xy_collector_popup_data_rate_header_label': {'text': 'Delta X Rate', 'alignment': 'Right', 'position': (6, 8, 1, 1)},
+                                                             '_xy_collector_popup_data_rate_label': {'alignment': 'Left', 'position': (6, 9, 1, 1)},
+
                                                              '_xy_collector_popup_ydata_label': {'alignment': 'Center', 'position': (7, 4, 5, 6)},
 
                                                              '_xy_collector_popup_ydata_mean_header_label': {'text': 'AVG:', 'alignment': 'Right', 'position': (12, 4, 1, 1)},
@@ -104,6 +107,9 @@ xy_collector_settings.xy_collector_build_dict = {
 
                                                              '_xy_collector_popup_ydata_std_header_label': {'text': 'STD', 'alignment': 'Right', 'position': (12, 6, 1, 1)},
                                                              '_xy_collector_popup_ydata_std_label': {'alignment': 'Left', 'position': (12, 7, 1, 1)},
+
+                                                             '_xy_collector_popup_data_time_header_label': {'text': 'Time', 'alignment': 'Right', 'position': (12, 8, 1, 1)},
+                                                             '_xy_collector_popup_data_time_label': {'alignment': 'Left', 'position': (12, 9, 1, 1)},
 
                                                              '_xy_collector_popup_xydata_label': {'alignment': 'Center', 'position': (13, 4, 5, 6)},
 
@@ -120,7 +126,7 @@ xy_collector_settings.xy_collector_combobox_entry_dict = {
                                                           '_xy_collector_popup_daq_sample_rate_combobox': ['50', '500', '1000'],
                                                           '_xy_collector_popup_daq_integration_time_combobox': ['50', '100', '500', '1000'],
                                                           '_xy_collector_popup_grt_range_combobox': ['2', '20', '200', '2K', '20K', '200K', '2M'],
-                                                          '_xy_collector_popup_sample_temp_combobox': ['1.2K', '1.0K', '900mK', '800mK', '700mK',
+                                                          '_xy_collector_popup_sample_temp_combobox': ['4K', '2K', '1.8K', '1.2K', '1.0K', '900mK', '800mK', '700mK',
                                                                                                        '600mK', '500mK', '400mK', '350mK', '325mK',
                                                                                                        '300mK', '275mK', '260mK', '250mK'],
                                                           '_xy_collector_popup_sample_drift_direction_combobox': ['Hi2Lo', 'Lo2Hi'],
