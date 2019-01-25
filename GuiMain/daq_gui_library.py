@@ -666,7 +666,7 @@ class DAQGuiTemplate(QtGui.QWidget):
 
     def _save_final_plot(self):
         self.active_fig.savefig(self.plotted_data_path)
-        self.quick_message('Saved png to {0}'.format(self.plotted_data_path))
+        self._quick_message('Saved png to {0}'.format(self.plotted_data_path))
         if False:
             if self.is_beam:
                 self._draw_beammaper_final(str(plot_path))
