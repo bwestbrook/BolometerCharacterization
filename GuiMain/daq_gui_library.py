@@ -33,7 +33,7 @@ from realDAQ.daq import DAQ
 
 
 #Global variables
-continue_run = True
+continue_run = False
 root = Tk()
 
 class DAQGuiTemplate(QtGui.QWidget):
@@ -1672,14 +1672,6 @@ class DAQGuiTemplate(QtGui.QWidget):
         continue_run = True
         scan_params = self._get_all_scan_params(popup='_single_channel_fts')
         pause = float(scan_params['pause_time']) / 1e3
-        print pause
-        print pause
-        print pause
-        print pause
-        print pause
-        print pause
-        print pause
-        print pause
         if not resume_run:
             if str(getattr(self, '_single_channel_fts_popup_fts_sm_connection_status_label').text()) != 'Connected!':
                 getattr(self, '_single_channel_fts_popup_start_pushbutton').setText('Connecting to Stepper Motor')
@@ -1752,16 +1744,15 @@ class DAQGuiTemplate(QtGui.QWidget):
         if continue_run:
             self._quick_message('Taking data!!!\nPlease stop taking data before closing single channel FTS!')
         else:
-            self.single_channel_fts_popup.close()
+            self.beam_mapper_popup.close()
             continue_run = False
 
-        self.beam_mapper_popup.close()
 
     def _beam_mapper(self):
         '''
         Opens the panel
         '''
-        #self.beam_map_daq = BeamMapDAQ()
+        self.beam_map_daq = BeamMapDAQ()
         if not hasattr(self, 'beam_mapper_popup'):
             self._create_popup_window('beam_mapper_popup')
         else:
@@ -1769,8 +1760,8 @@ class DAQGuiTemplate(QtGui.QWidget):
         self._build_panel(settings.beam_mapper_build_dict)
         for combobox_widget, entry_list in self.beam_mapper_combobox_entry_dict.iteritems():
             self.populate_combobox(combobox_widget, entry_list)
-        self._connect_to_com_port(beammapper=1)
-        self._connect_to_com_port(beammapper=2)
+        #self._connect_to_com_port(beammapper=1)
+        #self._connect_to_com_port(beammapper=2)
         self._draw_time_stream([0]*5, -1, -1,'_beam_mapper_popup_time_stream_label')
         self.beam_mapper_popup.showMaximized()
         self._initialize_beam_mapper()
@@ -1798,6 +1789,7 @@ class DAQGuiTemplate(QtGui.QWidget):
                 value = str(getattr(self, pull_from_widget_name).currentText())
                 scan_params[beam_map_setting] = value
         scan_params = self._get_grid(scan_params)
+        print scan_params
         return scan_params
 
     def _get_grid(self, scan_params):
