@@ -50,17 +50,17 @@ class TAUCurve():
             fit_params = curve_fit(self.test_single_pol, freq_vector, amp_vector, p0=fit_params)
             return fit_params[0]
 
-    def plot(self, freq_vector, amp_vector, error_vector, idx, fig=None, ax=None, 
+    def plot(self, freq_vector, amp_vector, error_vector, idx, fig=None, ax=None,
              tau_in_hertz='', color='', label=''):
         if fig is None and ax is None:
             pl.semilogx(freq_vector, amp_vector / amp_vector[0], color='w', linestyle='None')
-            pl.errorbar(freq_vector, amp_vector / amp_vector[0], yerr=error_vector, label=label,
+            pl.errorbar(freq_vector, amp_vector / amp_vector[0], yerr=error_vector / amp_vector[0], label=label,
                         marker='o', ms=5.0, linestyle='None', color=color)
             pl.xlabel('Modulation Frequency (Hz)')
             pl.ylabel('Normalized Amplitude')
         else:
             ax.semilogx(freq_vector, amp_vector / amp_vector[0], color='w', linestyle='None')
-            ax.errorbar(freq_vector, amp_vector / amp_vector[0], yerr=error_vector, label=label,
+            ax.errorbar(freq_vector, amp_vector / amp_vector[0], yerr=error_vector / amp_vector[0], label=label,
                         marker='o', ms=5.0, linestyle='None', color=color)
             ax.set_xlabel('Modulation Frequency (Hz)')
             ax.set_ylabel('Normalized Amplitude')

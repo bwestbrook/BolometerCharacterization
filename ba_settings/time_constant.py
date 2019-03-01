@@ -35,6 +35,7 @@ time_constant_settings.time_constant_popup_build_dict = {
                                                          '_time_constant_popup_voltage_bias_lineedit': {'text': '4.4', 'position': (5, 3, 1, 1)},
 
                                                          # CONTROLS 
+                                                         '_time_constant_popup_clear_data_pushbutton': {'text': 'Clear Data', 'function': '_clear_time_constant_data', 'position': (6, 0, 1, 4)},
                                                          '_time_constant_popup_take_data_point_pushbutton': {'text': 'Take Data', 'function': '_take_time_constant_data_point', 'position': (7, 0, 1, 4)},
                                                          '_time_constant_popup_delete_last_data_point_pushbutton': {'text': 'Delete Last Point', 'function': '_delete_last_point', 'position': (8, 0, 1, 4)},
                                                          '_time_constant_popup_save_pushbutton': {'text': 'Save And Plot Data', 'function': '_save_plots_and_data', 'position': (9, 0, 1, 4)},
@@ -58,6 +59,6 @@ time_constant_settings.time_constant_combobox_entry_dict = {
                                                             '_time_constant_popup_frequency_select_combobox': ['2', '4', '8', '16', '32', '64', '128', '256'],
                                                             '_time_constant_popup_daq_select_combobox': ['0', '1', '2', '3', '4', '5', '6', '7'],
                                                             '_time_constant_popup_daq_sample_rate_combobox': ['50', '500', '1000'],
-                                                            '_time_constant_popup_daq_integration_time_combobox': ['50', '500', '1000', '10000', '200000'],
+                                                            '_time_constant_popup_daq_integration_time_combobox': ['50', '500', '1000', '5000', '10000', '15000', '20000', '200000'],
                                                             '_time_constant_popup_squid_select_combobox': ['', '1', '2', '3', '4', '5', '6']
                                                              }

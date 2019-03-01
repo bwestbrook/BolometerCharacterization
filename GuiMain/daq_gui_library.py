@@ -1132,35 +1132,41 @@ class DAQGuiTemplate(QtGui.QWidget):
         fig, ax = self._create_blank_fig()
         tc = TAUCurve([])
         color = 'r'
-        freq_vector, amp_vector, error_vector = tc.load(self.raw_data_path[0])
-        freq_vector, amp_vector, tau_in_hertz, tau_in_ms, idx = tc.get_3db_point(freq_vector, amp_vector)
-        fig, ax = tc.plot(freq_vector, amp_vector, error_vector, idx, fig=fig, ax=ax,
-                          tau_in_hertz=tau_in_hertz, color=color)
-        f_0_guess = tau_in_hertz
-        amp_0_guess = 1.0
-        if len(freq_vector) >= 2 and ((max(freq_vector) - min(freq_vector)) >=2):
-            fit_params = tc.fit_single_pol(freq_vector, amp_vector / amp_vector[0],
-                                           fit_params=[amp_0_guess, f_0_guess])
-            test_freq_vector = np.arange(1.0, 250, 0.1)
-            fit_amp = tc.test_single_pol(test_freq_vector, fit_params[0], fit_params[1])
-            fit_3db_data = tc.get_3db_point(test_freq_vector, fit_amp)
-            fit_3db_point_hz = fit_3db_data[2]
-            fit_3db_point = 1e3 / (2 * np.pi * fit_3db_point_hz)
-            fit_idx = fit_3db_data[-1]
-            fig.subplots_adjust(left=0.1, right=0.95, top=0.90, bottom=0.2)
-            ax.plot(test_freq_vector[fit_idx], fit_amp[fit_idx],
-                    marker='*', ms=15.0, color=color, alpha=0.5, lw=2)
-            label = '$\\tau$={0:.2f} ms ({1} Hz) @ $V_b$={2}$\mu$V $V_S$={3}$V$'.format(fit_3db_point, fit_3db_point_hz,
-                                                                                         voltage_bias, signal_voltage)
-            ax.plot(test_freq_vector, fit_amp, color=color, alpha=0.7, label=label)
-        title = 'Response Amplitude vs Frequency\n{0}'.format(plot_params['label'])
-        ax.set_title(title)
-        ax.legend()
-        fig.savefig(self.plotted_data_path[0])
-        image_to_display = QtGui.QPixmap(self.plotted_data_path[0])
-        getattr(self, '_time_constant_popup_all_data_monitor_label').setPixmap(image_to_display)
-        self.temp_plot_path = self.plotted_data_path
-        self.active_fig = fig
+        if real_data:
+            freq_vector, amp_vector, error_vector = tc.load(self.raw_data_path[0])
+            freq_vector, amp_vector, tau_in_hertz, tau_in_ms, idx = tc.get_3db_point(freq_vector, amp_vector)
+            fig, ax = tc.plot(freq_vector, amp_vector, error_vector, idx, fig=fig, ax=ax,
+                              tau_in_hertz=tau_in_hertz, color=color)
+            f_0_guess = tau_in_hertz
+            amp_0_guess = 1.0
+            if len(freq_vector) >= 2 and ((max(freq_vector) - min(freq_vector)) >=2):
+                fit_params = tc.fit_single_pol(freq_vector, amp_vector / amp_vector[0],
+                                               fit_params=[amp_0_guess, f_0_guess])
+                test_freq_vector = np.arange(1.0, 250, 0.1)
+                fit_amp = tc.test_single_pol(test_freq_vector, fit_params[0], fit_params[1])
+                fit_3db_data = tc.get_3db_point(test_freq_vector, fit_amp)
+                fit_3db_point_hz = fit_3db_data[2]
+                fit_3db_point = 1e3 / (2 * np.pi * fit_3db_point_hz)
+                fit_idx = fit_3db_data[-1]
+                fig.subplots_adjust(left=0.1, right=0.95, top=0.82, bottom=0.2)
+                ax.plot(test_freq_vector[fit_idx], fit_amp[fit_idx],
+                        marker='*', ms=15.0, color=color, alpha=0.5, lw=2)
+                label = '$\\tau$={0:.2f} ms ({1} Hz) @ $V_b$={2}$\mu$V $V_S$={3}$V$'.format(fit_3db_point, fit_3db_point_hz,
+                                                                                             voltage_bias, signal_voltage)
+                ax.plot(test_freq_vector, fit_amp, color=color, alpha=0.7, label=label)
+            title = 'Response Amplitude vs Frequency\n{0}'.format(plot_params['label'])
+            ax.set_title(title)
+            ax.legend()
+            fig.savefig(self.plotted_data_path[0])
+            image_to_display = QtGui.QPixmap(self.plotted_data_path[0])
+            getattr(self, '_time_constant_popup_all_data_monitor_label').setPixmap(image_to_display)
+            self.temp_plot_path = self.plotted_data_path
+            self.active_fig = fig
+        else:
+            ax.plot(0.0, 0.0, color=color, alpha=0.7, label=label)
+            fig.savefig('./blank_fig.png')
+            image_to_display = QtGui.QPixmap('./blank_fig.png')
+            getattr(self, '_time_constant_popup_all_data_monitor_label').setPixmap(image_to_display)
 
     def _delete_last_point(self):
         if not hasattr(self, 'raw_data_path'):
@@ -1188,11 +1194,16 @@ class DAQGuiTemplate(QtGui.QWidget):
             self.time_constant_popup.close()
             continue_run = False
 
+    def _clear_time_constant_data(self):
+        self._plot_tau_data_point([])
+        self._plot_time_constant(real_data=False)
+        delattr(self, 'raw_data_path')
+
     def _get_params_from_time_constant(self):
         squid = str(getattr(self, '_time_constant_popup_squid_select_combobox').currentText())
         label = str(getattr(self, '_time_constant_popup_sample_name_lineedit').text())
-        voltage_bias = str(getattr(self, '_time_constant_popup_signal_voltage_lineedit').text())
-        signal_voltage = str(getattr(self, '_time_constant_popup_voltage_bias_lineedit').text())
+        signal_voltage = str(getattr(self, '_time_constant_popup_signal_voltage_lineedit').text())
+        voltage_bias = str(getattr(self, '_time_constant_popup_voltage_bias_lineedit').text())
         frequency = str(getattr(self, '_time_constant_popup_frequency_select_combobox').currentText())
         return {'squid': squid, 'voltage_bias': voltage_bias,
                 'signal_voltage': signal_voltage, 'label': label,
@@ -1217,7 +1228,8 @@ class DAQGuiTemplate(QtGui.QWidget):
             sample_rate = int(float(str(getattr(self, '_time_constant_popup_daq_sample_rate_combobox').currentText())))
             y_data, y_mean, y_min, y_max, y_std = self.real_daq.get_data(signal_channel=daq_channel,
                                                                          integration_time=integration_time,
-                                                                         sample_rate=sample_rate)
+                                                                         sample_rate=sample_rate,
+                                                                         active_devices=self.active_devices)
             frequency = float(str(getattr(self, '_time_constant_popup_frequency_select_combobox').currentText()))
             data_line = '{0}\t{1}\t{2}\n'.format(frequency, y_mean, y_std)
             # Append the data and rewrite to file
@@ -1238,9 +1250,11 @@ class DAQGuiTemplate(QtGui.QWidget):
         self._build_panel(settings.time_constant_popup_build_dict)
         for combobox_widget, entry_list in self.time_constant_combobox_entry_dict.iteritems():
             self.populate_combobox(combobox_widget, entry_list)
-        getattr(self, '_time_constant_popup_daq_select_combobox').setCurrentIndex(6)
+        getattr(self, '_time_constant_popup_daq_select_combobox').setCurrentIndex(0)
         getattr(self, '_time_constant_popup_daq_sample_rate_combobox').setCurrentIndex(2)
+        getattr(self, '_time_constant_popup_daq_integration_time_combobox').setCurrentIndex(4)
         self._plot_tau_data_point([])
+        self._plot_time_constant(real_data=False)
         self.time_constant_popup.showMaximized()
 
     #################################################
