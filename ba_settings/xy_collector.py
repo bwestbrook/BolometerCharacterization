@@ -17,30 +17,34 @@ xy_collector_settings.xy_collector_build_dict = {
                                                              '_xy_collector_popup_daq_channel_y_header_label': {'text': 'DAQ Channel Y:', 'position': (2, 2, 1, 1)},
                                                              '_xy_collector_popup_daq_channel_y_combobox': { 'position': (2, 3, 1, 1)},
 
-                                                             '_xy_collector_popup_squid_header_label': {'text': 'SQUID:', 'position': (3, 0, 1, 1), 'font': 'huge', 'color': 'red'},
+                                                             '_xy_collector_popup_daq_integration_time_header_label': {'text': 'Integration Time (ms):', 'position': (3, 0, 1, 1)},
+                                                             '_xy_collector_popup_daq_integration_time_combobox': {'position': (3, 1, 1, 1)},
+
+                                                             '_xy_collector_popup_daq_sample_rate_header_label': {'text': 'Sample Rate (Hz):', 'position': (3, 2, 1, 1)},
+                                                             '_xy_collector_popup_daq_sample_rate_combobox': {'position': (3, 3, 1, 1)},
+
+                                                             '_xy_collector_popup_squid_header_label': {'text': 'SQUID:', 'position': (4, 0, 1, 1), 'font': 'huge', 'color': 'red'},
                                                              '_xy_collector_popup_squid_select_combobox': {'function': '_update_squid_calibration', 'font': 'huge', 'color': 'red',
-                                                                                                           'position': (3, 1, 1, 1)},
+                                                                                                           'position': (4, 1, 1, 1)},
 
-                                                             '_xy_collector_popup_squid_conversion_header_label': {'text': 'SQUID Calibration:', 'position': (3, 2, 1, 1)},
-                                                             '_xy_collector_popup_squid_conversion_label': {'position': (3, 3, 1, 1)},
+                                                             '_xy_collector_popup_squid_conversion_header_label': {'text': 'SQUID Calibration:', 'position': (4, 2, 1, 1)},
+                                                             '_xy_collector_popup_squid_conversion_label': {'position': (4, 3, 1, 1)},
 
-                                                             '_xy_collector_popup_voltage_factor_header_label': {'text': 'Voltage Factor:', 'position': (4, 0, 1, 1)},
-                                                             '_xy_collector_popup_voltage_factor_combobox': {'position': (4, 1, 1, 1)},
+                                                             '_xy_collector_popup_voltage_factor_header_label': {'text': 'Voltage Factor:', 'position': (5, 0, 1, 1)},
+                                                             '_xy_collector_popup_voltage_factor_combobox': {'position': (5, 1, 1, 1)},
 
-                                                             '_xy_collector_popup_grt_range_header_label': {'text': 'GRT Range:', 'position': (4, 2, 1, 1)},
-                                                             '_xy_collector_popup_grt_range_combobox': {'position': (4, 3, 1, 1)},
+                                                             '_xy_collector_popup_grt_range_header_label': {'text': 'GRT Range:', 'position': (5, 2, 1, 1)},
+                                                             '_xy_collector_popup_grt_range_combobox': {'position': (5, 3, 1, 1)},
 
-                                                             '_xy_collector_popup_daq_integration_time_header_label': {'text': 'Integration Time (ms):', 'position': (5, 0, 1, 1)},
-                                                             '_xy_collector_popup_daq_integration_time_combobox': {'position': (5, 1, 1, 1)},
+                                                             '_xy_collector_popup_grt_serial_header_label': {'text': 'GRT Serial:', 'position': (6, 2, 1, 1)},
+                                                             '_xy_collector_popup_grt_serial_combobox': {'position': (6, 3, 1, 1)},
 
-                                                             '_xy_collector_popup_daq_sample_rate_header_label': {'text': 'Sample Rate (Hz):', 'position': (5, 2, 1, 1)},
-                                                             '_xy_collector_popup_daq_sample_rate_combobox': {'position': (5, 3, 1, 1)},
 # PLOT SETUP 
                                                              #'_xy_collector_popup_raw_data_path_header_label': {'text': 'Raw Data Path:', 'position': (7, 0, 1, 1)},
                                                              #'_xy_collector_popup_raw_data_path_label': {'text': 'Start Taking Data To Set Raw Data Path', 'position': (7, 1, 1, 3), 'font': 'med'},
 
                                                              '_xy_collector_popup_plotting_output_label': {'text': 'Plotting/Output', 'font': 'large', 'color': 'blue',
-                                                                                                           'alignment': 'Center', 'position': (6, 0, 1, 4)},
+                                                                                                           'alignment': 'Center', 'position': (6, 0, 1, 2)},
 
                                                              '_xy_collector_popup_sample_name_header_label': {'text': 'Sample Name:', 'position': (7, 0, 1, 1)},
                                                              '_xy_collector_popup_sample_name_lineedit': {'text': '', 'position': (7, 1, 1, 1)},
@@ -119,6 +123,7 @@ xy_collector_settings.xy_collector_build_dict = {
 
 xy_collector_settings.xy_collector_combobox_entry_dict = {
                                                           '_xy_collector_popup_mode_combobox': ['IV', 'RT', 'Discrete'],
+                                                          '_xy_collector_popup_grt_serial_combobox': ['', '29268', 'X36942'],
                                                           '_xy_collector_popup_daq_channel_x_combobox': ['0', '1', '2', '3'],
                                                           '_xy_collector_popup_daq_channel_y_combobox': ['0', '1', '2', '3'],
                                                           '_xy_collector_popup_squid_select_combobox': ['', '1', '2', '3', '4', '5', '6'],
@@ -126,9 +131,10 @@ xy_collector_settings.xy_collector_combobox_entry_dict = {
                                                           '_xy_collector_popup_daq_sample_rate_combobox': ['50', '500', '1000'],
                                                           '_xy_collector_popup_daq_integration_time_combobox': ['50', '100', '200', '300', '400', '500', '1000'],
                                                           '_xy_collector_popup_grt_range_combobox': ['2', '20', '200', '2K', '20K', '200K', '2M'],
-                                                          '_xy_collector_popup_sample_temp_combobox': ['4K', '2K', '1.8K', '1.2K', '1.0K', '900mK', '800mK', '700mK',
-                                                                                                       '600mK', '500mK', '400mK', '350mK', '325mK',
-                                                                                                       '300mK', '275mK', '260mK', '250mK'],
+                                                          '_xy_collector_popup_sample_temp_combobox': ['4K', '2K', '1.8K', '1.2K', '1.0K', '900mK',
+                                                                                                       '800mK', '700mK', '600mK', '500mK', '400mK',
+                                                                                                       '350mK', '325mK', '300mK', '290mK', '280mK',
+                                                                                                       '275mK', '270mK', '260mK', '250mK'],
                                                           '_xy_collector_popup_sample_drift_direction_combobox': ['Hi2Lo', 'Lo2Hi'],
                                                           '_xy_collector_popup_optical_load_combobox': ['Dark', '77K', '300K']
                                                          }

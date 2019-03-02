@@ -2,7 +2,9 @@ from math import log10, cos, acos
 from copy import copy
 import pylab as pl
 import numpy as np
-import sys 
+import sys
+from scipy.signal import medfilt2d
+from scipy.optimize import leastsq, curve_fit
 
 
 def resistance_to_temp(resistance, serial_number):
@@ -18,16 +20,19 @@ def resistance_to_temp(resistance, serial_number):
 	else:
             print 'Please supply a single number (can be formatted as string, int, float) or a list of such values'
             exit()
-    serial_number = int(serial_number)
+    serial_number = serial_number
     temperature_array = pl.zeros(resistance.size)
     for j, resistance_value in enumerate(resistance):
-        z = log10(float(resistance_value))
+        z = np.log10(float(resistance_value))
         z_lower, z_upper, a_coefficients = _return_chebychev_coefficients_and_impedance_limits(z, serial_number)
         x = ((z - z_lower) - (z_upper - z)) / (z_upper - z_lower)
         temperature = 0.
         for i, coefficient in enumerate(a_coefficients):
-            temperature += coefficient * pl.cos(i * pl.arccos(x))
+            temperature += coefficient * np.cos(i * pl.arccos(x))
 	temperature_array[j] = copy(temperature)
+        print 'grt'
+        print resistance_value, temperature
+        #print x, z, z_lower, z_upper, a_coefficients
     return temperature_array
 
 
@@ -108,10 +113,39 @@ def _return_chebychev_coefficients_and_impedance_limits(z, serial_number):
             z_lower = 2.18102749783
             z_upper = 4.73415951324
             a_coefficients = [0.805553,-0.756980,0.283894,-0.097728,0.031736,-0.009586,0.003079,-0.000504]
+    elif serial_number == 'X36942': #Old APEX-SZ UC Stage
+        indexLowZ = z < 2.31 # R of 204 Ohms, 2.7K
+        indexHighZ = z >= 2.31 # R of 204 Ohms, 2.7K
+	if indexLowZ:
+            z_lower = 1.41354860
+            z_upper = 4.11348851
+            a_coefficients = [4.38899368e+01, -6.14493328e+01, 6.81014731e+01, -2.35350808e+01, 3.22051536e+01,
+                              -6.28008435e-03, 7.40976930e+00, 1.59323247e+00]
+	elif indexHighZ:
+            z_upper = 5.013378734664989
+            z_lower = 1.8018480099633725
+            a_coefficients = [-0.5234685959969033, -13.678124605376624, -1.4818353896784546, -7.864843469586991,
+                              -1.0047821527037664, -2.6414990543941963, -0.24695301103448455, -0.4048453282392341]
     else:
         print 'grt serial number not recognised'
 	exit()
     return z_lower, z_upper, a_coefficients
+
+def test(resistance_value):
+    print 'GRT'
+    z_lower = 1.41354860
+    z_upper = 4.11348851
+    a_coefficients = [4.38899368e+01, -6.14493328e+01, 6.81014731e+01, -2.35350808e+01, 3.22051536e+01,
+                      -6.28008435e-03, 6.99000000e-04, 7.40976930e+00, 1.59323247e+00]
+    z = np.log10(float(resistance_value))
+    x = ((z - z_lower) - (z_upper - z)) / (z_upper - z_lower)
+    temperature = 0.
+    for i, coefficient in enumerate(a_coefficients):
+        temperature += coefficient * np.cos(i * pl.arccos(x))
+        print i
+        print temperature, coefficient
+        print
+    print resistance_value, temperature
 
 if __name__ == '__main__':
     if len(sys.argv) == 3:
@@ -126,10 +160,11 @@ if __name__ == '__main__':
 	compute_temp = False
     elif len(sys.argv) == 1:
         serial_number = 29268
+        serial_number = 'X36942'
         resistance_array = [300.0, 310, 320]
-        resistance_array = [110.0, 310, 320]
+        resistance_array = [100, 1000, 10000]
 	make_plot = True
-	compute_temp = True
+        compute_temp = False
     else:
 	print '\nPlease call the function as:'
 	print
@@ -140,11 +175,12 @@ if __name__ == '__main__':
 	exit()
     if compute_temp:
         temperature_array = resistance_to_temp(resistance_array, serial_number)
-        print 
+        print
         print "GRT Serial Number", serial_number
-        print "Resistance Values", resistance_array, 'Ohms' 
+        print "Resistance Values", resistance_array, 'Ohms'
         print "Temperature Values", temperature_array, 'Kelvin'
-        print 
+        print
     if make_plot:
-        make_calibration_curve(serial_number, r_low=2.0, r_upper=2000, r_resolution=1.0, plot_type='loglog')
-        make_calibration_curve(serial_number, r_low=2.0, r_upper=2000, r_resolution=1.0, plot_type='linear')
+        #test(50.0)
+        make_calibration_curve(serial_number, r_low=20.0, r_upper=10000, r_resolution=1.0, plot_type='loglog')
+        #make_calibration_curve(serial_number, r_low=2.0, r_upper=2000, r_resolution=1.0, plot_type='linear')

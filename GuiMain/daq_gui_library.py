@@ -996,9 +996,10 @@ class DAQGuiTemplate(QtGui.QWidget):
         temp = str(getattr(self, '_xy_collector_popup_sample_temp_combobox').currentText())
         drift = str(getattr(self, '_xy_collector_popup_sample_drift_direction_combobox').currentText())
         optical_load = str(getattr(self, '_xy_collector_popup_optical_load_combobox').currentText())
+        grt_serial = str(getattr(self, '_xy_collector_popup_grt_serial_combobox').currentText())
         fit_clip = (fit_clip_lo, fit_clip_hi)
         data_clip = (data_clip_lo, data_clip_hi)
-        return {'mode': mode, 'squid': squid, 'squid_conversion': squid_conversion,
+        return {'mode': mode, 'squid': squid, 'squid_conversion': squid_conversion, 'grt_serial': grt_serial,
                 'voltage_factor': voltage_factor, 'label': label, 'temp': temp, 'drift': drift,
                 'fit_clip': fit_clip, 'data_clip': data_clip, 'e_bars': e_bars,
                 'optical_load': optical_load}
@@ -1054,6 +1055,7 @@ class DAQGuiTemplate(QtGui.QWidget):
             if run_mode == 'RT':
                 rtc = RTCurve([])
                 grt_range = str(getattr(self, '_xy_collector_popup_grt_range_combobox').currentText())
+                grt_serial = str(getattr(self, '_xy_collector_popup_grt_serial_combobox').currentText())
                 voltage_factor = float(self.multimeter_voltage_factor_range_dict[grt_range])
                 first_x_point = 600
             with open(self.raw_data_path[0], 'w') as data_handle:
@@ -1077,13 +1079,15 @@ class DAQGuiTemplate(QtGui.QWidget):
                         x_data = x_data -2 * x_data
                     if run_mode == 'RT':
                         if 3.0 < x_mean * voltage_factor < 600:
-                            x_data = 1e3 * rtc.resistance_to_temp_grt(x_data * voltage_factor, serial_number=29268)
-                        else:
-                            x_data = [np.nan]
+                            if grt_serial != '':
+                                x_data = 1e3 * rtc.resistance_to_temp_grt(x_data * voltage_factor, serial_number=grt_serial)
+                        #else:
+                            #x_data = [np.nan]
                         x_mean = np.mean(x_data)
                         x_min = np.min(x_data)
                         x_max = np.max(x_data)
                         x_std = np.std(x_data)
+                        print x_mean
                     delta_x = x_mean - first_x_point
                     slew_rate = '{0:.2f} mK/s'.format(delta_x / float(data_point_time_str))
                     if run_mode == 'IV':
