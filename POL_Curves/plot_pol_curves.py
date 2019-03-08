@@ -21,7 +21,7 @@ class POLCurve():
             amplitude_vector = np.zeros(len(lines))
             for i, line in enumerate(lines):
                 data_ = line.split('\t')
-                print data_[0]
+                #print data_[0]
                 x_position = float(data_[0])
                 amplitude_value = data_[1]
                 np.put(x_position_vector, i, x_position)
@@ -33,8 +33,9 @@ class POLCurve():
         normalized_amplitude = data_dict['amplitude'] / np.max(data_dict['amplitude'])
         x_position_raw = data_dict['x_position']
         initial_fit_params = self.moments(x_position_raw, normalized_amplitude, degsperpoint)
+        #print initial_fit_params
         fit_params = self.fit_sine(x_position_raw, normalized_amplitude, initial_fit_params)
-        print fit_params
+        #print fit_params
         angle_vector = np.zeros(len(x_position_raw))
         for i, x_val in enumerate(x_position_raw):
             angle_ = (x_val / fit_params[1]) * 2 * np.pi
@@ -94,6 +95,7 @@ class POLCurve():
         return arb_sine
 
     def test_sine(self, x_val, amplitude, period, phase, y_offset):
+        print x_val
         period = float(period)
         y_offset = float(y_offset)
         #value = amplitude * np.sin((2.5 * x_val / period) * 2 * np.pi + phase) + y_offset
@@ -111,6 +113,7 @@ class POLCurve():
         return amplitude, period, phase, y_offset
 
     def fit_sine(self, x_data, y_data, fit_params):
+        #print x_data, y_data
         fit_params = curve_fit(self.test_sine, x_data, y_data, p0=fit_params)
         return fit_params[0]
 
