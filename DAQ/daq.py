@@ -5,7 +5,7 @@ import pylab as pl
 class DAQ():
 
     def __init__(self):
-        print 'hi'
+        print('hi')
 
     def get_data(self, signal_channel=0, integration_time=500, sample_rate=50, central_value=1.0,
                  simulate=True, plot=True):
@@ -44,4 +44,4 @@ class DAQ():
 
 if __name__ == '__main__':
     daq = DAQ()
-    print daq.get_data(0, 500, 50)
+    print(daq.get_data(0, 500, 50))

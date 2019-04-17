@@ -11,12 +11,12 @@ import pylab as pl
 import matplotlib.pyplot as plt
 import time
 import threading
-from Tkinter import *
+from tkinter import *
 from PyPDF2 import PdfFileMerger
 from pprint import pprint
 from datetime import datetime
 from copy import copy
-from PyQt4 import QtCore, QtGui
+from PyQt5 import QtCore, QtGui, QtWidgets
 from libraries.gen_class import Class
 from ba_settings.all_settings import settings
 from RT_Curves.plot_rt_curves import RTCurve
@@ -36,12 +36,12 @@ from realDAQ.daq import DAQ
 continue_run = False
 root = Tk()
 
-class DAQGuiTemplate(QtGui.QWidget):
+class DAQGuiTemplate(QtWidgets.QWidget):
 
 
     def __init__(self, screen_resolution):
         super(DAQGuiTemplate, self).__init__()
-        self.grid = QtGui.QGridLayout()
+        self.grid = QtWidgets.QGridLayout()
         self.grid.setVerticalSpacing(0)
         self.setLayout(self.grid)
         self.__apply_settings__(settings)
@@ -65,7 +65,7 @@ class DAQGuiTemplate(QtGui.QWidget):
             os.makedirs(self.data_folder)
         self.daq_main_panel_widget.showMaximized()
         self.active_ports = self.get_active_serial_ports()
-        print 'no active ports, check the hardware!'
+        print('no active ports, check the hardware!')
         #exit()
 
     def __apply_settings__(self, settings):
@@ -82,10 +82,10 @@ class DAQGuiTemplate(QtGui.QWidget):
         sys.exit()
 
     def _dummy(self):
-        print 'Dummy Function'
+        print('Dummy Function')
 
     def _final_plot(self):
-        print 'Dummy Function'
+        print('Dummy Function')
 
     #################################################
     # Stepper Motor and Com ports
@@ -123,13 +123,13 @@ class DAQGuiTemplate(QtGui.QWidget):
         sender_whats_this_str = str(self.sender().whatsThis())
         possible_com_ports = ['COM{0}'.format(x) for x in range(1, 9)]
         current_string, position_string, velocity_string, acceleration_string = 'NA', 'NA', 'NA', 'NA'
-        if type(self.sender()) == QtGui.QComboBox:
+        if type(self.sender()) == QtWidgets.QComboBox:
             com_port = self._get_com_port(combobox=sender_whats_this_str)
         elif com_port is not None and type(com_port) is str:
             com_port = com_port
         else:
             message = 'Not a combobox sender and not comport specificied, no connection made'
-            print message, com_port
+            print(message, com_port)
             self._quick_message(message)
         if com_port in possible_com_ports:
             if not hasattr(self, 'sm_{0}'.format(com_port)):
@@ -198,7 +198,9 @@ class DAQGuiTemplate(QtGui.QWidget):
         getattr(self, '_daq_main_panel_set_sample_dict_path_label').setText('Set Path @ {0}'.format(sample_dict_path))
 
     def _set_sample_dict_path(self):
-        sample_dict_path = str(QtGui.QFileDialog.getOpenFileName(self, directory=self.sample_dict_folder, filter='*.json'))
+        sample_dict_path = QtWidgets.QFileDialog.getOpenFileName(self, directory=self.sample_dict_folder, filter='*.json')[0]
+        #print(sample_dict_path, str(sample_dict_path))
+        #import ipdb;ipdb.set_trace()
         with open(sample_dict_path, 'r') as sample_dict_file_handle:
             self.sample_dict = json.load(sample_dict_file_handle)
         getattr(self, '_daq_main_panel_set_sample_dict_path_label').setText(sample_dict_path)
@@ -280,9 +282,9 @@ class DAQGuiTemplate(QtGui.QWidget):
         self.plotted_data_path = []
         for path in paths:
             if 'FTS' in suggested_file_name:
-                data_name = str(QtGui.QFileDialog.getSaveFileName(self, 'Raw Data Save Location', path, '.if'))
+                data_name = str(QtWidgets.QFileDialog.getSaveFileName(self, 'Raw Data Save Location', path, '.if'))
             else:
-                data_name = str(QtGui.QFileDialog.getSaveFileName(self, 'Raw Data Save Location', path, '.dat'))
+                data_name = str(QtWidgets.QFileDialog.getSaveFileName(self, 'Raw Data Save Location', path, '.dat'))
             if len(data_name) > 0:
                 full_path = os.path.join(self.data_folder, data_name)
                 self.raw_data_path.append(full_path)
@@ -294,12 +296,12 @@ class DAQGuiTemplate(QtGui.QWidget):
                 self.parsed_data_path = None
 
     def _get_plotted_data_save_path(self):
-        data_name = str(QtGui.QFileDialog.getSaveFileName(self, 'Plotted Data Save Location', self.data_folder))
+        data_name = str(QtWidgets.QFileDialog.getSaveFileName(self, 'Plotted Data Save Location', self.data_folder))
         self.plotted_data_path = os.path.join(self.data_folder, data_name)
         getattr(self, '_final_plot_popup_plot_path_label').setText(self.plotted_data_path)
 
     def _get_parsed_data_save_path(self):
-        data_name = str(QtGui.QFileDialog.getSaveFileName(self, 'Parsed Data Save Location', self.data_folder))
+        data_name = str(QtWidgets.QFileDialog.getSaveFileName(self, 'Parsed Data Save Location', self.data_folder))
         self.parsed_data_path = os.path.join(self.data_folder, data_name)
         getattr(self, '_final_plot_popup_data_path_label').setText(self.parsed_data_path)
 
@@ -309,8 +311,7 @@ class DAQGuiTemplate(QtGui.QWidget):
 
     def populate_combobox(self, unique_combobox_name, entries):
         for entry_str in entries:
-            entry = QtCore.QString(entry_str)
-            getattr(self, unique_combobox_name).addItem(entry)
+            getattr(self, unique_combobox_name).addItem(entry_str)
 
     def _get_all_scan_params(self, popup=None):
         if popup is None:
@@ -333,7 +334,7 @@ class DAQGuiTemplate(QtGui.QWidget):
 
     def _stop(self):
         global continue_run
-        print self.sender().whatsThis()
+        print(self.sender().whatsThis())
         if 'xy_collector' in str(self.sender().whatsThis()):
             getattr(self, '_xy_collector_popup_start_pushbutton').setFlat(False)
             getattr(self, '_xy_collector_popup_start_pushbutton').setText('Start')
@@ -364,7 +365,7 @@ class DAQGuiTemplate(QtGui.QWidget):
             self.sender().setText(str(40))
 
     def _quick_message(self, msg=''):
-        message_box = QtGui.QMessageBox()
+        message_box = QtWidgets.QMessageBox()
         message_box.setText(msg)
         message_box.exec_()
 
@@ -379,7 +380,7 @@ class DAQGuiTemplate(QtGui.QWidget):
 
     def _update_squid_calibration(self):
         combobox = self.sender()
-        if type(combobox) == QtGui.QComboBox:
+        if type(combobox) == QtWidgets.QComboBox:
             selected_squid = str(combobox.currentText())
             if selected_squid == '':
                 squid_calibration = 'NaN'
@@ -420,7 +421,7 @@ class DAQGuiTemplate(QtGui.QWidget):
         #data_folder = './Data/{0}'.format(self.today_str)
         #if not os.path.exists(data_folder):
         data_folder = './Data'
-        self.raw_data_path = [str(QtGui.QFileDialog.getOpenFileName(self, directory=data_folder))]
+        self.raw_data_path = [str(QtWidgets.QFileDialog.getOpenFileName(self, directory=data_folder))]
         self.parsed_data_path = [self.raw_data_path[0].replace('.dat', '_calibrated.dat')]
         self.plotted_data_path = [self.raw_data_path[0].replace('.dat', '_plotted.png')]
         plot_params = self._get_params_from_xy_collector()
@@ -436,7 +437,7 @@ class DAQGuiTemplate(QtGui.QWidget):
         elif plot_params['mode'] == 'RT':
             self._final_rt_plot()
         else:
-            print 'bad mode found {0}'.format(mode)
+            print('bad mode found {0}'.format(mode))
 
     def _adjust_final_plot_popup(self, plot_type, title=None, xlabel=None, ylabel=None):
         if not hasattr(self, 'final_plot_popup'):
@@ -522,9 +523,9 @@ class DAQGuiTemplate(QtGui.QWidget):
             if_ax.plot(if_xs, if_ys)
             if_ax.errorbar(if_xs, if_ys, if_stds, marker=',', linestyle='None')
             #pl.show()
-            print self.raw_data_path
-            print self.raw_data_path[0].replace('.if', '_if.png')
-            print self.raw_data_path[0].replace('.if', '_fft.png')
+            print(self.raw_data_path)
+            print(self.raw_data_path[0].replace('.if', '_if.png'))
+            print(self.raw_data_path[0].replace('.if', '_fft.png'))
             if_fig.savefig(self.raw_data_path[0].replace('.if', '_if.png'))
             fft_fig, fft_ax = self._create_blank_fig()
             fft_fig.savefig(self.raw_data_path[0].replace('.if', '_fft.png'))
@@ -536,8 +537,8 @@ class DAQGuiTemplate(QtGui.QWidget):
                     fh.write(line)
             #self._adjust_final_plot_popup('fts')
         else:
-            print sender
-            print 'need to be configured'
+            print(sender)
+            print('need to be configured')
             self._adjust_final_plot_popup('new')
 
     def _final_rt_plot(self):
@@ -718,7 +719,7 @@ class DAQGuiTemplate(QtGui.QWidget):
         else:
             self._initialize_panel('multimeter_popup')
         self._build_panel(settings.multimeter_popup_build_dict)
-        for combobox_widget, entry_list in self.multimeter_combobox_entry_dict.iteritems():
+        for combobox_widget, entry_list in self.multimeter_combobox_entry_dict.items():
             self.populate_combobox(combobox_widget, entry_list)
         getattr(self, '_multimeter_popup_daq_channel_1_combobox').setCurrentIndex(2)
         getattr(self, '_multimeter_popup_daq_channel_2_combobox').setCurrentIndex(3)
@@ -837,8 +838,6 @@ class DAQGuiTemplate(QtGui.QWidget):
             data_2, mean_2, min_2, max_2, std_2 = self.real_daq.get_data(signal_channel=daq_channel_2,
                                                                          integration_time=integration_time_2,
                                                                          sample_rate=sample_rate_2)
-            #print data_1, data_2
-            #print mean_1, mean_2
             getattr(self, '_cosmic_rays_popup_data_1_std_label').setText('{0:.3f}'.format(std_1))
             getattr(self, '_cosmic_rays_popup_data_2_std_label').setText('{0:.3f}'.format(std_2))
             getattr(self, '_cosmic_rays_popup_data_1_mean_label').setText('{0:.3f}'.format(mean_1))
@@ -855,7 +854,7 @@ class DAQGuiTemplate(QtGui.QWidget):
         else:
             self._initialize_panel('cosmic_rays_popup')
         self._build_panel(settings.cosmic_rays_build_dict)
-        for combobox_widget, entry_list in self.cosmic_rays_combobox_entry_dict.iteritems():
+        for combobox_widget, entry_list in self.cosmic_rays_combobox_entry_dict.items():
             self.populate_combobox(combobox_widget, entry_list)
         self.cosmic_rays_popup.showMaximized()
         for i in range(1, 3):
@@ -863,7 +862,7 @@ class DAQGuiTemplate(QtGui.QWidget):
             getattr(self, '_cosmic_rays_popup_daq_{0}_integration_time_combobox'.format(i)).setCurrentIndex(0)
         getattr(self, '_cosmic_rays_popup_daq_channel_1_combobox').setCurrentIndex(2)
         getattr(self, '_cosmic_rays_popup_daq_channel_2_combobox').setCurrentIndex(3)
-        print 'hello'
+        print('hello')
 
     def _draw_cr_timestream(self, data, channel, title='', xlabel='', ylabel=''):
         fig, ax = self._create_blank_fig()
@@ -901,7 +900,7 @@ class DAQGuiTemplate(QtGui.QWidget):
         else:
             self._initialize_panel('xy_collector_popup')
         self._build_panel(settings.xy_collector_build_dict)
-        for combobox_widget, entry_list in self.xy_collector_combobox_entry_dict.iteritems():
+        for combobox_widget, entry_list in self.xy_collector_combobox_entry_dict.items():
             self.populate_combobox(combobox_widget, entry_list)
         self.xy_collector_popup.showMaximized()
         self.xy_collector_popup.setWindowTitle('XY COLLECTOR')
@@ -1065,7 +1064,6 @@ class DAQGuiTemplate(QtGui.QWidget):
                     data_point_elapsed_time = last_time - data_time
                     tot_time_str = str(tot_elapsed_time.seconds)
                     data_point_time_str = str(data_point_elapsed_time.microseconds * 1e-6) # s
-                    #print data_point_time_str
                     x_data, x_mean, x_min, x_max, x_std = self.real_daq.get_data(signal_channel=daq_channel_x,
                                                                                  integration_time=integration_time,
                                                                                  sample_rate=sample_rate,
@@ -1087,7 +1085,7 @@ class DAQGuiTemplate(QtGui.QWidget):
                         x_min = np.min(x_data)
                         x_max = np.max(x_data)
                         x_std = np.std(x_data)
-                        print x_mean
+                        print(x_mean)
                     delta_x = x_mean - first_x_point
                     slew_rate = '{0:.2f} mK/s'.format(delta_x / float(data_point_time_str))
                     if run_mode == 'IV':
@@ -1123,7 +1121,7 @@ class DAQGuiTemplate(QtGui.QWidget):
         ax.set_xlabel('Time (ms)')
         temp_tau_save_path = './temp_files/temp_tau_data_point.png'
         fig.savefig(temp_tau_save_path)
-        image_to_display = QtGui.QPixmap(temp_tau_save_path)
+        image_to_display = QtWidgets.QPixmap(temp_tau_save_path)
         getattr(self, '_time_constant_popup_data_point_monitor_label').setPixmap(image_to_display)
 
     def _plot_time_constant(self, real_data=True):
@@ -1162,14 +1160,14 @@ class DAQGuiTemplate(QtGui.QWidget):
             ax.set_title(title)
             ax.legend()
             fig.savefig(self.plotted_data_path[0])
-            image_to_display = QtGui.QPixmap(self.plotted_data_path[0])
+            image_to_display = QtWidgets.QPixmap(self.plotted_data_path[0])
             getattr(self, '_time_constant_popup_all_data_monitor_label').setPixmap(image_to_display)
             self.temp_plot_path = self.plotted_data_path
             self.active_fig = fig
         else:
             ax.plot(0.0, 0.0, color=color, alpha=0.7, label=label)
             fig.savefig('./blank_fig.png')
-            image_to_display = QtGui.QPixmap('./blank_fig.png')
+            image_to_display = QtWidgets.QPixmap('./blank_fig.png')
             getattr(self, '_time_constant_popup_all_data_monitor_label').setPixmap(image_to_display)
 
     def _delete_last_point(self):
@@ -1215,8 +1213,8 @@ class DAQGuiTemplate(QtGui.QWidget):
 
     def _take_time_constant_data_point(self):
         if hasattr(self, 'raw_data_path') and self.raw_data_path is not None:
-            print 'Active Data Path Found'
-            print self.raw_data_path[0]
+            print('Active Data Path Found')
+            print(self.raw_data_path[0])
         else:
             self._get_raw_data_save_path()
         if self.raw_data_path is not None:
@@ -1252,7 +1250,7 @@ class DAQGuiTemplate(QtGui.QWidget):
         else:
             self._initialize_panel('time_constant_popup')
         self._build_panel(settings.time_constant_popup_build_dict)
-        for combobox_widget, entry_list in self.time_constant_combobox_entry_dict.iteritems():
+        for combobox_widget, entry_list in self.time_constant_combobox_entry_dict.items():
             self.populate_combobox(combobox_widget, entry_list)
         getattr(self, '_time_constant_popup_daq_select_combobox').setCurrentIndex(0)
         getattr(self, '_time_constant_popup_daq_sample_rate_combobox').setCurrentIndex(2)
@@ -1283,7 +1281,7 @@ class DAQGuiTemplate(QtGui.QWidget):
         else:
             self._initialize_panel('pol_efficiency_popup')
         self._build_panel(settings.pol_efficiency_build_dict)
-        for combobox_widget, entry_list in self.pol_efficiency_combobox_entry_dict.iteritems():
+        for combobox_widget, entry_list in self.pol_efficiency_combobox_entry_dict.items():
             self.populate_combobox(combobox_widget, entry_list)
         self._connect_to_com_port()
         self.pol_efficiency_popup.showMaximized()
@@ -1334,7 +1332,7 @@ class DAQGuiTemplate(QtGui.QWidget):
         ax.set_ylabel('Amplitude', fontsize=10)
         fig.savefig('temp_files/temp_pol.png')
         pl.close('all')
-        image = QtGui.QPixmap('temp_files/temp_pol.png')
+        image = QtWidgets.QPixmap('temp_files/temp_pol.png')
         image = image.scaled(600,300)
         getattr(self, '_pol_efficiency_popup_data_label').setPixmap(image)
 
@@ -1383,7 +1381,7 @@ class DAQGuiTemplate(QtGui.QWidget):
             ax.set_ylabel('Amplitude', fontsize=10)
             fig.savefig('temp_files/temp_pol.png')
             pl.close('all')
-            image = QtGui.QPixmap('temp_files/temp_pol.png')
+            image = QtWidgets.QPixmap('temp_files/temp_pol.png')
             image = image.scaled(600,400)
             getattr(self, '_pol_efficiency_popup_data_label').setPixmap(image)
             self.pol_efficiency_popup.repaint()
@@ -1532,7 +1530,7 @@ class DAQGuiTemplate(QtGui.QWidget):
         else:
             self._initialize_panel('single_channel_fts_popup')
         self._build_panel(settings.single_channel_fts_build_dict)
-        for unique_combobox, entries in settings.combobox_entry_dict.iteritems():
+        for unique_combobox, entries in settings.combobox_entry_dict.items():
             self.populate_combobox(unique_combobox, entries)
         self.populate_combobox('_single_channel_fts_popup_fts_sm_com_port_combobox', self.active_ports)
         self.populate_combobox('_single_channel_fts_popup_grid_sm_com_port_combobox', self.active_ports)
@@ -1585,7 +1583,7 @@ class DAQGuiTemplate(QtGui.QWidget):
         ax.set_title('Spectra')
         fig.savefig('temp_files/temp_fft.png')
         del fig
-        image = QtGui.QPixmap('tempfft.png')
+        image = QtWidgets.QPixmap('tempfft.png')
         image = image.scaled(350, 175)
         getattr(self, '_single_channel_fts_popup_fft_label').setPixmap(image)
 
@@ -1595,7 +1593,7 @@ class DAQGuiTemplate(QtGui.QWidget):
         '''
         scan_params = self._get_all_single_channel_fts_scan_params()
         self.apodization = scan_params['apodization_type']
-        print self.apodization
+        print(self.apodization)
 
     def _compute_resolution_and_max_frequency(self, scan_params):
         '''
@@ -1671,7 +1669,7 @@ class DAQGuiTemplate(QtGui.QWidget):
         ax.errorbar(positions, amplitudes, stds, marker=',', linestyle='None')
         fig.savefig('temp_files/temp_int.png')
         pl.close('all')
-        image = QtGui.QPixmap('temp_files/temp_int.png')
+        image = QtWidgets.QPixmap('temp_files/temp_int.png')
         getattr(self, '_single_channel_fts_popup_interferogram_label').setPixmap(image)
 
     def _rotate_grid(self):
@@ -1737,7 +1735,7 @@ class DAQGuiTemplate(QtGui.QWidget):
                 i += 1
                 self.last_fts_position = position + int(scan_params['step_size'])
             #self.posFreqArray,self.FTArrayPosFreq = self.fts_analyzer.analyzeBolo(positions, data,apodization=self.apodization)
-            #image = QtGui.QPixmap('temp_files/temp_fft.png')
+            #image = QtWidgets.QPixmap('temp_files/temp_fft.png')
             #image = image.scaled(600, 300)
             #getattr(self, '_single_channel_fts_popup_fft_label').setPixmap(image)
             #self.xdata = positions
@@ -1776,7 +1774,7 @@ class DAQGuiTemplate(QtGui.QWidget):
         else:
             self._initialize_panel('beam_mapper_popup')
         self._build_panel(settings.beam_mapper_build_dict)
-        for combobox_widget, entry_list in self.beam_mapper_combobox_entry_dict.iteritems():
+        for combobox_widget, entry_list in self.beam_mapper_combobox_entry_dict.items():
             self.populate_combobox(combobox_widget, entry_list)
         #self._connect_to_com_port(beammapper=1)
         #self._connect_to_com_port(beammapper=2)
@@ -1807,7 +1805,7 @@ class DAQGuiTemplate(QtGui.QWidget):
                 value = str(getattr(self, pull_from_widget_name).currentText())
                 scan_params[beam_map_setting] = value
         scan_params = self._get_grid(scan_params)
-        print scan_params
+        print(scan_params)
         return scan_params
 
     def _get_grid(self, scan_params):
@@ -1838,7 +1836,7 @@ class DAQGuiTemplate(QtGui.QWidget):
             scan_params = self._get_all_scan_params(popup='_beam_mapper')
             if scan_params is not None and len(scan_params) > 0:
                 self.beam_map_daq.simulate_beam(scan_params)
-                image = QtGui.QPixmap('temp_files/temp_beam.png')
+                image = QtWidgets.QPixmap('temp_files/temp_beam.png')
                 image = image.scaled(600, 300)
                 getattr(self, '_beam_mapper_popup_2D_plot_label').setPixmap(image)
                 n_points_x= scan_params['n_points_x']
@@ -1879,7 +1877,7 @@ class DAQGuiTemplate(QtGui.QWidget):
                 fig.savefig('temp_files/temp_beam.png')
                 pl.close('all')
                 self._draw_time_stream(data_time_stream, min_, max_,'_beam_mapper_popup_time_stream_label')
-                image = QtGui.QPixmap('temp_files/temp_beam.png')
+                image = QtWidgets.QPixmap('temp_files/temp_beam.png')
                 image = image.scaled(600, 300)
                 getattr(self, '_beam_mapper_popup_2D_plot_label').setPixmap(image)
                 getattr(self, '_beam_mapper_popup_data_mean_label').setText('{0:.3f}'.format(mean))
@@ -1919,12 +1917,12 @@ class DAQGuiTemplate(QtGui.QWidget):
         return widget_function
 
     def _build_panel(self, build_dict, parent=None):
-        for unique_widget_name, widget_settings in build_dict.iteritems():
+        for unique_widget_name, widget_settings in build_dict.items():
             widget_settings_copy = copy(build_dict['_common_settings'])
             if unique_widget_name != '_common_settings':
                 widget_settings_copy.update(widget_settings)
                 widget_settings_copy.update({'parent': parent})
-                for widget_param, widget_param_value in widget_settings.iteritems():
+                for widget_param, widget_param_value in widget_settings.items():
                     if 'function' == widget_param:
                         widget_function = self._unpack_widget_function(widget_param_value)
                         widget_settings_copy.update({'function':  widget_function})
@@ -1932,9 +1930,9 @@ class DAQGuiTemplate(QtGui.QWidget):
                 self._create_and_place_widget(unique_widget_name, **widget_settings_copy)
 
     def _create_popup_window(self, name):
-        popup_window = QtGui.QWidget()
+        popup_window = QtWidgets.QWidget()
         popup_window.setGeometry(100, 100, 400, 200)
-        popup_window.setLayout(QtGui.QGridLayout())
+        popup_window.setLayout(QtWidgets.QGridLayout())
         setattr(self, name, popup_window)
 
     def _create_and_place_widget(self,
@@ -1963,13 +1961,13 @@ class DAQGuiTemplate(QtGui.QWidget):
                                  **widget_setttings):
         widget_type = self.widget_to_object_dict[unique_widget_name.split('_')[-1]]
         if orientation is not None and widget_type == 'QSlider':
-            widget = QtGui.QSlider(getattr(QtCore.Qt, orientation))
+            widget = QtWidgets.QSlider(getattr(QtCore.Qt, orientation))
             widget.setTracking(True)
         else:
             if parent is not None:
-                widget = getattr(QtGui, widget_type)(parent)
+                widget = getattr(QtWidgets, widget_type)(parent)
             else:
-                widget = getattr(QtGui, widget_type)()
+                widget = getattr(QtWidgets, widget_type)()
         if function is not None:
             if widget_type == 'QSlider':
                 widget.valueChanged.connect(function)
@@ -1995,7 +1993,7 @@ class DAQGuiTemplate(QtGui.QWidget):
         if color is not None:
             widget.setStyleSheet('%s {color: %s}' % (widget_type, color))
         if pixmap is not None:
-            image = QtGui.QPixmap(pixmap)
+            image = QtWidgets.QPixmap(pixmap)
             if keep_aspect_ratio:
                 image = image.scaled(image_scale[0], image_scale[1], QtCore.Qt.KeepAspectRatio)
             else:
@@ -2005,7 +2003,7 @@ class DAQGuiTemplate(QtGui.QWidget):
             qt_alignment = getattr(QtCore.Qt, 'Align{0}'.format(alignment))
             widget.setAlignment(qt_alignment)
         if layout is not None:
-            widget.setLayout(getattr(QtGui, layout)())
+            widget.setLayout(getattr(QtWidgets, layout)())
         if tick_interval is not None:
             widget.setTickInterval(1)
         if tick_range is not None:

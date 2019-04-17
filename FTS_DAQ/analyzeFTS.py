@@ -11,7 +11,7 @@ import os,pickle,sys
 import pylab as pl
 #import numpy as np
 from numpy import *
-from PyQt4 import QtCore, QtGui
+from PyQt5 import QtCore, QtGui, QtWidgets
 
 class FTSanalyzer():
 

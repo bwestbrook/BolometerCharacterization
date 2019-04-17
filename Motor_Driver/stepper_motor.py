@@ -1,9 +1,9 @@
 from lab_code.lab_serial import lab_serial
 import sys
-import serial
+#import serial
 import time
 import numpy as np
-from operator import mul, div
+from operator import mul, truediv
 import matplotlib.pyplot as plt
 from scipy.optimize import curve_fit
 import csv
@@ -28,7 +28,7 @@ class stepper_motor():
     def _query_motor(self, query, timeout=0.5):
         self._send_command(query)
         response = self._connection.read()
-        print response
+        print(response)
         return response
 
     def move_to_position(self, x):
@@ -97,7 +97,7 @@ class stepper_motor():
         return simulated_data
 
     def take_pol_efficiency(self, start_angle,end_angle, step_size, pause = 1,noise=10):
-        stepnum = div(end_angle-start_angle,step_size)+1
+        stepnum = truediv(end_angle-start_angle,step_size)+1
         steps = np.linspace(start_angle,end_angle,stepnum)
         data = []
         for i, step in enumerate(steps):
@@ -106,7 +106,7 @@ class stepper_motor():
             if step != 0:
                 self.finite_rotation(step_size)
                 time.sleep(pause)
-            print step, i, data[i]
+            print(step, i, data[i])
         data = np.array(data)
         self.write_file(steps,data)
         return steps, data

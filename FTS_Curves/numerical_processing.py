@@ -89,18 +89,18 @@ class Fourier():
         return apodized_efficiency_vector
 
     def compute_fourier_transform_new(self, position_vector, efficiency_data, distance_per_step, steps_per_point, quick_plot=False):
-        print
-        print
-        print 'position_vector'
-        print position_vector
-        print 'efficiency_data'
-        print efficiency_data
-        print 'steps_per_point'
-        print steps_per_point
-        print 'distance_per_step'
-        print distance_per_step
-        print
-        print
+        print()
+        print()
+        print('position_vector')
+        print(position_vector)
+        print('efficiency_data')
+        print(efficiency_data)
+        print('steps_per_point')
+        print(steps_per_point)
+        print('distance_per_step')
+        print(distance_per_step)
+        print()
+        print()
         return position_vector, efficiency_data
 
     def compute_fourier_transform(self, position_vector, efficiency_data, distance_per_step, steps_per_point, quick_plot=False):
@@ -109,13 +109,13 @@ class Fourier():
         x_vector = np.linspace(0.0, N * T, N)
         frequency_vector = np.linspace(0.0, 1.0 / (2 * np.pi * T), N / 2)
         # some important factors
-        print
-        print
-        print 'FFT Setup'
-        print 'real distance per point is {0} nm ({1} m)'.format(T, T * 1e-9)
-        print 'number of points in data is {0}'.format(N)
-        print
-        print
+        print()
+        print()
+        print('FFT Setup')
+        print('real distance per point is {0} nm ({1} m)'.format(T, T * 1e-9))
+        print('number of points in data is {0}'.format(N))
+        print()
+        print()
         frequency_vector = frequency_vector * 3e8
         apodized_efficiency_vector = self.apply_window_to_data(position_vector, efficiency_data)
         fft_vector = scipy.fftpack.rfft(apodized_efficiency_vector)
@@ -154,7 +154,7 @@ class Fourier():
         frequency = 100.
         period = 1 / frequency
         y_vector = np.sin(x_vector / period)
-        print x_vector, y_vector
+        print(x_vector, y_vector)
         # Compute the FFT of the test data
         fft_vector = np.fft.fft(y_vector)
         normalized_fft_vector = (2.0 / N) * np.abs(fft_vector[0: N / 2])
@@ -162,8 +162,8 @@ class Fourier():
         fig = pl.figure(figsize=(10, 5))
         ax1 = fig.add_subplot(211)
         ax2 = fig.add_subplot(212)
-        print len(frequency_vector), len(normalized_fft_vector)
-        print len(x_vector), len(y_vector)
+        print(len(frequency_vector), len(normalized_fft_vector))
+        print(len(x_vector), len(y_vector))
         ax1.plot(x_vector, y_vector)
         #ax2.plot(frequency_vector, normalized_fft_vector)
         fig.show()
@@ -208,7 +208,7 @@ class BeamSplitter():
         '''
         frequency_vector = np.arange(0, 1.5e12, 100e6)
         thickness = 2.54e-5 * thickness  # from mils to m
-        print 'Mylar beam splitter (n={0}) thickness {1} in meters'.format(index, thickness)
+        print('Mylar beam splitter (n={0}) thickness {1} in meters'.format(index, thickness))
         reflectivity = ((index - 1) / (index + 1)) ** 2
         c = 2.99792458e8  # m / s 
         efficiency_vector = np.zeros(frequency_vector.size)
@@ -259,7 +259,7 @@ class BeamSplitter():
             self.plot_beam_splitter_efficiency(example_frequency_vector, example_efficiency_vector, 10)
         frequency_vector, efficiency_vector = self.create_beam_splitter_response(save_path, thickness)
         if save_data:
-            print 'saving'
+            print('saving')
             self.save_beam_splitter_efficiency(frequency_vector / 1e9, efficiency_vector, thickness)
         if plot_data:
             self.plot_beam_splitter_efficiency(frequency_vector / 1e9, efficiency_vector, thickness)

@@ -8,7 +8,7 @@ class BeamMapDAQ():
         self.hi = 'hi'
         self.daq = DAQ()
 
-    def twoD_Gaussian(self, (x, y), amplitude, x_0, y_0, sigma_x, sigma_y, theta):
+    def twoD_Gaussian(self, x, y, amplitude, x_0, y_0, sigma_x, sigma_y, theta):
         x_0 = float(x_0)
         y_0 = float(y_0)
         theta = np.deg2rad(theta)
@@ -41,7 +41,7 @@ class BeamMapDAQ():
         self.daq.get_data(integration_time)
 
     def take_beam_map(self, scan_params):
-        print Z_sim
+        print(Z_sim)
         Z_data = np.zeros(shape=X.shape)
         x_grid = np.linspace(scan_params['start_x_position'], scan_params['end_x_position'],  scan_params['n_points_x'])
         y_grid = np.linspace(scan_params['start_y_position'], scan_params['end_y_position'],  scan_params['n_points_y'])
@@ -59,7 +59,7 @@ class BeamMapDAQ():
                 import ipdb;ipdb.set_trace()'''
 
     def test(self):
-        print 'beam map DAQ'
+        print('beam map DAQ')
 
 if __name__ == '__main__':
     beam_map_daq = BeamMapDAQ()

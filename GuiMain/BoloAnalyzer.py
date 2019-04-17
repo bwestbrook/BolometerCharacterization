@@ -2,7 +2,7 @@ import os
 import numpy as np
 from copy import copy
 from datetime import datetime
-from PyQt4 import QtGui
+from PyQt5 import QtGui, QtWidgets
 from libraries.gen_class import Class
 from gui_library import GuiTemplate
 
@@ -13,7 +13,7 @@ class BoloAnalyzer(GuiTemplate):
         self.analysis_types = ('IV Curves', 'Tc Curves')
 
     def create_gui(self, analysis_types):
-        qt_app = QtGui.QApplication([])
+        qt_app = QtWidgets.QApplication([])
         gui = GuiTemplate(analysis_types)
         exit(qt_app.exec_())
 

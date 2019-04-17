@@ -4,7 +4,7 @@ import numpy as np
 import pylab as pl
 from pprint import pprint
 from copy import copy
-from settings import settings
+from .settings import settings
 
 
 class IVCurve():
@@ -126,7 +126,7 @@ class IVCurve():
         fit_vals = np.polyfit(v_bias_real, corrected_squid_voltage, 1)
         slope = fit_vals[0]
         squid_conv = 1.0 / (slope * calibration_resistor_val)
-        print '\n\n Transimpedance Value: {0}\n\n'.format(squid_conv)
+        print('\n\n Transimpedance Value: {1}\n\n'.format(squid_conv))
         return squid_conv
 
     def find_nearest_r_bolo(self, r_bolo, r_n, fracrn):
@@ -149,7 +149,7 @@ class IVCurve():
         ax.set_ylabel('Power ($\mu$V)', fontsize=16)
         p_at_same_rfracs = []
         for i, v_bias in enumerate(v_biases):
-            print i, v_bias
+            print(i, v_bias)
             fracrn = fracrns[i]
             i_bolo = i_bolos[i]
             r_bolo = v_bias / i_bolo
@@ -168,11 +168,11 @@ class IVCurve():
         p_window = self.compute_delta_power_at_window(spectra_path)
         p_sensed = np.abs(p_at_same_rfracs[1] - p_at_same_rfracs[0])
         efficiency = 100.0 * p_sensed / p_window
-        print
+        print()
         title =  'Power diff {0:.2f} / {1:.2f} (sensed / window) pW'.format(p_sensed, p_window)
         title += '\nEffiency is {0:.2f}%'.format(efficiency)
-        print title
-        print
+        print(title)
+        print()
         ax.set_title(title)
         ax.legend(numpoints=1)
         #, loc=2, bbox_to_anchor=(1.01, 1), borderaxespad=0.0)

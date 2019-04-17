@@ -2,7 +2,7 @@ import nidaqmx
 import os
 import sys
 import glob
-import serial
+#import serial
 import time
 import numpy as np
 from nidaqmx.constants import AcquisitionType, Edge
@@ -16,8 +16,8 @@ class DAQ():
                 device = active_devices[0]
             else:
                 device = active_devices[-1]
-                print 'Found multiple devices when trying to get data'
-                print 'Chose {0}'.format(device)
+                print('Found multiple devices when trying to get data')
+                print('Chose {0}'.format(device))
             voltage_chan_str = '{0}/ai{1}'.format(device, signal_channel)
             task.ai_channels.add_ai_voltage_chan(voltage_chan_str)
             integration_time = int(integration_time)
@@ -49,7 +49,7 @@ class DAQ():
                     task.ai_channels.add_ai_voltage_chan("{0}/ai0".format(device))
                     active_devices.append(device)
                 except nidaqmx.DaqError:
-                    print '{0} not present'.format(device)
+                    print('{0} not present'.format(device))
         return active_devices
 
 if __name__ == '__main__':

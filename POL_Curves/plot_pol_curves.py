@@ -95,7 +95,7 @@ class POLCurve():
         return arb_sine
 
     def test_sine(self, x_val, amplitude, period, phase, y_offset):
-        print x_val
+        print(x_val)
         period = float(period)
         y_offset = float(y_offset)
         #value = amplitude * np.sin((2.5 * x_val / period) * 2 * np.pi + phase) + y_offset
@@ -121,7 +121,7 @@ class POLCurve():
     def _ask_user_if_they_want_to_quit(self):
         input_ = raw_input('Press q to (q)uit, Any other Key to Continue')
         if input_ == 'q':
-            print 'Exiting'
+            print('Exiting')
             exit()
 
     def run(self, list_of_input_dicts):
@@ -131,85 +131,85 @@ class POLCurve():
             label = input_dict['measurements']['plot_label']
             data_dict = self.load_pol_efficiency_data(data_path)
             processed_data_dict = self.parse_data(data_dict, degsperpoint)
-            print label
+            print(label)
             fig = self.plot_polarization_efficiency(processed_data_dict, label, fig=None)
 
 
 if __name__ == '__main__':
     if False:
-	data_path = '../Data/2015_06_03/000_350_GHz_PolModEff.dat'
-	run(data_path, 350, 'HF_Triplexer')
-	data_path = '../Data/2015_06_03/002_220_GHz_PolModEff.dat'
-	run(data_path, 220, 'HF_Triplexer')
-	data_path = '../Data/2015_06_03/005_280_GHz_PolModEff.dat'
-	run(data_path, 280, 'HF_Triplexer')
+        data_path = '../Data/2015_06_03/000_350_GHz_PolModEff.dat'
+        run(data_path, 350, 'HF_Triplexer')
+        data_path = '../Data/2015_06_03/002_220_GHz_PolModEff.dat'
+        run(data_path, 220, 'HF_Triplexer')
+        data_path = '../Data/2015_06_03/005_280_GHz_PolModEff.dat'
+        run(data_path, 280, 'HF_Triplexer')
         #################################3
-	data_path = '../Data/2015_06_10/005_350_GHz_PolModEff.dat'
-	run(data_path, 350, 'Ds Dp')
+        data_path = '../Data/2015_06_10/005_350_GHz_PolModEff.dat'
+        run(data_path, 350, 'Ds Dp')
         #################################3
-	data_path = '../Data/2015_06_17/010_150_PolModEff.dat'
-	run(data_path, 150, 'Tetraplexer')
-	data_path = '../Data/2015_06_18/007_280_PolModEff.dat'
-	run(data_path, 280, 'Tetraplexer')
-	data_path = '../Data/2015_06_18/006_220_PolModEff.dat'
-	run(data_path, 220, 'Tetraplexer')
-	data_path = '../Data/2015_07_01/280/003_PolModEff.dat'
-        run(data_path, 280, 'Tetraplexer')
-	data_path = '../Data/2015_07_01/150/005_PolModEff.dat' # 3.46% for 90 GHZ tetra
+        data_path = '../Data/2015_06_17/010_150_PolModEff.dat'
         run(data_path, 150, 'Tetraplexer')
-	data_path = '../Data/2015_07_01/220/002_PolModEff.dat' # 2.10% for 220 GHZ tetra
+        data_path = '../Data/2015_06_18/007_280_PolModEff.dat'
+        run(data_path, 280, 'Tetraplexer')
+        data_path = '../Data/2015_06_18/006_220_PolModEff.dat'
         run(data_path, 220, 'Tetraplexer')
-	data_path = '../Data/2015_07_01/90/015_PolModEff.dat' # 2.81% for 90 GHZ tetra
-        run(data_path, 90, 'Tetraplexer')
-        #################################3
-	data_path = '../Data/2015_07_01/90/015_PolModEff.dat' # 2.81% for 90 GHZ tetra
-        run(data_path, 90, 'Tetraplexer')
-	data_path = '../Data/2015_07_01/150/018_PolModEff.dat' # 2.13% for 150 GHZ tetra
-        run(data_path, 150, 'Tetraplexer')
-	data_path = '../Data/2015_07_02/150/005_PolModEff.dat' # 2.50% for 150 GHZ tetra
-        run(data_path, 150, 'Tetraplexer')
-	data_path = '../Data/2015_07_01/280/009_PolModEff.dat' #4.10% for 280 GHz tetra
+        data_path = '../Data/2015_07_01/280/003_PolModEff.dat'
         run(data_path, 280, 'Tetraplexer')
-	data_path = '../Data/2015_07_02/280/015_PolModEff.dat' #4.10% for 280 GHz tetra
+        data_path = '../Data/2015_07_01/150/005_PolModEff.dat' # 3.46% for 90 GHZ tetra
+        run(data_path, 150, 'Tetraplexer')
+        data_path = '../Data/2015_07_01/220/002_PolModEff.dat' # 2.10% for 220 GHZ tetra
+        run(data_path, 220, 'Tetraplexer')
+        data_path = '../Data/2015_07_01/90/015_PolModEff.dat' # 2.81% for 90 GHZ tetra
+        run(data_path, 90, 'Tetraplexer')
+#################################3
+        data_path = '../Data/2015_07_01/90/015_PolModEff.dat' # 2.81% for 90 GHZ tetra
+        run(data_path, 90, 'Tetraplexer')
+        data_path = '../Data/2015_07_01/150/018_PolModEff.dat' # 2.13% for 150 GHZ tetra
+        run(data_path, 150, 'Tetraplexer')
+        data_path = '../Data/2015_07_02/150/005_PolModEff.dat' # 2.50% for 150 GHZ tetra
+        run(data_path, 150, 'Tetraplexer')
+        data_path = '../Data/2015_07_01/280/009_PolModEff.dat' #4.10% for 280 GHz tetra
         run(data_path, 280, 'Tetraplexer')
-	data_path = '../Data/2015_06_17/001_150_PolModEff.dat'
-	run(data_path, 150, 'Tetraplexer')
-	data_path = '../Data/2015_07_01/220/002_PolModEff.dat' # 2.10% for 220 GHZ tetra
+        data_path = '../Data/2015_07_02/280/015_PolModEff.dat' #4.10% for 280 GHz tetra
+        run(data_path, 280, 'Tetraplexer')
+        data_path = '../Data/2015_06_17/001_150_PolModEff.dat'
+        run(data_path, 150, 'Tetraplexer')
+        data_path = '../Data/2015_07_01/220/002_PolModEff.dat' # 2.10% for 220 GHZ tetra
         run(data_path, 220, 'Tetraplexer')
         data_path = '../Data/2015_07_02/90/017_PolModEff.dat' # 1.51% for 90 GHZ tetra
         run(data_path, 90, 'Tetraplexer')
-	data_path = '../Data/2015_07_02/220/003_PolModEff.dat' # 1.56% for 220 GHZ tetra
+        data_path = '../Data/2015_07_02/220/003_PolModEff.dat' # 1.56% for 220 GHZ tetra
         run(data_path, 220, 'Tetraplexer')
-	data_path = '../Data/2015_07_01/280/009_PolModEff.dat' #4.10% for 280 GHz tetra
+        data_path = '../Data/2015_07_01/280/009_PolModEff.dat' #4.10% for 280 GHz tetra
         run(data_path, 280, 'Tetraplexer')
-        # HF Triplexer 07.11.15
-	data_path = '../Data/2015_07_11/280/024_PolMod.dat' # 3.15% efficiency
-	data_path = '../Data/2015_07_11/280/021_PolMod.dat'
-	run(data_path, 280, 'HF_Triplexer')
-	data_path = '../Data/2015_07_11/350/022_PolMod.dat' # 3.56% efficiency
-	run(data_path, 350, 'HF_Triplexer')
-	data_path = '../Data/2015_07_11/220/005_PolMod.dat' # 2.95% efficiency
-	run(data_path, 220, 'HF_Triplexer')
-        # LF Triplexer 07.13.15
-        #################################3
-	#data_path = '../Data/2015_07_13/40/020_PolMod.dat' # 2.37% efficiency
-	#run(data_path, 40, 'LF_Triplexer')
-	data_path = '../Data/2015_07_13/60/009_PolMod.dat' # 2.89% efficiency
-	run(data_path, 60, 'LF_Triplexer')
-	data_path = '../Data/2015_07_13/90/022_PolMod.dat' # 3.57% efficiency
-	run(data_path, 90, 'LF_Triplexer')
-	#data_path = '../Data/2015_07_02/280/015_PolModEff.dat' #4.10% for 280 GHz tetra
-        #run(data_path, 280, 'Tetraplexer')
-        # HF Triplexer 07.11.15
-	data_path = '../Data/2015_07_11/280/024_PolMod.dat' # 3.15% efficiency
-	data_path = '../Data/2015_07_11/280/021_PolMod.dat'
-	run(data_path, 280, 'HF_Triplexer')
-	data_path = '../Data/2015_07_11/350/022_PolMod.dat' # 3.56% efficiency
-	run(data_path, 350, 'HF_Triplexer')
-	data_path = '../Data/2015_07_11/220/005_PolMod.dat' # 2.95% efficiency
-	run(data_path, 220, 'HF_Triplexer')
-	data_path = '../Data/2017_03_08/SQ1_Polarization3.dat' # 1.5% efficiency
-	run(data_path, 150, 'PB2_Pixel')
+# HF Triplexer 07.11.15
+        data_path = '../Data/2015_07_11/280/024_PolMod.dat' # 3.15% efficiency
+        data_path = '../Data/2015_07_11/280/021_PolMod.dat'
+        run(data_path, 280, 'HF_Triplexer')
+        data_path = '../Data/2015_07_11/350/022_PolMod.dat' # 3.56% efficiency
+        run(data_path, 350, 'HF_Triplexer')
+        data_path = '../Data/2015_07_11/220/005_PolMod.dat' # 2.95% efficiency
+        run(data_path, 220, 'HF_Triplexer')
+# LF Triplexer 07.13.15
+#################################3
+#data_path = '../Data/2015_07_13/40/020_PolMod.dat' # 2.37% efficiency
+#run(data_path, 40, 'LF_Triplexer')
+        data_path = '../Data/2015_07_13/60/009_PolMod.dat' # 2.89% efficiency
+        run(data_path, 60, 'LF_Triplexer')
+        data_path = '../Data/2015_07_13/90/022_PolMod.dat' # 3.57% efficiency
+        run(data_path, 90, 'LF_Triplexer')
+#data_path = '../Data/2015_07_02/280/015_PolModEff.dat' #4.10% for 280 GHz tetra
+#run(data_path, 280, 'Tetraplexer')
+# HF Triplexer 07.11.15
+        data_path = '../Data/2015_07_11/280/024_PolMod.dat' # 3.15% efficiency
+        data_path = '../Data/2015_07_11/280/021_PolMod.dat'
+        run(data_path, 280, 'HF_Triplexer')
+        data_path = '../Data/2015_07_11/350/022_PolMod.dat' # 3.56% efficiency
+        run(data_path, 350, 'HF_Triplexer')
+        data_path = '../Data/2015_07_11/220/005_PolMod.dat' # 2.95% efficiency
+        run(data_path, 220, 'HF_Triplexer')
+        data_path = '../Data/2017_03_08/SQ1_Polarization3.dat' # 1.5% efficiency
+        run(data_path, 150, 'PB2_Pixel')
     if True:
         list_of_input_dicts = [{'measurements': {'data_path': '../Data/2017_03_08/SQ1_Polarization3.dat',
                                                  'degsperpoint': 5,

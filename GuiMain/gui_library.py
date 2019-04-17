@@ -9,7 +9,7 @@ import pylab as pl
 from PyPDF2 import PdfFileMerger
 from pprint import pprint
 from copy import copy
-from PyQt4 import QtCore, QtGui
+from PyQt5 import QtCore, QtGui, QtWidgets
 from libraries.gen_class import Class
 from ba_settings.all_settings import settings
 from RT_Curves.plot_rt_curves import RTCurve
@@ -19,11 +19,11 @@ from POL_Curves.plot_pol_curves import POLCurve
 from TAU_Curves.plot_tau_curves import TAUCurve
 
 
-class GuiTemplate(QtGui.QWidget):
+class GuiTemplate(QtWidgets.QWidget):
 
     def __init__(self, analysis_types):
         super(GuiTemplate, self).__init__()
-        self.grid = QtGui.QGridLayout()
+        self.grid = QtWidgets.QGridLayout()
         self.grid.setVerticalSpacing(0)
         self.setLayout(self.grid)
         self.__apply_settings__(settings)
@@ -64,7 +64,7 @@ class GuiTemplate(QtGui.QWidget):
                       '_main_panel_rtcurve_checkbox', '_main_panel_ftscurve_checkbox',
                       '_main_panel_taucurve_checkbox']
         for checkbox in checkboxes:
-            print sender_name, checkbox
+            print(sender_name, checkbox)
             if sender_name == checkbox:
                 self.analysis_type = checkbox.split('_')[3]
                 getattr(self, checkbox).setCheckState(True)
@@ -73,14 +73,14 @@ class GuiTemplate(QtGui.QWidget):
                 getattr(self, checkbox).setCheckState(False)
                 analysis_type = checkbox.split('_')[3]
                 self._close_settings_popup(analysis_type)
-        print self.analysis_type
+        print(self.analysis_type)
 
     def _select_files(self):
-        data_paths = QtGui.QFileDialog.getOpenFileNames(self, 'Open file', self.data_folder)
+        data_paths = QtWidgets.QFileDialog.getOpenFileNames(self, 'Open file', self.data_folder)
         for data_path in data_paths:
             if str(data_path) not in self.selected_files:
                 self.selected_files.append(str(data_path))
-                print str(data_path)
+                print(str(data_path))
         selected_files_string = ',\n'.join(self.selected_files)
         getattr(self, '_main_panel_selected_file_label').setText(selected_files_string)
 
@@ -135,7 +135,7 @@ class GuiTemplate(QtGui.QWidget):
         self.selected_files_col_dict = {}
         color_dict = {0: 'r', 1: 'g', 2: 'c', 3: 'b', 4: 'y', 5: 'm'}
         for i, selected_file in enumerate(self.selected_files):
-            print selected_file
+            print(selected_file)
             col = 2 + i * 3
             self.selected_files_col_dict[col] = selected_file
             basename = os.path.basename(selected_file)
@@ -280,7 +280,7 @@ class GuiTemplate(QtGui.QWidget):
         list_of_input_dicts = []
         rt_settings = ['grt_serial', 'label', 'sample_res_factor',
                        'normal_res', 'invert', 'grt_res_factor']
-        for selected_file, row in self.selected_files_col_dict.iteritems():
+        for selected_file, row in self.selected_files_col_dict.items():
             input_dict = {'data_path': selected_file}
             for setting in rt_settings:
                 identity_string = '{0}_{1}'.format(row, setting)
@@ -425,54 +425,54 @@ class GuiTemplate(QtGui.QWidget):
             widget_settings = {'text': '', 'width': 200,
                                'position': (row, col, 1, 1)}
             self._create_and_place_widget(unique_widget_name, **widget_settings)
-            print unique_widget_name
+            print(unique_widget_name)
             getattr(self, unique_widget_name).setText('25.0')
             row += 1
             unique_widget_name = '_{0}_{1}_calibration_resistance_lineedit'.format(popup_name, col)
             widget_settings = {'text': '', 'width': 200,
                                'position': (row, col, 1, 1)}
-            print unique_widget_name
+            print(unique_widget_name)
             self._create_and_place_widget(unique_widget_name, **widget_settings)
             getattr(self, unique_widget_name).setText('0.5')
             row += 1
             unique_widget_name = '_{0}_{1}_fracrn_lineedit'.format(popup_name, col)
             widget_settings = {'text': '', 'width': 200,
                                'position': (row, col, 1, 1)}
-            print unique_widget_name
+            print(unique_widget_name)
             self._create_and_place_widget(unique_widget_name, **widget_settings)
             getattr(self, unique_widget_name).setText('0.75')
             row += 1
             unique_widget_name = '_{0}_{1}_color_lineedit'.format(popup_name, col)
             widget_settings = {'text': '', 'width': 200,
                                'position': (row, col, 1, 1)}
-            print unique_widget_name
+            print(unique_widget_name)
             self._create_and_place_widget(unique_widget_name, **widget_settings)
             getattr(self, unique_widget_name).setText('r')
             row += 1
             unique_widget_name = '_{0}_{1}_calibrate_checkbox'.format(popup_name, col)
             widget_settings = {'text': 'Calibrate?',
                                'position': (row, col, 1, 1)}
-            print unique_widget_name
+            print(unique_widget_name)
             self._create_and_place_widget(unique_widget_name, **widget_settings)
             getattr(self, unique_widget_name).setChecked(False)
             row += 1
             unique_widget_name = '_{0}_{1}_difference_checkbox'.format(popup_name, col)
             widget_settings = {'text': 'Difference?',
                                'position': (row, col, 1, 1)}
-            print unique_widget_name
+            print(unique_widget_name)
             self._create_and_place_widget(unique_widget_name, **widget_settings)
             getattr(self, unique_widget_name).setChecked(False)
             row += 1
             unique_widget_name = '_{0}_{1}_load_spectra_pushbutton'.format(popup_name, col)
             widget_settings = {'text': 'Load Spectra', 'function': self._load_spectra,
                                'position': (row, col, 1, 1)}
-            print unique_widget_name
+            print(unique_widget_name)
             self._create_and_place_widget(unique_widget_name, **widget_settings)
             unique_widget_name = '_{0}_{1}_loaded_spectra_label'.format(popup_name, col)
-            print unique_widget_name
+            print(unique_widget_name)
             widget_settings = {'text': '',
                                'position': (row, col + 1, 1, 1)}
-            print unique_widget_name
+            print(unique_widget_name)
             self._create_and_place_widget(unique_widget_name, **widget_settings)
             row = 3
         if not hasattr(self, popup_name):
@@ -485,7 +485,7 @@ class GuiTemplate(QtGui.QWidget):
         iv_settings = ['voltage_conversion', 'label', 'squid_conversion', 'color', 'fracrn',
                        'v_fit_lo', 'v_fit_hi', 'v_plot_lo', 'v_plot_hi', 'v_plot_lo', 'v_plot_hi',
                        'calibration_resistance', 'calibrate', 'difference', 'loaded_spectra']
-        for selected_file, col in self.selected_files_col_dict.iteritems():
+        for selected_file, col in self.selected_files_col_dict.items():
             input_dict = {'data_path': selected_file}
             for setting in iv_settings:
                 identity_string = '{0}_{1}'.format(col, setting)
@@ -521,7 +521,7 @@ class GuiTemplate(QtGui.QWidget):
     def _load_spectra(self):
         sender_str = str(self.sender().whatsThis())
         base = sender_str.split('_load')[0]
-        data_path = QtGui.QFileDialog.getOpenFileName(self, 'Open file', self.data_folder)
+        data_path = QtWidgets.QFileDialog.getOpenFileName(self, 'Open file', self.data_folder)
         set_to_widget = '{0}_loaded_spectra_label'.format(base)
         short_data_path = data_path.split('BolometerCharacterization')[-1]
         getattr(self, set_to_widget).setText(str(data_path))
@@ -590,11 +590,11 @@ class GuiTemplate(QtGui.QWidget):
     def _build_pol_input_dicts(self):
         list_of_input_dicts = []
         pol_settings = ['xlim', 'color', 'degsperpoint', 'plot_label']
-        for selected_file, col in self.selected_files_col_dict.iteritems():
+        for selected_file, col in self.selected_files_col_dict.items():
             input_dict = {'measurements': {'data_path': selected_file}}
             for setting in pol_settings:
                 identity_string = '{0}_{1}'.format(col, setting)
-                print identity_string
+                print(identity_string)
                 for widget in [x for x in dir(self) if identity_string in x]:
                     if 'lineedit' in widget:
                         widget_text = str(getattr(self, widget).text())
@@ -651,7 +651,7 @@ class GuiTemplate(QtGui.QWidget):
             self._create_and_place_widget(unique_widget_name, **widget_settings)
             row += 1
             # Add a lineedit for plot title
-            print col
+            print(col)
             unique_widget_name = '_{0}_{1}_plot_title_lineedit'.format(popup_name, col)
             widget_settings = {'text': '',
                                'position': (row, col, 1, 2)}
@@ -765,7 +765,7 @@ class GuiTemplate(QtGui.QWidget):
         fts_settings = ['smoothing_factor', 'xlim_plot', 'xlim_clip', 'divide_mmf', 'add_atm_model',
                         'divide_bs_5', 'divide_bs_10', 'step_size', 'steps_per_point', 'add_sim_band',
                         'add_co_lines', 'color', 'normalize', 'plot_title', 'plot_label']
-        for selected_file, col in self.selected_files_col_dict.iteritems():
+        for selected_file, col in self.selected_files_col_dict.items():
             input_dict = {'measurements': {'data_path': selected_file}}
             for setting in fts_settings:
                 identity_string = '{0}_{1}'.format(col, setting)
@@ -801,7 +801,7 @@ class GuiTemplate(QtGui.QWidget):
         pl.close('all')
 
     def __no_function(self):
-        print 'no function'
+        print('no function')
 
     #################################################
     # WIDGET GENERATORS AND FUNCTIONS
@@ -824,12 +824,12 @@ class GuiTemplate(QtGui.QWidget):
         return widget_function
 
     def _build_panel(self, build_dict, parent=None):
-        for unique_widget_name, widget_settings in build_dict.iteritems():
+        for unique_widget_name, widget_settings in build_dict.items():
             widget_settings_copy = copy(build_dict['_common_settings'])
             if unique_widget_name != '_common_settings':
                 widget_settings_copy.update(widget_settings)
                 widget_settings_copy.update({'parent': parent})
-                for widget_param, widget_param_value in widget_settings.iteritems():
+                for widget_param, widget_param_value in widget_settings.items():
                     if 'function' == widget_param:
                         widget_function = self._unpack_widget_function(widget_param_value)
                         widget_settings_copy.update({'function':  widget_function})
@@ -837,9 +837,9 @@ class GuiTemplate(QtGui.QWidget):
                 self._create_and_place_widget(unique_widget_name, **widget_settings_copy)
 
     def _create_popup_window(self, name):
-        popup_window = QtGui.QWidget()
+        popup_window = QtWidgets.QWidget()
         popup_window.setGeometry(100, 100, 400, 200)
-        popup_window.setLayout(QtGui.QGridLayout())
+        popup_window.setLayout(QtWidgets.QGridLayout())
         setattr(self, name, popup_window)
 
     def _create_and_place_widget(self,
@@ -868,19 +868,19 @@ class GuiTemplate(QtGui.QWidget):
                                  **widget_setttings):
         widget_type = self.widget_to_object_dict[unique_widget_name.split('_')[-1]]
         if orientation is not None and widget_type == 'QSlider':
-            widget = QtGui.QSlider(getattr(QtCore.Qt, orientation))
+            widget = QtWidgets.QSlider(getattr(QtCore.Qt, orientation))
             widget.setTracking(True)
         else:
             if parent is not None:
-                widget = getattr(QtGui, widget_type)(parent)
+                widget = getattr(QtWidgets, widget_type)(parent)
             else:
-                widget = getattr(QtGui, widget_type)()
+                widget = getattr(QtWidgets, widget_type)()
         if function is not None:
             if widget_type == 'QSlider':
                 widget.valueChanged.connect(function)
             elif widget_type in ('QPushButton', 'QCheckBox'):
                 widget.clicked.connect(function)
-                #button_icon = QtGui.QIcon()
+                #button_icon = QtWidgets.QIcon()
                 #button_icon.addFile('./resources/Bolo_Chip.jpg')
                 #widget.setIcon(button_icon)
                 #widget.setIconSize(QtCore.QSize(50, 50))
@@ -904,7 +904,7 @@ class GuiTemplate(QtGui.QWidget):
         if color is not None:
             widget.setStyleSheet('%s {color: %s}' % (widget_type, color))
         if pixmap is not None:
-            image = QtGui.QPixmap(pixmap)
+            image = QtWidgets.QPixmap(pixmap)
             if keep_aspect_ratio:
                 image = image.scaled(image_scale[0], image_scale[1], QtCore.Qt.KeepAspectRatio)
             else:
@@ -914,7 +914,7 @@ class GuiTemplate(QtGui.QWidget):
             qt_alignment = getattr(QtCore.Qt, 'Align{0}'.format(alignment))
             widget.setAlignment(qt_alignment)
         if layout is not None:
-            widget.setLayout(getattr(QtGui, layout)())
+            widget.setLayout(getattr(QtWidgets, layout)())
         if tick_interval is not None:
             widget.setTickInterval(1)
         if tick_range is not None:

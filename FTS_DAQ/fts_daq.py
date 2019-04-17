@@ -19,7 +19,7 @@ class FTSDAQ():
 
     def simulate_inteferogram(self, starting_position=-10000, ending_position=300000, step_size=500, test=False):
         dummy_int_x = np.arange(starting_position, ending_position+step_size, step_size)
-        print dummy_int_x
+        print(dummy_int_x)
         dummy_int_y = np.zeros(0)
         for i, x_pos in enumerate(dummy_int_x):
             noisy_sync = self.noisy_sync(x_pos)

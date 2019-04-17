@@ -5,8 +5,8 @@ import pylab as pl
 import numpy as np
 from copy import copy
 from pprint import pprint
-from foreground_plotter import ForegroundPlotter
-from numerical_processing import Fourier
+from .foreground_plotter import ForegroundPlotter
+from .numerical_processing import Fourier
 
 
 class FTSCurve():
@@ -75,7 +75,7 @@ class FTSCurve():
         transmission = []
         with open('.\FTS_Curves\Simulations\PB2abcBands.csv', 'r') as file_handle:
             for line in file_handle.readlines()[1:]:
-                print line
+                print(line)
                 if len(line.split(',')[freq_column]) > 0:
                     freq_value = float(line.split(',')[freq_column])
                     frequency.append(freq_value)
@@ -142,7 +142,7 @@ class FTSCurve():
                 signal = line.split('\t')[1]
                 np.put(position_vector, i, position)
                 np.put(signal_vector, i, signal)
-        print position_vector, signal_vector
+        print(position_vector, signal_vector)
         return position_vector, signal_vector
 
     def plot_IF_data(self, position_vector, signal_vector, color='b',
@@ -210,9 +210,9 @@ class FTSCurve():
         #import ipdb;ipdb.set_trace()
         #print handles, 
         order = [labels.index(label) for label in custom_order if label in labels]
-        print handles, labels
-        print custom_order
-        print order
+        print(handles, labels)
+        print(custom_order)
+        print(order)
         if len(custom_order) > 0:
             ax.legend([handles[idx] for idx in order], [labels[idx] for idx in order],
                       numpoints=1, borderaxespad=0.0, loc=2, bbox_to_anchor=(1.01, 1.0))
