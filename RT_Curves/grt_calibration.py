@@ -30,9 +30,6 @@ def resistance_to_temp(resistance, serial_number):
         for i, coefficient in enumerate(a_coefficients):
             temperature += coefficient * np.cos(i * pl.arccos(x))
         temperature_array[j] = copy(temperature)
-        print('grt')
-        print(resistance_value, temperature)
-        #print x, z, z_lower, z_upper, a_coefficients
     return temperature_array
 
 

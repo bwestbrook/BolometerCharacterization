@@ -206,13 +206,7 @@ class FTSCurve():
         ax.set_ylim((-0.05, 1.05))
         # Add Legend
         handles, labels = ax.get_legend_handles_labels()
-        #order = [custom_order.index(label) for label in labels if label in custom_order]
-        #import ipdb;ipdb.set_trace()
-        #print handles, 
         order = [labels.index(label) for label in custom_order if label in labels]
-        print(handles, labels)
-        print(custom_order)
-        print(order)
         if len(custom_order) > 0:
             ax.legend([handles[idx] for idx in order], [labels[idx] for idx in order],
                       numpoints=1, borderaxespad=0.0, loc=2, bbox_to_anchor=(1.01, 1.0))
@@ -379,7 +373,6 @@ class FTSCurve():
                     if os.path.exists(save_path):
                         os.remove(save_path)
                     self.save_FFT_data(frequency_vector, transmission_vector, save_path)
-                custom_order = []
                 #custom_order = ['ATM Model', '90T', '90B', '150T', '150B']
                 custom_order = ['ATM Model', 'CO 110 GHz', 'CO 115 GHz', '90 GHz Sim', '90 GHz Bottom', '90 GHz Top', '150 GHz Sim', '150 GHz Bottom', '150 GHz Top']
                 custom_order = ['ATM Model', 'CO 110 GHz', 'CO 115 GHz', '90 GHz Sim', '90 GHz Bottom', '90 GHz Top', '150 GHz Sim', '150 GHz Bottom', '150 GHz Top']
@@ -391,6 +384,8 @@ class FTSCurve():
                 custom_order = ['ATM Model', 'CO 110 GHz', 'CO 115 GHz', '90 GHz Sim', 'PB2-13-26 Wit-90', 'PB2-13-26 P101-90T',
                                 '150 GHz Sim', 'PB2-13-26 Wit-150', 'PB2-13-26 P100-150B']
                 custom_order = ['ATM Model', 'CO 110 GHz', 'CO 115 GHz', '220 GHz Sim', '270 GHz Sim', 'PB2-14-02 Ub-220B', 'PB2-14-02 Ub-270T']
+                custom_order = ['ATM Model', 'CO 110 GHz', 'CO 115 GHz', '150 GHz Sim', '13-35-Wit-150B', '13-35-Wit-150T']
+                custom_order = []
                 fig, ax, add_atmosphere = self.plot_FFT_data(frequency_vector, divided_transmission_vector, color=color, title=title, label=label, xlim=xlim_plot,
                                                              fig=fig, add_atmosphere=add_atmosphere, add_90_sim=add_90_sim, add_150_sim=add_150_sim, add_220_sim=add_220_sim,
                                                              add_270_sim=add_270_sim, add_co_lines=add_co_lines, custom_order=custom_order)

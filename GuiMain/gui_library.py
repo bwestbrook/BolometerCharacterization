@@ -39,6 +39,7 @@ class GuiTemplate(QtWidgets.QWidget):
         self.selected_files = []
         self.fts = FTSCurve()
         self.fts_fig = None
+        self.loaded_spectra_data_path = None
 
     def __apply_settings__(self, settings):
         for setting in dir(settings):
@@ -76,7 +77,7 @@ class GuiTemplate(QtWidgets.QWidget):
         print(self.analysis_type)
 
     def _select_files(self):
-        data_paths = QtWidgets.QFileDialog.getOpenFileNames(self, 'Open file', self.data_folder)
+        data_paths = QtWidgets.QFileDialog.getOpenFileNames(self, 'Open file', self.data_folder)[0]
         for data_path in data_paths:
             if str(data_path) not in self.selected_files:
                 self.selected_files.append(str(data_path))
@@ -407,26 +408,26 @@ class GuiTemplate(QtWidgets.QWidget):
             widget_settings = {'text': '', 'width': 200,
                                'position': (row, col, 1, 1)}
             self._create_and_place_widget(unique_widget_name, **widget_settings)
-            getattr(self, unique_widget_name).setText('3.0')
+            getattr(self, unique_widget_name).setText('7.0')
             row += 1
             unique_widget_name = '_{0}_{1}_v_fit_hi_lineedit'.format(popup_name, col)
             widget_settings = {'text': '', 'width': 200,
                                'position': (row, col, 1, 1)}
             self._create_and_place_widget(unique_widget_name, **widget_settings)
-            getattr(self, unique_widget_name).setText('8.0')
+            getattr(self, unique_widget_name).setText('15.0')
             row += 1
             unique_widget_name = '_{0}_{1}_v_plot_lo_lineedit'.format(popup_name, col)
             widget_settings = {'text': '', 'width': 200,
                                'position': (row, col, 1, 1)}
             self._create_and_place_widget(unique_widget_name, **widget_settings)
-            getattr(self, unique_widget_name).setText('1.0')
+            getattr(self, unique_widget_name).setText('4.5')
             row += 1
             unique_widget_name = '_{0}_{1}_v_plot_hi_lineedit'.format(popup_name, col)
             widget_settings = {'text': '', 'width': 200,
                                'position': (row, col, 1, 1)}
             self._create_and_place_widget(unique_widget_name, **widget_settings)
             print(unique_widget_name)
-            getattr(self, unique_widget_name).setText('25.0')
+            getattr(self, unique_widget_name).setText('20.0')
             row += 1
             unique_widget_name = '_{0}_{1}_calibration_resistance_lineedit'.format(popup_name, col)
             widget_settings = {'text': '', 'width': 200,
@@ -478,7 +479,7 @@ class GuiTemplate(QtWidgets.QWidget):
         if not hasattr(self, popup_name):
             self._create_popup_window(popup_name)
             self._build_panel(rtcurve_build_dict)
-        getattr(self, popup_name).show()
+        getattr(self, popup_name).showMaximized()
 
     def _build_iv_input_dicts(self):
         list_of_input_dicts = []
@@ -511,7 +512,11 @@ class GuiTemplate(QtWidgets.QWidget):
                             input_dict[setting] = widget_text
                         else:
                             input_dict[setting] = float(widget_text)
+                    elif setting == 'loaded_spectra':
+                        print(setting, 'loaded')
+                        input_dict[setting] = self.loaded_spectra_data_path
                     elif 'label' in widget:
+                        print(setting, 'else')
                         widget_text = str(getattr(self, widget).text())
                         input_dict[setting] = widget_text
             pprint(input_dict)
@@ -521,10 +526,11 @@ class GuiTemplate(QtWidgets.QWidget):
     def _load_spectra(self):
         sender_str = str(self.sender().whatsThis())
         base = sender_str.split('_load')[0]
-        data_path = QtWidgets.QFileDialog.getOpenFileName(self, 'Open file', self.data_folder)
+        data_path = QtWidgets.QFileDialog.getOpenFileName(self, 'Open file', self.data_folder)[0]
         set_to_widget = '{0}_loaded_spectra_label'.format(base)
         short_data_path = data_path.split('BolometerCharacterization')[-1]
-        getattr(self, set_to_widget).setText(str(data_path))
+        self.loaded_spectra_data_path = data_path
+        getattr(self, set_to_widget).setText(str(short_data_path))
 
     def _plot_ivcurve(self):
         selected_files = list(set(self.selected_files))

@@ -188,19 +188,25 @@ class DAQGuiTemplate(QtWidgets.QWidget):
 
     def _create_sample_dict_path(self):
         self.sample_dict = {}
+        total_len_of_names = 0
         for i in range(1, 7):
             widget = '_daq_main_panel_set_sample_{0}_lineedit'.format(i)
             sample_name = str(getattr(self, widget).text())
             self.sample_dict[str(i)] = sample_name
+            total_len_of_names += len(sample_name)
         sample_dict_path = './Sample_Dicts/{0}.json'.format(self.today_str)
-        with open(sample_dict_path, 'w') as sample_dict_file_handle:
-            json.dump(self.sample_dict, sample_dict_file_handle)
-        getattr(self, '_daq_main_panel_set_sample_dict_path_label').setText('Set Path @ {0}'.format(sample_dict_path))
+        response = None
+        if total_len_of_names == 0 and os.path.exists(sample_dict_path):
+            warning_msg = 'Warning! {0} exists and you are '.format(sample_dict_path)
+            warning_msg += 'going to overwrite with blank names for all channels'
+            response = self._quick_message(warning_msg, add_save=True, add_cancel=True)
+        if response == QtWidgets.QMessageBox.Save:
+            with open(sample_dict_path, 'w') as sample_dict_file_handle:
+                json.dump(self.sample_dict, sample_dict_file_handle)
+            getattr(self, '_daq_main_panel_set_sample_dict_path_label').setText('Set Path @ {0}'.format(sample_dict_path))
 
     def _set_sample_dict_path(self):
         sample_dict_path = QtWidgets.QFileDialog.getOpenFileName(self, directory=self.sample_dict_folder, filter='*.json')[0]
-        #print(sample_dict_path, str(sample_dict_path))
-        #import ipdb;ipdb.set_trace()
         with open(sample_dict_path, 'r') as sample_dict_file_handle:
             self.sample_dict = json.load(sample_dict_file_handle)
         getattr(self, '_daq_main_panel_set_sample_dict_path_label').setText(sample_dict_path)
@@ -282,9 +288,9 @@ class DAQGuiTemplate(QtWidgets.QWidget):
         self.plotted_data_path = []
         for path in paths:
             if 'FTS' in suggested_file_name:
-                data_name = str(QtWidgets.QFileDialog.getSaveFileName(self, 'Raw Data Save Location', path, '.if'))
+                data_name = QtWidgets.QFileDialog.getSaveFileName(self, 'Raw Data Save Location', path, '.if')[0]
             else:
-                data_name = str(QtWidgets.QFileDialog.getSaveFileName(self, 'Raw Data Save Location', path, '.dat'))
+                data_name = QtWidgets.QFileDialog.getSaveFileName(self, 'Raw Data Save Location', path, '.dat')[0]
             if len(data_name) > 0:
                 full_path = os.path.join(self.data_folder, data_name)
                 self.raw_data_path.append(full_path)
@@ -364,10 +370,19 @@ class DAQGuiTemplate(QtWidgets.QWidget):
         if value < min_value:
             self.sender().setText(str(40))
 
-    def _quick_message(self, msg=''):
+    def _quick_message(self, msg='', add_save=False, add_cancel=False, add_yes_to_all=False):
         message_box = QtWidgets.QMessageBox()
         message_box.setText(msg)
-        message_box.exec_()
+        if add_save:
+            save_button = QtWidgets.QMessageBox.Save
+            message_box.addButton(save_button)
+        if add_cancel:
+            cancel_button = QtWidgets.QMessageBox.Cancel
+            message_box.addButton(cancel_button)
+        if add_yes_to_all:
+            yes_to_all_button = QtWidgets.QMessageBox.YesToAll
+            message_box.addButton(yes_to_all_button)
+        return message_box.exec_()
 
     def _create_blank_fig(self, frac_sreen_width=0.5, frac_sreen_height=0.3,
                           left=0.12, right=0.98, top=0.8, bottom=0.23):
@@ -862,7 +877,6 @@ class DAQGuiTemplate(QtWidgets.QWidget):
             getattr(self, '_cosmic_rays_popup_daq_{0}_integration_time_combobox'.format(i)).setCurrentIndex(0)
         getattr(self, '_cosmic_rays_popup_daq_channel_1_combobox').setCurrentIndex(2)
         getattr(self, '_cosmic_rays_popup_daq_channel_2_combobox').setCurrentIndex(3)
-        print('hello')
 
     def _draw_cr_timestream(self, data, channel, title='', xlabel='', ylabel=''):
         fig, ax = self._create_blank_fig()
@@ -1085,7 +1099,6 @@ class DAQGuiTemplate(QtWidgets.QWidget):
                         x_min = np.min(x_data)
                         x_max = np.max(x_data)
                         x_std = np.std(x_data)
-                        print(x_mean)
                     delta_x = x_mean - first_x_point
                     slew_rate = '{0:.2f} mK/s'.format(delta_x / float(data_point_time_str))
                     if run_mode == 'IV':

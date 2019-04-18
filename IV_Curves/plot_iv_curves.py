@@ -137,7 +137,7 @@ class IVCurve():
 
 ## Plotting
 
-    def plot_differenced_ivs(self, v_biases, i_bolos, fracrns, colors, labels, spectra_paths):
+    def plot_differenced_ivs(self, v_biases, i_bolos, fracrns, colors, labels, spectra_paths, plot_clips):
         '''
         This code takes to sets of IV curves and takes a differenc in power at the same fracrn
         '''
@@ -149,12 +149,14 @@ class IVCurve():
         ax.set_ylabel('Power ($\mu$V)', fontsize=16)
         p_at_same_rfracs = []
         for i, v_bias in enumerate(v_biases):
-            print(i, v_bias)
+            plot_clip = plot_clips[i]
             fracrn = fracrns[i]
             i_bolo = i_bolos[i]
-            r_bolo = v_bias / i_bolo
+            #import ipdb;ipdb.set_trace()
+            selector = np.logical_and(plot_clip[0] < v_bias, plot_clip[1] > v_bias)
+            r_bolo = v_bias[selector] / i_bolo[selector]
             r_bolo_norm = r_bolo / np.max(r_bolo)
-            p_bolo = v_bias * i_bolo
+            p_bolo = v_bias[selector] * i_bolo[selector]
             #ax.plot(r_bolo, p_bolo, color=colors[i], label=labels[i])
             ax.plot(r_bolo_norm, p_bolo, color=colors[i], label=labels[i])
             #r_n = r_bolo[10] # some value near the start
@@ -307,7 +309,7 @@ class IVCurve():
             difference = input_dict['difference']
             if difference:
                 break
-        v_biases, i_bolos, colors, label_strs, fracrns, spectra_paths = [], [], [], [], [], []
+        v_biases, i_bolos, colors, label_strs, fracrns, spectra_paths, plot_clips = [], [], [], [], [], [], []
         for input_dict in self.list_of_input_dicts:
             data_path = input_dict['data_path']
             label = input_dict['label']
@@ -326,6 +328,7 @@ class IVCurve():
                                                                                  determine_calibration=input_dict['calibrate'],
                                                                                  clip=fit_clip, label=label)
             v_biases.append(v_bias_real)
+            plot_clips.append(plot_clip)
             i_bolos.append(i_bolo_real)
             label_strs.append(label)
             colors.append(color)
@@ -337,7 +340,7 @@ class IVCurve():
                                       show_plot=True)
 
         if difference:
-            self.plot_differenced_ivs(v_biases, i_bolos, fracrns, colors, label_strs, spectra_paths)
+            self.plot_differenced_ivs(v_biases, i_bolos, fracrns, colors, label_strs, spectra_paths, plot_clips)
 
 if __name__ == '__main__':
     ivc = IVCurve()
