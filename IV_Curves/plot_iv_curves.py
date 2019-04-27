@@ -212,7 +212,7 @@ class IVCurve():
         if stds is not None:
             ax1.errorbar(bolo_voltage_bias[plot_selector], bolo_current[plot_selector], yerr=stds[plot_selector],
                          label='error', marker='.', linestyle='None', alpha=0.25)
-        if pturn:
+        if pturn and len(bolo_voltage_bias) > 2:
             pt_idx = np.where(bolo_current[plot_selector] == min(bolo_current[plot_selector]))[0][0]
             pl_idx = np.where(bolo_voltage_bias[plot_selector] == min(bolo_voltage_bias[plot_selector]))[0][0]
             pturn_pw = bolo_current[plot_selector][pt_idx] * bolo_voltage_bias[plot_selector][pt_idx]

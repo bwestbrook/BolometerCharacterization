@@ -196,11 +196,17 @@ class DAQGuiTemplate(QtWidgets.QWidget):
             total_len_of_names += len(sample_name)
         sample_dict_path = './Sample_Dicts/{0}.json'.format(self.today_str)
         response = None
+        print(total_len_of_names)
+        print(sample_dict_path)
         if total_len_of_names == 0 and os.path.exists(sample_dict_path):
             warning_msg = 'Warning! {0} exists and you are '.format(sample_dict_path)
             warning_msg += 'going to overwrite with blank names for all channels'
             response = self._quick_message(warning_msg, add_save=True, add_cancel=True)
-        if response == QtWidgets.QMessageBox.Save:
+            if response == QtWidgets.QMessageBox.Save:
+                with open(sample_dict_path, 'w') as sample_dict_file_handle:
+                    json.dump(self.sample_dict, sample_dict_file_handle)
+                getattr(self, '_daq_main_panel_set_sample_dict_path_label').setText('Set Path @ {0}'.format(sample_dict_path))
+        else:
             with open(sample_dict_path, 'w') as sample_dict_file_handle:
                 json.dump(self.sample_dict, sample_dict_file_handle)
             getattr(self, '_daq_main_panel_set_sample_dict_path_label').setText('Set Path @ {0}'.format(sample_dict_path))
@@ -436,7 +442,7 @@ class DAQGuiTemplate(QtWidgets.QWidget):
         #data_folder = './Data/{0}'.format(self.today_str)
         #if not os.path.exists(data_folder):
         data_folder = './Data'
-        self.raw_data_path = [str(QtWidgets.QFileDialog.getOpenFileName(self, directory=data_folder))]
+        self.raw_data_path = [QtWidgets.QFileDialog.getOpenFileName(self, directory=data_folder)[0]]
         self.parsed_data_path = [self.raw_data_path[0].replace('.dat', '_calibrated.dat')]
         self.plotted_data_path = [self.raw_data_path[0].replace('.dat', '_plotted.png')]
         plot_params = self._get_params_from_xy_collector()
@@ -467,8 +473,10 @@ class DAQGuiTemplate(QtWidgets.QWidget):
             getattr(self,  '_final_plot_popup_result_label').setPixmap(image)
             self.plotted_data_path = self.raw_data_path[0].replace('.dat', '_plotted.png')
             self.parsed_data_path = self.raw_data_path[0].replace('.dat', '_calibrated.dat')
-            getattr(self, '_final_plot_popup_plot_path_label').setText(self.plotted_data_path)
-            getattr(self, '_final_plot_popup_data_path_label').setText(self.parsed_data_path)
+            relative_plotted_data_path = '/'.join(self.plotted_data_path.split('/')[5:])
+            relative_parsed_data_path = '/'.join(self.parsed_data_path.split('/')[5:])
+            getattr(self, '_final_plot_popup_plot_path_label').setText(relative_plotted_data_path)
+            getattr(self, '_final_plot_popup_data_path_label').setText(relative_parsed_data_path)
             if title is not None:
                 getattr(self, '_final_plot_popup_plot_title_lineedit').setText(title)
             if xlabel is not None:
@@ -771,15 +779,17 @@ class DAQGuiTemplate(QtWidgets.QWidget):
             ax.plot(temp_data)
             temp_data_std = np.std(temp_data)
             temp_data_mean = np.mean(temp_data)
-            getattr(self, '_multimeter_popup_data_point_mean_{0}_label'.format(channel)).setText('{0:.4f}'.format(temp_data_mean))
-            getattr(self, '_multimeter_popup_data_point_std_{0}_label'.format(channel)).setText('{0:.4f}'.format(temp_data_std))
+            getattr(self, '_multimeter_popup_data_point_mean_{0}_label'.format(channel)).setText('{0:.4f} mK'.format(temp_data_mean))
+            getattr(self, '_multimeter_popup_data_point_std_{0}_label'.format(channel)).setText('{0:.4f} mK'.format(temp_data_std))
+            unit = 'mK'
         else:
             ax.plot(self.mm_data)
             getattr(self, '_multimeter_popup_data_point_mean_{0}_label'.format(channel)).setText('{0:.4f}'.format(self.mm_mean))
             getattr(self, '_multimeter_popup_data_point_std_{0}_label'.format(channel)).setText('{0:.4f}'.format(self.mm_data_std))
+            unit = 'V'
         ax.set_title(title, fontsize=10)
         ax.set_xlabel(xlabel, fontsize=10)
-        ax.set_ylabel('CH{0} Output'.format(channel), fontsize=10)
+        ax.set_ylabel('CH{0} Output ({1})'.format(channel, unit), fontsize=10)
         save_path = 'temp_files/temp_mm.png'
         fig.savefig(save_path)
         pl.close('all')
