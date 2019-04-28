@@ -763,6 +763,12 @@ class GuiTemplate(QtWidgets.QWidget):
             widget_settings = {'text': '0.0',
                                'position': (row, col, 1, 2)}
             self._create_and_place_widget(unique_widget_name, **widget_settings)
+            row += 1
+            # Add an "Plot Interferogram" checkbox
+            unique_widget_name = '_{0}_{1}_plot_interferogram_checkbox'.format(popup_name, col)
+            widget_settings = {'text': '0.0',
+                               'position': (row, col, 1, 2)}
+            self._create_and_place_widget(unique_widget_name, **widget_settings)
             row = 3
         getattr(self, popup_name).show()
 
@@ -770,7 +776,7 @@ class GuiTemplate(QtWidgets.QWidget):
         list_of_input_dicts = []
         fts_settings = ['smoothing_factor', 'xlim_plot', 'xlim_clip', 'divide_mmf', 'add_atm_model',
                         'divide_bs_5', 'divide_bs_10', 'step_size', 'steps_per_point', 'add_sim_band',
-                        'add_co_lines', 'color', 'normalize', 'plot_title', 'plot_label']
+                        'add_co_lines', 'color', 'normalize', 'plot_title', 'plot_label', 'plot_interferogram']
         for selected_file, col in self.selected_files_col_dict.items():
             input_dict = {'measurements': {'data_path': selected_file}}
             for setting in fts_settings:
@@ -793,6 +799,12 @@ class GuiTemplate(QtWidgets.QWidget):
             list_of_input_dicts.append(copy(input_dict))
         pprint(list_of_input_dicts)
         return list_of_input_dicts
+
+    def _check_for_if_file(self):
+        list_of_input_dict = self._build_fts_input_dicts()
+        for input_dict in list_of_input_dicts:
+            input_dict['measurements']['plot_interferogram']
+
 
     def _plot_ftscurve(self):
         selected_files = list(set(self.selected_files))

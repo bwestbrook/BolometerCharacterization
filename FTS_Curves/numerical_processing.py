@@ -1,3 +1,4 @@
+import os
 import numpy as np
 import pylab as pl
 import scipy.fftpack
@@ -16,7 +17,7 @@ class Fourier():
         '''
         self.mesg = 'hey'
 
-    def convert_IF_to_FFT_data(self, position_vector, efficiency_vector, scan_param_dict, quick_plot=True):
+    def convert_IF_to_FFT_data(self, position_vector, efficiency_vector, scan_param_dict, quick_plot=False):
         '''
         Returns a frequency and efficiency vector from the inteferogram data and the input
         params of the FTS setup being used
@@ -40,8 +41,8 @@ class Fourier():
         symmetric_efficiency_data = self.make_data_symmetric(efficiency_right_data)
         poly_subtracted_data = self.remove_polynomial(symmetric_efficiency_data)
         xf = np.arange(symmetric_efficiency_data.size)
-        frequency_vector, fft_vector = self.compute_fourier_transform_new(symmetric_position_data, poly_subtracted_data, step_size,
-                                                                          steps_per_point, quick_plot=quick_plot)
+        frequency_vector, fft_vector = self.compute_fourier_transform(symmetric_position_data, poly_subtracted_data, step_size,
+                                                                      steps_per_point, quick_plot=quick_plot)
         return frequency_vector, fft_vector, symmetric_position_data, poly_subtracted_data
 
     def split_data_into_left_right_points(self, position_vector, efficiency_vector):
@@ -103,32 +104,33 @@ class Fourier():
         print()
         return position_vector, efficiency_data
 
-    def compute_fourier_transform(self, position_vector, efficiency_data, distance_per_step, steps_per_point, quick_plot=False):
-        N = efficiency_data.size
-        T = distance_per_step * steps_per_point
-        x_vector = np.linspace(0.0, N * T, N)
-        frequency_vector = np.linspace(0.0, 1.0 / (2 * np.pi * T), N / 2)
-        # some important factors
-        print()
-        print()
-        print('FFT Setup')
-        print('real distance per point is {0} nm ({1} m)'.format(T, T * 1e-9))
-        print('number of points in data is {0}'.format(N))
-        print()
-        print()
-        frequency_vector = frequency_vector * 3e8
-        apodized_efficiency_vector = self.apply_window_to_data(position_vector, efficiency_data)
-        fft_vector = scipy.fftpack.rfft(apodized_efficiency_vector)
-        normalized_fft_vector = (2.0 / N) * np.abs(fft_vector[0: N / 2])
-        peak_normalized_fft_vector = normalized_fft_vector / np.max(normalized_fft_vector)
-        # Plot the fourier transform
+    def manual_fourier_transform(self, efficiency_vector, resolution):
+        fft_vector = scipy.fftpack.fft(efficiency_vector)
+        fft_psd = np.abs(fft_vector) ** 2
+        fft_freq_vector = scipy.fftpack.fftfreq(len(fft_psd), resolution)
+        return fft_freq_vector, fft_psd
+
+    def compute_fourier_transform(self, position_vector, efficiency_vector, distance_per_step, steps_per_point, quick_plot=False):
+        N = efficiency_vector.size
+        total_steps = int(np.max(position_vector) - np.min(position_vector))
+        total_distance = total_steps * distance_per_step
+        resolution = ((3 * 10 ** 8) / total_distance) # Hz
+        resolution = steps_per_point * distance_per_step / (10 ** 12)
+        print(resolution)
+        print(resolution)
+        print(resolution)
+        apodized_efficiency_vector = self.apply_window_to_data(position_vector, efficiency_vector)
+        fft_freq_vector, fft_vector = self.manual_fourier_transform(apodized_efficiency_vector, resolution)
+        print(np.min(fft_freq_vector))
+        print(np.max(fft_freq_vector))
         if quick_plot:
             fig = pl.figure(figsize=(10, 5))
             fig.subplots_adjust(bottom=0.15, top =0.96, left=0.13, right=0.68, hspace=0.44)
             ax1 = fig.add_subplot(211)
             ax2 = fig.add_subplot(212)
-            ax1.plot(frequency_vector / 1e9, peak_normalized_fft_vector, label='Spectra')
-            ax2.plot(position_vector, efficiency_data, label='IF Data')
+            pos_freq_selector = np.where(fft_freq_vector > 0)
+            ax1.plot(fft_freq_vector[pos_freq_selector], fft_vector[pos_freq_selector], label='Spectra')
+            ax2.plot(position_vector, apodized_efficiency_vector, label='IF Data')
             ax1.set_xlabel('Frequency (GHz)', fontsize=16)
             ax1.set_ylabel('Normalized \n efficiency', fontsize=16)
             ax2.set_xlabel('X position (mm)', fontsize=16)
@@ -138,34 +140,67 @@ class Fourier():
                 handles, labels = axis.get_legend_handles_labels()
                 axis.legend(handles, labels, numpoints=1, loc=2, bbox_to_anchor=(1.01, 1.0))
             fig.savefig('temp_fft.png')
-        return frequency_vector, peak_normalized_fft_vector
+            pl.show()
+        return fft_freq_vector, fft_vector
 
-    def run_test(self, data_points=600, steps_per_point=500, spacing=250.39):
-        N = data_points
-        steps_per_point = 1
-        T = spacing * steps_per_point
-        # Based on the sample spacing and the number of points build a frequency vector 
-        x_vector = np.linspace(-N * T,  N * T, N)
-        #x_vector = np.linspace(-2**8, 2**8, 1)
-        
-        frequency_vector = np.linspace(0.0, 1.0 / (2.0 * T), N / 2)
-        # Create Some Test Data 
-        y_vector = 2e4 * np.sinc(x_vector) + 2e4 * np.sinc(-1 * x_vector) + 2
-        frequency = 100.
-        period = 1 / frequency
-        y_vector = np.sin(x_vector / period)
-        print(x_vector, y_vector)
-        # Compute the FFT of the test data
-        fft_vector = np.fft.fft(y_vector)
-        normalized_fft_vector = (2.0 / N) * np.abs(fft_vector[0: N / 2])
-        # Create the figure and plot the data
+
+    def top_hat(self, t, x_l=0000000, x_h=20000000):
+        t
+        s = []
+        for pos in t:
+            if x_l < pos < x_h:
+                s.append(1)
+            else:
+                s.append(0)
+        return np.asarray(s)
+
+    def simulated_if(self):
+        if_vector = []
+        with open('sample_if.if', 'r') as fh:
+            for line in fh.readlines():
+                val = line.replace('\n','')
+                if_vector.append(val)
+        if_vector = np.asarray(if_vector)
+        return if_vector
+
+    def actual_if_data(self):
+        with open('./Data/2019_04_26/SQ6_13-35-Wit-S3-150B_MedRes_16.if', 'r') as fh:
+            for line in fh.readlines():
+                val = line.replace('\n','')
+                if_vector.append(val)
+        return if_vector
+
+    def run_test(self, data_points=700, steps_per_point=500, spacing=10.39):
+        '''
+        Special Notes: For real number inputs is n the complex conjugate of N - n.
+        '''
+        sampling_interval = 500 * 250.39
+        t = np.linspace(0, sampling_interval * data_points, data_points)
+        t = np.linspace(-sampling_interval * data_points / 2, sampling_interval * data_points / 2, data_points)
+        s1 = np.sin(40 * 2 * np.pi * t) + 0.5 * np.sin(90 * 2 * np.pi * t)
+        #s = self.top_hat(t)
+        #s = self.simulated_if()
+        s = self.actual_if_data()
+        s1 = np.sinc(t - 20000000)
+        s1 = 0
+        #s = np.sinc(t)
+        #s = s1 + s2
+        #s = s ** 2
+        fft = np.fft.fft(s)
+        for i in range(2):
+            print("Value at index {}:\t{}".format(i, fft[i + 1]), "\nValue at index {}:\t{}".format(fft.size -1 - i, fft[-1 - i]))
         fig = pl.figure(figsize=(10, 5))
         ax1 = fig.add_subplot(211)
         ax2 = fig.add_subplot(212)
-        print(len(frequency_vector), len(normalized_fft_vector))
-        print(len(x_vector), len(y_vector))
-        ax1.plot(x_vector, y_vector)
-        #ax2.plot(frequency_vector, normalized_fft_vector)
+        ax1.plot(s)
+        T = t[1] - t[0]  # sampling interval 
+        N = s.size
+        f = np.linspace(0, 1 / T, N) # 1/T = frequency
+        with open('inverse.if', 'w') as fh:
+            for val in fft[:N // 2]:
+                fh.write('{0}\n'.format(val))
+        ax2.plot(f[:N // 2], np.abs(fft)[:N //2] * 1 / N)
+        #ax2.plot(f[:N // 2], fft[:N //2] * 1 / N)
         fig.show()
         self._ask_user_if_they_want_to_quit()
 
@@ -174,7 +209,7 @@ class Fourier():
         '''
         A simple method to stop the code without setting a trace with the option of quittting
         '''
-        quit_boolean = raw_input('Press q to q(uit), any other key to continue:\n')
+        quit_boolean = input('Press q to q(uit), any other key to continue:\n')
         if quit_boolean == 'q':
             exit()
 

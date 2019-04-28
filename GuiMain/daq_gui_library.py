@@ -1646,22 +1646,24 @@ class DAQGuiTemplate(QtWidgets.QWidget):
         if type(scan_params) is not dict:
             return None
         # Update Slider
-        if 'starting_position' in scan_params and 'ending_position' in scan_params:
-            resolution, max_frequency = self._compute_resolution_and_max_frequency(scan_params)
-            resolution_widget = '_single_channel_fts_popup_resolution_label'
-            getattr(self, resolution_widget).setText(resolution)
-            max_frequency_widget = '_single_channel_fts_popup_max_frequency_label'
-            getattr(self, max_frequency_widget).setText(max_frequency)
-            num_steps = (int(scan_params['ending_position']) - int(scan_params['starting_position'])) / int(scan_params['step_size'])
-            getattr(self, '_single_channel_fts_popup_number_of_steps_label').setText(str(num_steps))
-            self._update_slider_setup(scan_params)
-        fts_com_port = str(getattr(self, '_single_channel_fts_popup_fts_sm_com_port_combobox').currentText())
-        grid_com_port = str(getattr(self, '_single_channel_fts_popup_grid_sm_com_port_combobox').currentText())
-        if hasattr(self, 'sm_{0}'.format(fts_com_port)):
-            getattr(self, '_single_channel_fts_popup_fts_sm_connection_status_label').setText('Connected!')
-        if hasattr(self, 'sm_{0}'.format(grid_com_port)):
-            getattr(self, '_single_channel_fts_popup_grid_sm_connection_status_label').setText('Connected!')
-        self.single_channel_fts_popup.repaint()
+        resolution_widget = '_single_channel_fts_popup_resolution_label'
+        if hasattr(self, resolution_widget):
+            if 'starting_position' in scan_params and 'ending_position' in scan_params:
+                resolution, max_frequency = self._compute_resolution_and_max_frequency(scan_params)
+                resolution_widget = '_single_channel_fts_popup_resolution_label'
+                getattr(self, resolution_widget).setText(resolution)
+                max_frequency_widget = '_single_channel_fts_popup_max_frequency_label'
+                getattr(self, max_frequency_widget).setText(max_frequency)
+                num_steps = (int(scan_params['ending_position']) - int(scan_params['starting_position'])) / int(scan_params['step_size'])
+                getattr(self, '_single_channel_fts_popup_number_of_steps_label').setText(str(num_steps))
+                self._update_slider_setup(scan_params)
+            fts_com_port = str(getattr(self, '_single_channel_fts_popup_fts_sm_com_port_combobox').currentText())
+            grid_com_port = str(getattr(self, '_single_channel_fts_popup_grid_sm_com_port_combobox').currentText())
+            if hasattr(self, 'sm_{0}'.format(fts_com_port)):
+                getattr(self, '_single_channel_fts_popup_fts_sm_connection_status_label').setText('Connected!')
+            if hasattr(self, 'sm_{0}'.format(grid_com_port)):
+                getattr(self, '_single_channel_fts_popup_grid_sm_connection_status_label').setText('Connected!')
+            self.single_channel_fts_popup.repaint()
 
     def _update_slider_setup(self, scan_params):
         '''
@@ -1692,7 +1694,7 @@ class DAQGuiTemplate(QtWidgets.QWidget):
         ax.errorbar(positions, amplitudes, stds, marker=',', linestyle='None')
         fig.savefig('temp_files/temp_int.png')
         pl.close('all')
-        image = QtWidgets.QPixmap('temp_files/temp_int.png')
+        image = QtGui.QPixmap('temp_files/temp_int.png')
         getattr(self, '_single_channel_fts_popup_interferogram_label').setPixmap(image)
 
     def _rotate_grid(self):

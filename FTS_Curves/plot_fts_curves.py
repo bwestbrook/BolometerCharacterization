@@ -75,7 +75,6 @@ class FTSCurve():
         transmission = []
         with open('.\FTS_Curves\Simulations\PB2abcBands.csv', 'r') as file_handle:
             for line in file_handle.readlines()[1:]:
-                print(line)
                 if len(line.split(',')[freq_column]) > 0:
                     freq_value = float(line.split(',')[freq_column])
                     frequency.append(freq_value)
@@ -142,12 +141,11 @@ class FTSCurve():
                 signal = line.split('\t')[1]
                 np.put(position_vector, i, position)
                 np.put(signal_vector, i, signal)
-        print(position_vector, signal_vector)
         return position_vector, signal_vector
 
-    def plot_IF_data(self, position_vector, signal_vector, color='b',
-                     label='', fig=None, plot_if=False, plot_fft=False,
-                     scan_param_dict={}):
+    def plot_IF_data(self, position_vector, signal_vector, symmetric_position_vector, symmetric_signal_vector,
+                     frequency_vector, transmission_vector,
+                     color='b', label='', fig=None, plot_if=False, plot_fft=True, scan_param_dict={}):
         if fig is None:
             fig = pl.figure()
             fig.add_subplot(311)
@@ -157,16 +155,13 @@ class FTSCurve():
             ax2 = fig.get_axes()[1]
             ax3 = fig.get_axes()[2]
             fig.subplots_adjust(hspace=0.26, bottom=0.12, top =0.96, left=0.16, right=0.84)
-        frequency_vector, transmission_vector, symmetric_position_vector, symmetric_signal_vector  = self.fourier.convert_IF_to_FFT_data(position_vector,
-                                                                                                                                         signal_vector,
-                                                                                                                                         scan_param_dict=scan_param_dict,
-                                                                                                                                         quick_plot=False)
         ax1.set_xlabel('Mirror Position', fontsize=14)
         ax1.set_ylabel('IF Signal ', fontsize=14)
-        ax1.plot(position_vector, signal_vector, color, label=label, lw=2)
-        ax2.plot(symmetric_position_vector, symmetric_signal_vector, color, label=label, lw=2)
+        ax1.plot(position_vector, signal_vector, color, label=label, lw=0.5)
+        ax2.plot(symmetric_position_vector, symmetric_signal_vector, color, label=label, lw=0.5)
+        pos_freq_selector = np.where(frequency_vector > 0)
         if plot_fft:
-            self.plot_FFT_data(frequency_vector, transmission_vector, fig=fig, xlim=(0, 1200))
+            ax3.plot(frequency_vector[pos_freq_selector], transmission_vector[pos_freq_selector])
         pl.show()
         return fig
 
@@ -352,6 +347,22 @@ class FTSCurve():
             add_220_sim = float(dict_['measurements']['add_sim_band_220'])
             add_270_sim = float(dict_['measurements']['add_sim_band_270'])
             smoothing_factor = float(dict_['measurements']['smoothing_factor'])
+            plot_interferogram = dict_['measurements']['plot_interferogram']
+            add_local_FFT = False
+            if plot_interferogram:
+                interferogram_path = data_path.replace('.fft', '.if')
+                if os.path.exists(interferogram_path):
+                    position_vector, signal_vector = self.load_IF_data(interferogram_path)
+                    frequency_vector_fft, transmission_vector_fft, symmetric_position_vector, symmetric_signal_vector  = self.fourier.convert_IF_to_FFT_data(position_vector,
+                                                                                                                                                             signal_vector,
+                                                                                                                                                             scan_param_dict=dict_,
+                                                                                                                                                             quick_plot=True)
+                    #fig, frequency_vector_fft, transmission_vector_fft = self.plot_IF_data(position_vector, signal_vector,
+                                                                                           #symmetric_position_vector, symmetric_signal_vector,
+                                                                                           #frequency_vector, transmission_vector,
+                                                                                           #fig=fig, scan_param_dict=dict_)
+                    add_local_FFT = True
+                    fig = None
             if data_path[-4:] == '.fft':
                 frequency_vector, transmission_vector, normalized_transmission_vector = self.load_FFT_data(data_path, smoothing_factor=smoothing_factor,
                                                                                                            xlim_clip=xlim_clip)
@@ -389,6 +400,10 @@ class FTSCurve():
                 fig, ax, add_atmosphere = self.plot_FFT_data(frequency_vector, divided_transmission_vector, color=color, title=title, label=label, xlim=xlim_plot,
                                                              fig=fig, add_atmosphere=add_atmosphere, add_90_sim=add_90_sim, add_150_sim=add_150_sim, add_220_sim=add_220_sim,
                                                              add_270_sim=add_270_sim, add_co_lines=add_co_lines, custom_order=custom_order)
+                if add_local_FFT:
+                    pos_freq_selector = np.where(frequency_vector_fft > 0)
+                    normalized_transmission_fft = transmission_vector_fft / np.max(transmission_vector_fft)
+                    ax.plot(frequency_vector_fft[pos_freq_selector], normalized_transmission_fft[pos_freq_selector])
             elif data_path[-3:] == '.if':
                 plot_fft = True
                 position_vector, signal_vector = self.load_IF_data(data_path)
