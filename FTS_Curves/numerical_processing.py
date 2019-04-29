@@ -41,7 +41,7 @@ class Fourier():
                                                       remove_polynomial=1,
                                                       apodization_type='boxcar',
                                                       zero_fill=True)
-        phase_fft_vector = self.get_phase_correction_data(efficiency_vector, apodization_type='Triangular')
+        #phase_fft_vector = self.get_phase_correction_data(efficiency_vector, apodization_type='Triangular')
         fft_freq_vector, fft_vector, normalized_fft_vector = self.manual_fourier_transform(position_right_data, efficiency_vector, step_size, steps_per_point, quick_plot=quick_plot)
         return fft_freq_vector, fft_vector, normalized_fft_vector, position_left_data, efficiency_vector
 
@@ -163,7 +163,7 @@ class Fourier():
                 fft_freq = np.fft.fftfreq(fft_psd.size, resolution * i)
             fft_freq_test = np.fft.fftfreq(fft_psd.size, resolution * i)
         pos_freq_selector = fft_freq > 0
-        normalized_fft_psd = fft_psd / np.max(fft_psd)
+        normalized_fft_psd = fft_psd / np.max(fft_psd[100:])
         if quick_plot:
             pl.plot(fft_freq[pos_freq_selector] * 1e-9, fft_psd[pos_freq_selector])
             pl.show()
