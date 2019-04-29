@@ -353,14 +353,8 @@ class FTSCurve():
                 interferogram_path = data_path.replace('.fft', '.if')
                 if os.path.exists(interferogram_path):
                     position_vector, signal_vector = self.load_IF_data(interferogram_path)
-                    frequency_vector_fft, transmission_vector_fft, symmetric_position_vector, symmetric_signal_vector  = self.fourier.convert_IF_to_FFT_data(position_vector,
-                                                                                                                                                             signal_vector,
-                                                                                                                                                             scan_param_dict=dict_,
-                                                                                                                                                             quick_plot=True)
-                    #fig, frequency_vector_fft, transmission_vector_fft = self.plot_IF_data(position_vector, signal_vector,
-                                                                                           #symmetric_position_vector, symmetric_signal_vector,
-                                                                                           #frequency_vector, transmission_vector,
-                                                                                           #fig=fig, scan_param_dict=dict_)
+                    fft_freq_vector, fft_vector, normalized_fft_vector, position_vector, efficiency_vector = self.fourier.convert_IF_to_FFT_data(position_vector, signal_vector,
+                                                                                                                                                 scan_param_dict=dict_, quick_plot=True)
                     add_local_FFT = True
                     fig = None
             if data_path[-4:] == '.fft':
@@ -401,9 +395,9 @@ class FTSCurve():
                                                              fig=fig, add_atmosphere=add_atmosphere, add_90_sim=add_90_sim, add_150_sim=add_150_sim, add_220_sim=add_220_sim,
                                                              add_270_sim=add_270_sim, add_co_lines=add_co_lines, custom_order=custom_order)
                 if add_local_FFT:
-                    pos_freq_selector = np.where(frequency_vector_fft > 0)
-                    normalized_transmission_fft = transmission_vector_fft / np.max(transmission_vector_fft)
-                    ax.plot(frequency_vector_fft[pos_freq_selector], normalized_transmission_fft[pos_freq_selector])
+                    pos_freq_selector = np.where(fft_freq_vector > 0)
+                    normalized_fft_vector = fft_vector / np.max(fft_vector)
+                    ax.plot(fft_freq_vector[pos_freq_selector] * 1e9, normalized_fft_vector[pos_freq_selector], color='r')
             elif data_path[-3:] == '.if':
                 plot_fft = True
                 position_vector, signal_vector = self.load_IF_data(data_path)

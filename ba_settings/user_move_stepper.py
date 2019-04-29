@@ -5,7 +5,6 @@ user_move_stepper_settings = Class()
 user_move_stepper_settings.user_move_stepper_build_dict = {
                                                            '_common_settings': {'font': 'large'},
 
-
                                                            '_user_move_stepper_popup_control_label': {'text': 'CONTROL', 'font': 'huge', 'position': (0, 0, 1, 1)},
                                                            '_user_move_stepper_popup_set_to_label': {'text': 'SET TO', 'font': 'huge', 'position': (0, 1, 1, 1)},
                                                            '_user_move_stepper_popup_actual_label': {'text': 'ACTUAL', 'font': 'huge', 'position': (0, 2, 1, 1)},

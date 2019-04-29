@@ -37,13 +37,11 @@ class Fourier():
         efficiency_vector = np.asarray(efficiency_vector)
         efficiency_left_data, efficiency_right_data, position_left_data, position_right_data =\
             self.split_data_into_left_right_points(position_vector, efficiency_vector)
-        symmetric_position_data = self.make_data_symmetric(position_right_data, position=True)
-        symmetric_efficiency_data = self.make_data_symmetric(efficiency_right_data)
-        poly_subtracted_data = self.remove_polynomial(symmetric_efficiency_data)
-        xf = np.arange(symmetric_efficiency_data.size)
-        frequency_vector, fft_vector = self.compute_fourier_transform(symmetric_position_data, poly_subtracted_data, step_size,
-                                                                      steps_per_point, quick_plot=quick_plot)
-        return frequency_vector, fft_vector, symmetric_position_data, poly_subtracted_data
+        efficiency_vector = self.remove_polynomial(efficiency_right_data)
+        efficiency_vector = self.prepare_data_for_fft(efficiency_vector, apodization_type='Triangular')
+        phase_fft_vector = self.get_phase_correction_data(efficiency_vector, apodization_type='Triangular')
+        fft_freq_vector, fft_vector, normalized_fft_vector = self.manual_fourier_transform(position_right_data, efficiency_vector, step_size, steps_per_point, quick_plot=quick_plot)
+        return fft_freq_vector, fft_vector, normalized_fft_vector, position_left_data, efficiency_vector
 
     def split_data_into_left_right_points(self, position_vector, efficiency_vector):
         efficiency_left_data = efficiency_vector[position_vector < 0]
@@ -76,18 +74,43 @@ class Fourier():
         poly_subtracted = data - poly_fit
         return poly_subtracted
 
-    def apply_window_to_data(self, position_vector, efficiency_data, apodization_type='Triangular'):
+    def get_phase_correction_data(self, efficiency_data, apodization_type='Triangular'):
+        phases = np.zeros(len(efficiency_data))
+        mid_index = int(len(efficiency_data) / 2)
+        start_index = int(len(efficiency_data) / 2 - 128)
+        end_index = int(len(efficiency_data) / 2 + 128)
+        np.put(phases, start_index, efficiency_data[start_index:end_index])
+        phases_left = np.flip(phases[start_index:mid_index + 1])
+        phases_right = np.flip(phases[mid_index:end_index])
+        efficiency_data = np.insert(efficiency_data, 0, phases_left)
+        efficiency_data = np.insert(efficiency_data, -128, phases_right)
+        phases_fft_vector = np.fft.fft(phases)
+        psd_vector = np.absolute(phases_fft_vector)
+        return phases_fft_vector
+
+
+    def prepare_data_for_fft(self, efficiency_data, apodization_type='Triangular'):
         '''
         This function will apply a window function to the data
         Inputs:
             - postion_vector:  position vector (in mm) (assumed to be symmetric about 0)
             - efficiency_data:  efficiency data to be apodized
+        Notes: Following this prescription: https://www.essentialftir.com/fftTutorial.html
         '''
+        next_power_of_two = self.next_power_of_two(len(efficiency_data))
+        zeros_to_pad = next_power_of_two - len(efficiency_data)
+        apodized_efficiency_vector = np.insert(efficiency_data, -1, np.zeros(zeros_to_pad))
         if apodization_type == 'Triangular':
-            N = position_vector.size
-            window_function = np.bartlett(N)
-            apodized_efficiency_vector = window_function * efficiency_data
+            N = int(apodized_efficiency_vector.size * 2)
+            window_function = scipy.signal.windows.triang(N) / np.max(apodized_efficiency_vector)
+            apodized_efficiency_vector = window_function[int(N / 2):] * apodized_efficiency_vector
+        end_of_center_burst = int(0.15 * len(apodized_efficiency_vector))
+        center_burst = np.flip(apodized_efficiency_vector[0: end_of_center_burst])
+        apodized_efficiency_vector[len(apodized_efficiency_vector) - end_of_center_burst - 1: -1] = center_burst
         return apodized_efficiency_vector
+
+    def next_power_of_two(self, length):
+        return 1 if length == 0 else 2**(length - 1).bit_length()
 
     def compute_fourier_transform_new(self, position_vector, efficiency_data, distance_per_step, steps_per_point, quick_plot=False):
         print()
@@ -104,11 +127,16 @@ class Fourier():
         print()
         return position_vector, efficiency_data
 
-    def manual_fourier_transform(self, efficiency_vector, resolution):
-        fft_vector = scipy.fftpack.fft(efficiency_vector)
+    def manual_fourier_transform(self, position_vector, efficiency_vector, distance_per_step, steps_per_point, quick_plot=False):
+        resolution = np.pi / (distance_per_step * steps_per_point * 1e-8)
+        fft_vector = np.fft.fft(efficiency_vector)
         fft_psd = np.abs(fft_vector) ** 2
-        fft_freq_vector = scipy.fftpack.fftfreq(len(fft_psd), resolution)
-        return fft_freq_vector, fft_psd
+        fft_freq = np.fft.fftfreq(fft_psd.size, resolution)
+        pos_freq_selector = fft_freq > 0
+        pl.plot(fft_freq[pos_freq_selector] * 1e9, fft_psd[pos_freq_selector])
+        pl.show()
+        normalized_fft_psd = fft_psd / np.max(fft_psd)
+        return fft_freq, fft_psd, normalized_fft_psd
 
     def compute_fourier_transform(self, position_vector, efficiency_vector, distance_per_step, steps_per_point, quick_plot=False):
         N = efficiency_vector.size
@@ -119,17 +147,17 @@ class Fourier():
         print(resolution)
         print(resolution)
         print(resolution)
-        apodized_efficiency_vector = self.apply_window_to_data(position_vector, efficiency_vector)
-        fft_freq_vector, fft_vector = self.manual_fourier_transform(apodized_efficiency_vector, resolution)
+        fft_freq_vector, fft_psd, normalized_fft_psd = self.manual_fourier_transform(apodized_efficiency_vector, resolution)
         print(np.min(fft_freq_vector))
         print(np.max(fft_freq_vector))
+        quick_plot = True
         if quick_plot:
             fig = pl.figure(figsize=(10, 5))
             fig.subplots_adjust(bottom=0.15, top =0.96, left=0.13, right=0.68, hspace=0.44)
             ax1 = fig.add_subplot(211)
             ax2 = fig.add_subplot(212)
             pos_freq_selector = np.where(fft_freq_vector > 0)
-            ax1.plot(fft_freq_vector[pos_freq_selector], fft_vector[pos_freq_selector], label='Spectra')
+            ax1.plot(fft_freq_vector[pos_freq_selector], normalized_fft_psd[pos_freq_selector], label='Spectra')
             ax2.plot(position_vector, apodized_efficiency_vector, label='IF Data')
             ax1.set_xlabel('Frequency (GHz)', fontsize=16)
             ax1.set_ylabel('Normalized \n efficiency', fontsize=16)
