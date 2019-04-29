@@ -104,7 +104,7 @@ class Fourier():
             N = int(apodized_efficiency_vector.size * 2)
             window_function = scipy.signal.windows.triang(N) / np.max(apodized_efficiency_vector)
             apodized_efficiency_vector = window_function[int(N / 2):] * apodized_efficiency_vector
-        end_of_center_burst = int(0.15 * len(apodized_efficiency_vector))
+        end_of_center_burst = int(0.05 * len(apodized_efficiency_vector))
         center_burst = np.flip(apodized_efficiency_vector[0: end_of_center_burst])
         apodized_efficiency_vector[len(apodized_efficiency_vector) - end_of_center_burst - 1: -1] = center_burst
         return apodized_efficiency_vector
