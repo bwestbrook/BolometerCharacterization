@@ -354,7 +354,7 @@ class FTSCurve():
                 if os.path.exists(interferogram_path):
                     position_vector, signal_vector = self.load_IF_data(interferogram_path)
                     fft_freq_vector, fft_vector, normalized_fft_vector, position_vector, efficiency_vector = self.fourier.convert_IF_to_FFT_data(position_vector, signal_vector,
-                                                                                                                                                 scan_param_dict=dict_, quick_plot=True)
+                                                                                                                                                 scan_param_dict=dict_, quick_plot=False)
                     add_local_FFT = True
                     fig = None
             if data_path[-4:] == '.fft':
@@ -397,7 +397,7 @@ class FTSCurve():
                 if add_local_FFT:
                     pos_freq_selector = np.where(fft_freq_vector > 0)
                     normalized_fft_vector = fft_vector / np.max(fft_vector)
-                    ax.plot(fft_freq_vector[pos_freq_selector] * 1e9, normalized_fft_vector[pos_freq_selector], color='r')
+                    ax.plot(fft_freq_vector[pos_freq_selector] * 1e-9, normalized_fft_vector[pos_freq_selector], color='r')
             elif data_path[-3:] == '.if':
                 plot_fft = True
                 position_vector, signal_vector = self.load_IF_data(data_path)
