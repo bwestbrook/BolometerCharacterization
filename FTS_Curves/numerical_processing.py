@@ -17,7 +17,7 @@ class Fourier():
         '''
         self.mesg = 'hey'
 
-    def convert_IF_to_FFT_data(self, position_vector, efficiency_vector, scan_param_dict, quick_plot=False):
+    def convert_IF_to_FFT_data(self, position_vector, efficiency_vector, scan_param_dict, right_data=True, quick_plot=False):
         '''
         Returns a frequency and efficiency vector from the inteferogram data and the input
         params of the FTS setup being used
@@ -35,15 +35,19 @@ class Fourier():
         steps_per_point = int(scan_param_dict['measurements']['steps_per_point'])
         position_vector = np.asarray(position_vector)
         efficiency_vector = np.asarray(efficiency_vector)
-        efficiency_left_data, efficiency_right_data, position_left_data, position_right_data =\
-            self.split_data_into_left_right_points(position_vector, efficiency_vector)
-        efficiency_vector = self.prepare_data_for_fft(efficiency_right_data,
+        if right_data:
+            efficiency_left_data, efficiency_right_data, position_left_data, position_right_data =\
+                self.split_data_into_left_right_points(position_vector, efficiency_vector)
+            efficiency_vector = efficiency_right_data
+            position_vector = position_right_data
+        efficiency_vector = self.prepare_data_for_fft(efficiency_vector,
                                                       remove_polynomial=1,
                                                       apodization_type='boxcar',
                                                       zero_fill=True)
         fft_freq_vector, fft_vector, fft_psd_vector = self.manual_fourier_transform(efficiency_vector, step_size, steps_per_point, quick_plot=quick_plot)
+        #phase_corrected_fft_vector = fft_vector
         phase_corrected_fft_vector = self.phase_correct_data(efficiency_vector, fft_vector)
-        return fft_freq_vector, fft_vector, phase_corrected_fft_vector, position_left_data, efficiency_vector
+        return fft_freq_vector, fft_vector, phase_corrected_fft_vector, position_vector, efficiency_vector
 
     def split_data_into_left_right_points(self, position_vector, efficiency_vector):
         efficiency_left_data = efficiency_vector[position_vector < 0]
@@ -109,8 +113,8 @@ class Fourier():
         '''
         Takes data between the last data point to be 0.3 max signal
         '''
-        start_of_center_burst_index = np.where(np.abs(apodized_efficiency_vector) > 0.1 )[-1][0]
-        end_of_center_burst_index = np.where(np.abs(apodized_efficiency_vector) > 0.1)[-1][-1]
+        start_of_center_burst_index = np.where(np.abs(apodized_efficiency_vector) > 1.3 )[-1][0]
+        end_of_center_burst_index = np.where(np.abs(apodized_efficiency_vector) > 1.3)[-1][-1]
         center_burst = np.zeros(len(apodized_efficiency_vector))
         if symmetric:
             start = int(len(apodized_efficiency_vector) / 2) - end_of_center_burst_index

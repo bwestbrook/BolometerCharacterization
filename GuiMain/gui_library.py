@@ -15,6 +15,7 @@ from ba_settings.all_settings import settings
 from RT_Curves.plot_rt_curves import RTCurve
 from IV_Curves.plot_iv_curves import IVCurve
 from FTS_Curves.plot_fts_curves import FTSCurve
+from FTS_Curves.numerical_processing import Fourier
 from POL_Curves.plot_pol_curves import POLCurve
 from TAU_Curves.plot_tau_curves import TAUCurve
 
@@ -38,8 +39,10 @@ class GuiTemplate(QtWidgets.QWidget):
         self.grt_res_factors = [100.0, 1000.0]
         self.selected_files = []
         self.fts = FTSCurve()
+        self.fourier = Fourier()
         self.fts_fig = None
         self.loaded_spectra_data_path = None
+        self.analyze_interferogram = False
 
     def __apply_settings__(self, settings):
         for setting in dir(settings):
@@ -63,7 +66,7 @@ class GuiTemplate(QtWidgets.QWidget):
         sender_name = str(self.sender().whatsThis())
         checkboxes = ['_main_panel_polcurve_checkbox', '_main_panel_ivcurve_checkbox',
                       '_main_panel_rtcurve_checkbox', '_main_panel_ftscurve_checkbox',
-                      '_main_panel_taucurve_checkbox']
+                      '_main_panel_ifcurve_checkbox', '_main_panel_taucurve_checkbox']
         for checkbox in checkboxes:
             print(sender_name, checkbox)
             if sender_name == checkbox:
@@ -619,8 +622,12 @@ class GuiTemplate(QtWidgets.QWidget):
         pol.run(list_of_input_dicts)
 
     #################################################
-    # FTS Curves 
+    # FTS/IF Curves 
     #################################################
+    def _build_ifcurve_settings_popup(self):
+        popup_name = 'ftscurve_settings_popup'
+        self.analyze_interferogram = True
+        self._build_ftscurve_settings_popup(popup_name=popup_name)
 
     def _close_fts(self):
         self.ftscurve_settings_popup.close()
@@ -635,8 +642,9 @@ class GuiTemplate(QtWidgets.QWidget):
         getattr(self, sender_widget_name).setCheckState(True)
         getattr(self, other_widget_name).setCheckState(False)
 
-    def _build_ftscurve_settings_popup(self):
-        popup_name = '{0}_settings_popup'.format(self.analysis_type)
+    def _build_ftscurve_settings_popup(self, popup_name=None):
+        if popup_name is None:
+            popup_name = '{0}_settings_popup'.format(self.analysis_type)
         if hasattr(self, popup_name):
             self._initialize_panel(popup_name)
             self._build_panel(settings.ftscurve_popup_build_dict)
@@ -764,11 +772,18 @@ class GuiTemplate(QtWidgets.QWidget):
                                'position': (row, col, 1, 2)}
             self._create_and_place_widget(unique_widget_name, **widget_settings)
             row += 1
-            # Add an "Plot Interferogram" checkbox
+            # Add an "plot interferograme" checkbox
             unique_widget_name = '_{0}_{1}_plot_interferogram_checkbox'.format(popup_name, col)
-            widget_settings = {'text': '0.0',
-                               'position': (row, col, 1, 2)}
+            widget_settings = {'position': (row, col, 1, 2)}
             self._create_and_place_widget(unique_widget_name, **widget_settings)
+            getattr(self, unique_widget_name).setCheckState(True)
+            row += 1
+            # Add an "local FFT" checkbox
+            unique_widget_name = '_{0}_{1}_add_local_fft_checkbox'.format(popup_name, col)
+            widget_settings = {'position': (row, col, 1, 2)}
+            self._create_and_place_widget(unique_widget_name, **widget_settings)
+            getattr(self, unique_widget_name).setCheckState(True)
+            row += 1
             row = 3
         getattr(self, popup_name).show()
 
@@ -776,7 +791,8 @@ class GuiTemplate(QtWidgets.QWidget):
         list_of_input_dicts = []
         fts_settings = ['smoothing_factor', 'xlim_plot', 'xlim_clip', 'divide_mmf', 'add_atm_model',
                         'divide_bs_5', 'divide_bs_10', 'step_size', 'steps_per_point', 'add_sim_band',
-                        'add_co_lines', 'color', 'normalize', 'plot_title', 'plot_label', 'plot_interferogram']
+                        'add_co_lines', 'color', 'normalize', 'plot_title', 'plot_label', 'plot_interferogram',
+                        'add_local_fft']
         for selected_file, col in self.selected_files_col_dict.items():
             input_dict = {'measurements': {'data_path': selected_file}}
             for setting in fts_settings:
@@ -805,6 +821,30 @@ class GuiTemplate(QtWidgets.QWidget):
         for input_dict in list_of_input_dicts:
             input_dict['measurements']['plot_interferogram']
 
+    def _plot_ifcurve(self):
+        '''
+        First we do the numerical processing, then save the file as an FFT and plot using normal plotter
+        '''
+        selected_files = list(set(self.selected_files))
+        list_of_input_dicts = self._build_fts_input_dicts()
+        getattr(self, '_ftscurve_settings_popup_run_pushbutton').setText('Close Pylab Window')
+        getattr(self, '_ftscurve_settings_popup_run_pushbutton').setEnabled(False)
+        self.ftscurve_settings_popup.repaint()
+        for input_dict in list_of_input_dicts:
+            position_vector, efficiency_vector = self.fts.load_IF_data(input_dict['measurements']['data_path'])
+            fft_freq_vector, fft_vector, phase_corrected_fft_vector, position_vector, efficiency_vector\
+                    = self.fourier.convert_IF_to_FFT_data(position_vector, efficiency_vector, scan_param_dict=input_dict)
+            new_fft_path = input_dict['measurements']['data_path'].replace('.if', '_local.fft')
+            with open(new_fft_path, 'w') as file_handle:
+                for i, fft_freq in enumerate(fft_freq_vector):
+                    phase_corrected_fft_value = phase_corrected_fft_vector[i].real
+                    phase_corrected_fft_value = fft_vector[i].real
+                    fft_freq *= 1e-9
+                    line = '{0}\t{1}\t{2}\n'.format(fft_freq, np.abs(phase_corrected_fft_value), phase_corrected_fft_value)
+                    file_handle.write(line)
+            input_dict['measurements']['data_path'] = new_fft_path
+        pprint(list_of_input_dicts)
+        self.fts.run(list_of_input_dicts)
 
     def _plot_ftscurve(self):
         selected_files = list(set(self.selected_files))
