@@ -42,7 +42,7 @@ class Fourier():
                                                       apodization_type='boxcar',
                                                       zero_fill=True)
         fft_freq_vector, fft_vector, normalized_fft_vector = self.manual_fourier_transform(efficiency_vector, step_size, steps_per_point, quick_plot=quick_plot)
-        phase_corrected_fft_vector, normalized_phase_corrected_fft_vecor = self.phase_correct_data(efficiency_vector, fft_vector)
+        phase_corrected_fft_vector = self.phase_correct_data(efficiency_vector, fft_vector)
         return fft_freq_vector, fft_vector, normalized_fft_vector, position_left_data, efficiency_vector
 
     def split_data_into_left_right_points(self, position_vector, efficiency_vector):
@@ -82,12 +82,14 @@ class Fourier():
         phase_corrected_fft_vector = np.fft.fft(rotated_center_burst)
         phase_corrected_psd_vector = np.abs(phase_corrected_fft_vector) ** 2
         phase_pow_spectrum = np.arctan(phase_corrected_fft_vector.imag/phase_corrected_fft_vector.real)
+        phase_corrected_fft_vector = fft_vector * phase_corrected_psd_vector
+
         if quick_plot:
             pl.plot(fft_vector, label='no phase correction')
-            pl.plot(phase_pow_spectrum, label='phase correcter')
+            pl.plot(phase_corrected_psd_vector, label='phase correcter')
             pl.legend()
             pl.show()
-        return phase_corrected_fft_vector, normalized_phase_corrected_fft_vector
+        return phase_corrected_fft_vector
 
     def zero_fill(self, apodized_efficiency_vector, next_power_of_two=None):
         if next_power_of_two is None:
@@ -112,7 +114,7 @@ class Fourier():
             center_burst = apodized_efficiency_vector[start_of_center_burst_index:end_of_center_burst_index]
         else:
             center_burst = apodized_efficiency_vector[0:end_of_center_burst_index]
-        center_burst = self.zero_fill(center_burst, next_power_of_two=2048)
+        center_burst = self.zero_fill(center_burst, next_power_of_two=2050)
         if quick_plot:
             print(end_of_center_burst_index, len(apodized_efficiency_vector), symmetric)
             pl.plot(apodized_efficiency_vector, label='input')
