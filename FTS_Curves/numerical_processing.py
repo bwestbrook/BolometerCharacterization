@@ -41,9 +41,9 @@ class Fourier():
                                                       remove_polynomial=1,
                                                       apodization_type='boxcar',
                                                       zero_fill=True)
-        fft_freq_vector, fft_vector, normalized_fft_vector = self.manual_fourier_transform(efficiency_vector, step_size, steps_per_point, quick_plot=quick_plot)
+        fft_freq_vector, fft_vector, fft_psd_vector = self.manual_fourier_transform(efficiency_vector, step_size, steps_per_point, quick_plot=quick_plot)
         phase_corrected_fft_vector = self.phase_correct_data(efficiency_vector, fft_vector)
-        return fft_freq_vector, fft_vector, normalized_fft_vector, position_left_data, efficiency_vector
+        return fft_freq_vector, fft_vector, phase_corrected_fft_vector, position_left_data, efficiency_vector
 
     def split_data_into_left_right_points(self, position_vector, efficiency_vector):
         efficiency_left_data = efficiency_vector[position_vector < 0]
@@ -77,16 +77,21 @@ class Fourier():
         return poly_subtracted
 
     def phase_correct_data(self, efficiency_data, fft_vector, quick_plot=True):
+        '''
+        https://github.com/larsyunker/FTIR-python-tools/blob/master/FTIR.py
+        '''
         center_burst = self.extract_center_burst(efficiency_data)
         rotated_center_burst = self.rotate_if_data(center_burst)
-        phase_corrected_fft_vector = np.fft.fft(rotated_center_burst)
-        phase_corrected_psd_vector = np.abs(phase_corrected_fft_vector) ** 2
-        phase_pow_spectrum = np.arctan(phase_corrected_fft_vector.imag/phase_corrected_fft_vector.real)
-        phase_corrected_fft_vector = fft_vector * phase_corrected_psd_vector
-
+        phase_correction_fft_vector = np.fft.fft(rotated_center_burst)
+        phase_vector = np.arctan(phase_correction_fft_vector.imag/phase_correction_fft_vector.real)
+        phase_vector = np.interp(np.arange(len(fft_vector)), np.linspace(0, len(fft_vector), len(phase_vector)), phase_vector)
+        phase_corrected_fft_vector = fft_vector * np.exp(-np.complex(0,1) * phase_vector).real
         if quick_plot:
-            pl.plot(fft_vector, label='no phase correction')
-            pl.plot(phase_corrected_psd_vector, label='phase correcter')
+            #pl.plot(phase_vector, label='phase vector')
+            pl.plot(center_burst)
+            #pl.plot(phase_corrected_fft_vector.real, label='phase corrected real')
+            #pl.plot(phase_corrected_fft_vector.imag, label='phase corrected imag')
+            #pl.plot(np.abs(phase_corrected_fft_vector) **2, label='psd')
             pl.legend()
             pl.show()
         return phase_corrected_fft_vector
@@ -104,8 +109,8 @@ class Fourier():
         '''
         Takes data between the last data point to be 0.3 max signal
         '''
-        start_of_center_burst_index = np.where(apodized_efficiency_vector > 0.45)[-1][0]
-        end_of_center_burst_index = np.where(apodized_efficiency_vector > 0.45)[-1][-1]
+        start_of_center_burst_index = np.where(np.abs(apodized_efficiency_vector) > 0.1 )[-1][0]
+        end_of_center_burst_index = np.where(np.abs(apodized_efficiency_vector) > 0.1)[-1][-1]
         center_burst = np.zeros(len(apodized_efficiency_vector))
         if symmetric:
             start = int(len(apodized_efficiency_vector) / 2) - end_of_center_burst_index
@@ -187,22 +192,18 @@ class Fourier():
 
     def manual_fourier_transform(self, efficiency_vector, steps_per_point,
                                  distance_per_point=250.39, speed_of_light=2.998e8, quick_plot=False):
-        resolution = 2 * steps_per_point * distance_per_point * 1e-9 / speed_of_light # convert to m then divide by speed of light to get lambda, 2 is nyquist sampling
         fft_vector = np.fft.fft(efficiency_vector)
-        fft_psd = np.abs(fft_vector) ** 2
-        for i in range(1, 10):
-            if i == 1:
-                fft_freq = np.fft.fftfreq(fft_psd.size, resolution * i)
-            fft_freq_test = np.fft.fftfreq(fft_psd.size, resolution * i)
-        pos_freq_selector = fft_freq > 0
-        #normalized_fft_psd = fft_psd / np.max(fft_psd[100:])
-        normalized_fft_psd = fft_psd / np.max(fft_psd)
+        fft_psd_vector = np.abs(fft_vector) ** 2
+        # convert to m then divide by speed of light to get lambda, 2 is nyquist sampling
+        resolution = 2 * steps_per_point * distance_per_point * 1e-9 / speed_of_light
+        fft_freq_vector = np.fft.fftfreq(fft_psd_vector.size, resolution)
         if quick_plot:
-            pl.plot(fft_freq[pos_freq_selector] * 1e-9, fft_psd[pos_freq_selector])
+            pos_freq_selector = fft_freq > 0
+            pl.plot(fft_freq_vector[pos_freq_selector] * 1e-9, fft_psd_vector[pos_freq_selector])
             pl.show()
-            pl.plot(fft_freq[pos_freq_selector] * 1e-9, normalized_fft_psd[pos_freq_selector])
+            pl.plot(fft_freq_vector[pos_freq_selector] * 1e-9, fft_vector[pos_freq_selector].real)
             pl.show()
-        return fft_freq, fft_psd, normalized_fft_psd
+        return fft_freq_vector, fft_vector, fft_psd_vector
 
     def compute_fourier_transform(self, position_vector, efficiency_vector, distance_per_step, steps_per_point, quick_plot=False):
         N = efficiency_vector.size
