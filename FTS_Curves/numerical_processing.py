@@ -37,12 +37,12 @@ class Fourier():
         efficiency_vector = np.asarray(efficiency_vector)
         efficiency_left_data, efficiency_right_data, position_left_data, position_right_data =\
             self.split_data_into_left_right_points(position_vector, efficiency_vector)
-        efficiency_vector = self.prepare_data_for_fft(efficiency_vector,
+        efficiency_vector = self.prepare_data_for_fft(efficiency_right_data,
                                                       remove_polynomial=1,
                                                       apodization_type='boxcar',
                                                       zero_fill=True)
-        #phase_fft_vector = self.get_phase_correction_data(efficiency_vector, apodization_type='Triangular')
-        fft_freq_vector, fft_vector, normalized_fft_vector = self.manual_fourier_transform(position_right_data, efficiency_vector, step_size, steps_per_point, quick_plot=quick_plot)
+        fft_freq_vector, fft_vector, normalized_fft_vector = self.manual_fourier_transform(efficiency_vector, step_size, steps_per_point, quick_plot=quick_plot)
+        phase_corrected_fft_vector, normalized_phase_corrected_fft_vecor = self.phase_correct_data(efficiency_vector, fft_vector)
         return fft_freq_vector, fft_vector, normalized_fft_vector, position_left_data, efficiency_vector
 
     def split_data_into_left_right_points(self, position_vector, efficiency_vector):
@@ -76,38 +76,68 @@ class Fourier():
         poly_subtracted = data - poly_fit
         return poly_subtracted
 
-    def get_phase_correction_data(self, efficiency_data, apodization_type='Triangular'):
-        phases = np.zeros(len(efficiency_data))
-        mid_index = int(len(efficiency_data) / 2)
-        start_index = int(len(efficiency_data) / 2 - 128)
-        end_index = int(len(efficiency_data) / 2 + 128)
-        np.put(phases, start_index, efficiency_data[start_index:end_index])
-        phases_left = np.flip(phases[start_index:mid_index + 1])
-        phases_right = np.flip(phases[mid_index:end_index])
-        efficiency_data = np.insert(efficiency_data, 0, phases_left)
-        efficiency_data = np.insert(efficiency_data, -128, phases_right)
-        phases_fft_vector = np.fft.fft(phases)
-        psd_vector = np.absolute(phases_fft_vector)
-        return phases_fft_vector
+    def phase_correct_data(self, efficiency_data, fft_vector, quick_plot=True):
+        center_burst = self.extract_center_burst(efficiency_data)
+        rotated_center_burst = self.rotate_if_data(center_burst)
+        phase_corrected_fft_vector = np.fft.fft(rotated_center_burst)
+        phase_corrected_psd_vector = np.abs(phase_corrected_fft_vector) ** 2
+        phase_pow_spectrum = np.arctan(phase_corrected_fft_vector.imag/phase_corrected_fft_vector.real)
+        if quick_plot:
+            pl.plot(fft_vector, label='no phase correction')
+            pl.plot(phase_pow_spectrum, label='phase correcter')
+            pl.legend()
+            pl.show()
+        return phase_corrected_fft_vector, normalized_phase_corrected_fft_vector
 
-    def zero_fill(self, apodized_efficiency_vector):
-        next_power_of_two = self.next_power_of_two(len(apodized_efficiency_vector))
-        zeros_to_pad = next_power_of_two - len(apodized_efficiency_vector)
+    def zero_fill(self, apodized_efficiency_vector, next_power_of_two=None):
+        if next_power_of_two is None:
+            next_power_of_two = self.next_power_of_two(len(apodized_efficiency_vector))
+        zeros_to_pad = int(next_power_of_two - len(apodized_efficiency_vector) / 2)
         apodized_efficiency_vector = np.insert(apodized_efficiency_vector, -1, np.zeros(zeros_to_pad))
+        apodized_efficiency_vector = np.insert(apodized_efficiency_vector, 0, np.zeros(zeros_to_pad))
+        np.put(apodized_efficiency_vector, -1, 0) # errant bad values being added here)
         return apodized_efficiency_vector
 
-    def extract_center_burst(self, apodized_efficiency_vector):
+    def extract_center_burst(self, apodized_efficiency_vector, symmetric=True, quick_plot=False):
         '''
         Takes data between the last data point to be 0.3 max signal
         '''
-        end_of_center_burst_index = np.where(apodized_efficiency_vector > 0.25)[-1][-1]
-        center_burst = apodized_efficiency_vector[0:end_of_center_burst_index]
+        start_of_center_burst_index = np.where(apodized_efficiency_vector > 0.45)[-1][0]
+        end_of_center_burst_index = np.where(apodized_efficiency_vector > 0.45)[-1][-1]
+        center_burst = np.zeros(len(apodized_efficiency_vector))
+        if symmetric:
+            start = int(len(apodized_efficiency_vector) / 2) - end_of_center_burst_index
+            end = int(len(apodized_efficiency_vector) / 2) + end_of_center_burst_index
+            print(start, end)
+            center_burst = apodized_efficiency_vector[start_of_center_burst_index:end_of_center_burst_index]
+        else:
+            center_burst = apodized_efficiency_vector[0:end_of_center_burst_index]
+        center_burst = self.zero_fill(center_burst, next_power_of_two=2048)
+        if quick_plot:
+            print(end_of_center_burst_index, len(apodized_efficiency_vector), symmetric)
+            pl.plot(apodized_efficiency_vector, label='input')
+            pl.plot(center_burst, label='center')
+            pl.legend()
+            pl.show()
         return center_burst
+
+    def rotate_if_data(self, apodized_efficiency_vector, quick_plot=False):
+        '''
+        put the right half at begining of array and left half at end of the array
+        '''
+        rotated_array = np.asarray([])
+        mid_point = int(len(apodized_efficiency_vector) / 2)
+        rotated_array = np.insert(rotated_array, 0, apodized_efficiency_vector[mid_point:-1])
+        rotated_array = np.insert(rotated_array, -1, apodized_efficiency_vector[:mid_point])
+        if quick_plot:
+            pl.plot(apodized_efficiency_vector, label='input')
+            pl.plot(rotated_arary, label='rotated')
+            pl.show()
+        return rotated_array
 
     def prepare_data_for_fft(self, efficiency_data,
                              remove_polynomial=None, apodization_type=None,
-                             zero_fill=False,
-                             quick_plot=False):
+                             zero_fill=False, quick_plot=False):
         '''
         This function will apply a window function to the data
         Inputs:
@@ -115,8 +145,8 @@ class Fourier():
             - efficiency_data:  efficiency data to be apodized
         Notes: Following this prescription: https://www.essentialftir.com/fftTutorial.html, apodization is before
         '''
-        apodized_efficiency_vector = efficiency_data
-        #apodized_efficiency_vector = self.make_data_symmetric(efficiency_data)
+        #apodized_efficiency_vector = efficiency_data
+        apodized_efficiency_vector = self.make_data_symmetric(efficiency_data)
         #pl.plot(apodized_efficiency_vector)
         #pl.show()
         # Subtract polynomial
@@ -153,7 +183,7 @@ class Fourier():
         print()
         return position_vector, efficiency_data
 
-    def manual_fourier_transform(self, position_vector, efficiency_vector, steps_per_point,
+    def manual_fourier_transform(self, efficiency_vector, steps_per_point,
                                  distance_per_point=250.39, speed_of_light=2.998e8, quick_plot=False):
         resolution = 2 * steps_per_point * distance_per_point * 1e-9 / speed_of_light # convert to m then divide by speed of light to get lambda, 2 is nyquist sampling
         fft_vector = np.fft.fft(efficiency_vector)
@@ -163,7 +193,8 @@ class Fourier():
                 fft_freq = np.fft.fftfreq(fft_psd.size, resolution * i)
             fft_freq_test = np.fft.fftfreq(fft_psd.size, resolution * i)
         pos_freq_selector = fft_freq > 0
-        normalized_fft_psd = fft_psd / np.max(fft_psd[100:])
+        #normalized_fft_psd = fft_psd / np.max(fft_psd[100:])
+        normalized_fft_psd = fft_psd / np.max(fft_psd)
         if quick_plot:
             pl.plot(fft_freq[pos_freq_selector] * 1e-9, fft_psd[pos_freq_selector])
             pl.show()
