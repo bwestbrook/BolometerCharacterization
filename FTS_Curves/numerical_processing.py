@@ -114,7 +114,7 @@ class Fourier():
             center_burst = apodized_efficiency_vector[start_of_center_burst_index:end_of_center_burst_index]
         else:
             center_burst = apodized_efficiency_vector[0:end_of_center_burst_index]
-        center_burst = self.zero_fill(center_burst, next_power_of_two=2050)
+        center_burst = self.zero_fill(center_burst, next_power_of_two=2049)
         if quick_plot:
             print(end_of_center_burst_index, len(apodized_efficiency_vector), symmetric)
             pl.plot(apodized_efficiency_vector, label='input')
