@@ -164,12 +164,12 @@ class FTSCurve():
         #symmetric_position_vector, symmetric_signal_vector,
         #frequency_vector, transmission_vector,
         '''
-        axes2 = fig.axes
-        print(row_col)
         ax = self.axis_dict[row_col]
         ax.set_xlabel('Mirror Position', fontsize=14)
         ax.set_ylabel('IF Signal ', fontsize=14)
         ax.plot(position_vector, signal_vector, color, label=label, lw=0.5)
+        handles, labels = ax.get_legend_handles_labels()
+        ax.legend(handles, labels, numpoints=1, borderaxespad=0.0, loc=2, bbox_to_anchor=(1.01, 1.0))
         return fig
 
     def plot_FFT_data(self, frequency_vector, transmission_vector, fig,
@@ -328,14 +328,14 @@ class FTSCurve():
             for j in range(0, col_count):
                 if i == row_count - 1 and j == 0:
                     colspan = col_count
-                    ax = pl.subplot2grid((row_count, col_count), (i, i % col_count), colspan=colspan)
+                    ax = pl.subplot2grid((row_count, col_count), (i, j), colspan=colspan)
                     print('{0}{1}'.format(i, j))
                     self.axis_dict['{0}{1}'.format(i, j)] = ax
                 elif i == row_count - 1 and j == col_count - 1:
                     pass
                 else:
                     colspan = 1
-                    ax = pl.subplot2grid((row_count, col_count), (i, i % col_count), colspan=colspan)
+                    ax = pl.subplot2grid((row_count, col_count), (i, j), colspan=colspan)
                     print('{0}{1}'.format(i, j))
                     self.axis_dict['{0}{1}'.format(i, j)] = ax
         return fig
@@ -356,7 +356,9 @@ class FTSCurve():
             add_atmosphere=False, add_foreground=False):
         col_count = len(list_of_input_dicts)
         fig = self.create_plot_for_if_and_fft(col_count=len(list_of_input_dicts))
-        for i, dict_ in enumerate(list_of_input_dicts):
+        row = 0
+        col = 0
+        for dict_ in list_of_input_dicts:
             data_path = dict_['measurements']['data_path']
             label = dict_['measurements']['plot_label']
             title = dict_['measurements']['plot_title']
@@ -380,13 +382,12 @@ class FTSCurve():
                 position_vector, efficiency_vector = self.load_IF_data(if_data_path)
                 fft_freq_vector, fft_vector, phase_corrected_fft_vector, symmetric_position_vector, symmetric_efficiency_vector\
                     = self.fourier.convert_IF_to_FFT_data(position_vector, efficiency_vector, dict_)
-                print()
-                print(i % 2, i)
-                print((i + 1) % 2, i)
-                print()
-                fig = self.plot_IF_data(position_vector, efficiency_vector, fig, row_col='{0}{1}'.format(i % 2, i), color='r', label='Raw IF', ax=0)
+                row_col = '{0}{1}'.format(row, col)
+                fig = self.plot_IF_data(position_vector, efficiency_vector, fig, row_col=row_col, color='r', label='Raw IF', ax=0)
+                row_col = '{0}{1}'.format(row + 1, col)
                 fig = self.plot_IF_data(symmetric_position_vector, symmetric_efficiency_vector, fig,
-                                        row_col='{0}{1}'.format((i + 1) % 2, i), color='b', label='Processed IF', ax=1)
+                                        row_col=row_col, color='b', label='Processed IF', ax=1)
+                col += 1
             else:
                 fig = self.create_plot_for_fft_only()
             if add_local_fft:
