@@ -756,13 +756,13 @@ class GuiTemplate(QtWidgets.QWidget):
             row += 1
             # Add an "xlim clip" lineedit
             unique_widget_name = '_{0}_{1}_xlim_clip_lineedit'.format(popup_name, col)
-            widget_settings = {'text': '10:250',
+            widget_settings = {'text': '0:600',
                                'position': (row, col, 1, 2)}
             self._create_and_place_widget(unique_widget_name, **widget_settings)
             row += 1
             # Add an "xlim plot" lineedit
             unique_widget_name = '_{0}_{1}_xlim_plot_lineedit'.format(popup_name, col)
-            widget_settings = {'text': '50:250',
+            widget_settings = {'text': '0:600',
                                'position': (row, col, 1, 2)}
             self._create_and_place_widget(unique_widget_name, **widget_settings)
             row += 1

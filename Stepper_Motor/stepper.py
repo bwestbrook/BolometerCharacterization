@@ -9,20 +9,12 @@ class Stepper():
         self.com_port = com_port
 
     def connect_to_com_port(self, com_port):
-        #print
-        #print
-        #print 'will connect to com port {0} here'.format(com_port)
         if np.random.random() > 0.5:
             return True
         else:
             return False
 
     def get_current_position_from_com_port(self, com_port):
-        #print
-        #print
-        #print 'Actual code will connect to driver and get position of {0}'.format(com_port)
-        #print
-        #print 'for now it just pull for the dict'
         return self.stepper_position_dict[com_port]
 
     def move_to(self, move_to):

@@ -28,7 +28,6 @@ class stepper_motor():
     def _query_motor(self, query, timeout=0.5):
         self._send_command(query)
         response = self._connection.read()
-        print(response)
         return response
 
     def move_to_position(self, x):

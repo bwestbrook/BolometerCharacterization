@@ -6,6 +6,7 @@ import os
 import subprocess
 import shutil
 import time
+import datetime
 import numpy as np
 import pylab as pl
 import matplotlib.pyplot as plt
@@ -196,8 +197,6 @@ class DAQGuiTemplate(QtWidgets.QWidget):
             total_len_of_names += len(sample_name)
         sample_dict_path = './Sample_Dicts/{0}.json'.format(self.today_str)
         response = None
-        print(total_len_of_names)
-        print(sample_dict_path)
         if total_len_of_names == 0 and os.path.exists(sample_dict_path):
             warning_msg = 'Warning! {0} exists and you are '.format(sample_dict_path)
             warning_msg += 'going to overwrite with blank names for all channels'
@@ -1525,7 +1524,7 @@ class DAQGuiTemplate(QtWidgets.QWidget):
         header_str = '{0} (steps)'.format(stepper_position)
         getattr(self, '_user_move_stepper_popup_stepper_slider').setSliderPosition(int(stepper_position))
         getattr(self, '_user_move_stepper_popup_current_position_label').setText(header_str)
-        self.last_position_string = move_to_pos
+        self.last_position_string = stepper_position
 
     #################################################
     # SINGLE CHANNEL FTS BILLS
@@ -1557,9 +1556,9 @@ class DAQGuiTemplate(QtWidgets.QWidget):
             self.populate_combobox(unique_combobox, entries)
         self.populate_combobox('_single_channel_fts_popup_fts_sm_com_port_combobox', self.active_ports)
         self.populate_combobox('_single_channel_fts_popup_grid_sm_com_port_combobox', self.active_ports)
-        getattr(self, '_single_channel_fts_popup_integration_time_combobox').setCurrentIndex(0)
+        getattr(self, '_single_channel_fts_popup_integration_time_combobox').setCurrentIndex(1)
         getattr(self, '_single_channel_fts_popup_pause_time_combobox').setCurrentIndex(1)
-        getattr(self, '_single_channel_fts_popup_sample_rate_combobox').setCurrentIndex(3)
+        getattr(self, '_single_channel_fts_popup_sample_rate_combobox').setCurrentIndex(4)
         getattr(self, '_single_channel_fts_popup_grid_sm_com_port_combobox').setCurrentIndex(1)
         getattr(self, '_single_channel_fts_popup_fts_sm_com_port_combobox').setCurrentIndex(2)
         self._update_single_channel_fts()
@@ -1589,34 +1588,7 @@ class DAQGuiTemplate(QtWidgets.QWidget):
             else:
                 value = 0.0
             scan_params[scan_param] = value
-        pprint(scan_params)
         return scan_params
-
-    def _compute_fft(self, positions, data, scan_params):
-        '''
-        Post data collection analysis
-        '''
-        frequency_vector, fft_vector = self.fourier.convert_IF_to_FFT_data(positions, data)
-        fig = pl.figure(figsize=(3.5,1.5))
-        ax = fig.add_subplot(111)
-        fig.subplots_adjust(left=0.24, right=0.99, top=0.80, bottom=0.35)
-        ax.plot(frequency_vector, fft_vector)
-        ax.set_xlabel('Frequency (GHz)')
-        ax.set_ylabel('Amplitude')
-        ax.set_title('Spectra')
-        fig.savefig('temp_files/temp_fft.png')
-        del fig
-        image = QtWidgets.QPixmap('tempfft.png')
-        image = image.scaled(350, 175)
-        getattr(self, '_single_channel_fts_popup_fft_label').setPixmap(image)
-
-    def _apodize(self):
-        '''
-        Apodize the data
-        '''
-        scan_params = self._get_all_single_channel_fts_scan_params()
-        self.apodization = scan_params['apodization_type']
-        print(self.apodization)
 
     def _compute_resolution_and_max_frequency(self, scan_params):
         '''
@@ -1682,11 +1654,33 @@ class DAQGuiTemplate(QtWidgets.QWidget):
         getattr(self, slider).sliderPressed.connect(self._dummy)
         self.starting_position = scan_params['starting_position']
 
+    def _compute_and_plot_fft(self, position_vector, efficiency_vector, scan_params):
+        '''
+        Post data collection analysis
+        '''
+
+        fft_freq_vector, fft_vector, phase_corrected_fft_vector, symmetric_position_vector, symmetric_efficiency_vector\
+            = self.fourier.convert_IF_to_FFT_data(position_vector, efficiency_vector, scan_params)
+        normalized_phase_corrected_fft_vector = np.abs(phase_corrected_fft_vector.real / np.max(phase_corrected_fft_vector.real))
+        fig, ax = self._create_blank_fig()
+        pl.grid(True)
+        pos_freq_selector = np.where(fft_freq_vector > 0)
+        ax.plot(fft_freq_vector[pos_freq_selector] * 1e-9, normalized_phase_corrected_fft_vector[pos_freq_selector])
+        ax.set_xlabel('Frequency (GHz)')
+        ax.set_ylabel('Phase Corrected FFT')
+        ax.set_title('Spectral Response {0}'.format(scan_params['sample_name']))
+        fig.savefig('temp_files/temp_fft.png')
+        image = QtGui.QPixmap('temp_files/temp_fft.png')
+        getattr(self, '_single_channel_fts_popup_fft_label').setPixmap(image)
+        pl.close('all')
+
     def _plot_interferogram(self, positions=[], amplitudes=[], stds=[]):
+
         '''
         Plots the collected data as an XY scatter (position, amplitude) and paints it to the panel
         '''
         fig, ax = self._create_blank_fig()
+        pl.grid(True)
         ax.set_xlabel('Mirror Position (cm)',fontsize = 10)
         ax.set_ylabel('Amplitude',fontsize = 10)
         ax.set_title('Interferogram')
@@ -1725,9 +1719,7 @@ class DAQGuiTemplate(QtWidgets.QWidget):
                 self.single_channel_fts_popup.repaint()
                 self._connect_to_com_port(com_port=scan_params['grid_sm_com_port'])
             getattr(self, '_single_channel_fts_popup_start_pushbutton').setText('Taking Data')
-            self._apodize()
             self.fts_positions_steps, self.fts_positions_m, self.fts_amplitudes, self.fts_stds = [], [], [], []
-            amplitude = self.fts_daq.read_inteferogram('SQ5_Pix101_90T_Spectra_09.if',1)
             i = 0
             helper = np.arange(int(scan_params['starting_position']), int(scan_params['ending_position']) + int(scan_params['step_size']), int(scan_params['step_size']))
             getattr(self, 'sm_{0}'.format(scan_params['fts_sm_com_port'])).move_to_position(int(scan_params['starting_position']))
@@ -1738,34 +1730,31 @@ class DAQGuiTemplate(QtWidgets.QWidget):
                 i = 0
                 time.sleep(2)
                 helper = np.arange(self.last_fts_position, int(scan_params['ending_position']) + int(scan_params['step_size']), int(scan_params['step_size']))
-            while continue_run and i < len(helper):
-                position = helper[i]
-                getattr(self, 'sm_{0}'.format(scan_params['fts_sm_com_port'])).move_to_position(position)
-                time.sleep(pause)
-                data_time_stream, mean, min_, max_, std = self.real_daq.get_data(signal_channel=scan_params['signal_channel'], integration_time=scan_params['integration_time'],
-                                                                                 sample_rate=scan_params['sample_rate'], active_devices=self.active_devices)
-                getattr(self, '_single_channel_fts_popup_std_label').setText('{0:.3f}'.format(std))
-                getattr(self, '_single_channel_fts_popup_mean_label').setText('{0:.3f}'.format(mean))
-                getattr(self, '_single_channel_fts_popup_current_position_label').setText('{0:.3f}'.format(position))
-                self._draw_time_stream(data_time_stream, min_, max_, '_single_channel_fts_popup_time_stream_label')
-                self.fts_positions_m.append(position * float(scan_params['DistPerStep']) * 1e-7)
-                self.fts_positions_steps.append(position)
-                self.fts_amplitudes.append(mean)
-                self.fts_stds.append(std)
-                self._plot_interferogram(self.fts_positions_steps, self.fts_amplitudes, self.fts_stds)
-                getattr(self, '_single_channel_fts_popup_position_monitor_slider').setSliderPosition(position)
-                self.single_channel_fts_popup.repaint()
-                getattr(self, 'sm_{0}'.format(scan_params['fts_sm_com_port'])).move_to_position(position)
-                root.update()
-                i += 1
-                self.last_fts_position = position + int(scan_params['step_size'])
-            #self.posFreqArray,self.FTArrayPosFreq = self.fts_analyzer.analyzeBolo(positions, data,apodization=self.apodization)
-            #image = QtWidgets.QPixmap('temp_files/temp_fft.png')
-            #image = image.scaled(600, 300)
-            #getattr(self, '_single_channel_fts_popup_fft_label').setPixmap(image)
-            #self.xdata = positions
-            #self.ydata = data
-            #getattr(self, '_single_channel_fts_popup_save_pushbutton').setEnabled(True)
+            start = datetime.now()
+            with open(self.raw_data_path[0], 'w') as if_save_handle:
+                while continue_run and i < len(helper):
+                    position = helper[i]
+                    getattr(self, 'sm_{0}'.format(scan_params['fts_sm_com_port'])).move_to_position(position)
+                    time.sleep(pause)
+                    data_time_stream, mean, min_, max_, std = self.real_daq.get_data(signal_channel=scan_params['signal_channel'], integration_time=scan_params['integration_time'],
+                                                                                     sample_rate=scan_params['sample_rate'], active_devices=self.active_devices)
+                    getattr(self, '_single_channel_fts_popup_std_label').setText('{0:.3f}'.format(std))
+                    getattr(self, '_single_channel_fts_popup_mean_label').setText('{0:.3f}'.format(mean))
+                    getattr(self, '_single_channel_fts_popup_current_position_label').setText('{0:.3f}'.format(position))
+                    self._draw_time_stream(data_time_stream, min_, max_, '_single_channel_fts_popup_time_stream_label')
+                    self.fts_positions_m.append(position * float(scan_params['DistPerStep']) * 1e-7)
+                    self.fts_positions_steps.append(position)
+                    self.fts_amplitudes.append(mean)
+                    self.fts_stds.append(std)
+                    self._plot_interferogram(self.fts_positions_steps, self.fts_amplitudes, self.fts_stds)
+                    data_line ='{0}\t{1}\t{2}\n'.format(position, mean, std)
+                    if_save_handle.write(data_line)
+                    if position > 5000:
+                        self._compute_and_plot_fft(self.fts_positions_steps, self.fts_amplitudes, scan_params)
+                    getattr(self, '_single_channel_fts_popup_position_monitor_slider').setSliderPosition(position)
+                    i += 1
+                    self.last_fts_position = position + int(scan_params['step_size'])
+                    root.update()
         else:
             getattr(self, '_single_channel_fts_popup_start_pushbutton').setText('Start')
             getattr(self, '_single_channel_fts_popup_start_pushbutton').setFlat(False)
@@ -1830,7 +1819,6 @@ class DAQGuiTemplate(QtWidgets.QWidget):
                 value = str(getattr(self, pull_from_widget_name).currentText())
                 scan_params[beam_map_setting] = value
         scan_params = self._get_grid(scan_params)
-        print(scan_params)
         return scan_params
 
     def _get_grid(self, scan_params):

@@ -31,8 +31,12 @@ class Fourier():
             efficiency_vector: the extracted frequency vector
 
         '''
-        step_size = float(scan_param_dict['measurements']['step_size'])
-        steps_per_point = int(scan_param_dict['measurements']['steps_per_point'])
+        if 'measurements' in scan_param_dict:
+            step_size = float(scan_param_dict['measurements']['step_size'])
+            steps_per_point = int(scan_param_dict['measurements']['steps_per_point'])
+        else:
+            step_size = float(scan_param_dict['DistPerStep'])
+            steps_per_point = int(scan_param_dict['step_size'])
         position_vector = np.asarray(position_vector)
         efficiency_vector = np.asarray(efficiency_vector)
         if right_data:
@@ -40,13 +44,16 @@ class Fourier():
                 self.split_data_into_left_right_points(position_vector, efficiency_vector)
             efficiency_vector = efficiency_right_data
             position_vector = position_right_data
-        efficiency_vector = self.prepare_data_for_fft(efficiency_vector,
-                                                      remove_polynomial=1,
-                                                      apodization_type='boxcar',
-                                                      zero_fill=True)
+        efficiency_vector, position_vector = self.prepare_data_for_fft(efficiency_vector, position_vector,
+                                                                       remove_polynomial=2, apodization_type='boxcar', zero_fill=True)
         fft_freq_vector, fft_vector, fft_psd_vector = self.manual_fourier_transform(efficiency_vector, step_size, steps_per_point, quick_plot=quick_plot)
-        #phase_corrected_fft_vector = fft_vector
-        phase_corrected_fft_vector = self.phase_correct_data(efficiency_vector, fft_vector)
+        phase_corrected_fft_vector = self.phase_correct_data(efficiency_vector, fft_vector, quick_plot=False)
+        quick_plot = False
+        if quick_plot:
+            pl.plot(fft_vector, label='unphase corrected')
+            pl.plot(phase_corrected_fft_vector, label='phase corrected')
+            pl.legend()
+            pl.show()
         return fft_freq_vector, fft_vector, phase_corrected_fft_vector, position_vector, efficiency_vector
 
     def split_data_into_left_right_points(self, position_vector, efficiency_vector):
@@ -80,7 +87,7 @@ class Fourier():
         poly_subtracted = data - poly_fit
         return poly_subtracted
 
-    def phase_correct_data(self, efficiency_data, fft_vector, quick_plot=True):
+    def phase_correct_data(self, efficiency_data, fft_vector, quick_plot=False):
         '''
         https://github.com/larsyunker/FTIR-python-tools/blob/master/FTIR.py
         '''
@@ -113,8 +120,8 @@ class Fourier():
         '''
         Takes data between the last data point to be 0.3 max signal
         '''
-        start_of_center_burst_index = np.where(np.abs(apodized_efficiency_vector) > 1.3 )[-1][0]
-        end_of_center_burst_index = np.where(np.abs(apodized_efficiency_vector) > 1.3)[-1][-1]
+        start_of_center_burst_index = np.where(np.abs(apodized_efficiency_vector) > 0.8)[-1][0]
+        end_of_center_burst_index = np.where(np.abs(apodized_efficiency_vector) > 0.8)[-1][-1]
         center_burst = np.zeros(len(apodized_efficiency_vector))
         if symmetric:
             start = int(len(apodized_efficiency_vector) / 2) - end_of_center_burst_index
@@ -146,7 +153,7 @@ class Fourier():
             pl.show()
         return rotated_array
 
-    def prepare_data_for_fft(self, efficiency_data,
+    def prepare_data_for_fft(self, efficiency_vector, position_vector,
                              remove_polynomial=None, apodization_type=None,
                              zero_fill=False, quick_plot=False):
         '''
@@ -156,13 +163,11 @@ class Fourier():
             - efficiency_data:  efficiency data to be apodized
         Notes: Following this prescription: https://www.essentialftir.com/fftTutorial.html, apodization is before
         '''
-        #apodized_efficiency_vector = efficiency_data
-        apodized_efficiency_vector = self.make_data_symmetric(efficiency_data)
-        #pl.plot(apodized_efficiency_vector)
-        #pl.show()
-        # Subtract polynomial
+        # Subtract polynomial First
         if remove_polynomial is not None:
-            apodized_efficiency_vector = self.remove_polynomial(apodized_efficiency_vector, n=remove_polynomial)
+            apodized_efficiency_vector = self.remove_polynomial(efficiency_vector, n=remove_polynomial)
+        apodized_efficiency_vector = self.make_data_symmetric(apodized_efficiency_vector)
+        position_vector = self.make_data_symmetric(position_vector, position=True)
         # Make data symmetric for the window function
         if apodization_type is not None:
             N = apodized_efficiency_vector.size
@@ -171,10 +176,11 @@ class Fourier():
         # Zero-fill the FFT to the nearest next largest power of 2
         if zero_fill:
             apodized_efficiency_vector = self.zero_fill(apodized_efficiency_vector)
+            position_vector = self.zero_fill(position_vector)
         if quick_plot:
-            pl.plot(apodized_efficiency_vector)
+            pl.plot(position_vector, apodized_efficiency_vector)
             pl.show()
-        return apodized_efficiency_vector
+        return apodized_efficiency_vector, position_vector
 
     def next_power_of_two(self, length):
         return 1 if length == 0 else 2**(length - 1).bit_length()
@@ -202,7 +208,7 @@ class Fourier():
         resolution = 2 * steps_per_point * distance_per_point * 1e-9 / speed_of_light
         fft_freq_vector = np.fft.fftfreq(fft_psd_vector.size, resolution)
         if quick_plot:
-            pos_freq_selector = fft_freq > 0
+            pos_freq_selector = fft_freq_vector > 0
             pl.plot(fft_freq_vector[pos_freq_selector] * 1e-9, fft_psd_vector[pos_freq_selector])
             pl.show()
             pl.plot(fft_freq_vector[pos_freq_selector] * 1e-9, fft_vector[pos_freq_selector].real)

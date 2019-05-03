@@ -1,7 +1,7 @@
 """
 Class for communicating with RS232 lab devices w/ a USB-to-RS232 converter
 """
-#import serial
+import serial
 import time
 
 #DEFAULT_PORT = '/dev/ttyUSB0'

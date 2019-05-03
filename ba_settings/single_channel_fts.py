@@ -21,13 +21,13 @@ single_channel_fts_settings.single_channel_fts_build_dict = {
                                                              '_single_channel_fts_popup_scan_setup_label': {'text': 'SCAN SETUP', 'font': 'huge', 'color': 'blue', 'alignment': 'Center', 'position': (4, 0, 1, 6)},
 
                                                              '_single_channel_fts_popup_starting_position_header_label': {'text': 'Starting Position:', 'position': (5, 0, 1, 1)},
-                                                             '_single_channel_fts_popup_starting_position_lineedit': {'text': '-10000', 'function': '_update_single_channel_fts', 'position': (5, 1, 1, 1)},
+                                                             '_single_channel_fts_popup_starting_position_lineedit': {'text': '-1000', 'function': '_update_single_channel_fts', 'position': (5, 1, 1, 1)},
 
                                                              '_single_channel_fts_popup_ending_position_header_label': {'text': 'Ending Position:', 'position': (5, 2, 1, 1)},
-                                                             '_single_channel_fts_popup_ending_position_lineedit': {'text': '10000', 'function': '_update_single_channel_fts', 'position': (5, 3, 1, 1)},
+                                                             '_single_channel_fts_popup_ending_position_lineedit': {'text': '300000', 'function': '_update_single_channel_fts', 'position': (5, 3, 1, 1)},
 
                                                              '_single_channel_fts_popup_step_size_header_label': {'text': 'Step Size:', 'position': (5, 4, 1, 1)},
-                                                             '_single_channel_fts_popup_step_size_lineedit': {'text': '10000', 'function': '_update_single_channel_fts', 'position': (5, 5, 1, 1)},
+                                                             '_single_channel_fts_popup_step_size_lineedit': {'text': '1000', 'function': '_update_single_channel_fts', 'position': (5, 5, 1, 1)},
 
                                                              '_single_channel_fts_popup_signal_channel_header_label': {'text': 'Signal Channel:', 'position': (7, 0, 1, 1)},
                                                              '_single_channel_fts_popup_signal_channel_combobox': {'position': (7, 1, 1, 1)},
@@ -73,7 +73,7 @@ single_channel_fts_settings.single_channel_fts_build_dict = {
                                                              '_single_channel_fts_popup_sample_name_lineedit': {'position': (14, 3, 1, 1)},
 
                                                              '_single_channel_fts_popup_apodization_type_header_label': {'text': 'Apodization:', 'position': (14, 4, 1, 1)},
-                                                             '_single_channel_fts_popup_apodization_type_combobox': {'function':'_apodize','position': (14, 5, 1, 1)},
+                                                             '_single_channel_fts_popup_apodization_type_combobox': {'position': (14, 5, 1, 1)},
 
                                                              #'_single_channel_fts_popup_v_bias_header_label': {'text': 'Heater Voltage:', 'position': (14, 0, 1, 1)},
                                                              #'_single_channel_fts_popup_v_bias_lineedit': {'position': (14, 1, 1, 1)},
@@ -111,7 +111,7 @@ single_channel_fts_settings.single_channel_fts_build_dict = {
 
                                                              '_single_channel_fts_popup_interferogram_label': {'alignment': 'Center', 'position': (11, 7, 6, 4)},
 
-                                                             '_single_channel_fts_popup_fft_label': {'alignment': 'Center', 'position': (17, 7, 6, 4)},
+                                                             '_single_channel_fts_popup_fft_label': {'alignment': 'Center', 'position': (16, 7, 6, 3)},
 }
 
 single_channel_fts_settings.single_channel_fts_monitor_build_dict = {
@@ -133,7 +133,7 @@ single_channel_fts_settings.combobox_entry_dict = {
                                                    '_single_channel_fts_popup_DistPerStep_combobox': ["250.39 (Bill's)", "4.168 Paul's"],
                                                    #'_single_channel_fts_popup_current_com_port_combobox': ['COM1', 'COM2', 'COM3', 'COM4','COM5','COM6'],
                                                    #'_single_channel_fts_popup_grid_current_com_port_combobox': ['COM1', 'COM2', 'COM3', 'COM4'],
-                                                   '_single_channel_fts_popup_pause_time_combobox': ['100', '500', '1000'],
+                                                   '_single_channel_fts_popup_pause_time_combobox': ['100', '500', '750','1000'],
                                                    '_single_channel_fts_popup_integration_time_combobox': ['50', '500', '1000'],
                                                    '_single_channel_fts_popup_sample_rate_combobox': ['50', '100', '250', '500', '1000','2000','3000','4000','5000','6000','7000','8000','9000','10000','20000','30000','40000','48000']
                                                    }
