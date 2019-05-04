@@ -118,6 +118,7 @@ class FTSCurve():
             frequency_vector = np.zeros(len(lines))
             transmission_vector = np.zeros(len(lines))
             for i, line in enumerate(lines):
+                print(line)
                 if ',' in line:
                     frequency = line.split(', ')[0]
                     transmission = line.split(', ')[1]
@@ -127,8 +128,8 @@ class FTSCurve():
                 if float(xlim_clip[0]) < float(frequency) < float(xlim_clip[1]):
                     np.put(frequency_vector, i, frequency)
                     np.put(transmission_vector, i, transmission)
-        transmission_vector = transmission_vector[frequency_vector != 0.0]
-        frequency_vector = frequency_vector[frequency_vector != 0.0]
+        transmission_vector = transmission_vector[frequency_vector > 0.0]
+        frequency_vector = frequency_vector[frequency_vector > 0.0]
         if smoothing_factor > 0.0:
             transmission_vector = self.running_mean(transmission_vector, smoothing_factor=smoothing_factor)
         normalized_transmission_vector = transmission_vector / max(transmission_vector)

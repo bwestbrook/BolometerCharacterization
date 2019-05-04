@@ -333,15 +333,20 @@ class DAQGuiTemplate(QtWidgets.QWidget):
             return getattr(self, function)()
 
     def _draw_time_stream(self, data_time_stream=[], min_=0.0, max_=1.0, set_to_widget=''):
-         fig, ax = self._create_blank_fig()
-         ax.plot(data_time_stream)
-         ax.set_title('Timestream')
-         ax.set_xlabel('Number of Samples')
-         ax.set_ylabel('SQUID Output Voltage (V)')
-         fig.savefig('temp_files/temp_ts.png')
-         pl.close('all')
-         image = QtGui.QPixmap('temp_files/temp_ts.png')
-         getattr(self, set_to_widget).setPixmap(image)
+        if 'fts_' in set_to_widget:
+            fig, ax = self._create_blank_fig(frac_screen_width=0.45, frac_screen_height=0.25)
+            ylabel = 'Lock-in Voltage (V)'
+        else:
+            fig, ax = self._create_blank_fig()
+            ylabel = 'SQUID Voltage (V)'
+        ax.plot(data_time_stream)
+        ax.set_title('Timestream')
+        ax.set_xlabel('Number of Samples')
+        ax.set_ylabel(ylabel)
+        fig.savefig('temp_files/temp_ts.png')
+        pl.close('all')
+        image = QtGui.QPixmap('temp_files/temp_ts.png')
+        getattr(self, set_to_widget).setPixmap(image)
 
     def _stop(self):
         global continue_run
@@ -356,15 +361,14 @@ class DAQGuiTemplate(QtWidgets.QWidget):
         self.repaint()
         continue_run = False
 
-    def _pause(self):
+    def _stop_fts(self):
         global continue_run
         if 'single_channel_fts' in str(self.sender().whatsThis()):
             if str(self.sender().text()) == 'Pause':
-                #getattr(self, '_single_channel_fts_popup_pause_pushbutton').setFlat(True)
-                getattr(self, '_single_channel_fts_popup_pause_pushbutton').setText('Resume')
+                getattr(self, '_single_channel_fts_popup_stop_pushbutton').setText('Resume')
                 continue_run = False
             elif str(self.sender().text()) == 'Resume':
-                getattr(self, '_single_channel_fts_popup_pause_pushbutton').setText('Pause')
+                getattr(self, '_single_channel_fts_popup_stop_pushbutton').setText('Pause')
                 self._run_fts(resume_run=True)
                 continue_run = True
         else:
@@ -389,10 +393,10 @@ class DAQGuiTemplate(QtWidgets.QWidget):
             message_box.addButton(yes_to_all_button)
         return message_box.exec_()
 
-    def _create_blank_fig(self, frac_sreen_width=0.5, frac_sreen_height=0.3,
+    def _create_blank_fig(self, frac_screen_width=0.5, frac_screen_height=0.3,
                           left=0.12, right=0.98, top=0.8, bottom=0.23):
-        width = (frac_sreen_width * float(self.screen_resolution.width())) / self.monitor_dpi
-        height = (frac_sreen_height * float(self.screen_resolution.height())) / self.monitor_dpi
+        width = (frac_screen_width * float(self.screen_resolution.width())) / self.monitor_dpi
+        height = (frac_screen_height * float(self.screen_resolution.height())) / self.monitor_dpi
         fig = pl.figure(figsize=(width, height))
         ax = fig.add_subplot(111)
         fig.subplots_adjust(left=left, right=right, top=top, bottom=bottom)
@@ -1556,7 +1560,7 @@ class DAQGuiTemplate(QtWidgets.QWidget):
             self.populate_combobox(unique_combobox, entries)
         self.populate_combobox('_single_channel_fts_popup_fts_sm_com_port_combobox', self.active_ports)
         self.populate_combobox('_single_channel_fts_popup_grid_sm_com_port_combobox', self.active_ports)
-        getattr(self, '_single_channel_fts_popup_integration_time_combobox').setCurrentIndex(1)
+        getattr(self, '_single_channel_fts_popup_integration_time_combobox').setCurrentIndex(0)
         getattr(self, '_single_channel_fts_popup_pause_time_combobox').setCurrentIndex(1)
         getattr(self, '_single_channel_fts_popup_sample_rate_combobox').setCurrentIndex(4)
         getattr(self, '_single_channel_fts_popup_grid_sm_com_port_combobox').setCurrentIndex(1)
@@ -1662,7 +1666,7 @@ class DAQGuiTemplate(QtWidgets.QWidget):
         fft_freq_vector, fft_vector, phase_corrected_fft_vector, symmetric_position_vector, symmetric_efficiency_vector\
             = self.fourier.convert_IF_to_FFT_data(position_vector, efficiency_vector, scan_params)
         normalized_phase_corrected_fft_vector = np.abs(phase_corrected_fft_vector.real / np.max(phase_corrected_fft_vector.real))
-        fig, ax = self._create_blank_fig()
+        fig, ax = self._create_blank_fig(frac_screen_width=0.45, frac_screen_height=0.25)
         pl.grid(True)
         pos_freq_selector = np.where(fft_freq_vector > 0)
         ax.plot(fft_freq_vector[pos_freq_selector] * 1e-9, normalized_phase_corrected_fft_vector[pos_freq_selector])
@@ -1673,13 +1677,14 @@ class DAQGuiTemplate(QtWidgets.QWidget):
         image = QtGui.QPixmap('temp_files/temp_fft.png')
         getattr(self, '_single_channel_fts_popup_fft_label').setPixmap(image)
         pl.close('all')
+        return fft_freq_vector, normalized_phase_corrected_fft_vector
 
     def _plot_interferogram(self, positions=[], amplitudes=[], stds=[]):
 
         '''
         Plots the collected data as an XY scatter (position, amplitude) and paints it to the panel
         '''
-        fig, ax = self._create_blank_fig()
+        fig, ax = self._create_blank_fig(frac_screen_width=0.45, frac_screen_height=0.25)
         pl.grid(True)
         ax.set_xlabel('Mirror Position (cm)',fontsize = 10)
         ax.set_ylabel('Amplitude',fontsize = 10)
@@ -1738,17 +1743,26 @@ class DAQGuiTemplate(QtWidgets.QWidget):
                     time.sleep(pause)
                     data_time_stream, mean, min_, max_, std = self.real_daq.get_data(signal_channel=scan_params['signal_channel'], integration_time=scan_params['integration_time'],
                                                                                      sample_rate=scan_params['sample_rate'], active_devices=self.active_devices)
+                    # Update data point info
                     getattr(self, '_single_channel_fts_popup_std_label').setText('{0:.3f}'.format(std))
                     getattr(self, '_single_channel_fts_popup_mean_label').setText('{0:.3f}'.format(mean))
                     getattr(self, '_single_channel_fts_popup_current_position_label').setText('{0:.3f}'.format(position))
                     self._draw_time_stream(data_time_stream, min_, max_, '_single_channel_fts_popup_time_stream_label')
+                    # Update IF plots and vectors
                     self.fts_positions_m.append(position * float(scan_params['DistPerStep']) * 1e-7)
                     self.fts_positions_steps.append(position)
                     self.fts_amplitudes.append(mean)
                     self.fts_stds.append(std)
                     self._plot_interferogram(self.fts_positions_steps, self.fts_amplitudes, self.fts_stds)
+                    # Update IF linearity info
+                    if_mean = np.mean(self.fts_amplitudes)
+                    if_max_minus_min = np.mean([np.max(self.fts_amplitudes), np.min(self.fts_amplitudes)])
+                    getattr(self, '_single_channel_fts_popup_if_mean_label').setText('{0:.3f}'.format(if_mean))
+                    getattr(self, '_single_channel_fts_popup_if_max_min_label').setText('{0:.3f}'.format(if_max_minus_min))
+                    # Save the data
                     data_line ='{0}\t{1}\t{2}\n'.format(position, mean, std)
                     if_save_handle.write(data_line)
+                    # Update the FFT of the data
                     if position > 5000:
                         self._compute_and_plot_fft(self.fts_positions_steps, self.fts_amplitudes, scan_params)
                     getattr(self, '_single_channel_fts_popup_position_monitor_slider').setSliderPosition(position)
@@ -1761,6 +1775,29 @@ class DAQGuiTemplate(QtWidgets.QWidget):
             self._quick_message('Bad data path or no signal channel set!')
         getattr(self, '_single_channel_fts_popup_start_pushbutton').setText('Start')
         getattr(self, '_single_channel_fts_popup_start_pushbutton').setFlat(False)
+        self._save_if_and_fft(self.fts_positions_steps, self.fts_amplitudes, scan_params)
+        response = self._quick_message('Finished Taking Data\nMove Mirror back to zero?', add_save=True)
+        if response == QtWidgets.QMessageBox.Save:
+            getattr(self, 'sm_{0}'.format(scan_params['fts_sm_com_port'])).move_to_position(0)
+            getattr(self, '_single_channel_fts_popup_position_monitor_slider').setSliderPosition(0)
+            getattr(self, '_single_channel_fts_popup_current_position_label').setText('{0:.3f}'.format(0))
+        continue_run = False
+        getattr(self, '_single_channel_fts_popup_stop_pushbutton').setText('Pause')
+
+    def _save_if_and_fft(self, position_vector, efficiency_vector, scan_params):
+        fft_freq_vector, phase_corrected_fft_vector = self._compute_and_plot_fft(self.fts_positions_steps, self.fts_amplitudes, scan_params)
+        normalized_phase_corrected_fft_vector = np.abs(phase_corrected_fft_vector.real / np.max(phase_corrected_fft_vector.real))
+        fft_save_path = self.raw_data_path[0].replace('.if', '.fft')
+        png_save_path = self.raw_data_path[0].replace('.if', '.png')
+        with open(fft_save_path, 'w') as file_handle:
+            for i, freq in enumerate(fft_freq_vector):
+                freq *= 1e-9
+                fft_val = normalized_phase_corrected_fft_vector[i]
+                line = '{0}\t{1}\n'.format(freq, fft_val)
+                file_handle.write(line)
+        png_save_path = self.raw_data_path[0].replace('.if', '.png')
+        shutil.copy('temp_files/temp_fft.png', png_save_path)
+        response = self._quick_message('Data saved to {0}\n{1}\n{2}\n'.format(self.raw_data_path[0], self.raw_data_path[0].replace('.if', '.fft'), self.raw_data_path[0].replace('.if', '.png')))
 
     #################################################
     # BEAM MAPPER

@@ -21,10 +21,10 @@ single_channel_fts_settings.single_channel_fts_build_dict = {
                                                              '_single_channel_fts_popup_scan_setup_label': {'text': 'SCAN SETUP', 'font': 'huge', 'color': 'blue', 'alignment': 'Center', 'position': (4, 0, 1, 6)},
 
                                                              '_single_channel_fts_popup_starting_position_header_label': {'text': 'Starting Position:', 'position': (5, 0, 1, 1)},
-                                                             '_single_channel_fts_popup_starting_position_lineedit': {'text': '-1000', 'function': '_update_single_channel_fts', 'position': (5, 1, 1, 1)},
+                                                             '_single_channel_fts_popup_starting_position_lineedit': {'text': '-10000', 'function': '_update_single_channel_fts', 'position': (5, 1, 1, 1)},
 
                                                              '_single_channel_fts_popup_ending_position_header_label': {'text': 'Ending Position:', 'position': (5, 2, 1, 1)},
-                                                             '_single_channel_fts_popup_ending_position_lineedit': {'text': '300000', 'function': '_update_single_channel_fts', 'position': (5, 3, 1, 1)},
+                                                             '_single_channel_fts_popup_ending_position_lineedit': {'text': '30000', 'function': '_update_single_channel_fts', 'position': (5, 3, 1, 1)},
 
                                                              '_single_channel_fts_popup_step_size_header_label': {'text': 'Step Size:', 'position': (5, 4, 1, 1)},
                                                              '_single_channel_fts_popup_step_size_lineedit': {'text': '1000', 'function': '_update_single_channel_fts', 'position': (5, 5, 1, 1)},
@@ -85,7 +85,7 @@ single_channel_fts_settings.single_channel_fts_build_dict = {
                                                              '_single_channel_fts_popup_control_buttons_label': {'text': 'CONTROLS', 'font': 'huge', 'color': 'blue', 'alignment': 'Center', 'position': (16, 0, 1, 6)},
 
                                                              '_single_channel_fts_popup_start_pushbutton': {'text': 'Start', 'function': '_run_fts', 'position': (17, 0, 1, 3)},
-                                                             '_single_channel_fts_popup_pause_pushbutton': {'text': 'Pause', 'function': '_pause', 'position': (17, 3, 1, 3)},
+                                                             '_single_channel_fts_popup_stop_pushbutton': {'text': 'Stop', 'function': '_stop_fts', 'position': (17, 3, 1, 3)},
                                                              '_single_channel_fts_popup_close_pushbutton': {'text': 'Close', 'function': '_close_single_channel_fts', 'position': (18, 0, 1, 3)},
                                                              '_single_channel_fts_popup_save_pushbutton': {'text': 'Save', 'function': '_save_plots_and_data', 'position': (18, 3, 1, 3)},
 
@@ -93,25 +93,31 @@ single_channel_fts_settings.single_channel_fts_build_dict = {
                                                              '_single_channel_fts_popup_data_monitor_label': {'text': 'VISUAL DATA MONITOR', 'font': 'huge', 'color': 'blue',
                                                                                                               'alignment': 'Center', 'position': (0, 7, 1, 4)},
 
-                                                             '_single_channel_fts_popup_position_monitor_slider': {'function': None, 'position': (1, 7, 1, 5), 'orientation': 'Horizontal'},
+                                                             '_single_channel_fts_popup_position_monitor_slider': {'function': None, 'position': (1, 7, 1, 4), 'orientation': 'Horizontal'},
 
-                                                             '_single_channel_fts_popup_position_slider_min_label': {'text': '-5000', 'position': (2, 7, 1, 1)},
-                                                             '_single_channel_fts_popup_position_slider_max_label': {'text': '10000', 'position': (2, 11, 1, 1)},
+                                                             '_single_channel_fts_popup_position_slider_min_label': {'position': (2, 7, 1, 1)},
+                                                             '_single_channel_fts_popup_position_slider_max_label': {'position': (2, 11, 1, 1)},
 
                                                              '_single_channel_fts_popup_current_position_header_label': {'text': 'Current Mirror Position:', 'position': (3, 7, 1, 1)},
-                                                             '_single_channel_fts_popup_current_position_label': {'text': '0', 'position': (3, 9, 1, 1)},
+                                                             '_single_channel_fts_popup_current_position_label': {'text': '0', 'position': (3, 8, 1, 1)},
 
-                                                             '_single_channel_fts_popup_time_stream_label': {'alignment': 'Center', 'position': (5, 7, 5, 4)},
+                                                             '_single_channel_fts_popup_time_stream_label': {'alignment': 'Center', 'position': (4, 7, 4, 4)},
 
-                                                             '_single_channel_fts_popup_mean_header_label': {'text': 'Time Average:', 'position': (10, 7, 1, 1)},
-                                                             '_single_channel_fts_popup_mean_label': {'text': '0', 'position': (10, 8, 1, 1)},
+                                                             '_single_channel_fts_popup_mean_header_label': {'text': 'Time Average:', 'position': (9, 7, 1, 1)},
+                                                             '_single_channel_fts_popup_mean_label': {'text': '0', 'position': (9, 8, 1, 1)},
 
-                                                             '_single_channel_fts_popup_std_header_label': {'text': 'Standard Dev:', 'position': (10, 9, 1, 1)},
-                                                             '_single_channel_fts_popup_std_label': {'text': '0', 'position': (10, 10, 1, 1)},
+                                                             '_single_channel_fts_popup_std_header_label': {'text': 'Standard Dev:', 'position': (9, 9, 1, 1)},
+                                                             '_single_channel_fts_popup_std_label': {'text': '0', 'position': (9, 10, 1, 1)},
 
-                                                             '_single_channel_fts_popup_interferogram_label': {'alignment': 'Center', 'position': (11, 7, 6, 4)},
+                                                             '_single_channel_fts_popup_interferogram_label': {'alignment': 'Center', 'position': (10, 7, 4, 4)},
 
-                                                             '_single_channel_fts_popup_fft_label': {'alignment': 'Center', 'position': (16, 7, 6, 3)},
+                                                             '_single_channel_fts_popup_if_mean_header_label': {'text': 'IF Mean:', 'position': (14, 7, 1, 1)},
+                                                             '_single_channel_fts_popup_if_mean_label': {'text': '0', 'position': (14, 8, 1, 1)},
+
+                                                             '_single_channel_fts_popup_if_max_min_header_label': {'text': 'If Max - Min:', 'position': (14, 9, 1, 1)},
+                                                             '_single_channel_fts_popup_if_max_min_label': {'text': '0', 'position': (14, 10, 1, 1)},
+
+                                                             '_single_channel_fts_popup_fft_label': {'alignment': 'Center', 'position': (15, 7, 6, 4)},
 }
 
 single_channel_fts_settings.single_channel_fts_monitor_build_dict = {
@@ -133,8 +139,8 @@ single_channel_fts_settings.combobox_entry_dict = {
                                                    '_single_channel_fts_popup_DistPerStep_combobox': ["250.39 (Bill's)", "4.168 Paul's"],
                                                    #'_single_channel_fts_popup_current_com_port_combobox': ['COM1', 'COM2', 'COM3', 'COM4','COM5','COM6'],
                                                    #'_single_channel_fts_popup_grid_current_com_port_combobox': ['COM1', 'COM2', 'COM3', 'COM4'],
-                                                   '_single_channel_fts_popup_pause_time_combobox': ['100', '500', '750','1000'],
-                                                   '_single_channel_fts_popup_integration_time_combobox': ['50', '500', '1000'],
+                                                   '_single_channel_fts_popup_pause_time_combobox': ['500', '750','1000'],
+                                                   '_single_channel_fts_popup_integration_time_combobox': ['250', '500', '1000'],
                                                    '_single_channel_fts_popup_sample_rate_combobox': ['50', '100', '250', '500', '1000','2000','3000','4000','5000','6000','7000','8000','9000','10000','20000','30000','40000','48000']
                                                    }
 
