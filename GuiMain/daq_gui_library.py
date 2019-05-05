@@ -1730,6 +1730,7 @@ class DAQGuiTemplate(QtWidgets.QWidget):
             getattr(self, 'sm_{0}'.format(scan_params['fts_sm_com_port'])).move_to_position(int(scan_params['starting_position']))
             time.sleep(2)
             self._get_raw_data_save_path()
+        start = datetime.now()
         if (self.raw_data_path is not None and len(scan_params['signal_channel']) > 0) or resume_run:
             if resume_run:
                 i = 0
@@ -1746,7 +1747,7 @@ class DAQGuiTemplate(QtWidgets.QWidget):
                     # Update data point info
                     getattr(self, '_single_channel_fts_popup_std_label').setText('{0:.3f}'.format(std))
                     getattr(self, '_single_channel_fts_popup_mean_label').setText('{0:.3f}'.format(mean))
-                    getattr(self, '_single_channel_fts_popup_current_position_label').setText('{0:.3f}'.format(position))
+                    getattr(self, '_single_channel_fts_popup_current_position_label').setText('{0:.3f} [{1}/{2} complete]'.format(position, i, len(helper)))
                     self._draw_time_stream(data_time_stream, min_, max_, '_single_channel_fts_popup_time_stream_label')
                     # Update IF plots and vectors
                     self.fts_positions_m.append(position * float(scan_params['DistPerStep']) * 1e-7)

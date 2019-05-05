@@ -4,23 +4,23 @@ from lab_code.lab_serial import lab_serial
 
 class SwitchRelay():
 
-    def __init__(self, port='COM1'):
+    def __init__(self, port='COM6'):
         self.port = port
         self._connection = lab_serial(port=self.port)
-        self._query_voltage('MEAS:VOlT?')
+        self._query('MEAS:VOlT?')
         import ipdb;ipdb.set_trace()
-        self._setup()
-
-    def _setup(self):
-        self._send_command('PM2') # set for SCL ready code when turned on
 
     def _send_command(self, msg):
         self._connection.write(msg)
 
     def switch_to_position(self, position):
         print('Switching to position {0}'.format(position))
+        if position == 0:
+            self._send_command('VOLT 0')
+        elif position == 1:
+            self._send_command('VOLT 14')
 
-    def _query_voltage(self, query, timeout=0.5):
+    def _query(self, query, timeout=0.5):
         self._send_command(query)
         response = self._connection.read()
         print(response)
