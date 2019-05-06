@@ -31,10 +31,12 @@ from BeamMapping.beam_map_daq import BeamMapDAQ
 from Motor_Driver.stepper_motor import stepper_motor
 from FTS_DAQ.analyzeFTS import FTSanalyzer
 from realDAQ.daq import DAQ
+from FridgeCycle.fridge_cycle import FridgeCycle
 
 
 #Global variables
 continue_run = False
+do_cycle_fridge = False
 root = Tk()
 
 class DAQGuiTemplate(QtWidgets.QWidget):
@@ -722,6 +724,26 @@ class DAQGuiTemplate(QtWidgets.QWidget):
     # DAQ TYPE SPECFIC CODES
     #################################################
     #################################################
+
+    #################################################
+    # Fridge Cycle
+    #################################################
+
+    def _fridge_cycle(self):
+        if not hasattr(self, 'fridge_cycle_popup'):
+            self._create_popup_window('fridge_cycle_popup')
+        else:
+            self._initialize_panel('fridge_cycle_popup')
+        self._build_panel(settings.fridge_cycle_popup_build_dict)
+        self.fridge_cycle_popup.showMaximized()
+
+    def _start_fridge_cycle(self):
+        self.fc = FridgeCycle()
+        self.fc.run_cycle()
+
+    def _stop_fridge_cycle(self):
+        if hasattr(self, 'fc'):
+            self.fc.stop_cycle()
 
     #################################################
     # MULTIMETER
