@@ -39,11 +39,14 @@ class Fourier():
             steps_per_point = int(scan_param_dict['step_size'])
         position_vector = np.asarray(position_vector)
         efficiency_vector = np.asarray(efficiency_vector)
+        efficiency_left_data, efficiency_right_data, position_left_data, position_right_data =\
+            self.split_data_into_left_right_points(position_vector, efficiency_vector)
         if right_data:
-            efficiency_left_data, efficiency_right_data, position_left_data, position_right_data =\
-                self.split_data_into_left_right_points(position_vector, efficiency_vector)
             efficiency_vector = efficiency_right_data
             position_vector = position_right_data
+        else:
+            efficiency_vector = efficiency_left_data
+            position_vector = position_left_data
         efficiency_vector, position_vector = self.prepare_data_for_fft(efficiency_vector, position_vector,
                                                                        remove_polynomial=2, apodization_type='boxcar', zero_fill=True)
         fft_freq_vector, fft_vector, fft_psd_vector = self.manual_fourier_transform(efficiency_vector, step_size, steps_per_point, quick_plot=quick_plot)

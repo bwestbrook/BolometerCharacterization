@@ -4,7 +4,7 @@ from lab_code.lab_serial import lab_serial
 
 class SwitchRelay():
 
-    def __init__(self, port='COM6'):
+    def __init__(self, port='COM3'):
         self.port = port
         self._connection = lab_serial(port=self.port)
         self._query('MEAS:VOlT?')

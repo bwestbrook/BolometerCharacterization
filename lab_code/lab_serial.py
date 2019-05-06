@@ -15,6 +15,7 @@ class lab_serial(object):
                                  baudrate = 9600,
                                  timeout = 3)
         #self.ser = serial.Serial(port=self.port,
+                                 #parity = serial.PARITY_NONE,
                                  #baudrate = 9600,
                                  #bytesize = serial.EIGHTBITS,
                                  #parity = serial.PARITY_NONE,
@@ -35,22 +36,29 @@ class lab_serial(object):
         self.ser.flushInput()
         self.ser.flushOutput()
 
-    def write(self, string):
+    def write(self, string, encode=None):
         """
         Properly terminates and encodes a message, then writes it to the port
         """
         if not string.endswith('\r\n'): # the '\n' may not be necessary, but the '\r' usually is.  Depends on the device, so add both
             string += '\r\n'
-        self.ser.write(string.encode()) # unicode not supported for serial module in python 3
+            #string += ' \n'
+            #string = string
+        if encode is None:
+            self.ser.write(string.encode()) # unicode not supported for serial module in python 3
+        elif encode == 'ASCII':
+            print(string)
+            self.ser.write(string.encode('ASCII')) # unicode not supported for serial module in python 3
 
-    def read(self):
+    def read(self, decode='utf-8'):
         "Returns a properly decoded string of the bytes read from the port"
-        return self.ser.readline().decode('utf-8').strip('\r\n')
+        response = self.ser.readline().decode(decode).strip('\r\n')
+        return response
 
-    def write_read(self, string, wait_time=0.1):
-        self.write(string)
+    def write_read(self, string, encode=None, decode='utf-8', wait_time=0.1):
+        self.write(string, encode=encode)
         time.sleep(wait_time)
-        return self.read()
+        return self.read(decode=decode)
 
     def is_open(self):
         return self.ser.isOpen()

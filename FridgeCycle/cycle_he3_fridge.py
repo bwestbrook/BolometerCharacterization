@@ -1,16 +1,17 @@
 import time
-from lab_code.lab_serial import lab_serial
+from lab_code.lab_serial2 import lab_serial
 
 
 class FridgeCycle():
 
-    def __init__(self, ps_port='COM6', mm_port='COM3'):
-        self.ps_port = ps_port
-        self.ps_connection = lab_serial(port=self.ps_port)
+    def __init__(self, ps_port='COM7', mm_port='COM3'):
+        #self.ps_port = ps_port
+        #self.ps_connection = lab_serial(port=self.ps_port)
         self.mm_port = mm_port
         self.mm_connection = lab_serial(port=self.mm_port)
-        self._query_mm('MEAS:RES')
-        import ipdb;ipdb.set_trace()
+        self.initialize_mm_for_resistance()
+        #import ipdb;ipdb.set_trace()
+        self.check_resistance()
 
     def _send_ps_command(self, msg):
         self.ps_connection.write(msg)
@@ -30,11 +31,17 @@ class FridgeCycle():
         print(response)
         return response
 
+    def initialize_mm_for_resistance(self):
+        self._send_mm_command(":SYST:REM\r\n;")
+        self._send_mm_command(":CONF:RES AUTO\r\n;")
+
     def apply_voltage(self, volts):
-        self._send_command('VOLT {0}'.format(volts))
+        self._send_ps_command('VOLT {0}'.format(volts))
 
     def check_resistance(self):
-        resistance = self._query('RES')
+        self._send_mm_command(":MEAS:RES?\r\n")
+        resistance = float(self.mm_connection.read())
+        print(resistance)
         return resistance
 
     def run_cycle(self, charcoal_start_resistance=5e5, charcoal_end_resistance=3.5e3, sleep_time=0.5):
@@ -55,4 +62,5 @@ class FridgeCycle():
 
 if __name__ == '__main__':
     fc = FridgeCycle()
+    fc.run_cycle()
 

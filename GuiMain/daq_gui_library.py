@@ -363,16 +363,7 @@ class DAQGuiTemplate(QtWidgets.QWidget):
 
     def _stop_fts(self):
         global continue_run
-        if 'single_channel_fts' in str(self.sender().whatsThis()):
-            if str(self.sender().text()) == 'Pause':
-                getattr(self, '_single_channel_fts_popup_stop_pushbutton').setText('Resume')
-                continue_run = False
-            elif str(self.sender().text()) == 'Resume':
-                getattr(self, '_single_channel_fts_popup_stop_pushbutton').setText('Pause')
-                self._run_fts(resume_run=True)
-                continue_run = True
-        else:
-            continue_run = False
+        continue_run = False
 
     def _force_min_time(self, min_value=40.0):
         value = float(str(self.sender().text()))
@@ -1518,7 +1509,7 @@ class DAQGuiTemplate(QtWidgets.QWidget):
     def _reset_stepper_zero(self):
         com_port = self._get_com_port('_user_move_stepper_popup_com_ports_combobox')
         getattr(self, 'sm_{0}'.format(com_port)).reset_zero()
-        stepper_position = getattr(self, 'sm_{0}'.format(com_port)).get_position().replace('SP=')
+        stepper_position = getattr(self, 'sm_{0}'.format(com_port)).get_position().replace('SP=', '')
         self._update_stepper_position()
         getattr(self, '_user_move_stepper_popup_move_to_position_lineedit').setText('0')
 
@@ -1740,13 +1731,18 @@ class DAQGuiTemplate(QtWidgets.QWidget):
             with open(self.raw_data_path[0], 'w') as if_save_handle:
                 while continue_run and i < len(helper):
                     position = helper[i]
+                    getattr(self, '_single_channel_fts_popup_position_monitor_slider').setSliderPosition(position)
+                    self.repaint()
                     getattr(self, 'sm_{0}'.format(scan_params['fts_sm_com_port'])).move_to_position(position)
                     time.sleep(pause)
                     data_time_stream, mean, min_, max_, std = self.real_daq.get_data(signal_channel=scan_params['signal_channel'], integration_time=scan_params['integration_time'],
                                                                                      sample_rate=scan_params['sample_rate'], active_devices=self.active_devices)
                     # Update data point info
-                    getattr(self, '_single_channel_fts_popup_std_label').setText('{0:.3f}'.format(std))
-                    getattr(self, '_single_channel_fts_popup_mean_label').setText('{0:.3f}'.format(mean))
+                    std_pct = 100 * (std / mean)
+                    std_pct = '({0:.2f}'.format(std_pct)
+                    std_pct += '%)'
+                    getattr(self, '_single_channel_fts_popup_mean_label').setText('{0:.4f}'.format(mean))
+                    getattr(self, '_single_channel_fts_popup_std_label').setText('{0:.4f} {1}'.format(std, std_pct))
                     getattr(self, '_single_channel_fts_popup_current_position_label').setText('{0:.3f} [{1}/{2} complete]'.format(position, i, len(helper)))
                     self._draw_time_stream(data_time_stream, min_, max_, '_single_channel_fts_popup_time_stream_label')
                     # Update IF plots and vectors
@@ -1766,7 +1762,6 @@ class DAQGuiTemplate(QtWidgets.QWidget):
                     # Update the FFT of the data
                     if position > 5000:
                         self._compute_and_plot_fft(self.fts_positions_steps, self.fts_amplitudes, scan_params)
-                    getattr(self, '_single_channel_fts_popup_position_monitor_slider').setSliderPosition(position)
                     i += 1
                     self.last_fts_position = position + int(scan_params['step_size'])
                     root.update()
@@ -1777,11 +1772,10 @@ class DAQGuiTemplate(QtWidgets.QWidget):
         getattr(self, '_single_channel_fts_popup_start_pushbutton').setText('Start')
         getattr(self, '_single_channel_fts_popup_start_pushbutton').setFlat(False)
         self._save_if_and_fft(self.fts_positions_steps, self.fts_amplitudes, scan_params)
-        response = self._quick_message('Finished Taking Data\nMove Mirror back to zero?', add_save=True)
-        if response == QtWidgets.QMessageBox.Save:
-            getattr(self, 'sm_{0}'.format(scan_params['fts_sm_com_port'])).move_to_position(0)
-            getattr(self, '_single_channel_fts_popup_position_monitor_slider').setSliderPosition(0)
-            getattr(self, '_single_channel_fts_popup_current_position_label').setText('{0:.3f}'.format(0))
+        response = self._quick_message('Finished Taking Data\nMoving mirror back to 0')
+        getattr(self, 'sm_{0}'.format(scan_params['fts_sm_com_port'])).move_to_position(0)
+        getattr(self, '_single_channel_fts_popup_position_monitor_slider').setSliderPosition(0)
+        getattr(self, '_single_channel_fts_popup_current_position_label').setText('{0:.3f}'.format(0))
         continue_run = False
         getattr(self, '_single_channel_fts_popup_stop_pushbutton').setText('Pause')
 

@@ -139,8 +139,8 @@ single_channel_fts_settings.combobox_entry_dict = {
                                                    '_single_channel_fts_popup_DistPerStep_combobox': ["250.39 (Bill's)", "4.168 Paul's"],
                                                    #'_single_channel_fts_popup_current_com_port_combobox': ['COM1', 'COM2', 'COM3', 'COM4','COM5','COM6'],
                                                    #'_single_channel_fts_popup_grid_current_com_port_combobox': ['COM1', 'COM2', 'COM3', 'COM4'],
-                                                   '_single_channel_fts_popup_pause_time_combobox': ['500', '750','1000', '1500'],
-                                                   '_single_channel_fts_popup_integration_time_combobox': ['250', '500', '1000', '1500'],
+                                                   '_single_channel_fts_popup_pause_time_combobox': ['500', '750','1000', '1500', '2000', '3000', '5000'],
+                                                   '_single_channel_fts_popup_integration_time_combobox': ['250', '500', '1000', '1500', '3000'],
                                                    '_single_channel_fts_popup_sample_rate_combobox': ['50', '100', '250', '500', '1000','2000','3000','4000','5000','6000','7000','8000','9000','10000','20000','30000','40000','48000']
                                                    }
 
