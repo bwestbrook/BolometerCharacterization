@@ -8,7 +8,7 @@ import time
 DEFAULT_PORT = 'COM3'
 
 class lab_serial(object):
-    def __init__(self, port=DEFAULT_PORT, verbose=True):
+    def __init__(self, port=DEFAULT_PORT, verbose=True, parity=None):
         self.port = port
         self.verbose = verbose#
         self.ser = serial.Serial(port=self.port,
@@ -42,13 +42,7 @@ class lab_serial(object):
         """
         if not string.endswith('\r\n'): # the '\n' may not be necessary, but the '\r' usually is.  Depends on the device, so add both
             string += '\r\n'
-            #string += ' \n'
-            #string = string
-        if encode is None:
-            self.ser.write(string.encode()) # unicode not supported for serial module in python 3
-        elif encode == 'ASCII':
-            print(string)
-            self.ser.write(string.encode('ASCII')) # unicode not supported for serial module in python 3
+        self.ser.write(string.encode()) # unicode not supported for serial module in python 3
 
     def read(self, decode='utf-8'):
         "Returns a properly decoded string of the bytes read from the port"

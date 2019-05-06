@@ -124,7 +124,7 @@ class DAQGuiTemplate(QtWidgets.QWidget):
 
     def _connect_to_com_port(self, com_port=None):
         sender_whats_this_str = str(self.sender().whatsThis())
-        possible_com_ports = ['COM{0}'.format(x) for x in range(1, 9)]
+        possible_com_ports = ['COM{0}'.format(x) for x in range(1, 256)]
         current_string, position_string, velocity_string, acceleration_string = 'NA', 'NA', 'NA', 'NA'
         if type(self.sender()) == QtWidgets.QComboBox:
             com_port = self._get_com_port(combobox=sender_whats_this_str)
@@ -134,6 +134,7 @@ class DAQGuiTemplate(QtWidgets.QWidget):
             message = 'Not a combobox sender and not comport specificied, no connection made'
             print(message, com_port)
             self._quick_message(message)
+        #import ipdb;ipdb.set_trace()
         if com_port in possible_com_ports:
             if not hasattr(self, 'sm_{0}'.format(com_port)):
                 setattr(self, 'sm_{0}'.format(com_port), stepper_motor(com_port))
@@ -163,15 +164,19 @@ class DAQGuiTemplate(QtWidgets.QWidget):
             self._quick_message(message)
             error = False
         if 'user_move_stepper' in sender_whats_this_str and not error:
-            getattr(self, '_user_move_stepper_popup_current_position_label').setText('{0} (steps)'.format(position_string))
-            getattr(self, '_user_move_stepper_popup_move_to_position_lineedit').setText('{0}'.format(position_string))
-            getattr(self, '_user_move_stepper_popup_stepper_slider').setSliderPosition(int(position_string))
-            getattr(self, '_user_move_stepper_popup_actual_current_label').setText('{0} (A)'.format(current_string))
-            getattr(self, '_user_move_stepper_popup_set_current_to_lineedit').setText('{0}'.format(current_string))
-            getattr(self, '_user_move_stepper_popup_actual_velocity_label').setText('{0} (mm/s)'.format(velocity_string))
-            getattr(self, '_user_move_stepper_popup_set_velocity_to_lineedit').setText('{0}'.format(velocity_string))
-            getattr(self, '_user_move_stepper_popup_actual_acceleration_label').setText('{0} (mm/s/s)'.format(acceleration_string))
-            getattr(self, '_user_move_stepper_popup_set_acceleration_to_lineedit').setText('{0}'.format(acceleration_string))
+            if self._is_float(position_string):
+                getattr(self, '_user_move_stepper_popup_current_position_label').setText('{0} (steps)'.format(position_string))
+                getattr(self, '_user_move_stepper_popup_move_to_position_lineedit').setText('{0}'.format(position_string))
+                getattr(self, '_user_move_stepper_popup_stepper_slider').setSliderPosition(int(position_string))
+            if self._is_float(current_string):
+                getattr(self, '_user_move_stepper_popup_actual_current_label').setText('{0} (A)'.format(current_string))
+                getattr(self, '_user_move_stepper_popup_set_current_to_lineedit').setText('{0}'.format(current_string))
+            if self._is_float(velocity_string):
+                getattr(self, '_user_move_stepper_popup_actual_velocity_label').setText('{0} (mm/s)'.format(velocity_string))
+                getattr(self, '_user_move_stepper_popup_set_velocity_to_lineedit').setText('{0}'.format(velocity_string))
+            if self._is_float(acceleration_string):
+                getattr(self, '_user_move_stepper_popup_actual_acceleration_label').setText('{0} (mm/s/s)'.format(acceleration_string))
+                getattr(self, '_user_move_stepper_popup_set_acceleration_to_lineedit').setText('{0}'.format(acceleration_string))
         elif 'single_channel_fts' in sender_whats_this_str and not error:
             if str(getattr(self, '_single_channel_fts_popup_fts_sm_com_port_combobox').currentText()) == com_port:
                 getattr(self, '_single_channel_fts_popup_fts_sm_connection_status_label').setText('Connected!')
@@ -733,20 +738,49 @@ class DAQGuiTemplate(QtWidgets.QWidget):
         self.fridge_cycle_popup.close()
 
     def _fridge_cycle(self):
+        if not hasattr(self, 'fc'):
+            self.fc = FridgeCycle()
         if not hasattr(self, 'fridge_cycle_popup'):
             self._create_popup_window('fridge_cycle_popup')
         else:
             self._initialize_panel('fridge_cycle_popup')
         self._build_panel(settings.fridge_cycle_popup_build_dict)
+        voltage = self.fc.get_voltage()
+        resistance = self.fc.get_resistance()
+        getattr(self, '_fridge_cycle_popup_resistance_value_label').setText(resistance)
+        getattr(self, '_fridge_cycle_popup_voltage_value_label').setText(voltage)
         self.fridge_cycle_popup.showMaximized()
 
     def _start_fridge_cycle(self):
-        self.fc = FridgeCycle()
-        self.fc.run_cycle()
+        global do_cycle_fridge
+        do_cycle_fridge = True
+        resistance = self.check_resistance()
+        # Wait for charcoal to cool down
+        print('Start Cool', resistance, charcoal_start_resistance, do_cycle_fridge)
+        while resistance < charcoal_start_resistance and do_cycle_fridge:
+            time.sleep(sleep_time)
+            resistance = self.fc.check_resistance()
+            print('Cooling', resistance, charcoal_start_resistance, do_cycle_fridge)
+        print('Charcol has reached {0} turning on Voltage'.format(charcoal_start_resistance))
+        # Turn on voltage in steps of 1 volt over with a sleep between
+        for i in range(3):
+            time.sleep(sleep_time)
+            self.fc.apply_voltage(i)
+        print('Start Heat', resistance, charcoal_end_resistance, do_cycle_fridge)
+        print('Voltage to heater set to {0} V'.format(i))
+        while resistance > charcoal_end_resistance and do_cycle_fridge:
+            time.sleep(sleep_time)
+            resistance = self.fc.check_resistance()
+            print('Heating', resistance, charcoal_start_resistance, do_cycle_fridge)
+        print('Charcol has reached {0} turning off Voltage'.format(charcoal_start_resistance))
+        self.fc.apply_voltage(0)
+        print('Voltage on heater set to 0V')
 
     def _stop_fridge_cycle(self):
         if hasattr(self, 'fc'):
-            self.fc.stop_cycle()
+            global do_cycle_fridge
+            do_cycle_fridge = False
+            self.fc.apply_voltage(0)
 
     #################################################
     # MULTIMETER

@@ -1,4 +1,5 @@
 import time
+import serial
 from datetime import datetime
 from lab_code.lab_serial2 import lab_serial
 
@@ -10,13 +11,13 @@ class FridgeCycle():
         self.ps_port = ps_port
         self.ps_connection = lab_serial(port=self.ps_port)
         self.mm_port = mm_port
-        self.mm_connection = lab_serial(port=self.mm_port)
+        self.mm_connection = lab_serial(port=self.mm_port, parity=serial.PARITY_NONE)
         self.initialize_mm_for_resistance()
         try:
             self.check_resistance()
         except ValueError:
             import ipdb;ipdb.set_trace()
-        self.apply_voltage(1)
+        self.apply_voltage(0)
         #import ipdb;ipdb.set_trace()
 
     def _send_ps_command(self, msg):
@@ -44,6 +45,9 @@ class FridgeCycle():
     def apply_voltage(self, volts):
         self._send_ps_command('VOLT {0}\r\n'.format(volts))
 
+    def get_voltage(self):
+        self._send_ps_command('VOLT?\r\n'.format(volts))
+
     def check_resistance(self):
         self._send_mm_command(":MEAS:RES?\r\n")
         resistance = float(self.mm_connection.read())
@@ -60,7 +64,7 @@ class FridgeCycle():
             time.sleep(sleep_time)
             resistance = self.check_resistance()
             print('Cooling', resistance, charcoal_start_resistance, do_cycle_fridge)
-        print('Charcol has reached {0} Turning on Voltage'.format(charcoal_start_resistance))
+        print('Charcol has reached {0} turning on Voltage'.format(charcoal_start_resistance))
         # Turn on voltage in steps of 1 volt over with a sleep between
         for i in range(3):
             time.sleep(sleep_time)
@@ -71,7 +75,7 @@ class FridgeCycle():
             time.sleep(sleep_time)
             resistance = self.check_resistance()
             print('Heating', resistance, charcoal_start_resistance, do_cycle_fridge)
-        print('Charcol has reached {0} Turning on Voltage'.format(charcoal_start_resistance))
+        print('Charcol has reached {0} turning off Voltage'.format(charcoal_start_resistance))
         self.apply_voltage(0)
         print('Voltage on heater set to 0V')
 

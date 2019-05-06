@@ -1,6 +1,5 @@
-from lab_code.lab_serial import lab_serial
+from lab_code.lab_serial2 import lab_serial
 import sys
-#import serial
 import time
 import numpy as np
 from operator import mul, truediv
@@ -16,13 +15,11 @@ class stepper_motor():
         self._setup()
 
     def _setup(self):
-        self._send_command('PM2') # set for SCL ready code when turned on
-        self._send_command('ME') # Motor is enabled 
-        self._send_command('DL1') # Set limit to be normally open
+        self._send_command('PM2\r\n') # set for SCL ready code when turned on
+        self._send_command('ME\r\n') # Motor is enabled 
+        self._send_command('DL1\r\n') # Set limit to be normally open
 
     def _send_command(self, msg):
-        ###     if not msg.endswith('\r'):
-        #msg +='\r'
         self._connection.write(msg)
 
     def _query_motor(self, query, timeout=0.5):
@@ -35,40 +32,40 @@ class stepper_motor():
         # convert physical units to stepper motor units
         # tell the motor what to do
         #import ipdb;ipdb.set_trace()
-        self._send_command("DI{:d}".format(int(x)))
-        response = self._query_motor("DI")
-        self._send_command('FP')
+        self._send_command("DI{:d}\r\n".format(int(x)))
+        response = self._query_motor("DI\r\n")
+        self._send_command('FP\r\n')
         # check that the motor did what you wanted
         # IP, EP, commands to see
 
     def reset_zero(self):
-        self._send_command('SP0')
-        self._send_command('SP')
+        self._send_command('SP0\r\n')
+        self._send_command('SP\r\n')
 
     def get_motor_current(self):
-        current = self._query_motor('CC')
+        current = self._query_motor('CC\r\n')
         return current
 
     def get_motor_voltage(self):
-        voltage = self._query_motor('RA')
+        voltage = self._query_motor('RA\r\n')
         return voltage
 
     def get_position(self):
-        return self._query_motor('SP')
+        return self._query_motor('SP\r\n')
 
     def get_velocity(self):
-        velocity = self._query_motor('VE')
+        velocity = self._query_motor('VE\r\n')
         return velocity
 
     def get_acceleration(self):
-        acceleration = self._query_motor('AC')
+        acceleration = self._query_motor('AC\r\n')
         return acceleration
 
     def set_current(self,current):
-        self._send_command('CC{:f}'.format(current))
+        self._send_command('CC{:f}\r\n'.format(current))
 
     def set_acceleration(self, acceleration):
-        self._send_command('AC{:f}'.format(acceleration))
+        self._send_command('AC{:f}\r\n'.format(acceleration))
 
     def set_velocity(self, velocity):
         """
@@ -76,14 +73,14 @@ class stepper_motor():
         Arguments:
             velocity (float) - angular velocity in Hz
         """
-        self._send_command('VE{:f}'.format(velocity))
+        self._send_command('VE{:f}\r\n'.format(velocity))
 
     def finite_rotation(self, step_size):
         degrees = step_size*2500/6
         # degrees = step_size
         self._setup()
-        self._send_command('DI{:d}'.format(int(degrees)))
-        self._send_command('FL')
+        self._send_command('DI{:d}\r\n'.format(int(degrees)))
+        self._send_command('FL\r\n')
 
     def get_simulated_data(self, datatype, current_position, noise=10):
         '''
@@ -94,48 +91,6 @@ class stepper_motor():
         simulated_data = np.sin(in_degree) + dev
         print(simulated_data)
         return simulated_data
-
-    def take_pol_efficiency(self, start_angle,end_angle, step_size, pause = 1,noise=10):
-        stepnum = truediv(end_angle-start_angle,step_size)+1
-        steps = np.linspace(start_angle,end_angle,stepnum)
-        data = []
-        for i, step in enumerate(steps):
-            data_point = self.get_simulated_data(int, step,noise=noise)
-            data.append(data_point)
-            if step != 0:
-                self.finite_rotation(step_size)
-                time.sleep(pause)
-            print(step, i, data[i])
-        data = np.array(data)
-        self.write_file(steps,data)
-        return steps, data
-
-    def write_file(self,xdata,ydata):
-        with open('rawdata.csv','w') as f:
-            #wtr = csv.writer(f,delimiter=' ')
-            #wtr.writerows([xdata,ydata])
-            for x, y in zip(xdata, ydata):
-                f.write('{:f}\t{:f}\n'.format(x, y))
-
-    def read_file(self, filename):
-        x, y = np.loadtxt(filename, unpack=True)
-        return x,y
-
-    def plot_pol_efficiency_data(self,angles, data):
-        def func(x,b):
-            return np.sin(x*np.pi/180+b)
-        plt.title('Data vs Angles')
-        plt.xlabel('angles')
-        plt.ylabel('data')
-        #blue_star, = plt.plot(angles,data, "b*", markersize = 10)
-        popt, pocv= curve_fit(func, angles, data)
-        #red_dot, = plt.plot(angles, func(angles, popt), "ro", markersize = 10)
-        #plt.legend([blue_star, red_dot], ["Original Data","Fitted Data"])
-        plt.plot(angles,data, 'b-', label = 'Original Data')
-        fitangles = np.linspace(0,360,1)
-        plt.plot(fitangles, func(fitangles,popt), 'r--', label = 'Fitted Data')
-        plt.legend()
-        plt.show()
 
     def get_active_serial_ports(self):
         """ Lists serial port names
@@ -154,7 +109,6 @@ class stepper_motor():
             ports = glob.glob('/dev/tty.*')
         else:
             raise EnvironmentError('Unsupported platform')
-
         active_ports = []
         for port in ports:
             try:
@@ -166,9 +120,5 @@ class stepper_motor():
         return active_ports
 
 if __name__ == '__main__':
-    SM = stepper_motor('COM3')
-    # SM.set_current(2)
-    # SM.finite_rotation(6000)
-    # angles, data = SM.take_pol_efficiency(1, 60, noise = 1)
-    # SM.plot_pol_efficiency_data(angles, data)
+    SM = stepper_motor('COM9')
     import ipdb;ipdb.set_trace()

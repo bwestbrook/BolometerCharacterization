@@ -1,1 +1,1 @@
-python3 FridgeCycle\cycle_he3_fridge.py
+python3 FridgeCycle\fridge_cycle.py
