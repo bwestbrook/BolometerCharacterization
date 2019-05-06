@@ -729,6 +729,9 @@ class DAQGuiTemplate(QtWidgets.QWidget):
     # Fridge Cycle
     #################################################
 
+    def _close_fridge_cycle(self):
+        self.fridge_cycle_popup.close()
+
     def _fridge_cycle(self):
         if not hasattr(self, 'fridge_cycle_popup'):
             self._create_popup_window('fridge_cycle_popup')
