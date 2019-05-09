@@ -3,7 +3,7 @@ from libraries.gen_class import Class
 fridge_cycle_settings = Class()
 
 fridge_cycle_settings.fridge_cycle_popup_build_dict = {
-                                                       '_common_settings': {'font': 'huge'},
+                                                       '_common_settings': {'font': 'large'},
                                                        '_fridge_cycle_popup_header_label': {'text': 'Select Params for Fridge Cycle', 'alignment': 'Center',
                                                                                             'position': (0, 0, 1, 2)},
                                                         # CYCLE PARAMS
@@ -45,4 +45,5 @@ fridge_cycle_settings.fridge_cycle_combobox_entry_dict = {
                                                           '_fridge_cycle_popup_grt_serial_combobox': ['', '29268', 'X36942'],
                                                           '_fridge_cycle_popup_grt_range_combobox': ['2', '20', '200', '2K', '20K', '200K', '2M'],
                                                           '_fridge_cycle_popup_cycle_end_temperature_combobox': ['1000', '500', '300'],
+                                                          '_fridge_cycle_popup_cycle_end_temperature_combobox': ['1000', '500', '320', '300'],
                                                          }

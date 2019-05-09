@@ -126,7 +126,7 @@ class IVCurve():
         fit_vals = np.polyfit(v_bias_real, corrected_squid_voltage, 1)
         slope = fit_vals[0]
         squid_conv = 1.0 / (slope * calibration_resistor_val)
-        print('\n\n Transimpedance Value: {1}\n\n'.format(squid_conv))
+        print('\n\n Transimpedance Value: {0}\n\n'.format(squid_conv))
         return squid_conv
 
     def find_nearest_r_bolo(self, r_bolo, r_n, fracrn):

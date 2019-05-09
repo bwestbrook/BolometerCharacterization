@@ -391,11 +391,14 @@ class DAQGuiTemplate(QtWidgets.QWidget):
         return message_box.exec_()
 
     def _create_blank_fig(self, frac_screen_width=0.5, frac_screen_height=0.3,
-                          left=0.12, right=0.98, top=0.8, bottom=0.23):
+                          left=0.12, right=0.98, top=0.8, bottom=0.23, multiple_axes=False):
         width = (frac_screen_width * float(self.screen_resolution.width())) / self.monitor_dpi
         height = (frac_screen_height * float(self.screen_resolution.height())) / self.monitor_dpi
         fig = pl.figure(figsize=(width, height))
-        ax = fig.add_subplot(111)
+        if not multiple_axes:
+            ax = fig.add_subplot(111)
+        else:
+            ax = None
         fig.subplots_adjust(left=left, right=right, top=top, bottom=bottom)
         return fig, ax
 
@@ -746,18 +749,20 @@ class DAQGuiTemplate(QtWidgets.QWidget):
         self._build_panel(settings.fridge_cycle_popup_build_dict)
         resistance = '{0:.2f}'.format(self.fc.get_resistance())
         getattr(self, '_fridge_cycle_popup_abr_resistance_value_label').setText(resistance)
-        getattr(self, '_fridge_cycle_popup_ps_voltage_value_label').setText('0.1')
+        getattr(self, '_fridge_cycle_popup_ps_voltage_value_label').setText('0')
         for combobox_widget, entry_list in self.fridge_cycle_combobox_entry_dict.items():
             self.populate_combobox(combobox_widget, entry_list)
         getattr(self, '_fridge_cycle_popup_grt_daq_channel_combobox').setCurrentIndex(1)
         getattr(self, '_fridge_cycle_popup_grt_serial_combobox').setCurrentIndex(2)
         getattr(self, '_fridge_cycle_popup_grt_range_combobox').setCurrentIndex(3)
-        getattr(self, '_fridge_cycle_popup_cycle_end_temperature_combobox').setCurrentIndex(1)
+        getattr(self, '_fridge_cycle_popup_cycle_end_temperature_combobox').setCurrentIndex(2)
         self.fc_time_stamp_vector, self.ps_voltage_vector, self.abr_resistance_vector, self.grt_temperature_vector = [], [], [], []
-        self._update_fridge_cycle()
         self.fridge_cycle_popup.showMaximized()
         fc_params = self._get_params_from_fride_cycle()
-        grt_temperature = self._get_grt_temp(fc_params)
+        grt_temperature, grt_temperature_str = self._get_grt_temp(fc_params)
+        getattr(self, '_fridge_cycle_popup_grt_temperature_value_label').setText(grt_temperature_str)
+        self._update_fridge_cycle()
+        self.repaint()
 
     def _get_fridge_cycle_save_path(self):
         date = datetime.now()
@@ -776,29 +781,30 @@ class DAQGuiTemplate(QtWidgets.QWidget):
         rtc = RTCurve([])
         voltage_factor = float(self.multimeter_voltage_factor_range_dict[fc_params['grt_range']])
         grt_serial = fc_params['grt_serial']
-        temp_data = 1e3 * rtc.resistance_to_temp_grt(grt_data * voltage_factor, serial_number=grt_serial)
-        temperature = '{0:.3f} mk'.format(np.mean(temp_data))
-        return temperature
+        temperature = np.mean(1e3 * rtc.resistance_to_temp_grt(grt_data * voltage_factor, serial_number=grt_serial))
+        temperature_str = '{0:.3f} mk'.format(temperature)
+        return temperature, temperature_str
 
     def _start_fridge_cycle(self, sleep_time=1.0):
         global do_cycle_fridge
         self.aborted_cycle = False
         do_cycle_fridge = True
+        fc_params = self._get_params_from_fride_cycle()
         data_path = self._get_fridge_cycle_save_path()
         self._quick_message('Saving data to {0}'.format(data_path))
         with open(data_path, 'w') as fc_file_handle:
             fc_params = self._get_params_from_fride_cycle()
             abr_resistance = fc_params['abr_resistance']
-            grt_temperature = self._get_grt_temp(fc_params)
+            grt_temperature, grt_temperature_str = self._get_grt_temp(fc_params)
             time_stamp = datetime.now()
             time_stamp = datetime.strftime(time_stamp, '%Y_%m_%d_%H_%M_%S')
             getattr(self, '_fridge_cycle_popup_abr_resistance_value_label').setText(str(abr_resistance))
-            getattr(self, '_fridge_cycle_popup_grt_temperature_value_label').setText(grt_temperature)
+            getattr(self, '_fridge_cycle_popup_grt_temperature_value_label').setText(grt_temperature_str)
             self.fc_time_stamp_vector.append(time_stamp)
-            self.ps_voltage_vector.append(fc_params['ps_voltage'])
+            self.ps_voltage_vector.append(float(fc_params['ps_voltage']))
             self.abr_resistance_vector.append(abr_resistance)
-            self.grt_temperature_vector.append(fc_params['grt_temperature'])
-            data_line = '{0}\t{1}\t{2}\t{3}\n'.format(time_stamp, abr_resistance, fc_params['ps_voltage'], fc_params['grt_temperature'])
+            self.grt_temperature_vector.append(grt_temperature)
+            data_line = '{0}\t{1}\t{2}\t{3}\n'.format(time_stamp, abr_resistance, fc_params['ps_voltage'], grt_temperature)
             fc_file_handle.write(data_line)
             charcoal_start_resistance = float(fc_params['charcoal_start_resistance'])
             charcoal_end_resistance = float(fc_params['charcoal_end_resistance'])
@@ -811,17 +817,17 @@ class DAQGuiTemplate(QtWidgets.QWidget):
                 # Update resistance and temp
                 abr_resistance = self.fc.get_resistance()
                 getattr(self, '_fridge_cycle_popup_abr_resistance_value_label').setText(str(abr_resistance))
-                grt_temperature = self._get_grt_temp(fc_params)
-                getattr(self, '_fridge_cycle_popup_grt_temperature_value_label').setText(grt_temperature)
+                grt_temperature, grt_temperature_str = self._get_grt_temp(fc_params)
+                getattr(self, '_fridge_cycle_popup_grt_temperature_value_label').setText(grt_temperature_str)
                 time_stamp = datetime.now()
                 time_stamp = datetime.strftime(time_stamp, '%Y_%m_%d_%H_%M_%S')
                 fc_params = self._get_params_from_fride_cycle()
-                self.ps_voltage_vector.append(fc_params['ps_voltage'])
+                self.ps_voltage_vector.append(float(fc_params['ps_voltage']))
                 self.abr_resistance_vector.append(fc_params['abr_resistance'])
-                self.grt_temperature_vector.append(fc_params['grt_temperature'])
+                self.grt_temperature_vector.append(grt_temperature)
                 self.fc_time_stamp_vector.append(time_stamp)
                 self._update_fridge_cycle(data_path=data_path)
-                data_line = '{0}\t{1}\t{2}\t{3}\n'.format(time_stamp, abr_resistance, fc_params['ps_voltage'], fc_params['grt_temperature'])
+                data_line = '{0}\t{1}\t{2}\t{3}\n'.format(time_stamp, abr_resistance, fc_params['ps_voltage'], grt_temperature)
                 fc_file_handle.write(data_line)
                 root.update()
                 self.repaint()
@@ -836,17 +842,17 @@ class DAQGuiTemplate(QtWidgets.QWidget):
                 # Update resistance and temp
                 abr_resistance = self.fc.get_resistance()
                 getattr(self, '_fridge_cycle_popup_abr_resistance_value_label').setText(str(abr_resistance))
-                grt_temperature = self._get_grt_temp(fc_params)
-                getattr(self, '_fridge_cycle_popup_grt_temperature_value_label').setText(grt_temperature)
+                grt_temperature, grt_temperature_str = self._get_grt_temp(fc_params)
+                getattr(self, '_fridge_cycle_popup_grt_temperature_value_label').setText(grt_temperature_str)
                 time_stamp = datetime.now()
                 time_stamp = datetime.strftime(time_stamp, '%Y_%m_%d_%H_%M_%S')
                 self.fc_time_stamp_vector.append(time_stamp)
                 fc_params = self._get_params_from_fride_cycle()
-                self.ps_voltage_vector.append(fc_params['ps_voltage'])
+                self.ps_voltage_vector.append(float(fc_params['ps_voltage']))
                 self.abr_resistance_vector.append(fc_params['abr_resistance'])
-                self.grt_temperature_vector.append(fc_params['grt_temperature'])
+                self.grt_temperature_vector.append(grt_temperature)
                 self._update_fridge_cycle(data_path=data_path)
-                data_line = '{0}\t{1}\t{2}\t{3}\n'.format(time_stamp, abr_resistance, fc_params['ps_voltage'], fc_params['grt_temperature'])
+                data_line = '{0}\t{1}\t{2}\t{3}\n'.format(time_stamp, abr_resistance, fc_params['ps_voltage'], grt_temperature)
                 fc_file_handle.write(data_line)
                 root.update()
                 self.repaint()
@@ -857,41 +863,43 @@ class DAQGuiTemplate(QtWidgets.QWidget):
             while abr_resistance > charcoal_end_resistance and do_cycle_fridge:
                 abr_resistance = self.fc.get_resistance()
                 getattr(self, '_fridge_cycle_popup_abr_resistance_value_label').setText(str(abr_resistance))
-                grt_temperature = self._get_grt_temp(fc_params)
-                getattr(self, '_fridge_cycle_popup_grt_temperature_value_label').setText(grt_temperature)
+                grt_temperature, grt_temperature_str = self._get_grt_temp(fc_params)
+                getattr(self, '_fridge_cycle_popup_grt_temperature_value_label').setText(grt_temperature_str)
                 time_stamp = datetime.now()
                 time_stamp = datetime.strftime(time_stamp, '%Y_%m_%d_%H_%M_%S')
                 self.fc_time_stamp_vector.append(time_stamp)
                 fc_params = self._get_params_from_fride_cycle()
-                self.ps_voltage_vector.append(fc_params['ps_voltage'])
+                self.ps_voltage_vector.append(float(fc_params['ps_voltage']))
                 self.abr_resistance_vector.append(fc_params['abr_resistance'])
-                self.grt_temperature_vector.append(fc_params['grt_temperature'])
+                self.grt_temperature_vector.append(grt_temperature)
                 self._update_fridge_cycle(data_path=data_path)
                 time_stamp = datetime.now()
                 time_stamp = datetime.strftime(time_stamp, '%Y_%m_%d_%H_%M_%S')
-                data_line = '{0}\t{1}\t{2}\t{3}\n'.format(time_stamp, abr_resistance, fc_params['ps_voltage'], fc_params['grt_temperature'])
+                data_line = '{0}\t{1}\t{2}\t{3}\n'.format(time_stamp, abr_resistance, fc_params['ps_voltage'], grt_temperature)
                 fc_file_handle.write(data_line)
+                self._update_fridge_cycle(data_path=data_path)
                 root.update()
                 self.repaint()
                 time.sleep(sleep_time)
             status = 'Charcoal reached {0} turnign of voltage and cooling stage'.format(abr_resistance)
             getattr(self, '_fridge_cycle_popup_status_label').setText(status)
             self.fc.apply_voltage(0)
-            getattr(self, '_fridge_cycle_popup_ps_voltage_value_label').setText('0.1')
+            getattr(self, '_fridge_cycle_popup_ps_voltage_value_label').setText('0')
             # record the data for another few mins to see stage start to cool
+            cycle_end_temperature = float(fc_params['cycle_end_temperature'])
             while grt_temperature > cycle_end_temperature and do_cycle_fridge:
                 abr_resistance = self.fc.get_resistance()
                 getattr(self, '_fridge_cycle_popup_abr_resistance_value_label').setText(str(abr_resistance))
-                grt_temperature = self._get_grt_temp(fc_params)
-                getattr(self, '_fridge_cycle_popup_grt_temperature_value_label').setText(grt_temperature)
+                grt_temperature, grt_temperature_str = self._get_grt_temp(fc_params)
+                getattr(self, '_fridge_cycle_popup_grt_temperature_value_label').setText(grt_temperature_str)
                 fc_params = self._get_params_from_fride_cycle()
-                self.ps_voltage_vector.append(fc_params['ps_voltage'])
-                self.abr_resistance_vector.append(fc_params['abr_resistance'])
-                self.grt_temperature_vector.append(fc_params['grt_temperature'])
+                self.ps_voltage_vector.append(float(fc_params['ps_voltage']))
+                self.abr_resistance_vector.append(abr_resistance)
+                self.grt_temperature_vector.append(grt_temperature)
                 self._update_fridge_cycle(data_path=data_path)
                 time_stamp = datetime.now()
                 time_stamp = datetime.strftime(time_stamp, '%Y_%m_%d_%H_%M_%S')
-                data_line = '{0}\t{1}\t{2}\t{3}\n'.format(time_stamp, abr_resistance, fc_params['ps_voltage'], fc_params['grt_temperature'])
+                data_line = '{0}\t{1}\t{2}\t{3}\n'.format(time_stamp, abr_resistance, fc_params['ps_voltage'], grt_temperature)
                 fc_file_handle.write(data_line)
                 root.update()
                 self.repaint()
@@ -940,12 +948,35 @@ class DAQGuiTemplate(QtWidgets.QWidget):
 
     def _update_fridge_cycle(self, data_path=None):
         try:
-            fig, ax = self._create_blank_fig(frac_screen_width=0.9)
+            fc_params = self._get_params_from_fride_cycle()
+            fig, ax = self._create_blank_fig(frac_screen_width=0.95, frac_screen_height=0.7,
+                                             left=0.05, right=0.98, top=0.9, bottom=0.1,
+                                             multiple_axes=True)
+            ax1 = fig.add_subplot(311)
+            ax2 = fig.add_subplot(312)
+            ax3 = fig.add_subplot(313)
             time_stamp_vector = [datetime.strptime(x, '%Y_%m_%d_%H_%M_%S') for x in self.fc_time_stamp_vector]
-            ax.semilogy(time_stamp_vector, self.ps_voltage_vector, label='PS Voltage (V)')
-            ax.semilogy(time_stamp_vector, np.asarray(self.abr_resistance_vector, dtype=float) * 1e-3, label='ABR Resistance (kOhms)')
-            ax.semilogy(time_stamp_vector, self.grt_temperature_vector, label='GRT Temp (mK)')
-            ax.set_ylim([0.01, 3000])
+            ax1.plot(time_stamp_vector, self.ps_voltage_vector, color='r', label='PS Voltage (V)')
+            date = datetime.strftime(datetime.now(), '%Y_%m_%d')
+            ax1.set_title('576 Fridge Cycle {0}'.format(date))
+            ax1.set_ylabel('PS Voltage (V)')
+            ax1.set_ylim([0, 26])
+            ax2.plot(time_stamp_vector, np.asarray(self.abr_resistance_vector, dtype=float) * 1e-3, color='g', label='ABR Resistance (kOhms)')
+            ax2.set_ylabel('ABR Res (kOhms)')
+            ax3.plot(time_stamp_vector, self.grt_temperature_vector, color='c', label='GRT Temp (mK)')
+            ax2.axhline(float(fc_params['charcoal_end_resistance']) * 1e-3, color='b', label='ABR End')
+            ax2.axhline(float(fc_params['charcoal_start_resistance']) * 1e-3, color='m', label='ABR Start')
+            ax3.axhline(float(fc_params['cycle_end_temperature']), color='b', label='Approx GRT Base')
+            ax3.set_ylabel('GRT Temp (mK)')
+            ax3.set_xlabel('Time Stamps')
+            # Add legends
+            handles, labels = ax1.get_legend_handles_labels()
+            ax1.legend(handles, labels, numpoints=1)
+            handles, labels = ax2.get_legend_handles_labels()
+            ax2.legend(handles, labels, numpoints=1)
+            handles, labels = ax3.get_legend_handles_labels()
+            ax3.legend(handles, labels, numpoints=1)
+            #ax.set_ylim([0.01, 3000])
             if data_path is not None:
                 save_path = data_path.replace('.dat', '.png')
             else:
