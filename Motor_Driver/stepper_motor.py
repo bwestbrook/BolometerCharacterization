@@ -1,4 +1,4 @@
-from lab_code.lab_serial2 import lab_serial
+from lab_code.lab_serial import lab_serial
 import sys
 import time
 import numpy as np
