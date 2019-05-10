@@ -24,7 +24,7 @@ fridge_cycle_settings.fridge_cycle_popup_build_dict = {
                                                        '_fridge_cycle_popup_grt_range_combobox': {'position': (3, 3, 1, 1)},
                                                         # Monitoring
                                                        '_fridge_cycle_popup_status_header_label': {'text': 'Status:', 'alignment': 'Right', 'position': (4, 0, 1, 1)},
-                                                       '_fridge_cycle_popup_status_label': {'text': 'Idle', 'alignment': 'Left', 'position': (4, 1, 1, 3)},
+                                                       '_fridge_cycle_popup_status_label': {'text': 'Idle', 'alignment': 'Left', 'position': (4, 1, 1, 2)},
                                                        '_fridge_cycle_popup_fridge_cycle_plot_label': {'alignment': 'Center', 'position': (5, 0, 1, 4)},
                                                        '_fridge_cycle_popup_abr_resistance_header_label': {'text': 'ABR Res:', 'position': (6, 0, 1, 1)},
                                                        '_fridge_cycle_popup_abr_resistance_value_label': {'position': (6, 1, 1, 1)},
@@ -41,9 +41,8 @@ fridge_cycle_settings.fridge_cycle_popup_build_dict = {
 
 fridge_cycle_settings.fridge_cycle_combobox_entry_dict = {
                                                           '_fridge_cycle_popup_grt_daq_channel_combobox': [str(x) for x in range(10)],
-                                                          '_fridge_cycle_popup_cycle_voltage_combobox': ['25'],
+                                                          '_fridge_cycle_popup_cycle_voltage_combobox': ['2', '25'],
                                                           '_fridge_cycle_popup_grt_serial_combobox': ['', '29268', 'X36942'],
                                                           '_fridge_cycle_popup_grt_range_combobox': ['2', '20', '200', '2K', '20K', '200K', '2M'],
-                                                          '_fridge_cycle_popup_cycle_end_temperature_combobox': ['1000', '500', '300'],
-                                                          '_fridge_cycle_popup_cycle_end_temperature_combobox': ['1000', '500', '320', '300'],
+                                                          '_fridge_cycle_popup_cycle_end_temperature_combobox': ['1000', '500', '320', '300', '290', '280'],
                                                          }

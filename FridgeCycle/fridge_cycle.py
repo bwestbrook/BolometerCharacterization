@@ -7,7 +7,7 @@ do_cycle_fridge = False
 
 class FridgeCycle():
 
-    def __init__(self, ps_port='COM10', mm_port='COM3'):
+    def __init__(self, ps_port='COM12', mm_port='COM3'):
         self.ps_port = ps_port
         self.ps_connection = lab_serial(port=self.ps_port, parity=None)
         self.mm_port = mm_port

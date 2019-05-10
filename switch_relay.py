@@ -4,7 +4,7 @@ from lab_code.lab_serial import lab_serial
 
 class SwitchRelay():
 
-    def __init__(self, port='COM10'):
+    def __init__(self, port='COM12'):
         self.port = port
         self._connection = lab_serial(port=self.port)
         self._query('MEAS:VOlT?')
@@ -15,10 +15,10 @@ class SwitchRelay():
 
     def switch_to_position(self, position):
         print('Switching to position {0}'.format(position))
-        if position == 0:
-            self._send_command('APPL 0, 0.1\r\n')
-        elif position == 1:
-            self._send_command('APPL 14, 0.1\r\n')
+        if position == 1:
+            self._send_command('APPL 0, 0.2\r\n')
+        elif position == 2:
+            self._send_command('APPL 14, 0.2\r\n')
 
     def _query(self, query, timeout=0.5):
         self._send_command(query)

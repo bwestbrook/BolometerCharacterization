@@ -9,11 +9,11 @@ single_channel_fts_settings.single_channel_fts_build_dict = {
 
                                                              '_single_channel_fts_popup_fts_sm_com_port_header_label': {'text': 'Stepper Motor Resource Name:', 'position': (1, 0, 1, 1)},
                                                              '_single_channel_fts_popup_fts_sm_com_port_combobox': {'function': '_connect_to_com_port', 'position': (1, 1, 1, 1)},
-                                                             '_single_channel_fts_popup_fts_sm_connection_status_label': {'text': 'Not Connected', 'color': 'red', 'font': 'huge', 'position': (1, 2, 1, 1)},
+                                                             '_single_channel_fts_popup_fts_sm_connection_status_label': {'text': 'Not Ready', 'color': 'red', 'font': 'huge', 'position': (1, 2, 1, 1)},
 
                                                              '_single_channel_fts_popup_grid_sm_motor_header_label': {'text': 'Polar Grid Motor:', 'position': (2, 0, 1, 1)},
                                                              '_single_channel_fts_popup_grid_sm_com_port_combobox': {'function': '_connect_to_com_port', 'position': (2, 1, 1, 1)},
-                                                             '_single_channel_fts_popup_grid_sm_connection_status_label': {'text': 'Not Connected', 'color': 'red', 'font': 'huge', 'position': (2, 2, 1, 1)},
+                                                             '_single_channel_fts_popup_grid_sm_connection_status_label': {'text': 'Not Ready', 'color': 'red', 'font': 'huge', 'position': (2, 2, 1, 1)},
                                                              '_single_channel_fts_popup_set_grid_angle_pushbutton': {'text': 'Set Pol Grid Angle To:', 'function': '_rotate_grid', 'position': (2, 3, 1, 1)},
                                                              '_single_channel_fts_popup_grid_angle_lineedit': {'text': '',  'position': (2, 4, 1, 1)},
 
@@ -57,29 +57,23 @@ single_channel_fts_settings.single_channel_fts_build_dict = {
                                                              '_single_channel_fts_popup_DistPerStep_header_label': {'text': 'DistPerStep (nm):', 'position': (11, 0, 1, 1)},
                                                              '_single_channel_fts_popup_DistPerStep_combobox': {'function': '_update_single_channel_fts', 'position': (11, 1, 1, 1)},
 
-                                                             '_single_channel_fts_popup_zero_path_position_header_label': {'text': '0-Path Position(in):', 'position': (11, 3, 1, 1)},
-                                                             '_single_channel_fts_popup_zero_path_position_lineedit': {'text': '1.345', 'position': (11, 4, 1, 1)},
+                                                             '_single_channel_fts_popup_apodization_type_header_label': {'text': 'Apodization:', 'position': (11, 2, 1, 1)},
+                                                             '_single_channel_fts_popup_apodization_type_combobox': {'position': (11, 3, 1, 1)},
 
-                                                             '_single_channel_fts_popup_phone_email_header_label': {'text': 'Phone # or e-mail address:', 'position': (13, 0, 1, 1)},
-                                                             '_single_channel_fts_popup_phone_email_lineedit': {'text': '', 'position': (13, 1, 1, 1)},
+                                                             '_single_channel_fts_popup_phone_email_header_label': {'text': 'E-mail address:', 'position': (11, 4, 1, 1)},
+                                                             '_single_channel_fts_popup_phone_email_lineedit': {'text': '', 'position': (11, 5, 1, 1)},
 
-                                                             '_single_channel_fts_popup_carrier_header_label': {'text': 'Select Carrier:', 'position': (13, 2, 1, 1)},
-                                                             '_single_channel_fts_popup_carrier_type_combobox': {'position': (13, 3, 1, 1)},
+                                                             '_single_channel_fts_popup_squid_select_header_label': {'text': 'SQUID:', 'position': (12, 0, 1, 1)},
+                                                             '_single_channel_fts_popup_squid_select_combobox': {'function': '_update_squid_calibration', 'position': (12, 1, 1, 1)},
 
-                                                             '_single_channel_fts_popup_squid_select_header_label': {'text': 'SQUID:', 'position': (14, 0, 1, 1)},
-                                                             '_single_channel_fts_popup_squid_select_combobox': {'function': '_update_squid_calibration', 'position': (14, 1, 1, 1)},
+                                                             '_single_channel_fts_popup_sample_name_header_label': {'text': 'Sample Name:', 'position': (12, 2, 1, 1)},
+                                                             '_single_channel_fts_popup_sample_name_lineedit': {'position': (12, 3, 1, 1)},
 
-                                                             '_single_channel_fts_popup_sample_name_header_label': {'text': 'Sample Name:', 'position': (14, 2, 1, 1)},
-                                                             '_single_channel_fts_popup_sample_name_lineedit': {'position': (14, 3, 1, 1)},
-
-                                                             '_single_channel_fts_popup_apodization_type_header_label': {'text': 'Apodization:', 'position': (14, 4, 1, 1)},
-                                                             '_single_channel_fts_popup_apodization_type_combobox': {'position': (14, 5, 1, 1)},
-
-                                                             #'_single_channel_fts_popup_v_bias_header_label': {'text': 'Heater Voltage:', 'position': (14, 0, 1, 1)},
-                                                             #'_single_channel_fts_popup_v_bias_lineedit': {'position': (14, 1, 1, 1)},
+                                                             '_single_channel_fts_popup_v_bias_header_label': {'text': 'Heater Voltage:', 'position': (13, 0, 1, 1)},
+                                                             '_single_channel_fts_popup_v_bias_lineedit': {'position': (13, 1, 1, 1)},
 #
-                                                             #'_single_channel_fts_popup_heater_voltage_header_label': {'text': 'V_bias:', 'position': (14, 2, 1, 1)},
-                                                             #'_single_channel_fts_popup_heater_voltage_lineedit': {'position': (14, 3, 1, 1)},
+                                                             '_single_channel_fts_popup_heater_voltage_header_label': {'text': 'V_bias:', 'position': (13, 2, 1, 1)},
+                                                             '_single_channel_fts_popup_heater_voltage_lineedit': {'position': (13, 3, 1, 1)},
 #
 # CONTROL BUTTONS 
                                                              '_single_channel_fts_popup_control_buttons_label': {'text': 'CONTROLS', 'font': 'huge', 'color': 'blue', 'alignment': 'Center', 'position': (16, 0, 1, 6)},
@@ -96,7 +90,7 @@ single_channel_fts_settings.single_channel_fts_build_dict = {
                                                              '_single_channel_fts_popup_position_monitor_slider': {'function': None, 'position': (1, 7, 1, 4), 'orientation': 'Horizontal'},
 
                                                              '_single_channel_fts_popup_position_slider_min_label': {'position': (2, 7, 1, 1)},
-                                                             '_single_channel_fts_popup_position_slider_max_label': {'position': (2, 10, 1, 1)},
+                                                             '_single_channel_fts_popup_position_slider_max_label': {'alignment': 'Right', 'position': (2, 10, 1, 1)},
 
                                                              '_single_channel_fts_popup_current_position_header_label': {'text': 'Current Mirror Position:', 'position': (3, 7, 1, 1)},
                                                              '_single_channel_fts_popup_current_position_label': {'text': '0', 'position': (3, 8, 1, 2)},
@@ -134,12 +128,11 @@ single_channel_fts_settings.carrier_types = ['phone', 'e-mail']
 single_channel_fts_settings.combobox_entry_dict = {
                                                    '_single_channel_fts_popup_signal_channel_combobox': ['', '0', '1', '2', '3'],
                                                    '_single_channel_fts_popup_squid_select_combobox': ['', '1', '2', '3', '4', '5', '6'],
-                                                   '_single_channel_fts_popup_carrier_type_combobox': ['phone', 'e-mail'],
-                                                   '_single_channel_fts_popup_apodization_type_combobox': ['BOXCAR', 'TRIAGNULAR'],
+                                                   '_single_channel_fts_popup_apodization_type_combobox': ['TRIAGNULAR'],
                                                    '_single_channel_fts_popup_DistPerStep_combobox': ["250.39 (Bill's)", "4.168 Paul's"],
                                                    #'_single_channel_fts_popup_current_com_port_combobox': ['COM1', 'COM2', 'COM3', 'COM4','COM5','COM6'],
                                                    #'_single_channel_fts_popup_grid_current_com_port_combobox': ['COM1', 'COM2', 'COM3', 'COM4'],
-                                                   '_single_channel_fts_popup_pause_time_combobox': ['500', '750','1000', '1500', '2000', '3000', '5000'],
+                                                   '_single_channel_fts_popup_pause_time_combobox': ['500', '750','1000', '1500', '2000', '3000', '5000', '10000'],
                                                    '_single_channel_fts_popup_integration_time_combobox': ['250', '500', '1000', '1500', '3000'],
                                                    '_single_channel_fts_popup_sample_rate_combobox': ['50', '100', '250', '500', '1000','2000','3000','4000','5000','6000','7000','8000','9000','10000','20000','30000','40000','48000']
                                                    }

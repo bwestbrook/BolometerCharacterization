@@ -170,9 +170,10 @@ class IVCurve():
         p_window = self.compute_delta_power_at_window(spectra_path)
         p_sensed = np.abs(p_at_same_rfracs[1] - p_at_same_rfracs[0])
         efficiency = 100.0 * p_sensed / p_window
+        pk_per_K_efficiency = p_sensed / (300.0 - 77.0)
         print()
-        title =  'Power diff {0:.2f} / {1:.2f} (sensed / window) pW'.format(p_sensed, p_window)
-        title += '\nEffiency is {0:.2f}%'.format(efficiency)
+        title =  'Power diff {0:.2f} / {1:.2f} (sensed / window) {2:.3f} pW/K'.format(p_sensed, p_window, pk_per_K_efficiency)
+        title += '\nEfficiency is {0:.2f}%'.format(efficiency)
         print(title)
         print()
         ax.set_title(title)
