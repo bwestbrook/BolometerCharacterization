@@ -178,8 +178,10 @@ class DAQGuiTemplate(QtWidgets.QWidget):
                 getattr(self, '_user_move_stepper_popup_set_acceleration_to_lineedit').setText('{0}'.format(acceleration_string))
         elif 'single_channel_fts' in sender_whats_this_str and not error:
             if str(getattr(self, '_single_channel_fts_popup_fts_sm_com_port_combobox').currentText()) == com_port:
+                getattr(self, '_single_channel_fts_popup_fts_sm_connection_status_label').setStyleSheet('QLabel {color: green}')
                 getattr(self, '_single_channel_fts_popup_fts_sm_connection_status_label').setText('Ready!')
             if str(getattr(self, '_single_channel_fts_popup_grid_sm_com_port_combobox').currentText()) == com_port:
+                getattr(self, '_single_channel_fts_popup_grid_sm_connection_status_label').setStyleSheet('QLabel {color: green}')
                 getattr(self, '_single_channel_fts_popup_grid_sm_connection_status_label').setText('Ready!')
             getattr(self, '_single_channel_fts_popup_position_monitor_slider').setSliderPosition(int(position_string))
         self.last_current_string, self.last_position_string, self.last_velocity_string, self.last_acceleration_string = current_string, position_string, velocity_string, acceleration_string
@@ -733,6 +735,32 @@ class DAQGuiTemplate(QtWidgets.QWidget):
     #################################################
 
     #################################################
+    # Lock in 
+    #################################################
+
+    def _close_lock_in_popup(self):
+        self.lock_in_popup.close()
+
+    def _lock_in(self):
+        if not hasattr(self, 'fc'):
+            self.lock_in = LockIn()
+        if not hasattr(self, 'lock_in_popup'):
+            self._create_popup_window('lock_in_popup')
+        else:
+            self._initialize_panel('lock_in_popup')
+        self._build_panel(settings.fridge_cycle_popup_build_dict)
+        for combobox_widget, entry_list in self.lock_in_combobox_entry_dict.items():
+            self.populate_combobox(combobox_widget, entry_list)
+        self.repaint()
+
+    def _change_lock_in_range(self):
+        if 'down' in self.sender().whatsThis():
+            self.lock_in._change_lock_in_range('down')
+        else:
+            self.lock_in._change_lock_in_range('up')
+
+
+    #################################################
     # Fridge Cycle
     #################################################
 
@@ -747,12 +775,9 @@ class DAQGuiTemplate(QtWidgets.QWidget):
         else:
             self._initialize_panel('fridge_cycle_popup')
         self._build_panel(settings.fridge_cycle_popup_build_dict)
-        resistance = '{0:.2f}'.format(self.fc.get_resistance())
-        getattr(self, '_fridge_cycle_popup_abr_resistance_value_label').setText(resistance)
-        getattr(self, '_fridge_cycle_popup_ps_voltage_value_label').setText('0')
         for combobox_widget, entry_list in self.fridge_cycle_combobox_entry_dict.items():
             self.populate_combobox(combobox_widget, entry_list)
-        getattr(self, '_fridge_cycle_popup_grt_daq_channel_combobox').setCurrentIndex(1)
+        getattr(self, '_fridge_cycle_popup_grt_daq_channel_combobox').setCurrentIndex(0)
         getattr(self, '_fridge_cycle_popup_grt_serial_combobox').setCurrentIndex(2)
         getattr(self, '_fridge_cycle_popup_grt_range_combobox').setCurrentIndex(3)
         getattr(self, '_fridge_cycle_popup_cycle_voltage_combobox').setCurrentIndex(1)
@@ -760,8 +785,13 @@ class DAQGuiTemplate(QtWidgets.QWidget):
         self.fc_time_stamp_vector, self.ps_voltage_vector, self.abr_resistance_vector, self.grt_temperature_vector = [], [], [], []
         self.fridge_cycle_popup.showMaximized()
         fc_params = self._get_params_from_fride_cycle()
+        # Update with measured values
         grt_temperature, grt_temperature_str = self._get_grt_temp(fc_params)
         getattr(self, '_fridge_cycle_popup_grt_temperature_value_label').setText(grt_temperature_str)
+        abr_resistance, abr_resistance_str = self.fc.get_resistance()
+        getattr(self, '_fridge_cycle_popup_abr_resistance_value_label').setText(abr_resistance_str)
+        applied_voltage, applied_voltage_str = self.fc.get_voltage()
+        getattr(self, '_fridge_cycle_popup_ps_voltage_value_label').setText(applied_voltage_str)
         self._update_fridge_cycle()
         self.repaint()
 
@@ -786,146 +816,75 @@ class DAQGuiTemplate(QtWidgets.QWidget):
         temperature_str = '{0:.3f} mk'.format(temperature)
         return temperature, temperature_str
 
+    def _set_ps_voltage(self):
+        voltage = float(str(getattr(self, '_fridge_cycle_popup_man_set_voltage_lineedit').text()))
+        applied_voltage = self.fc.apply_voltage(voltage)
+        return applied_voltage
+
     def _start_fridge_cycle(self, sleep_time=1.0):
+        # Config globals
         global do_cycle_fridge
         self.aborted_cycle = False
         do_cycle_fridge = True
+        # Get essential FC params
         fc_params = self._get_params_from_fride_cycle()
+        charcoal_start_resistance = float(fc_params['charcoal_start_resistance'])
+        charcoal_end_resistance = float(fc_params['charcoal_end_resistance'])
+        cycle_end_temperature = float(fc_params['cycle_end_temperature'])
+        # Set Data Path
         data_path = self._get_fridge_cycle_save_path()
         self._quick_message('Saving data to {0}'.format(data_path))
         fig = None
         with open(data_path, 'w') as fc_file_handle:
-            fc_params = self._get_params_from_fride_cycle()
-            abr_resistance = fc_params['abr_resistance']
-            grt_temperature, grt_temperature_str = self._get_grt_temp(fc_params)
-            time_stamp = datetime.now()
-            time_stamp = datetime.strftime(time_stamp, '%Y_%m_%d_%H_%M_%S')
-            getattr(self, '_fridge_cycle_popup_abr_resistance_value_label').setText(str(abr_resistance))
-            getattr(self, '_fridge_cycle_popup_grt_temperature_value_label').setText(grt_temperature_str)
-            # Add and plot data
-            self.fc_time_stamp_vector.append(time_stamp)
-            self.ps_voltage_vector.append(float(fc_params['ps_voltage']))
-            self.abr_resistance_vector.append(abr_resistance)
-            self.grt_temperature_vector.append(grt_temperature)
-            # Write Data 
-            data_line = '{0}\t{1}\t{2}\t{3}\n'.format(time_stamp, abr_resistance, fc_params['ps_voltage'], grt_temperature)
+            # Get new data 
+            data_line = self._check_cycle_stage_and_update_data(fc_params, data_path, sleep_time)
             fc_file_handle.write(data_line)
-            charcoal_start_resistance = float(fc_params['charcoal_start_resistance'])
-            charcoal_end_resistance = float(fc_params['charcoal_end_resistance'])
             self._update_fridge_cycle(data_path=data_path)
-            # Wait for charcoal to cool down
+            # Update status
             status = 'Cooling ABR before heating'
             getattr(self, '_fridge_cycle_popup_status_label').setText(status)
-            abr_resistance = self.fc.get_resistance()
+            # Check ABR Res to Start While Loop
+            abr_resistance, abr_resistance_str = self.fc.get_resistance()
             while abr_resistance < charcoal_start_resistance and do_cycle_fridge:
-                # Update resistance and temp
-                abr_resistance = self.fc.get_resistance()
-                getattr(self, '_fridge_cycle_popup_abr_resistance_value_label').setText(str(abr_resistance))
-                grt_temperature, grt_temperature_str = self._get_grt_temp(fc_params)
-                getattr(self, '_fridge_cycle_popup_grt_temperature_value_label').setText(grt_temperature_str)
-                # Update time stamp
-                time_stamp = datetime.now()
-                time_stamp = datetime.strftime(time_stamp, '%Y_%m_%d_%H_%M_%S')
-                fc_params = self._get_params_from_fride_cycle()
-                # Add and plot data
-                self.fc_time_stamp_vector.append(time_stamp)
-                self.ps_voltage_vector.append(float(fc_params['ps_voltage']))
-                self.abr_resistance_vector.append(fc_params['abr_resistance'])
-                self.grt_temperature_vector.append(grt_temperature)
-                self._update_fridge_cycle(data_path=data_path)
-                # Write Data 
-                data_line = '{0}\t{1}\t{2}\t{3}\n'.format(time_stamp, abr_resistance, fc_params['ps_voltage'], grt_temperature)
+                # Get new data 
+                data_line = self._check_cycle_stage_and_update_data(fc_params, data_path, sleep_time)
                 fc_file_handle.write(data_line)
-                # Update Gui and Sleep
-                root.update()
-                self.repaint()
-                time.sleep(sleep_time)
+                # Check ABR Res
+                abr_resistance, abr_resistance_str = self.fc.get_resistance()
+            # Update Status
             status = 'Charcoal has reached {0} turning on voltage'.format(charcoal_start_resistance)
             getattr(self, '_fridge_cycle_popup_status_label').setText(status)
-            time.sleep(sleep_time)
             # Turn on voltage in steps of 1 volt over with a sleep between
-            for i in range(int(fc_params['cycle_voltage']) + 1):
-                # Apply voltage
-                self.fc.apply_voltage(i)
-                getattr(self, '_fridge_cycle_popup_ps_voltage_value_label').setText(str(i))
-                # Update resistance and temp
-                abr_resistance = self.fc.get_resistance()
-                getattr(self, '_fridge_cycle_popup_abr_resistance_value_label').setText(str(abr_resistance))
-                grt_temperature, grt_temperature_str = self._get_grt_temp(fc_params)
-                getattr(self, '_fridge_cycle_popup_grt_temperature_value_label').setText(grt_temperature_str)
-                # Update time stamp
-                time_stamp = datetime.now()
-                time_stamp = datetime.strftime(time_stamp, '%Y_%m_%d_%H_%M_%S')
-                fc_params = self._get_params_from_fride_cycle()
-                # Add and plot data
-                self.fc_time_stamp_vector.append(time_stamp)
-                self.ps_voltage_vector.append(float(fc_params['ps_voltage']))
-                self.abr_resistance_vector.append(fc_params['abr_resistance'])
-                self.grt_temperature_vector.append(grt_temperature)
-                self._update_fridge_cycle(data_path=data_path)
-                # Write Data 
-                data_line = '{0}\t{1}\t{2}\t{3}\n'.format(time_stamp, abr_resistance, fc_params['ps_voltage'], grt_temperature)
+            for i in range(0, int(fc_params['cycle_voltage']) + 1, 5):
+                # Apply voltage and update gui
+                applied_voltage = self.fc.apply_voltage(i)
+                getattr(self, '_fridge_cycle_popup_ps_voltage_value_label').setText(str(applied_voltage))
+                # Get new data 
+                data_line = self._check_cycle_stage_and_update_data(fc_params, data_path, sleep_time)
                 fc_file_handle.write(data_line)
-                # Update Gui and Sleep
-                root.update()
-                self.repaint()
-                time.sleep(sleep_time)
+            # Update Status
             status = 'Charcoal being heated: Voltage to heater set to {0} V'.format(i)
             getattr(self, '_fridge_cycle_popup_status_label').setText(status)
-            abr_resistance = self.fc.get_resistance()
+            # Check ABR Res to Start While Loop
+            abr_resistance, abr_resistance_str = self.fc.get_resistance()
             while abr_resistance > charcoal_end_resistance and do_cycle_fridge:
-                # Update resistance and temp
-                abr_resistance = self.fc.get_resistance()
-                getattr(self, '_fridge_cycle_popup_abr_resistance_value_label').setText(str(abr_resistance))
-                grt_temperature, grt_temperature_str = self._get_grt_temp(fc_params)
-                getattr(self, '_fridge_cycle_popup_grt_temperature_value_label').setText(grt_temperature_str)
-                # Update time stamp
-                time_stamp = datetime.now()
-                time_stamp = datetime.strftime(time_stamp, '%Y_%m_%d_%H_%M_%S')
-                fc_params = self._get_params_from_fride_cycle()
-                # Add and plot data
-                self.fc_time_stamp_vector.append(time_stamp)
-                self.ps_voltage_vector.append(float(fc_params['ps_voltage']))
-                self.abr_resistance_vector.append(fc_params['abr_resistance'])
-                self.grt_temperature_vector.append(grt_temperature)
-                self._update_fridge_cycle(data_path=data_path)
-                # Write Data 
-                data_line = '{0}\t{1}\t{2}\t{3}\n'.format(time_stamp, abr_resistance, fc_params['ps_voltage'], grt_temperature)
+                # Get new data 
+                data_line = self._check_cycle_stage_and_update_data(fc_params, data_path, sleep_time)
                 fc_file_handle.write(data_line)
-                # Update Gui and Sleep
-                root.update()
-                self.repaint()
-                time.sleep(sleep_time)
+                # Check ABR Res
+                abr_resistance, abr_resistance_str = self.fc.get_resistance()
             status = 'Charcoal reached {0} turning off voltage and cooling stage'.format(abr_resistance)
             getattr(self, '_fridge_cycle_popup_status_label').setText(status)
             self.fc.apply_voltage(0)
             getattr(self, '_fridge_cycle_popup_ps_voltage_value_label').setText('0')
             # Record the data until grt reaches base temp 
             grt_temperature, grt_temperature_str = self._get_grt_temp(fc_params)
-            cycle_end_temperature = float(fc_params['cycle_end_temperature'])
             while grt_temperature > cycle_end_temperature and do_cycle_fridge:
-                # Update resistance and temp
-                abr_resistance = self.fc.get_resistance()
-                getattr(self, '_fridge_cycle_popup_abr_resistance_value_label').setText(str(abr_resistance))
-                grt_temperature, grt_temperature_str = self._get_grt_temp(fc_params)
-                getattr(self, '_fridge_cycle_popup_grt_temperature_value_label').setText(grt_temperature_str)
-                # Update time stamp
-                time_stamp = datetime.now()
-                time_stamp = datetime.strftime(time_stamp, '%Y_%m_%d_%H_%M_%S')
-                fc_params = self._get_params_from_fride_cycle()
-                # Add and plot data
-                self.fc_time_stamp_vector.append(time_stamp)
-                self.ps_voltage_vector.append(float(fc_params['ps_voltage']))
-                self.abr_resistance_vector.append(abr_resistance)
-                self.grt_temperature_vector.append(grt_temperature)
-                self._update_fridge_cycle(data_path=data_path)
-                # Write Data 
-                data_line = '{0}\t{1}\t{2}\t{3}\n'.format(time_stamp, abr_resistance, fc_params['ps_voltage'], grt_temperature)
+                # Get new data 
+                data_line = self._check_cycle_stage_and_update_data(fc_params, data_path, sleep_time)
                 fc_file_handle.write(data_line)
-                # Update Gui and Sleep
-                root.update()
-                self.repaint()
-                time.sleep(sleep_time)
+                # Check GRT Temp 
+                grt_temperature, grt_temperature_str = self._get_grt_temp(fc_params)
             if self.aborted_cycle:
                 status = 'Cycle Aborted'
                 getattr(self, '_fridge_cycle_popup_status_label').setText(status)
@@ -934,6 +893,34 @@ class DAQGuiTemplate(QtWidgets.QWidget):
                 getattr(self, '_fridge_cycle_popup_status_label').setText(status)
             do_cycle_fridge = False
             root.update()
+
+    def _check_cycle_stage_and_update_data(self, fc_params, data_path, sleep_time):
+        # Update resistance
+        abr_resistance, abr_resistance_str = self.fc.get_resistance()
+        getattr(self, '_fridge_cycle_popup_abr_resistance_value_label').setText(abr_resistance_str)
+        # Update temp
+        grt_temperature, grt_temperature_str = self._get_grt_temp(fc_params)
+        getattr(self, '_fridge_cycle_popup_grt_temperature_value_label').setText(grt_temperature_str)
+        # Update voltage
+        applied_voltage, applied_voltage_str = self.fc.get_voltage()
+        getattr(self, '_fridge_cycle_popup_ps_voltage_value_label').setText(applied_voltage_str)
+        # Update time stamp
+        time_stamp = datetime.now()
+        time_stamp = datetime.strftime(time_stamp, '%Y_%m_%d_%H_%M_%S')
+        # Add and plot data
+        self.fc_time_stamp_vector.append(time_stamp)
+        self.ps_voltage_vector.append(applied_voltage)
+        self.abr_resistance_vector.append(abr_resistance)
+        self.grt_temperature_vector.append(grt_temperature)
+        self._update_fridge_cycle(data_path=data_path)
+        # Write Data 
+        data_line = '{0}\t{1}\t{2}\t{3}\n'.format(time_stamp, abr_resistance, applied_voltage, grt_temperature)
+        # Update Gui and Sleep
+        root.update()
+        self.repaint()
+        time.sleep(sleep_time)
+        return data_line
+
 
     def _stop_fridge_cycle(self):
         if hasattr(self, 'fc'):
@@ -1882,19 +1869,25 @@ class DAQGuiTemplate(QtWidgets.QWidget):
         '''
         Compute the resultant quantities on the panel
         '''
-        total_steps = int(scan_params['ending_position']) - int(scan_params['starting_position'])
-        total_distance = total_steps * float(scan_params['DistPerStep']) #nm
-        min_distance = int(scan_params['step_size']) * float(scan_params['DistPerStep']) #m
-        if min_distance > 0:
-            min_distance *= 1e-9 # from nm to m
-            total_distance *= 1e-9 # from nm to m
-            nyquist_distance = 4 * min_distance
-            max_frequency = ((2.99792458 * 10 ** 8) / nyquist_distance) / (10 ** 9) # GHz
-            resolution = ((3 * 10 ** 8) / total_distance) / (10 ** 9) # GHz
-            resolution = '{0:.2f} GHz'.format(resolution)
-            max_frequency = '{0:.2f} GHz'.format(max_frequency)
+        proceed = False
+        if self._is_float(scan_params['ending_position']) and self._is_float(scan_params['starting_position']) and self._is_float(scan_params['DistPerStep']) and self._is_float(scan_params['step_size']):
+            proceed = True
+        if proceed:
+            total_steps = int(scan_params['ending_position']) - int(scan_params['starting_position'])
+            total_distance = total_steps * float(scan_params['DistPerStep']) #nm
+            min_distance = int(scan_params['step_size']) * float(scan_params['DistPerStep']) #m
+            if min_distance > 0:
+                min_distance *= 1e-9 # from nm to m
+                total_distance *= 1e-9 # from nm to m
+                nyquist_distance = 4 * min_distance
+                max_frequency = ((2.99792458 * 10 ** 8) / nyquist_distance) / (10 ** 9) # GHz
+                resolution = ((3 * 10 ** 8) / total_distance) / (10 ** 9) # GHz
+                resolution = '{0:.2f} GHz'.format(resolution)
+                max_frequency = '{0:.2f} GHz'.format(max_frequency)
+            else:
+                resolution, max_frequency = 'nan', 'nan'
         else:
-            resolution, max_frequency = np.nan, np.nan
+            resolution, max_frequency = 'nan', 'nan'
         return resolution, max_frequency
 
     def _update_single_channel_fts(self):

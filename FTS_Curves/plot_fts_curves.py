@@ -356,7 +356,9 @@ class FTSCurve():
     def run(self, list_of_input_dicts, save_fft=False, run_open_comparison=False,
             add_atmosphere=False, add_foreground=False):
         col_count = len(list_of_input_dicts)
-        fig = self.create_plot_for_if_and_fft(col_count=len(list_of_input_dicts))
+        #fig = self.create_plot_for_if_and_fft(col_count=len(list_of_input_dicts))
+        fig = self.create_plot_for_fft_only()
+        #fig = None
         row = 0
         col = 0
         for dict_ in list_of_input_dicts:
@@ -389,8 +391,6 @@ class FTSCurve():
                 fig = self.plot_IF_data(symmetric_position_vector, symmetric_efficiency_vector, fig,
                                         row_col=row_col, color='b', label='Processed IF', ax=1)
                 col += 1
-            else:
-                fig = self.create_plot_for_fft_only()
             if add_local_fft:
                 fft_freq_vector, fft_vector, phase_corrected_fft_vector, position_vector, efficiency_vector\
                     = self.convert_if_to_fft(data_path, dict_)
@@ -417,7 +417,7 @@ class FTSCurve():
                     os.remove(save_path)
                 self.save_FFT_data(frequency_vector, transmission_vector, save_path)
             custom_order = []
-            fig = self.plot_FFT_data(frequency_vector, divided_transmission_vector, fig,
+            fig = self.plot_FFT_data(frequency_vector, divided_transmission_vector, fig=fig,
                                      color='r', title=title, label=label, xlim=xlim_plot,
                                      add_atmosphere=add_atmosphere, add_90_sim=add_90_sim, add_150_sim=add_150_sim, add_220_sim=add_220_sim,
                                      add_270_sim=add_270_sim, add_co_lines=add_co_lines, custom_order=custom_order)

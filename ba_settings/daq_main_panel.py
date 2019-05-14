@@ -15,6 +15,7 @@ daq_main_panel_settings.daq_main_panel_build_dict = {
                                                      '_daq_main_panel_multimeter_pushbutton': {'text': 'Multimeter', 'function': '_launch_daq', 'position': (2, 2, 1, 1)},
                                                      '_daq_main_panel_cosmic_rays_pushbutton': {'text': 'Cosmic Rays', 'function': '_launch_daq', 'position': (2, 3, 1, 1)},
                                                      '_daq_main_panel_fridge_cycle_pushbutton': {'text': 'Fridge Cycle', 'function': '_launch_daq', 'position': (3, 0, 1, 1)},
+                                                     '_daq_main_panel_lock_in_pushbutton': {'text': 'Lock In', 'function': '_launch_daq', 'position': (3, 1, 1, 1)},
                                                      '_daq_main_panel_set_sample_dict_label': {'text': 'Enter the samples names for the six channels (Optional)', 'alignment': 'Center',
                                                                                                'font': 'huge', 'position': (4, 0, 1, 4), 'color': 'Blue'},
                                                      '_daq_main_panel_set_sample_1_header_label': {'text': 'Ch 1', 'position': (5, 0, 1, 1)},

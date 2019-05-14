@@ -17,6 +17,7 @@ from .xy_collector import xy_collector_settings
 from .cosmic_rays import cosmic_rays_settings
 from .multimeter import multimeter_settings
 from .fridge_cycle import fridge_cycle_settings
+from .lock_in import lock_in_settings
 
 
 settings = Class()
@@ -53,7 +54,7 @@ list_of_extra_settings = [main_panel_settings, rtcurve_settings_popup_settings,
                           beam_mapper_settings, pol_efficiency_settings, final_plot_settings,
                           taucurve_settings_popup_settings, xy_collector_settings,
                           time_constant_settings, multimeter_settings, cosmic_rays_settings,
-                          fridge_cycle_settings]
+                          fridge_cycle_settings, lock_in_settings]
 
 
 for extra_settings in list_of_extra_settings:
