@@ -35,7 +35,7 @@ class Fourier():
             step_size = float(scan_param_dict['measurements']['step_size'])
             steps_per_point = int(scan_param_dict['measurements']['steps_per_point'])
         else:
-            step_size = float(scan_param_dict['DistPerStep'])
+            step_size = float(scan_param_dict['distance_per_step'])
             steps_per_point = int(scan_param_dict['step_size'])
         position_vector = np.asarray(position_vector)
         efficiency_vector = np.asarray(efficiency_vector)

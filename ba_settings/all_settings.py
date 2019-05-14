@@ -63,5 +63,5 @@ for extra_settings in list_of_extra_settings:
             setattr(settings, attribute, getattr(extra_settings, attribute))
 
 
-settings.squid_calibration_dict  = {'1': 30.0, '2': 26.8, '3': 30.0,
+settings.squid_calibration_dict  = {'1': 30.0, '2': 26.8, '3': 24.67,
                                     '4': 30.1, '5': 25.9, '6': 25.0}

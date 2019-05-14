@@ -69,8 +69,6 @@ class DAQGuiTemplate(QtWidgets.QWidget):
             os.makedirs(self.data_folder)
         self.daq_main_panel_widget.showMaximized()
         self.active_ports = self.get_active_serial_ports()
-        print('no active ports, check the hardware!')
-        #exit()
 
     def __apply_settings__(self, settings):
         for setting in dir(settings):
@@ -112,7 +110,6 @@ class DAQGuiTemplate(QtWidgets.QWidget):
             ports = glob.glob('/dev/tty.*')
         else:
             raise EnvironmentError('Unsupported platform')
-
         active_ports = ['']
         for port in ports:
             try:
@@ -122,6 +119,10 @@ class DAQGuiTemplate(QtWidgets.QWidget):
             except (OSError, serial.SerialException):
                 pass
         return active_ports
+
+    def _get_com_port(self, combobox):
+        com_port = str(getattr(self, combobox).currentText())
+        return com_port
 
     def _connect_to_com_port(self, com_port=None):
         sender_whats_this_str = str(self.sender().whatsThis())
@@ -187,10 +188,6 @@ class DAQGuiTemplate(QtWidgets.QWidget):
             getattr(self, '_single_channel_fts_popup_position_monitor_slider').setSliderPosition(int(position_string))
         self.last_current_string, self.last_position_string, self.last_velocity_string, self.last_acceleration_string = current_string, position_string, velocity_string, acceleration_string
         return current_string, position_string, velocity_string, acceleration_string
-
-    def _get_com_port(self, combobox):
-        com_port = str(getattr(self, combobox).currentText())
-        return com_port
 
     #################################################
     # Generica Control Function (Common to all DAQ Types)
@@ -285,7 +282,8 @@ class DAQGuiTemplate(QtWidgets.QWidget):
                 path = os.path.join(self.data_folder, suggested_file_name)
                 paths.append(path)
         elif 'single_channel_fts' in sender:
-            scan_params = self._get_all_single_channel_fts_scan_params()
+            meta_data = self._get_all_meta_data(popup='_single_channel_fts')
+            scan_params = self._get_all_params(meta_data, settings.fts_scan_params, 'single_channel_fts')
             squid = scan_params['squid_select']
             label = scan_params['sample_name']
             resolution = scan_params['resolution']
@@ -333,13 +331,36 @@ class DAQGuiTemplate(QtWidgets.QWidget):
         for entry_str in entries:
             getattr(self, unique_combobox_name).addItem(entry_str)
 
-    def _get_all_scan_params(self, popup=None):
+    def _get_all_meta_data(self, popup=None):
         if popup is None:
             popup = str(self.sender().whatsThis()).split('_popup')[0]
+        widgets = []
+        for widget in dir(self):
+            if popup in widget:
+                widgets.append(widget)
+        param_data_dict = {}
+        for widget in widgets:
+            if hasattr(getattr(self, widget), 'text'):
+                value = str(getattr(self, widget).text())
+                param_data_dict[widget] = value
+            elif hasattr(getattr(self, widget), 'currentText'):
+                value = str(getattr(self, widget).currentText())
+                param_data_dict[widget] = value
+        return param_data_dict
 
-        function = '_get_all{0}_scan_params'.format(popup)
-        if hasattr(self, function):
-            return getattr(self, function)()
+    def _get_all_params(self, meta_data, scan_param_list, popup):
+        '''
+        Collect Settings from panel
+        '''
+        scan_params = {}
+        for scan_param_widget_end in scan_param_list:
+            widget = '_{0}_popup_{1}'.format(popup, scan_param_widget_end)
+            scan_param = '_'.join(scan_param_widget_end.split('_')[:-1])
+            print(widget)
+            if widget in meta_data:
+                value = meta_data[widget]
+                scan_params[scan_param] = value
+        return scan_params
 
     def _draw_time_stream(self, data_time_stream=[], min_=0.0, max_=1.0, set_to_widget=''):
         if 'fts_' in set_to_widget:
@@ -990,7 +1011,7 @@ class DAQGuiTemplate(QtWidgets.QWidget):
         ax1.set_title('576 Fridge Cycle {0}'.format(date))
         ax1.set_ylabel('PS Voltage (V)')
         ax1.set_ylim([0, 26])
-        ax2.plot(time_stamp_vector, np.asarray(self.abr_resistance_vector, dtype=float) * 1e-3, color='g', label='ABR Resistance (kOhms)')
+        ax2.semilogy(time_stamp_vector, np.asarray(self.abr_resistance_vector, dtype=float) * 1e-3, color='g', label='ABR Resistance (kOhms)')
         ax2.set_ylabel('ABR Res (kOhms)')
         ax3.plot(time_stamp_vector, self.grt_temperature_vector, color='c', label='GRT Temp (mK)')
         ax2.axhline(float(fc_params['charcoal_end_resistance']) * 1e-3, color='b', label='ABR End')
@@ -1868,40 +1889,17 @@ class DAQGuiTemplate(QtWidgets.QWidget):
         self.single_channel_fts_popup.showMaximized()
         self.single_channel_fts_popup.setWindowTitle('Single Channel FTS')
 
-    def _get_all_single_channel_fts_scan_params(self):
-        '''
-        Collect Settings from panel
-        '''
-        scan_params = {}
-        for scan_param_widget_end in settings.fts_scan_params:
-            widget = '_single_channel_fts_popup_{0}'.format(scan_param_widget_end)
-            scan_param = '_'.join(scan_param_widget_end.split('_')[:-1])
-            if hasattr(self, widget):
-                if 'combobox' in scan_param_widget_end:
-                    value = str(getattr(self, widget).currentText())
-                    if 'DistPerStep' in widget:
-                        value = value.split(' ')[0]
-                elif 'lineedit' in scan_param_widget_end:
-                    value = str(getattr(self, widget).text())
-                elif 'resolution_label' in scan_param_widget_end or 'max_frequency' in scan_param_widget_end:
-                    value = str(getattr(self, widget).text())
-                    value = str(int(np.ceil(float(value.replace(' GHz', '')))))
-            else:
-                value = 0.0
-            scan_params[scan_param] = value
-        return scan_params
-
     def _compute_resolution_and_max_frequency(self, scan_params):
         '''
         Compute the resultant quantities on the panel
         '''
         proceed = False
-        if self._is_float(scan_params['ending_position']) and self._is_float(scan_params['starting_position']) and self._is_float(scan_params['DistPerStep']) and self._is_float(scan_params['step_size']):
+        if self._is_float(scan_params['ending_position']) and self._is_float(scan_params['starting_position']) and self._is_float(scan_params['distance_per_step']) and self._is_float(scan_params['step_size']):
             proceed = True
         if proceed:
             total_steps = int(scan_params['ending_position']) - int(scan_params['starting_position'])
-            total_distance = total_steps * float(scan_params['DistPerStep']) #nm
-            min_distance = int(scan_params['step_size']) * float(scan_params['DistPerStep']) #m
+            total_distance = total_steps * float(scan_params['distance_per_step']) #nm
+            min_distance = int(scan_params['step_size']) * float(scan_params['distance_per_step']) #m
             if min_distance > 0:
                 min_distance *= 1e-9 # from nm to m
                 total_distance *= 1e-9 # from nm to m
@@ -1920,7 +1918,8 @@ class DAQGuiTemplate(QtWidgets.QWidget):
         '''
         Update the resultant quantities on the panel
         '''
-        scan_params = self._get_all_scan_params(popup='_single_channel_fts')
+        meta_data = self._get_all_meta_data(popup='_single_channel_fts')
+        scan_params = self._get_all_params(meta_data, settings.fts_scan_params, 'single_channel_fts')
         if type(scan_params) is not dict:
             return None
         # Update Slider
@@ -2012,7 +2011,8 @@ class DAQGuiTemplate(QtWidgets.QWidget):
         '''
         global continue_run
         continue_run = True
-        scan_params = self._get_all_scan_params(popup='_single_channel_fts')
+        meta_data = self._get_all_meta_data(popup='_single_channel_fts')
+        scan_params = self._get_all_params(meta_data, settings.fts_scan_params, 'single_channel_fts')
         pause = float(scan_params['pause_time']) / 1e3
         if not resume_run:
             if str(getattr(self, '_single_channel_fts_popup_fts_sm_connection_status_label').text()) != 'Ready!':
@@ -2039,6 +2039,8 @@ class DAQGuiTemplate(QtWidgets.QWidget):
                 time.sleep(2)
                 helper = np.arange(self.last_fts_position, int(scan_params['ending_position']) + int(scan_params['step_size']), int(scan_params['step_size']))
             start = datetime.now()
+            with open(self.raw_data_path[0].replace('.if', '.json'), 'w') as meta_data_handle:
+                json.dump(meta_data, meta_data_handle)
             with open(self.raw_data_path[0], 'w') as if_save_handle:
                 while continue_run and i < len(helper):
                     position = helper[i]
@@ -2057,7 +2059,7 @@ class DAQGuiTemplate(QtWidgets.QWidget):
                     getattr(self, '_single_channel_fts_popup_current_position_label').setText('{0:.3f} [{1}/{2} complete]'.format(position, i, len(helper) - 1))
                     self._draw_time_stream(data_time_stream, min_, max_, '_single_channel_fts_popup_time_stream_label')
                     # Update IF plots and vectors
-                    self.fts_positions_m.append(position * float(scan_params['DistPerStep']) * 1e-7)
+                    self.fts_positions_m.append(position * float(scan_params['distance_per_step']) * 1e-7)
                     self.fts_positions_steps.append(position)
                     self.fts_amplitudes.append(mean)
                     self.fts_stds.append(std)

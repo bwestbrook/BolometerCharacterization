@@ -41,8 +41,7 @@ single_channel_fts_settings.single_channel_fts_build_dict = {
                                                              '_single_channel_fts_popup_sample_rate_header_label': {'text': 'Sample Rate (Hz):', 'position': (8, 4, 1, 1)},
                                                              '_single_channel_fts_popup_sample_rate_combobox': {'position': (8, 5, 1, 1)},
 
-                                                             '_single_channel_fts_popup_lock_in_range_up_pushbutton': {'text': 'Lock-in Range Up', 'function': '_change_lock_in_sensitivity_range', 'position': (9, 0, 1, 1)},
-                                                             '_single_channel_fts_popup_lock_in_range_down_pushbutton': {'text': 'Ste Lock-in Range Down', 'function': '_change_lock_in_sensitivity_range', 'position': (9, 1, 1, 1)},
+                                                             '_single_channel_fts_popup_open_lock_in_pushbutton': {'text': 'Open Lock-in', 'function': '_lock_in', 'position': (9, 0, 1, 1)},
 # DERIVED QUANTITIES 
 
                                                              '_single_channel_fts_popup_number_of_steps_header_label': {'text': 'Number of Steps:', 'position': (6, 0, 1, 1)},
@@ -57,8 +56,8 @@ single_channel_fts_settings.single_channel_fts_build_dict = {
 # ANALYSIS SETUP 
                                                              '_single_channel_fts_popup_analysis_setup_label': {'text': 'ANALYSIS SETUP', 'font': 'huge', 'color': 'blue', 'alignment': 'Center', 'position': (10, 0, 1, 6)},
 
-                                                             '_single_channel_fts_popup_DistPerStep_header_label': {'text': 'DistPerStep (nm):', 'position': (11, 0, 1, 1)},
-                                                             '_single_channel_fts_popup_DistPerStep_combobox': {'function': '_update_single_channel_fts', 'position': (11, 1, 1, 1)},
+                                                             '_single_channel_fts_popup_distance_per_step_header_label': {'text': 'Dist/Step (nm):', 'position': (11, 0, 1, 1)},
+                                                             '_single_channel_fts_popup_distance_per_step_combobox': {'function': '_update_single_channel_fts', 'position': (11, 1, 1, 1)},
 
                                                              '_single_channel_fts_popup_apodization_type_header_label': {'text': 'Apodization:', 'position': (11, 2, 1, 1)},
                                                              '_single_channel_fts_popup_apodization_type_combobox': {'position': (11, 3, 1, 1)},
@@ -132,7 +131,7 @@ single_channel_fts_settings.combobox_entry_dict = {
                                                    '_single_channel_fts_popup_signal_channel_combobox': ['', '0', '1', '2', '3'],
                                                    '_single_channel_fts_popup_squid_select_combobox': ['', '1', '2', '3', '4', '5', '6'],
                                                    '_single_channel_fts_popup_apodization_type_combobox': ['TRIAGNULAR'],
-                                                   '_single_channel_fts_popup_DistPerStep_combobox': ["250.39 (Bill's)", "4.168 Paul's"],
+                                                   '_single_channel_fts_popup_distance_per_step_combobox': ["250.39", "4.168"],
                                                    #'_single_channel_fts_popup_current_com_port_combobox': ['COM1', 'COM2', 'COM3', 'COM4','COM5','COM6'],
                                                    #'_single_channel_fts_popup_grid_current_com_port_combobox': ['COM1', 'COM2', 'COM3', 'COM4'],
                                                    '_single_channel_fts_popup_pause_time_combobox': ['500', '750','1000', '1500', '2000', '3000', '5000', '10000'],
@@ -142,7 +141,7 @@ single_channel_fts_settings.combobox_entry_dict = {
 
 single_channel_fts_settings.fts_scan_params = ['starting_position_lineedit', 'ending_position_lineedit', 'sample_name_lineedit', 'step_size_lineedit',  'grid_angle_lineedit', #ints
                                                'resolution_label', 'max_frequency_label',
-                                               'DistPerStep_combobox', 'squid_select_combobox', 'integration_time_combobox', 'pause_time_combobox',
+                                               'distance_per_step_combobox', 'squid_select_combobox', 'integration_time_combobox', 'pause_time_combobox',
                                                'fts_sm_com_port_combobox', 'grid_sm_com_port_combobox', 'signal_channel_combobox', 'sample_rate_combobox',
                                                'apodization_type_combobox'] #combobox
 
