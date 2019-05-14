@@ -32,6 +32,7 @@ from Motor_Driver.stepper_motor import stepper_motor
 from FTS_DAQ.analyzeFTS import FTSanalyzer
 from realDAQ.daq import DAQ
 from FridgeCycle.fridge_cycle import FridgeCycle
+from LockIn.lock_in import LockIn
 
 
 #Global variables
@@ -738,27 +739,48 @@ class DAQGuiTemplate(QtWidgets.QWidget):
     # Lock in 
     #################################################
 
-    def _close_lock_in_popup(self):
+    def _close_lock_in(self):
         self.lock_in_popup.close()
 
     def _lock_in(self):
-        if not hasattr(self, 'fc'):
+        if not hasattr(self, 'lock_in'):
             self.lock_in = LockIn()
         if not hasattr(self, 'lock_in_popup'):
             self._create_popup_window('lock_in_popup')
         else:
             self._initialize_panel('lock_in_popup')
-        self._build_panel(settings.fridge_cycle_popup_build_dict)
+        self._build_panel(settings.lock_in_popup_build_dict)
         for combobox_widget, entry_list in self.lock_in_combobox_entry_dict.items():
             self.populate_combobox(combobox_widget, entry_list)
+        # Set current values to gui
+        time_constant_index = self.lock_in._get_current_time_constant()
+        getattr(self, '_lock_in_popup_lock_in_time_constant_combobox').setCurrentIndex(time_constant_index)
+        sensitivity_range_index = self.lock_in._get_current_sensitivity_range()
+        getattr(self, '_lock_in_popup_lock_in_sensitivity_range_combobox').setCurrentIndex(sensitivity_range_index)
+
+        self.lock_in_popup.showMaximized()
         self.repaint()
 
-    def _change_lock_in_range(self):
-        if 'down' in self.sender().whatsThis():
-            self.lock_in._change_lock_in_range('down')
+    def _change_lock_in_sensitivity_range(self):
+        if 'combobox' in str(self.sender().whatsThis()):
+            new_value = int(getattr(self, '_lock_in_popup_lock_in_sensitivity_range_combobox').currentText())
+            self.lock_in._change_lock_in_sensitivity_range(setting=new_value)
+        elif 'down' in str(self.sender().whatsThis()):
+            self.lock_in._change_lock_in_sensitivity_range(direction='down')
         else:
-            self.lock_in._change_lock_in_range('up')
+            self.lock_in._change_lock_in_sensitivity_range(direction='up')
 
+    def _change_lock_in_time_constant(self):
+        if 'combobox' in str(self.sender().whatsThis()):
+            new_value = int(getattr(self, '_lock_in_popup_lock_in_time_constant_combobox').currentText())
+            self.lock_in._change_lock_in_time_constant(setting=new_value)
+        elif 'down' in str(self.sender().whatsThis()):
+            self.lock_in._change_lock_in_time_constant(direction='down')
+        else:
+            self.lock_in._change_lock_in_time_constant(direction='up')
+
+    def _zero_lock_in_phase(self):
+        self.lock_in._zero_lock_in_phase()
 
     #################################################
     # Fridge Cycle
@@ -1820,8 +1842,12 @@ class DAQGuiTemplate(QtWidgets.QWidget):
         '''
         Creates the panel
         '''
-        self.fts_daq = FTSDAQ()
-        self.fourier = Fourier()
+        if not hasattr(self, 'fts_daq'):
+            self.fts_daq = FTSDAQ()
+        if not hasattr(self, 'fourier'):
+            self.fourier = Fourier()
+        if not hasattr(self, 'lock_in'):
+            self.lock_in = LockIn()
         if not hasattr(self, 'single_channel_fts_popup'):
             self._create_popup_window('single_channel_fts_popup')
         else:

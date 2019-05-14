@@ -41,8 +41,8 @@ single_channel_fts_settings.single_channel_fts_build_dict = {
                                                              '_single_channel_fts_popup_sample_rate_header_label': {'text': 'Sample Rate (Hz):', 'position': (8, 4, 1, 1)},
                                                              '_single_channel_fts_popup_sample_rate_combobox': {'position': (8, 5, 1, 1)},
 
-                                                             '_single_channel_fts_popup_lock_in_range_up_pushbutton': {'text': 'Lock-in Range Up', 'function': '_change_lock_in_rage', 'position': (9, 0, 1, 1)},
-                                                             '_single_channel_fts_popup_lock_in_range_down_pushbutton': {'text': 'Ste Lock-in Range Down', 'function': '_change_lock_in_rage', 'position': (9, 1, 1, 1)},
+                                                             '_single_channel_fts_popup_lock_in_range_up_pushbutton': {'text': 'Lock-in Range Up', 'function': '_change_lock_in_sensitivity_range', 'position': (9, 0, 1, 1)},
+                                                             '_single_channel_fts_popup_lock_in_range_down_pushbutton': {'text': 'Ste Lock-in Range Down', 'function': '_change_lock_in_sensitivity_range', 'position': (9, 1, 1, 1)},
 # DERIVED QUANTITIES 
 
                                                              '_single_channel_fts_popup_number_of_steps_header_label': {'text': 'Number of Steps:', 'position': (6, 0, 1, 1)},
