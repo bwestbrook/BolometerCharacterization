@@ -38,7 +38,7 @@ fridge_cycle_settings.fridge_cycle_popup_build_dict = {
                                                         # Controls
                                                        '_fridge_cycle_popup_start_cycle_pushbutton': {'text': 'Start Cycle', 'function': '_start_fridge_cycle', 'position': (8, 0, 1, 2)},
                                                        '_fridge_cycle_popup_stop_cycle_pushbutton': {'text': 'Stop Cycle', 'function': '_stop_fridge_cycle', 'position': (8, 2, 1, 2)},
-                                                       '_fridge_cycle_popup_man_set_voltage_pushbutton': {'text': 'Set Voltage', 'function': '_set_ps_voltage', 'position': (9, 0, 1, 1)},
+                                                       '_fridge_cycle_popup_man_set_voltage_pushbutton': {'text': 'Set Voltage', 'function': '_set_ps_voltage_fc', 'position': (9, 0, 1, 1)},
                                                        '_fridge_cycle_popup_man_set_voltage_lineedit': {'text': '0', 'position': (9, 1, 1, 1)},
                                                        '_fridge_cycle_popup_close_fridge_cycle_pushbutton': {'text': 'Close', 'function': '_close_fridge_cycle', 'position': (10, 0, 1, 4)},
                                                        }

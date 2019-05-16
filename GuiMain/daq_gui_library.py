@@ -33,6 +33,7 @@ from FTS_DAQ.analyzeFTS import FTSanalyzer
 from realDAQ.daq import DAQ
 from FridgeCycle.fridge_cycle import FridgeCycle
 from LockIn.lock_in import LockIn
+from PowerSupply.power_supply import PowerSupply
 from GuiBuilder.gui_builder import GuiBuilder
 
 
@@ -126,6 +127,9 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
         return com_port
 
     def _connect_to_com_port(self, com_port=None):
+        if com_port is not None and type(com_port) is int:
+            print('No com port specified!!')
+            return None
         sender_whats_this_str = str(self.sender().whatsThis())
         possible_com_ports = ['COM{0}'.format(x) for x in range(1, 256)]
         current_string, position_string, velocity_string, acceleration_string = 'NA', 'NA', 'NA', 'NA'
@@ -186,7 +190,8 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
             if str(getattr(self, '_single_channel_fts_popup_grid_sm_com_port_combobox').currentText()) == com_port:
                 getattr(self, '_single_channel_fts_popup_grid_sm_connection_status_label').setStyleSheet('QLabel {color: green}')
                 getattr(self, '_single_channel_fts_popup_grid_sm_connection_status_label').setText('Ready!')
-            getattr(self, '_single_channel_fts_popup_position_monitor_slider').setSliderPosition(int(position_string))
+            if position_string != 'NA':
+                getattr(self, '_single_channel_fts_popup_position_monitor_slider').setSliderPosition(int(position_string))
         self.last_current_string, self.last_position_string, self.last_velocity_string, self.last_acceleration_string = current_string, position_string, velocity_string, acceleration_string
         return current_string, position_string, velocity_string, acceleration_string
 
@@ -805,6 +810,31 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
         self.lock_in._zero_lock_in_phase()
 
     #################################################
+    # Power Supply 
+    #################################################
+
+    def _close_power_supply(self):
+        self.power_supply_popup.close()
+
+    def _power_supply(self):
+        if not hasattr(self, 'ps'):
+            self.ps = PowerSupply()
+        if not hasattr(self, 'power_supply_popup'):
+            self._create_popup_window('power_supply_popup')
+        else:
+            self._initialize_panel('power_supply_popup')
+        self._build_panel(settings.power_supply_popup_build_dict)
+        #for combobox_widget, entry_list in self.power_supply_combobox_entry_dict.items():
+            #self.populate_combobox(combobox_widget, entry_list)
+        self.repaint()
+        self.power_supply_popup.showMaximized()
+
+    def _set_ps_voltage(self):
+        voltage_to_set = getattr(self, '_power_supply_popup_set_voltage_lineedit').text()
+        if self._is_float(voltage_to_set):
+            self.ps.apply_voltage(float(voltage_to_set))
+
+    #################################################
     # Fridge Cycle
     #################################################
 
@@ -860,7 +890,7 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
         temperature_str = '{0:.3f} mk'.format(temperature)
         return temperature, temperature_str
 
-    def _set_ps_voltage(self):
+    def _set_ps_voltage_fc(self):
         voltage = float(str(getattr(self, '_fridge_cycle_popup_man_set_voltage_lineedit').text()))
         applied_voltage = self.fc.apply_voltage(voltage)
         return applied_voltage
