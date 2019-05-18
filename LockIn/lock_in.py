@@ -5,7 +5,7 @@ from lab_code.lab_serial import lab_serial
 
 class LockIn():
 
-    def __init__(self, port='COM3'):
+    def __init__(self, port='COM12'):
         self.port = port
         self._connection = lab_serial(port=self.port)
         self._set_lock_in_defaults()
@@ -17,12 +17,11 @@ class LockIn():
     def _query(self, query, timeout=0.5):
         self._send_command(query)
         response = self._connection.read()
-        print(response)
         return response
 
     def _set_lock_in_defaults(self):
-        self._change_lock_in_sensitivity_range(setting=20)
-        self._change_lock_in_time_constant(setting=6)
+        self._change_lock_in_sensitivity_range(setting=22)
+        self._change_lock_in_time_constant(setting=8)
 
     def _zero_lock_in_phase(self):
         self._send_command('APHS\r\n')

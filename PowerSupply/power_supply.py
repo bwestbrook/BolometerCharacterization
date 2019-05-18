@@ -12,6 +12,7 @@ class PowerSupply():
     def __init__(self, ps_port='COM3'):
         self.ps_port = ps_port
         self.ps_connection = lab_serial(port=self.ps_port, parity=None)
+        self.initialize_ps()
 
     def _send_ps_command(self, msg):
         self.ps_connection.write(msg)
@@ -40,7 +41,7 @@ class PowerSupply():
             time.sleep(0.5)
             self.get_voltage()
 
-    def initialize_ps_for_resistance(self):
+    def initialize_ps(self):
         self._send_ps_command("INIT\r\n;")
         self.ps_connection.read()
         self._send_ps_command("*RST\r\n;")

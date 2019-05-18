@@ -24,6 +24,8 @@ class Stepper():
         self.connect_to_com_port(com_port)
         self.get_current_position_from_com_port(com_port)
 
+    def _is_stepper(self):
+
 
 if __name__ == '__main__':
     print sys.argv

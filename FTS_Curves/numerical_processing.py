@@ -17,7 +17,7 @@ class Fourier():
         '''
         self.mesg = 'hey'
 
-    def convert_IF_to_FFT_data(self, position_vector, efficiency_vector, scan_param_dict, right_data=True, quick_plot=False):
+    def convert_IF_to_FFT_data(self, position_vector, efficiency_vector, scan_param_dict, data_selector='Right', quick_plot=False):
         '''
         Returns a frequency and efficiency vector from the inteferogram data and the input
         params of the FTS setup being used
@@ -41,16 +41,22 @@ class Fourier():
         efficiency_vector = np.asarray(efficiency_vector)
         efficiency_left_data, efficiency_right_data, position_left_data, position_right_data =\
             self.split_data_into_left_right_points(position_vector, efficiency_vector)
-        if right_data:
+        if data_selector == 'All':
+            efficiency_vector = efficiency_vector
+            position_vector = position_vector
+        elif data_selector == 'Right':
             efficiency_vector = efficiency_right_data
             position_vector = position_right_data
-        else:
+        elif data_selector == 'Left':
             efficiency_vector = efficiency_left_data
             position_vector = position_left_data
         efficiency_vector, position_vector = self.prepare_data_for_fft(efficiency_vector, position_vector,
                                                                        remove_polynomial=2, apodization_type='boxcar', zero_fill=True)
         fft_freq_vector, fft_vector, fft_psd_vector = self.manual_fourier_transform(efficiency_vector, step_size, steps_per_point, quick_plot=quick_plot)
-        phase_corrected_fft_vector = self.phase_correct_data(efficiency_vector, fft_vector, quick_plot=False)
+        if data_selector in ('Right', 'Left'):
+            phase_corrected_fft_vector = self.phase_correct_data(efficiency_vector, fft_vector, quick_plot=False)
+        else:
+            phase_corrected_fft_vector = fft_vector
         quick_plot = False
         if quick_plot:
             pl.plot(fft_vector, label='unphase corrected')
@@ -62,7 +68,6 @@ class Fourier():
     def split_data_into_left_right_points(self, position_vector, efficiency_vector):
         efficiency_left_data = efficiency_vector[position_vector < 0]
         efficiency_right_data = efficiency_vector[position_vector >= 0]
-        poly_removed_efficiency_data = self.remove_polynomial(efficiency_right_data, n=1)
         position_left_data = position_vector[position_vector < 0]
         position_right_data = position_vector[position_vector >= 0]
         return efficiency_left_data, efficiency_right_data, position_left_data, position_right_data

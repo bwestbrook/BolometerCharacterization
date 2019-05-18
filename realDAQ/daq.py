@@ -48,8 +48,9 @@ class DAQ():
                 try:
                     task.ai_channels.add_ai_voltage_chan("{0}/ai0".format(device))
                     active_devices.append(device)
+                    print('Found an active DAQ at {0}'.format(device))
                 except nidaqmx.DaqError:
-                    print('{0} not present'.format(device))
+                    pass
         return active_devices
 
 if __name__ == '__main__':

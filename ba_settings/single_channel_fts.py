@@ -89,15 +89,16 @@ single_channel_fts_settings.single_channel_fts_build_dict = {
                                                              '_single_channel_fts_popup_data_monitor_label': {'text': 'VISUAL DATA MONITOR', 'font': 'huge', 'color': 'blue',
                                                                                                               'alignment': 'Center', 'position': (0, 7, 1, 4)},
 
-                                                             '_single_channel_fts_popup_position_monitor_slider': {'function': None, 'position': (1, 7, 1, 4), 'orientation': 'Horizontal'},
+                                                             '_single_channel_fts_popup_position_monitor_slider': {'position': (1, 7, 1, 4), 'orientation': 'Horizontal'},
 
                                                              '_single_channel_fts_popup_position_slider_min_label': {'position': (2, 7, 1, 1)},
                                                              '_single_channel_fts_popup_position_slider_max_label': {'alignment': 'Right', 'position': (2, 10, 1, 1)},
 
                                                              '_single_channel_fts_popup_current_position_header_label': {'text': 'Current Mirror Position:', 'position': (3, 7, 1, 1)},
                                                              '_single_channel_fts_popup_current_position_label': {'text': '0', 'position': (3, 8, 1, 2)},
+                                                             '_single_channel_fts_popup_duration_label': {'font': 'small', 'position': (4, 7, 1, 4)},
 
-                                                             '_single_channel_fts_popup_time_stream_label': {'alignment': 'Center', 'position': (4, 7, 4, 4)},
+                                                             '_single_channel_fts_popup_time_stream_label': {'alignment': 'Center', 'position': (5, 7, 4, 4)},
 
                                                              '_single_channel_fts_popup_mean_header_label': {'text': 'Time Average:', 'position': (9, 7, 1, 1)},
                                                              '_single_channel_fts_popup_mean_label': {'text': '0', 'position': (9, 8, 1, 1)},
@@ -105,15 +106,15 @@ single_channel_fts_settings.single_channel_fts_build_dict = {
                                                              '_single_channel_fts_popup_std_header_label': {'text': 'Standard Dev:', 'position': (9, 9, 1, 1)},
                                                              '_single_channel_fts_popup_std_label': {'text': '0', 'position': (9, 10, 1, 1)},
 
-                                                             '_single_channel_fts_popup_interferogram_label': {'alignment': 'Center', 'position': (10, 7, 4, 4)},
+                                                             '_single_channel_fts_popup_interferogram_label': {'alignment': 'Center', 'position': (10, 7, 8, 4)},
 
-                                                             '_single_channel_fts_popup_if_mean_header_label': {'text': 'IF Mean:', 'position': (14, 7, 1, 1)},
-                                                             '_single_channel_fts_popup_if_mean_label': {'text': '0', 'position': (14, 8, 1, 1)},
+                                                             '_single_channel_fts_popup_if_mean_header_label': {'text': 'IF Mean:', 'position': (18, 7, 1, 1)},
+                                                             '_single_channel_fts_popup_if_mean_label': {'text': '0', 'position': (18, 8, 1, 1)},
 
-                                                             '_single_channel_fts_popup_if_max_min_header_label': {'text': 'If Max - Min:', 'position': (14, 9, 1, 1)},
-                                                             '_single_channel_fts_popup_if_max_min_label': {'text': '0', 'position': (14, 10, 1, 1)},
+                                                             '_single_channel_fts_popup_if_max_min_header_label': {'text': 'If Max - Min:', 'position': (18, 9, 1, 1)},
+                                                             '_single_channel_fts_popup_if_max_min_label': {'text': '0', 'position': (18, 10, 1, 1)},
 
-                                                             '_single_channel_fts_popup_fft_label': {'alignment': 'Center', 'position': (15, 7, 6, 4)},
+                                                             #'_single_channel_fts_popup_fft_label': {'alignment': 'Center', 'position': (15, 7, 6, 4)},
 }
 
 single_channel_fts_settings.single_channel_fts_monitor_build_dict = {
@@ -127,17 +128,19 @@ single_channel_fts_settings.apodization_types = ['BOXCAR', 'TRIANGULAR']
 
 single_channel_fts_settings.carrier_types = ['phone', 'e-mail']
 
-single_channel_fts_settings.combobox_entry_dict = {
-                                                   '_single_channel_fts_popup_signal_channel_combobox': ['', '0', '1', '2', '3'],
-                                                   '_single_channel_fts_popup_squid_select_combobox': ['', '1', '2', '3', '4', '5', '6'],
-                                                   '_single_channel_fts_popup_apodization_type_combobox': ['TRIAGNULAR'],
-                                                   '_single_channel_fts_popup_distance_per_step_combobox': ["250.39", "4.168"],
-                                                   #'_single_channel_fts_popup_current_com_port_combobox': ['COM1', 'COM2', 'COM3', 'COM4','COM5','COM6'],
-                                                   #'_single_channel_fts_popup_grid_current_com_port_combobox': ['COM1', 'COM2', 'COM3', 'COM4'],
-                                                   '_single_channel_fts_popup_pause_time_combobox': ['500', '750','1000', '1500', '2000', '3000', '5000', '10000'],
-                                                   '_single_channel_fts_popup_integration_time_combobox': ['250', '500', '1000', '1500', '3000'],
-                                                   '_single_channel_fts_popup_sample_rate_combobox': ['50', '100', '250', '500', '1000','2000','3000','4000','5000','6000','7000','8000','9000','10000','20000','30000','40000','48000']
-                                                   }
+single_channel_fts_settings.fts_combobox_entry_dict = {
+                                                       '_single_channel_fts_popup_signal_channel_combobox': ['', '0', '1', '2', '3'],
+                                                       '_single_channel_fts_popup_squid_select_combobox': ['', '1', '2', '3', '4', '5', '6'],
+                                                       '_single_channel_fts_popup_apodization_type_combobox': ['TRIAGNULAR'],
+                                                       '_single_channel_fts_popup_distance_per_step_combobox': ["250.39", "4.168"],
+                                                       #'_single_channel_fts_popup_current_com_port_combobox': ['COM1', 'COM2', 'COM3', 'COM4','COM5','COM6'],
+                                                       #'_single_channel_fts_popup_grid_current_com_port_combobox': ['COM1', 'COM2', 'COM3', 'COM4'],
+                                                       '_single_channel_fts_popup_pause_time_combobox': ['500', '750','1000', '1500', '2000', '3000', '5000', '10000'],
+                                                       '_single_channel_fts_popup_integration_time_combobox': ['250', '500', '1000', '1500', '3000'],
+                                                       '_single_channel_fts_popup_sample_rate_combobox': ['50', '100', '250', '500', '1000','2000','3000','4000','5000','6000','7000','8000','9000','10000','20000','30000','40000','48000'],
+                                                       '_single_channel_fts_popup_fts_sm_com_port_combobox': ['COM5'],
+                                                       '_single_channel_fts_popup_grid_sm_com_port_combobox': ['']
+                                                       }
 
 single_channel_fts_settings.fts_scan_params = ['starting_position_lineedit', 'ending_position_lineedit', 'sample_name_lineedit', 'step_size_lineedit',  'grid_angle_lineedit', #ints
                                                'resolution_label', 'max_frequency_label',

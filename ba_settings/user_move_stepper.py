@@ -37,5 +37,5 @@ user_move_stepper_settings.user_move_stepper_build_dict = {
 
 
 user_move_stepper_settings.user_move_stepper_combobox_entry_dict = {
-                                                                    '_user_move_stepper_popup_current_com_port_combobox': ['COM8'],
+                                                                    '_user_move_stepper_popup_com_ports_combobox': ['COM5'],
                                                                     }

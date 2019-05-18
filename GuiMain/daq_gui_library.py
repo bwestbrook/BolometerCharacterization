@@ -1,4 +1,5 @@
 import sys
+import imageio
 import smtplib
 import serial
 import json
@@ -86,6 +87,7 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
         sys.exit()
 
     def _dummy(self):
+        print(self.sender().whatsThis())
         print('Dummy Function')
 
     def _final_plot(self):
@@ -127,32 +129,29 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
         return com_port
 
     def _connect_to_com_port(self, com_port=None):
-        if com_port is not None and type(com_port) is int:
-            print('No com port specified!!')
-            return None
         sender_whats_this_str = str(self.sender().whatsThis())
-        possible_com_ports = ['COM{0}'.format(x) for x in range(1, 256)]
         current_string, position_string, velocity_string, acceleration_string = 'NA', 'NA', 'NA', 'NA'
         if type(self.sender()) == QtWidgets.QComboBox:
             com_port = self._get_com_port(combobox=sender_whats_this_str)
+            if len(com_port) == 0:
+                return None
         elif com_port is not None and type(com_port) is str:
             com_port = com_port
         else:
-            message = 'Not a combobox sender and not comport specificied, no connection made'
+            message = 'Not a combobox sender and no comport explicitly specificied, no connection made'
             print(message, com_port)
             self._quick_message(message)
-        if com_port in possible_com_ports:
-            if not hasattr(self, 'sm_{0}'.format(com_port)):
-                setattr(self, 'sm_{0}'.format(com_port), stepper_motor(com_port))
-                setattr(self, 'sm_{0}_connected'.format(com_port), True)
-                current_string = getattr(self, 'sm_{0}'.format(com_port)).get_motor_current().strip('CC=')
-                position_string = getattr(self, 'sm_{0}'.format(com_port)).get_position().strip('SP=')
-                velocity_string = getattr(self, 'sm_{0}'.format(com_port)).get_velocity().strip('VE=')
-                acceleration_string = getattr(self, 'sm_{0}'.format(com_port)).get_acceleration().strip('AC=')
-            else:
-                current_string, position_string, velocity_string, acceleration_string = self.last_current_string, self.last_position_string, self.last_velocity_string, self.last_acceleration_string
+        if not hasattr(self, 'sm_{0}'.format(com_port)):
+            setattr(self, 'sm_{0}'.format(com_port), stepper_motor(com_port))
+            setattr(self, 'sm_{0}_connected'.format(com_port), True)
+            current_string = getattr(self, 'sm_{0}'.format(com_port)).get_motor_current().strip('CC=')
+            position_string = getattr(self, 'sm_{0}'.format(com_port)).get_position().strip('SP=')
+            velocity_string = getattr(self, 'sm_{0}'.format(com_port)).get_velocity().strip('VE=')
+            acceleration_string = getattr(self, 'sm_{0}'.format(com_port)).get_acceleration().strip('AC=')
+        else:
+            current_string, position_string, velocity_string, acceleration_string = self.last_current_string, self.last_position_string, self.last_velocity_string, self.last_acceleration_string
         if len(current_string) == 'NA' or len(current_string) == 0:
-            message = 'Problem with connection to stepper motor {0}\n'.format(com_port)
+            message = 'Problem with connection to stepper motor on {0}\n'.format(com_port)
             message += 'Please check the hardware and software!\n'
             message += 'Current: {0} (A)\n'.format(current_string)
             message += 'Velocity: {0} (mm/s)\n'.format(velocity_string)
@@ -161,12 +160,12 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
             self._quick_message(message)
             error = True
         else:
-            message = 'Successful connection to stepper motor via {0}\n'.format(com_port)
+            message = 'Successful connection to stepper motor on {0}\n'.format(com_port)
             message += 'Current: {0} (A)\n'.format(current_string)
             message += 'Velocity: {0} (mm/s)\n'.format(velocity_string)
             message += 'Acceleration: {0} (mm/s/s)\n'.format(acceleration_string)
             message += 'Position: {0} (steps)\n'.format(position_string)
-            message += 'You can change these motor stettings using "User Move Stepper"'
+            message += 'You can change these motor stettings using the "User Move Stepper" App'
             self._quick_message(message)
             error = False
         if 'user_move_stepper' in sender_whats_this_str and not error:
@@ -298,7 +297,8 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
             if len(grid_angle) > 0:
                 suggested_file_name = 'SQ{0}_{1}_FTS_Scan Max_Freq_{2}GHz_Resolution_{3}GHz_Grid_Angle_{4}Deg_Raw_'.format(squid, label, max_frequency, resolution, grid_angle)
             else:
-                suggested_file_name = 'SQ{0}_{1}_FTS_Scan Max_Freq_{2}GHz_Resolution_{3}GHz_Raw_'.format(squid, label, max_frequency, resolution)
+                suggested_file_name = 'SQ{0}_{1}_FTS_Scan Max_Freq_{2}_Resolution_{3}_Raw_'.format(squid, label, max_frequency, resolution)
+            suggested_file_name = suggested_file_name.replace(' ', '_')
             suggested_file_name = self._add_index_to_suggested_file_name(suggested_file_name)
             paths = [os.path.join(self.data_folder, suggested_file_name)]
         self.raw_data_path = []
@@ -362,7 +362,6 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
         for scan_param_widget_end in scan_param_list:
             widget = '_{0}_popup_{1}'.format(popup, scan_param_widget_end)
             scan_param = '_'.join(scan_param_widget_end.split('_')[:-1])
-            print(widget)
             if widget in meta_data:
                 value = meta_data[widget]
                 scan_params[scan_param] = value
@@ -780,11 +779,9 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
         for combobox_widget, entry_list in self.lock_in_combobox_entry_dict.items():
             self.populate_combobox(combobox_widget, entry_list)
         # Set current values to gui
-        time_constant_index = self.lock_in._get_current_time_constant()
-        getattr(self, '_lock_in_popup_lock_in_time_constant_combobox').setCurrentIndex(time_constant_index)
-        sensitivity_range_index = self.lock_in._get_current_sensitivity_range()
-        getattr(self, '_lock_in_popup_lock_in_sensitivity_range_combobox').setCurrentIndex(sensitivity_range_index)
-
+        #time_constant_index = self.lock_in._get_current_time_constant()
+        #getattr(self, '_lock_in_popup_lock_in_time_constant_combobox').setCurrentIndex(time_constant_index)
+        getattr(self, '_lock_in_popup_lock_in_sensitivity_range_combobox').setCurrentIndex(22)
         self.lock_in_popup.showMaximized()
         self.repaint()
 
@@ -826,13 +823,25 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
         self._build_panel(settings.power_supply_popup_build_dict)
         #for combobox_widget, entry_list in self.power_supply_combobox_entry_dict.items():
             #self.populate_combobox(combobox_widget, entry_list)
-        self.repaint()
+        voltage_to_set, voltage_to_set_str = self.ps.get_voltage()
+        if voltage_to_set < 0:
+            voltage_to_set, voltage_to_set_str = 0.0, '0.0'
+        self._set_ps_voltage(voltage_to_set=voltage_to_set)
+        getattr(self, '_power_supply_popup_set_voltage_lineedit').setText(voltage_to_set_str)
         self.power_supply_popup.showMaximized()
+        self.repaint()
 
-    def _set_ps_voltage(self):
-        voltage_to_set = getattr(self, '_power_supply_popup_set_voltage_lineedit').text()
+    def _set_ps_voltage(self, voltage_to_set=None):
+        if voltage_to_set is None or type(voltage_to_set) is bool:
+            voltage_to_set = getattr(self, '_power_supply_popup_set_voltage_lineedit').text()
         if self._is_float(voltage_to_set):
             self.ps.apply_voltage(float(voltage_to_set))
+            set_voltage, set_voltage_str = self.ps.get_voltage()
+            if float(voltage_to_set) < 10:
+                getattr(self, '_power_supply_popup_which_squid_label').setText('SQUID 1')
+            else:
+                getattr(self, '_power_supply_popup_which_squid_label').setText('SQUID 2')
+            getattr(self, '_power_supply_popup_set_voltage_label').setText(set_voltage_str)
 
     #################################################
     # Fridge Cycle
@@ -1379,12 +1388,13 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
                 x_voltage_uV_plotting_factor = 10
             elif voltage_factor == '1e-4':
                 x_voltage_uV_plotting_factor = 100
-            self._draw_x(title='X data', xlabel='Sample', ylabel='Bias Voltage @ Box (V)')
-            self._draw_y(title='Y data', xlabel='Sample', ylabel='SQUID Output Voltage (V)')
-            self._draw_xy_collector(title='IV Curve', xlabel='Bias Voltage @ TES ($\mu$V)', ylabel='SQUID Output Voltage (V)',
-                                    x_voltage_uV_plotting_factor=x_voltage_uV_plotting_factor)
-            if len(self.xdata) == 0:
-                getattr(self, '_xy_collector_popup_voltage_factor_combobox').setCurrentIndex(0)
+            if hasattr(self, 'xdata'):
+                self._draw_x(title='X data', xlabel='Sample', ylabel='Bias Voltage @ Box (V)')
+                self._draw_y(title='Y data', xlabel='Sample', ylabel='SQUID Output Voltage (V)')
+                self._draw_xy_collector(title='IV Curve', xlabel='Bias Voltage @ TES ($\mu$V)', ylabel='SQUID Output Voltage (V)',
+                                        x_voltage_uV_plotting_factor=x_voltage_uV_plotting_factor)
+                if len(self.xdata) == 0:
+                    getattr(self, '_xy_collector_popup_voltage_factor_combobox').setCurrentIndex(0)
         elif run_mode == 'RT':
             if len(self.xdata) == 0:
                 getattr(self, '_xy_collector_popup_voltage_factor_combobox').setCurrentIndex(3)
@@ -1762,7 +1772,6 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
         getattr(self, '_pol_efficiency_popup_save_pushbutton').setEnabled(True)
 #        return steps, data
 
-
     def read_file(self, filename):
         x, y = np.loadtxt(filename, unpack=True)
         return x,y
@@ -1809,8 +1818,9 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
         else:
             self._initialize_panel('user_move_stepper_popup')
         self._build_panel(settings.user_move_stepper_build_dict)
-        self.populate_combobox('_user_move_stepper_popup_com_ports_combobox', self.active_ports)
-        getattr(self, '_user_move_stepper_popup_com_ports_combobox').setCurrentIndex(3)
+        for unique_combobox, entries in settings.user_move_stepper_combobox_entry_dict.items():
+            self.populate_combobox(unique_combobox, entries)
+        getattr(self, '_user_move_stepper_popup_com_ports_combobox').setCurrentIndex(0)
         self.user_move_stepper_popup.setWindowTitle('User Move Stepper')
         self.user_move_stepper_popup.showMaximized()
 
@@ -1904,16 +1914,16 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
             self._create_popup_window('single_channel_fts_popup')
         else:
             self._initialize_panel('single_channel_fts_popup')
+        self.if_count = 0
         self._build_panel(settings.single_channel_fts_build_dict)
-        for unique_combobox, entries in settings.combobox_entry_dict.items():
+        for unique_combobox, entries in settings.fts_combobox_entry_dict.items():
             self.populate_combobox(unique_combobox, entries)
-        self.populate_combobox('_single_channel_fts_popup_fts_sm_com_port_combobox', self.active_ports)
-        self.populate_combobox('_single_channel_fts_popup_grid_sm_com_port_combobox', self.active_ports)
         getattr(self, '_single_channel_fts_popup_integration_time_combobox').setCurrentIndex(0)
         getattr(self, '_single_channel_fts_popup_pause_time_combobox').setCurrentIndex(1)
         getattr(self, '_single_channel_fts_popup_sample_rate_combobox').setCurrentIndex(8)
-        getattr(self, '_single_channel_fts_popup_grid_sm_com_port_combobox').setCurrentIndex(1)
-        getattr(self, '_single_channel_fts_popup_fts_sm_com_port_combobox').setCurrentIndex(2)
+        #getattr(self, '_single_channel_fts_popup_grid_sm_com_port_combobox').setCurrentIndex(0
+        getattr(self, '_single_channel_fts_popup_fts_sm_com_port_combobox').setCurrentIndex(0)
+        self.fts_positions_steps, self.fts_positions_m, self.fts_amplitudes, self.fts_stds = [], [], [], []
         self._update_single_channel_fts()
         self._plot_interferogram()
         self._draw_time_stream(set_to_widget='_single_channel_fts_popup_time_stream_label')
@@ -1962,7 +1972,10 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
                 getattr(self, resolution_widget).setText(resolution)
                 max_frequency_widget = '_single_channel_fts_popup_max_frequency_label'
                 getattr(self, max_frequency_widget).setText(max_frequency)
-                num_steps = (int(scan_params['ending_position']) - int(scan_params['starting_position'])) / int(scan_params['step_size'])
+                if int(scan_params['step_size']) > 0:
+                    num_steps = (int(scan_params['ending_position']) - int(scan_params['starting_position'])) / int(scan_params['step_size'])
+                else:
+                    num_steps = 'inf'
                 getattr(self, '_single_channel_fts_popup_number_of_steps_label').setText(str(num_steps))
                 self._update_slider_setup(scan_params)
             fts_com_port = str(getattr(self, '_single_channel_fts_popup_fts_sm_com_port_combobox').currentText())
@@ -1992,41 +2005,60 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
         getattr(self, slider).sliderPressed.connect(self._dummy)
         self.starting_position = scan_params['starting_position']
 
-    def _compute_and_plot_fft(self, position_vector, efficiency_vector, scan_params):
+    def _compute_and_plot_fft(self, position_vector, efficiency_vector, scan_params, fig=None):
         '''
         Post data collection analysis
         '''
         fft_freq_vector, fft_vector, phase_corrected_fft_vector, symmetric_position_vector, symmetric_efficiency_vector\
-            = self.fourier.convert_IF_to_FFT_data(position_vector, efficiency_vector, scan_params)
+            = self.fourier.convert_IF_to_FFT_data(position_vector, efficiency_vector, scan_params, data_selector='All')
         normalized_phase_corrected_fft_vector = np.abs(phase_corrected_fft_vector.real / np.max(phase_corrected_fft_vector.real))
-        fig, ax = self._create_blank_fig(frac_screen_width=0.45, frac_screen_height=0.25)
-        pl.grid(True)
-        pos_freq_selector = np.where(fft_freq_vector > 0)
-        ax.plot(fft_freq_vector[pos_freq_selector] * 1e-9, normalized_phase_corrected_fft_vector[pos_freq_selector])
-        ax.set_xlabel('Frequency (GHz)')
-        ax.set_ylabel('Phase Corrected FFT')
-        ax.set_title('Spectral Response {0}'.format(scan_params['sample_name']))
-        fig.savefig('temp_files/temp_fft.png')
-        image = QtGui.QPixmap('temp_files/temp_fft.png')
-        getattr(self, '_single_channel_fts_popup_fft_label').setPixmap(image)
-        pl.close('all')
-        return fft_freq_vector, normalized_phase_corrected_fft_vector
+        if fig is not None:
+            ax = fig.axes[-1]
+            pl.grid(True)
+            pos_freq_selector = np.where(fft_freq_vector > 0)
+            ax.plot(fft_freq_vector[pos_freq_selector] * 1e-9, normalized_phase_corrected_fft_vector[pos_freq_selector])
+            ax.set_xlabel('Frequency (GHz)', fontsize=10)
+            ax.set_ylabel('Phase Corrected FFT', fontsize=10)
+            ax.set_title('Spectral Response {0}'.format(scan_params['sample_name']), fontsize=12)
+            #fig.savefig('temp_files/temp_fft.png')
+            #fig.savefig('temp_files/IF_GIF/FFT_{0}.png'.format(str(self.if_count).zfill(3)))
+            #image = QtGui.QPixmap('temp_files/temp_fft.png')
+            #getattr(self, '_single_channel_fts_popup_fft_label').setPixmap(image)
+            #pl.close('all')
+        return fft_freq_vector, normalized_phase_corrected_fft_vector, fig
 
     def _plot_interferogram(self, positions=[], amplitudes=[], stds=[]):
         '''
         Plots the collected data as an XY scatter (position, amplitude) and paints it to the panel
         '''
-        fig, ax = self._create_blank_fig(frac_screen_width=0.45, frac_screen_height=0.25)
-        pl.grid(True)
-        ax.set_xlabel('Mirror Position (cm)',fontsize = 10)
-        ax.set_ylabel('Amplitude',fontsize = 10)
-        ax.set_title('Interferogram')
-        ax.plot(positions, amplitudes)
-        ax.errorbar(positions, amplitudes, stds, marker=',', linestyle='None')
-        fig.savefig('temp_files/temp_int.png')
-        pl.close('all')
-        image = QtGui.QPixmap('temp_files/temp_int.png')
-        getattr(self, '_single_channel_fts_popup_interferogram_label').setPixmap(image)
+        if len(self.fts_positions_steps) > 5:
+            meta_data = self._get_all_meta_data(popup='_single_channel_fts')
+            scan_params = self._get_all_params(meta_data, settings.fts_scan_params, 'single_channel_fts')
+            basename = os.path.basename(self.raw_data_path[0]) .replace('.if', '')
+            fig, ax = self._create_blank_fig(frac_screen_width=0.45, frac_screen_height=0.5, multiple_axes=True)
+            fig.add_subplot(211)
+            fig.add_subplot(212)
+            fig.subplots_adjust(left=0.12, bottom=0.12, top=0.92, right=0.98, hspace=0.45, wspace=0.20)
+            fft_vector, normalized_phase_corrected_fft_vector, fig = self._compute_and_plot_fft(self.fts_positions_steps, self.fts_amplitudes, scan_params, fig)
+            ax = fig.axes[0]
+            pl.grid(True)
+            ax.set_xlabel('Mirror Position (cm)',fontsize = 10)
+            ax.set_ylabel('Amplitude',fontsize = 10)
+            ax.set_title('Interferogram', fontsize=12)
+            ax.plot(positions, amplitudes)
+            ax.errorbar(positions, amplitudes, stds, marker=',', linestyle='None')
+            fig.savefig('temp_files/temp_int.png')
+            save_folder = './temp_files/{0}'.format(basename)
+            if not os.path.exists(save_folder):
+                os.makedirs(save_folder)
+            incremental_save_path = os.path.join(save_folder, '{0}.png'.format(str(self.if_count).zfill(4)))
+            print(incremental_save_path)
+            fig.savefig(os.path.join(incremental_save_path))
+            self.if_count += 1
+
+            pl.close('all')
+            image = QtGui.QPixmap('temp_files/temp_int.png')
+            getattr(self, '_single_channel_fts_popup_interferogram_label').setPixmap(image)
 
     def _rotate_grid(self):
         '''
@@ -2057,19 +2089,18 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
                 self.single_channel_fts_popup.repaint()
                 self._connect_to_com_port(com_port=scan_params['grid_sm_com_port'])
             getattr(self, '_single_channel_fts_popup_start_pushbutton').setText('Taking Data')
-            self.fts_positions_steps, self.fts_positions_m, self.fts_amplitudes, self.fts_stds = [], [], [], []
             i = 0
             helper = np.arange(int(scan_params['starting_position']), int(scan_params['ending_position']) + int(scan_params['step_size']), int(scan_params['step_size']))
             getattr(self, 'sm_{0}'.format(scan_params['fts_sm_com_port'])).move_to_position(int(scan_params['starting_position']))
             time.sleep(2)
             self._get_raw_data_save_path()
-        start = datetime.now()
         if (self.raw_data_path is not None and len(scan_params['signal_channel']) > 0) or resume_run:
             if resume_run:
                 i = 0
                 time.sleep(2)
                 helper = np.arange(self.last_fts_position, int(scan_params['ending_position']) + int(scan_params['step_size']), int(scan_params['step_size']))
-            start = datetime.now()
+            start_time = datetime.now()
+            start_time_str = datetime.strftime(start_time, '%H:%M')
             with open(self.raw_data_path[0].replace('.if', '.json'), 'w') as meta_data_handle:
                 json.dump(meta_data, meta_data_handle)
             with open(self.raw_data_path[0], 'w') as if_save_handle:
@@ -2085,9 +2116,18 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
                     std_pct = 100 * (std / mean)
                     std_pct = '({0:.2f}'.format(std_pct)
                     std_pct += '%)'
+                    now_time = datetime.now()
+                    now_time_str = datetime.strftime(now_time, '%H:%M')
+                    duration = now_time - start_time
+                    time_per_step = duration.seconds / (i + 1)
+                    steps_left = len(helper) - i
+                    time_left = time_per_step * steps_left / 60
                     getattr(self, '_single_channel_fts_popup_mean_label').setText('{0:.4f}'.format(mean))
                     getattr(self, '_single_channel_fts_popup_std_label').setText('{0:.4f} {1}'.format(std, std_pct))
                     getattr(self, '_single_channel_fts_popup_current_position_label').setText('{0:.3f} [{1}/{2} complete]'.format(position, i, len(helper) - 1))
+                    status_str = 'Start: {0} ::::: Tot Duration: {1} (s) ::::: Time Per Step {2:.2f} (s) ::::: Estimated Time Left: {3:.2f} (m)'.format(start_time_str, duration.seconds,
+                                                                                                                                                        time_per_step, time_left)
+                    getattr(self, '_single_channel_fts_popup_duration_label').setText(status_str)
                     self._draw_time_stream(data_time_stream, min_, max_, '_single_channel_fts_popup_time_stream_label')
                     # Update IF plots and vectors
                     self.fts_positions_m.append(position * float(scan_params['distance_per_step']) * 1e-7)
@@ -2104,8 +2144,6 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
                     data_line ='{0}\t{1}\t{2}\n'.format(position, mean, std)
                     if_save_handle.write(data_line)
                     # Update the FFT of the data
-                    if position > 5000:
-                        self._compute_and_plot_fft(self.fts_positions_steps, self.fts_amplitudes, scan_params)
                     i += 1
                     self.last_fts_position = position + int(scan_params['step_size'])
                     root.update()
@@ -2122,9 +2160,10 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
         getattr(self, '_single_channel_fts_popup_current_position_label').setText('{0:.3f}'.format(0))
         continue_run = False
         getattr(self, '_single_channel_fts_popup_stop_pushbutton').setText('Pause')
+        #self._make_if_fft_gif()
 
     def _save_if_and_fft(self, position_vector, efficiency_vector, scan_params):
-        fft_freq_vector, phase_corrected_fft_vector = self._compute_and_plot_fft(self.fts_positions_steps, self.fts_amplitudes, scan_params)
+        fft_freq_vector, phase_corrected_fft_vector, fig = self._compute_and_plot_fft(self.fts_positions_steps, self.fts_amplitudes, scan_params, fig=None)
         normalized_phase_corrected_fft_vector = np.abs(phase_corrected_fft_vector.real / np.max(phase_corrected_fft_vector.real))
         fft_save_path = self.raw_data_path[0].replace('.if', '.fft')
         png_save_path = self.raw_data_path[0].replace('.if', '.png')
@@ -2137,6 +2176,20 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
         png_save_path = self.raw_data_path[0].replace('.if', '.png')
         shutil.copy('temp_files/temp_fft.png', png_save_path)
         response = self._quick_message('Data saved to {0}\n{1}\n{2}\n'.format(self.raw_data_path[0], self.raw_data_path[0].replace('.if', '.fft'), self.raw_data_path[0].replace('.if', '.png')))
+
+    def _make_if_fft_gif(self):
+        gif_basename = os.path.basename(self.raw_data_path[0]).replace('.if', '_{0}.gif'.format(str(self.if_count).zfill(4)))
+        gif_path = os.path.join('./temp_files/IF_GIF/', gif_basename)
+        with imageio.get_writer(gif_path, mode='I') as writer:
+            for i in range(1000):
+                if_filename = './temp_files/IF_GIF/IF_{0}.png'.format(str(i).zfill(4))
+                fft_filename = './temp_files/IF_GIF/FFT_{0}.png'.format(str(i).zfill(4))
+                if os.path.exists(if_filename) and os.path.exists(fft_filename):
+                    tiled_filename = './temp_files/IF_GIF/tiled_{0}.png'.format(str(i).zfill(4))
+                    montage_command = 'montage {0} {1} -geometry 1600x3200+0+0 -tile 1x2 {2}'.format(if_filename, fft_filename, tiled_filename)
+                    subprocess.call(montage_command, shell=True)
+                    image = imageio.imread(tiled_filename)
+                    writer.append_data(image)
 
     #################################################
     # BEAM MAPPER

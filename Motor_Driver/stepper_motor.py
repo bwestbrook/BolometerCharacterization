@@ -13,6 +13,10 @@ class stepper_motor():
         self.port = port
         self._connection = lab_serial(port=self.port)
         self._setup()
+        #import ipdb;ipdb.set_trace()
+        is_stepper = self._is_stepper()
+        if not is_stepper:
+            return None
 
     def _setup(self):
         self._send_command('PM2\r\n') # set for SCL ready code when turned on
@@ -119,6 +123,16 @@ class stepper_motor():
                 pass
         return active_ports
 
+    def _is_stepper(self):
+        try:
+            float(self.get_motor_current())
+            is_stepper = True
+        except ValueError:
+            is_stepper = False
+        return is_stepper
+
+
+
 if __name__ == '__main__':
-    SM = stepper_motor('COM9')
+    SM = stepper_motor('COM5')
     import ipdb;ipdb.set_trace()
