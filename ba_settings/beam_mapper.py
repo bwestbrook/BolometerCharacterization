@@ -36,17 +36,17 @@ beam_mapper_settings.beam_mapper_build_dict = {
 #SCAN SETUP
                                                '_beam_mapper_popup_scan_setup_label': {'text': 'SCAN SETUP', 'alignment': 'Center', 'font': 'huge', 'color': 'blue', 'position': (6, 0, 1, 6)},
 
-                                               '_beam_mapper_popup_start_x_position_header_label': {'text': 'Start X Pos (in)', 'position': (7, 0, 1, 1)},
-                                               '_beam_mapper_popup_start_x_position_lineedit': {'function': '_initialize_beam_mapper', 'text': '-3', 'position': (7, 1, 1, 1)},
+                                               '_beam_mapper_popup_start_x_position_header_label': {'text': 'Start X Pos (steps)', 'position': (7, 0, 1, 1)},
+                                               '_beam_mapper_popup_start_x_position_lineedit': {'function': '_initialize_beam_mapper', 'text': '-100000', 'position': (7, 1, 1, 1)},
 
-                                               '_beam_mapper_popup_end_x_position_header_label': {'text': 'End X Pos (in)', 'position': (8, 0, 1, 1)},
-                                               '_beam_mapper_popup_end_x_position_lineedit': {'function': '_initialize_beam_mapper', 'text': '3', 'position': (8, 1, 1, 1)},
+                                               '_beam_mapper_popup_end_x_position_header_label': {'text': 'End X Pos (steps)', 'position': (8, 0, 1, 1)},
+                                               '_beam_mapper_popup_end_x_position_lineedit': {'function': '_initialize_beam_mapper', 'text': '100000', 'position': (8, 1, 1, 1)},
 
-                                               '_beam_mapper_popup_start_y_position_header_label': {'text': 'Start Y Pos (in)', 'position': (7, 2, 1, 1)},
-                                               '_beam_mapper_popup_start_y_position_lineedit': {'function': '_initialize_beam_mapper', 'text': '-3', 'position': (7, 3, 1, 1)},
+                                               '_beam_mapper_popup_start_y_position_header_label': {'text': 'Start Y Pos (steps)', 'position': (7, 2, 1, 1)},
+                                               '_beam_mapper_popup_start_y_position_lineedit': {'function': '_initialize_beam_mapper', 'text': '-100000', 'position': (7, 3, 1, 1)},
 
-                                               '_beam_mapper_popup_end_y_position_header_label': {'text': 'End Y Pos (in)', 'position': (8, 2, 1, 1)},
-                                               '_beam_mapper_popup_end_y_position_lineedit': {'function': '_initialize_beam_mapper', 'text': '3', 'position': (8, 3, 1, 1)},
+                                               '_beam_mapper_popup_end_y_position_header_label': {'text': 'End Y Pos (steps)', 'position': (8, 2, 1, 1)},
+                                               '_beam_mapper_popup_end_y_position_lineedit': {'function': '_initialize_beam_mapper', 'text': '100000', 'position': (8, 3, 1, 1)},
 
                                                '_beam_mapper_popup_n_points_x_header_label': {'text': 'N points X', 'position': (11, 0, 1, 1)},
                                                '_beam_mapper_popup_n_points_x_label': {'text': '', 'position': (11, 1, 1, 1)},
@@ -61,10 +61,10 @@ beam_mapper_settings.beam_mapper_build_dict = {
                                                '_beam_mapper_popup_total_y_label': {'text': '', 'position': (10, 3, 1, 1)},
 
                                                '_beam_mapper_popup_step_size_x_header_label': {'text': 'Step Size X', 'position': (9, 0, 1, 1)},
-                                               '_beam_mapper_popup_step_size_x_lineedit': {'function': '_initialize_beam_mapper', 'text': '1', 'position': (9, 1, 1, 1)},
+                                               '_beam_mapper_popup_step_size_x_lineedit': {'function': '_initialize_beam_mapper', 'text': '10000', 'position': (9, 1, 1, 1)},
 
                                                '_beam_mapper_popup_step_size_y_header_label': {'text': 'Step Size Y', 'position': (9, 2, 1, 1)},
-                                               '_beam_mapper_popup_step_size_y_lineedit': {'function': '_initialize_beam_mapper', 'text': '1', 'position': (9, 3, 1, 1)},
+                                               '_beam_mapper_popup_step_size_y_lineedit': {'function': '_initialize_beam_mapper', 'text': '10000', 'position': (9, 3, 1, 1)},
 
                                                '_beam_mapper_popup_integration_time_header_label': {'text': 'Integration Time (ms):', 'position': (12, 0, 1, 1)},
                                                '_beam_mapper_popup_integration_time_lineedit': {'text': '100', 'position': (12, 1, 1, 1)},
@@ -102,9 +102,11 @@ beam_mapper_settings.beam_mapper_build_dict = {
                                                '_beam_mapper_popup_data_std_header_label': {'text': 'Data STD:', 'position': (2, 10, 1, 1)},
                                                '_beam_mapper_popup_data_std_label': {'text': '', 'position': (2, 11, 1, 1)},
 
-                                               '_beam_mapper_popup_time_stream_label': {'position': (3, 8, 6, 6)},
+                                               '_beam_mapper_popup_status_label': {'position': (3, 8, 1, 2)},
 
-                                               '_beam_mapper_popup_2D_plot_label': {'position': (10, 8, 4, 4)},
+                                               '_beam_mapper_popup_time_stream_label': {'position': (4, 8, 4, 4)},
+
+                                               '_beam_mapper_popup_2D_plot_label': {'position': (9, 8, 4, 4)},
                                                }
 
 beam_mapper_settings.motor_currents = np.linspace(1, 1, 10)

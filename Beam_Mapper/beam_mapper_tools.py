@@ -20,17 +20,17 @@ class BeamMapperTools():
         popt, pcov = opt.curve_fit(twoD_Gaussian, (X, Y), data, p0=initial_guess)
         return popt
 
-    def simulate_beam(self, scan_params):
-        x_grid = np.linspace(scan_params['start_x_position'], scan_params['end_x_position'],  scan_params['n_points_x'])
-        y_grid = np.linspace(scan_params['start_y_position'], scan_params['end_y_position'],  scan_params['n_points_y'])
+    def simulate_beam(self, scan_params, file_path):
+        x_grid = np.linspace(int(scan_params['start_x_position']), int(scan_params['end_x_position']),  int(scan_params['n_points_x']))
+        y_grid = np.linspace(int(scan_params['start_y_position']), int(scan_params['end_y_position']),  int(scan_params['n_points_y']))
         X, Y = np.meshgrid(x_grid, y_grid)
-        fit_params = {'amplitude': 100, 'x_0': 0, 'y_0': 0, 'sigma_x': 15, 'sigma_y': 15, 'theta': 1}
-        Z = self.twoD_Gaussian((X, Y), **fit_params)
+        fit_params = {'amplitude': 100, 'x_0': 0, 'y_0': 0, 'sigma_x': 10000, 'sigma_y': 10000, 'theta': 0}
+        Z = self.twoD_Gaussian(X, Y, **fit_params)
         Z = Z.reshape(X.shape)
         fig = pl.figure()
         ax = fig.add_subplot(111)
         ax.pcolor(X, Y, Z)
-        fig.savefig('temp_beam.png')
+        fig.savefig(file_path)
         pl.close('all')
         return X, Y, Z
 
