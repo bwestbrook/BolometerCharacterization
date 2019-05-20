@@ -1,7 +1,7 @@
 import numpy as np
 import pylab as pl
 
-class BeamMapTools():
+class BeamMapperTools():
 
     def __init__(self):
         self.hello = 'hello'
@@ -39,4 +39,4 @@ class BeamMapTools():
         self.daq.get_data(integration_time)
 
 if __name__ == '__main__':
-    beam_map_daq = BeamMapTools()
+    beam_map_daq = BeamMapperTools()

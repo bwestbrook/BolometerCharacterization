@@ -25,7 +25,7 @@ from RT_Curves.plot_rt_curves import RTCurve
 from IV_Curves.plot_iv_curves import IVCurve
 from FTS_Curves.plot_fts_curves import FTSCurve
 from FTS_Curves.numerical_processing import Fourier
-from Beam_Mapper.beam_map_tools import BeamMapTools
+from Beam_Mapper.beam_map_tools import BeamMapperTools
 from POL_Curves.plot_pol_curves import POLCurve
 from TAU_Curves.plot_tau_curves import TAUCurve
 from FTS_DAQ.fts_daq import FTSDAQ
@@ -2257,6 +2257,8 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
         '''
         Opens the panel
         '''
+        if not hasattr(self, 'bmt'):
+            self.bmt = BeamMapperTools()
         if not hasattr(self, 'beam_mapper_popup'):
             self._create_popup_window('beam_mapper_popup')
         else:
@@ -2288,20 +2290,6 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
         scan_params['y_total'] = y_total
         return scan_params
 
-    def simulate_beam(self, scan_params):
-        x_grid = np.linspace(int(scan_params['start_x_position']), int(scan_params['end_x_position']),  int(scan_params['n_points_x']))
-        y_grid = np.linspace(int(scan_params['start_y_position']), int(scan_params['end_y_position']),  int(scan_params['n_points_y']))
-        X, Y = np.meshgrid(x_grid, y_grid)
-        fit_params = {'amplitude': 100, 'x_0': 0, 'y_0': 0, 'sigma_x': 15, 'sigma_y': 15, 'theta': 1}
-        Z = self.twoD_Gaussian((X, Y), **fit_params)
-        Z = Z.reshape(X.shape)
-        fig = pl.figure()
-        ax = fig.add_subplot(111)
-        ax.pcolor(X, Y, Z)
-        fig.savefig('temp_beam.png')
-        pl.close('all')
-        return X, Y, Z
-
     def _initialize_beam_mapper(self):
         '''
         Updates the panel based on inputs of desired grid
@@ -2313,7 +2301,7 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
             scan_params = self._get_all_params(meta_data, settings.beam_mapper_params, 'beam_mapper')
             scan_params = self._get_grid(scan_params)
             if scan_params is not None and len(scan_params) > 0:
-                self.simulate_beam(scan_params)
+                self.bmt.simulate_beam(scan_params)
                 image = QtGui.QPixmap('temp_files/temp_beam.png')
                 image = image.scaled(600, 300)
                 getattr(self, '_beam_mapper_popup_2D_plot_label').setPixmap(image)
