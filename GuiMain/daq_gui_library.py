@@ -25,7 +25,7 @@ from RT_Curves.plot_rt_curves import RTCurve
 from IV_Curves.plot_iv_curves import IVCurve
 from FTS_Curves.plot_fts_curves import FTSCurve
 from FTS_Curves.numerical_processing import Fourier
-from Beam_Mapping.beam_map_tools import BeamMapTools
+from Beam_Mapper.beam_map_tools import BeamMapTools
 from POL_Curves.plot_pol_curves import POLCurve
 from TAU_Curves.plot_tau_curves import TAUCurve
 from FTS_DAQ.fts_daq import FTSDAQ
