@@ -1,2 +1,5 @@
-.\temp_files\*
-.\Sample_Dicts\*
+temp_files/*
+Sample_Dicts/*
+FTS_Curves/temp/*
+*__pycache__*
+Data/*
