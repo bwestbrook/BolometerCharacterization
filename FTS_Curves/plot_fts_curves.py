@@ -348,19 +348,19 @@ class FTSCurve():
 
     def convert_if_to_fft(self, data_path, input_dict):
         if_data_path = data_path.replace('.fft', '.if')
+        data_selector = input_dict['measurements']['interferogram_data_select']
         position_vector, efficiency_vector = self.load_IF_data(if_data_path)
         fft_freq_vector, fft_vector, phase_corrected_fft_vector, position_vector, efficiency_vector\
-                = self.fourier.convert_IF_to_FFT_data(position_vector, efficiency_vector, scan_param_dict=input_dict)
+                = self.fourier.convert_IF_to_FFT_data(position_vector, efficiency_vector, scan_param_dict=input_dict, data_selector=data_selector)
         return fft_freq_vector, fft_vector, phase_corrected_fft_vector, position_vector, efficiency_vector
 
     def run(self, list_of_input_dicts, save_fft=False, run_open_comparison=False,
             add_atmosphere=False, add_foreground=False):
         col_count = len(list_of_input_dicts)
-        #fig = self.create_plot_for_if_and_fft(col_count=len(list_of_input_dicts))
-        fig = self.create_plot_for_fft_only()
         #fig = None
         row = 0
         col = 0
+        fig = None
         for dict_ in list_of_input_dicts:
             data_path = dict_['measurements']['data_path']
             label = dict_['measurements']['plot_label']
@@ -378,8 +378,14 @@ class FTSCurve():
             add_220_sim = float(dict_['measurements']['add_sim_band_220'])
             add_270_sim = float(dict_['measurements']['add_sim_band_270'])
             smoothing_factor = float(dict_['measurements']['smoothing_factor'])
+            interferogram_data_select = dict_['measurements']['interferogram_data_select']
             plot_interferogram = float(dict_['measurements']['plot_interferogram'])
             add_local_fft = float(dict_['measurements']['add_local_fft'])
+            if fig is None:
+                if plot_interferogram:
+                    fig = self.create_plot_for_if_and_fft(col_count=len(list_of_input_dicts))
+                else:
+                    fig = self.create_plot_for_fft_only()
             if plot_interferogram:
                 if_data_path = data_path.replace('.fft', '.if')
                 position_vector, efficiency_vector = self.load_IF_data(if_data_path)
@@ -395,7 +401,7 @@ class FTSCurve():
                 fft_freq_vector, fft_vector, phase_corrected_fft_vector, position_vector, efficiency_vector\
                     = self.convert_if_to_fft(data_path, dict_)
                 normalized_phase_corrected_fft_vector = np.abs(phase_corrected_fft_vector.real / np.max(phase_corrected_fft_vector.real))
-                fig = self.plot_FFT_data(fft_freq_vector * 1e-9, normalized_phase_corrected_fft_vector, fig)
+                fig = self.plot_FFT_data(fft_freq_vector * 1e-9, normalized_phase_corrected_fft_vector, fig, label='Local {0} {1}'.format(interferogram_data_select, label))
             frequency_vector, transmission_vector, normalized_transmission_vector = self.load_FFT_data(data_path, smoothing_factor=smoothing_factor,
                                                                                                        xlim_clip=xlim_clip)
             if run_open_comparison:
@@ -418,7 +424,7 @@ class FTSCurve():
                 self.save_FFT_data(frequency_vector, transmission_vector, save_path)
             custom_order = []
             fig = self.plot_FFT_data(frequency_vector, divided_transmission_vector, fig=fig,
-                                     color='r', title=title, label=label, xlim=xlim_plot,
+                                     color=color, title=title, label=label, xlim=xlim_plot,
                                      add_atmosphere=add_atmosphere, add_90_sim=add_90_sim, add_150_sim=add_150_sim, add_220_sim=add_220_sim,
                                      add_270_sim=add_270_sim, add_co_lines=add_co_lines, custom_order=custom_order)
         if len(title) > 0:

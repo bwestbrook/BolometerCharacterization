@@ -6,6 +6,7 @@ import time
 import numpy as np
 import datetime
 import pylab as pl
+import json
 from PyPDF2 import PdfFileMerger
 from pprint import pprint
 from copy import copy
@@ -65,20 +66,13 @@ class GuiTemplate(QtWidgets.QWidget, GuiBuilder):
 
     def _select_analysis_type(self):
         sender_name = str(self.sender().whatsThis())
-        checkboxes = ['_main_panel_polcurve_checkbox', '_main_panel_ivcurve_checkbox',
-                      '_main_panel_rtcurve_checkbox', '_main_panel_ftscurve_checkbox',
-                      '_main_panel_ifcurve_checkbox', '_main_panel_taucurve_checkbox']
-        for checkbox in checkboxes:
-            print(sender_name, checkbox)
-            if sender_name == checkbox:
-                self.analysis_type = checkbox.split('_')[3]
-                getattr(self, checkbox).setCheckState(True)
+        pushbuttons = ['_main_panel_polcurve_pushbutton', '_main_panel_ivcurve_pushbutton',
+                       '_main_panel_rtcurve_pushbutton', '_main_panel_ftscurve_pushbutton',
+                       '_main_panel_ifcurve_pushbutton', '_main_panel_taucurve_pushbutton']
+        for pushbutton in pushbuttons:
+            if sender_name == pushbutton:
+                self.analysis_type = pushbutton.split('_')[3]
                 getattr(self, '_build_{0}_settings_popup'.format(self.analysis_type))()
-            else:
-                getattr(self, checkbox).setCheckState(False)
-                analysis_type = checkbox.split('_')[3]
-                self._close_settings_popup(analysis_type)
-        print(self.analysis_type)
 
     def _select_files(self):
         data_paths = QtWidgets.QFileDialog.getOpenFileNames(self, 'Open file', self.data_folder)[0]
@@ -625,6 +619,7 @@ class GuiTemplate(QtWidgets.QWidget, GuiBuilder):
     #################################################
     # FTS/IF Curves 
     #################################################
+
     def _build_ifcurve_settings_popup(self):
         popup_name = 'ftscurve_settings_popup'
         self.analyze_interferogram = True
@@ -632,16 +627,6 @@ class GuiTemplate(QtWidgets.QWidget, GuiBuilder):
 
     def _close_fts(self):
         self.ftscurve_settings_popup.close()
-
-    def _select_bs_thickness(self):
-        file_col = int(str(self.sender().whatsThis()).split('_')[4])
-        other_thickness_dict = {'5': '10', '10': '5'}
-        bs_thickness = str(self.sender().text()).split(' ')[0]
-        other_thickness = other_thickness_dict[bs_thickness]
-        sender_widget_name = '_ftscurve_settings_popup_{0}_divide_bs_{1}mil_checkbox'.format(file_col, bs_thickness)
-        other_widget_name = '_ftscurve_settings_popup_{0}_divide_bs_{1}mil_checkbox'.format(file_col, other_thickness)
-        getattr(self, sender_widget_name).setCheckState(True)
-        getattr(self, other_widget_name).setCheckState(False)
 
     def _build_ftscurve_settings_popup(self, popup_name=None):
         if popup_name is None:
@@ -654,6 +639,12 @@ class GuiTemplate(QtWidgets.QWidget, GuiBuilder):
             self._build_panel(settings.ftscurve_popup_build_dict)
         row = 3
         self.selected_files_col_dict = {}
+        json_path = self.selected_files[0].replace('.fft', '.json')
+        if os.path.exists(json_path):
+            with open(json_path, 'r') as json_handle:
+                meta_data = json.load(json_handle)
+        distance_per_step = meta_data['_single_channel_fts_popup_distance_per_step_combobox']
+        step_size = meta_data['_single_channel_fts_popup_step_size_lineedit']
         for i, selected_file in enumerate(self.selected_files):
             # update dict with column file mapping
             col = 1 + i * 2
@@ -739,14 +730,12 @@ class GuiTemplate(QtWidgets.QWidget, GuiBuilder):
             row += 2
             # Add a "step size" lineedit
             unique_widget_name = '_{0}_{1}_step_size_lineedit'.format(popup_name, col)
-            widget_settings = {'text': '250.39',
-                               'position': (row, col, 1, 2)}
+            widget_settings = {'text': distance_per_step, 'position': (row, col, 1, 2)}
             self._create_and_place_widget(unique_widget_name, **widget_settings)
             row += 1
             # Add a "steps per point" lineedit
             unique_widget_name = '_{0}_{1}_steps_per_point_lineedit'.format(popup_name, col)
-            widget_settings = {'text': '500',
-                               'position': (row, col, 1, 2)}
+            widget_settings = {'text': step_size, 'position': (row, col, 1, 2)}
             self._create_and_place_widget(unique_widget_name, **widget_settings)
             row += 1
             # Add an "color" lineedit
@@ -773,7 +762,15 @@ class GuiTemplate(QtWidgets.QWidget, GuiBuilder):
                                'position': (row, col, 1, 2)}
             self._create_and_place_widget(unique_widget_name, **widget_settings)
             row += 1
-            # Add an "plot interferograme" checkbox
+            # Add an "interferogram data select" lineedit
+            unique_widget_name = '_{0}_{1}_interferogram_data_select_combobox'.format(popup_name, col)
+            widget_settings = {'position': (row, col, 1, 2)}
+            self._create_and_place_widget(unique_widget_name, **widget_settings)
+            for entry in ['All', 'Right', 'Left']:
+                getattr(self, unique_widget_name).addItem(entry)
+            getattr(self, unique_widget_name).setCurrentIndex(0)
+            row += 1
+            # Add an "plot interferogram" checkbox
             unique_widget_name = '_{0}_{1}_plot_interferogram_checkbox'.format(popup_name, col)
             widget_settings = {'position': (row, col, 1, 2)}
             self._create_and_place_widget(unique_widget_name, **widget_settings)
@@ -792,8 +789,8 @@ class GuiTemplate(QtWidgets.QWidget, GuiBuilder):
         list_of_input_dicts = []
         fts_settings = ['smoothing_factor', 'xlim_plot', 'xlim_clip', 'divide_mmf', 'add_atm_model',
                         'divide_bs_5', 'divide_bs_10', 'step_size', 'steps_per_point', 'add_sim_band',
-                        'add_co_lines', 'color', 'normalize', 'plot_title', 'plot_label', 'plot_interferogram',
-                        'add_local_fft']
+                        'add_co_lines', 'color', 'normalize', 'plot_title', 'plot_label', 'interferogram_data_select',
+                        'plot_interferogram', 'add_local_fft']
         for selected_file, col in self.selected_files_col_dict.items():
             input_dict = {'measurements': {'data_path': selected_file}}
             for setting in fts_settings:
@@ -813,9 +810,22 @@ class GuiTemplate(QtWidgets.QWidget, GuiBuilder):
                         if 'xlim' in widget:
                             widget_text = (int(widget_text.split(':')[0]), int(widget_text.split(':')[1]))
                         input_dict['measurements'][setting] = widget_text
+                    elif 'combobox' in widget:
+                        widget_text = str(getattr(self, widget).currentText())
+                        input_dict['measurements'][setting] = widget_text
             list_of_input_dicts.append(copy(input_dict))
         pprint(list_of_input_dicts)
         return list_of_input_dicts
+
+    def _select_bs_thickness(self):
+        file_col = int(str(self.sender().whatsThis()).split('_')[4])
+        other_thickness_dict = {'5': '10', '10': '5'}
+        bs_thickness = str(self.sender().text()).split(' ')[0]
+        other_thickness = other_thickness_dict[bs_thickness]
+        sender_widget_name = '_ftscurve_settings_popup_{0}_divide_bs_{1}mil_checkbox'.format(file_col, bs_thickness)
+        other_widget_name = '_ftscurve_settings_popup_{0}_divide_bs_{1}mil_checkbox'.format(file_col, other_thickness)
+        getattr(self, sender_widget_name).setCheckState(True)
+        getattr(self, other_widget_name).setCheckState(False)
 
     def _check_for_if_file(self):
         list_of_input_dict = self._build_fts_input_dicts()

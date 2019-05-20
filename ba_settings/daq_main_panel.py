@@ -33,10 +33,14 @@ daq_main_panel_settings.daq_main_panel_build_dict = {
                                                      '_daq_main_panel_set_sample_5_lineedit': {'position': (7, 1, 1, 1)},
                                                      '_daq_main_panel_set_sample_6_header_label': {'text': 'Ch 6', 'position': (7, 2, 1, 1)},
                                                      '_daq_main_panel_set_sample_6_lineedit': {'position': (7, 3, 1, 1)},
+                                                     '_daq_main_panel_pump_header_label': {'text': 'Pump Used:', 'position': (8, 0, 1, 1)},
+                                                     '_daq_main_panel_pump_lineedit': {'position': (8, 1, 1, 1)},
+                                                     '_daq_main_panel_pump_oil_level_header_label': {'text': 'Oil Level:', 'position': (8, 2, 1, 1)},
+                                                     '_daq_main_panel_pump_oil_level_lineedit': {'position': (8, 3, 1, 1)},
                                                      '_daq_main_panel_set_sample_dict_path_label': {'text': 'No Sample Dict Set (Optional)', 'alignment': 'Center',
-                                                                                                    'position': (8, 0, 1, 4)},
-                                                     '_daq_main_panel_create_sample_dict_path_pushbutton': {'text': 'Create Sample Dict Path', 'function': '_create_sample_dict_path', 'position': (9, 0, 1, 4)},
-                                                     '_daq_main_panel_set_sample_dict_path_pushbutton': {'text': 'Load Sample Dict Path', 'function': '_set_sample_dict_path', 'position': (10, 0, 1, 4)},
-                                                     '_daq_main_panel_close_pushbutton': {'text': 'Close', 'function': '_close_main', 'position': (11, 0, 1, 4)}
+                                                                                                    'position': (9, 0, 1, 4)},
+                                                     '_daq_main_panel_create_sample_dict_path_pushbutton': {'text': 'Create Sample Dict Path', 'function': '_create_sample_dict_path', 'position': (10, 0, 1, 4)},
+                                                     '_daq_main_panel_set_sample_dict_path_pushbutton': {'text': 'Load Sample Dict Path', 'function': '_set_sample_dict_path', 'position': (11, 0, 1, 4)},
+                                                     '_daq_main_panel_close_pushbutton': {'text': 'Close', 'function': '_close_main', 'position': (12, 0, 1, 4)}
                                                      }
 

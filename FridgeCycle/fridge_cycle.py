@@ -2,6 +2,7 @@ import time
 import serial
 import os
 import numpy as np
+import pylab as pl
 from datetime import datetime
 from lab_code.lab_serial import lab_serial
 
@@ -35,7 +36,7 @@ class FridgeCycle():
     def get_resistance(self):
         resistance = self._query_mm(":MEAS:RES?\r\n")
         if self._is_float(resistance):
-            resistance_str = '{0:.2f}'.format(float(resistance))
+            resistance_str = '{0:.2f} Ohms'.format(float(resistance))
         else:
             resistance_str = resistance
         if self._is_float(resistance):
@@ -44,6 +45,11 @@ class FridgeCycle():
             self._send_mm_command("*CLS\r\n;")
             time.sleep(0.5)
             self.get_resistance()
+
+    def abr_resistance_to_kelvin(self, resistance):
+        temperature = 9.5 / np.log(resistance / 3300)
+        temperature_str = '{0:.2f} K'.format(float(temperature))
+        return temperature, temperature_str
 
     def apply_voltage(self, volts):
         self._send_ps_command('APPL {0}, 0.2\r\n'.format(volts))
@@ -124,5 +130,12 @@ class FridgeCycle():
 
 if __name__ == '__main__':
     fc = FridgeCycle()
-    fc.run_cycle()
+    #fc.run_cycle()
+    res_s, temps = [], []
+    for res in np.arange(1501, 200000, 100):
+        temp = fc.abr_resistance_to_kelvin(res)[0]
+        res_s.append(res)
+        temps.append(temp)
+    pl.loglog(res_s, temps)
+    pl.show()
 
