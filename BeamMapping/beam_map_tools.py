@@ -1,12 +1,10 @@
 import numpy as np
 import pylab as pl
-from DAQ.daq import DAQ
 
-class BeamMapDAQ():
+class BeamMapTools():
 
     def __init__(self):
-        self.hi = 'hi'
-        self.daq = DAQ()
+        self.hello = 'hello'
 
     def twoD_Gaussian(self, x, y, amplitude, x_0, y_0, sigma_x, sigma_y, theta):
         x_0 = float(x_0)
@@ -40,27 +38,5 @@ class BeamMapDAQ():
         X, Y, Z_sim = self.simulate_beam(scan_params)
         self.daq.get_data(integration_time)
 
-    def take_beam_map(self, scan_params):
-        print(Z_sim)
-        Z_data = np.zeros(shape=X.shape)
-        x_grid = np.linspace(scan_params['start_x_position'], scan_params['end_x_position'],  scan_params['n_points_x'])
-        y_grid = np.linspace(scan_params['start_y_position'], scan_params['end_y_position'],  scan_params['n_points_y'])
-        '''for i, x_pos in enumerate(x_grid):
-            for j, y_pos in enumerate(y_grid):
-                print x_pos, y_pos
-                line = '{0}, {1}, {2} {3}\n'.format(x_pos, y_pos, data, std_)
-                fh.write(line)
-                Z_data[i][j] = Z_sim[i][j]
-                fig = pl.figure()
-                ax = fig.add_subplot(111)
-                ax.pcolor(X, Y, Z)
-                fig.savefig('temp_beam.png')
-                pl.close('all')
-                import ipdb;ipdb.set_trace()'''
-
-    def test(self):
-        print('beam map DAQ')
-
 if __name__ == '__main__':
-    beam_map_daq = BeamMapDAQ()
-    beam_map_daq.test()
+    beam_map_daq = BeamMapTools()

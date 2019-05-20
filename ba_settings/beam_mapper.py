@@ -9,7 +9,7 @@ beam_mapper_settings.beam_mapper_build_dict = {
                                                '_beam_mapper_popup_hardware_setup_label': {'text': 'HARDWARE SETUP', 'alignment': 'Center', 'font': 'huge', 'color': 'blue', 'position': (0, 0, 1, 6)},
 
                                                '_beam_mapper_popup_x_motor_header_label': {'text': 'X MOTOR:', 'position': (1, 0, 1, 1)},
-                                               '_beam_mapper_popup_x_current_com_port_combobox': {'function': '_connect_to_com_port','position': (1, 1, 1, 1)},
+                                               #'_beam_mapper_popup_x_current_com_port_combobox': {'function': '_connect_to_com_port','position': (1, 1, 1, 1)},
                                                '_beam_mapper_popup_x_successful_connection_header_label': {'text': '', 'position': (2, 0, 1, 2)},
 
                                                '_beam_mapper_popup_x_motor_current_label': {'text': 'X MOTOR CURRENT (A):', 'position': (3, 0, 1, 1)},
@@ -19,7 +19,7 @@ beam_mapper_settings.beam_mapper_build_dict = {
                                                '_beam_mapper_popup_x_motor_speed_lineedit': {'text' : '5','position': (4, 1, 1, 1)},
 
                                                '_beam_mapper_popup_y_motor_header_label': {'text': 'Y MOTOR', 'position': (1, 2, 1, 1)},
-                                               '_beam_mapper_popup_y_current_com_port_combobox': {'function': '_connect_to_com_port','position': (1, 3, 1, 1)},
+                                               #'_beam_mapper_popup_y_current_com_port_combobox': {'function': '_connect_to_com_port','position': (1, 3, 1, 1)},
                                                '_beam_mapper_popup_y_successful_connection_header_label': {'text': '', 'position': (2, 2, 1, 2)},
 
                                                '_beam_mapper_popup_y_motor_current_label': {'text': 'Y MOTOR CURRENT (A):', 'position': (3, 2, 1, 1)},
@@ -118,5 +118,18 @@ beam_mapper_settings.beam_map_int_settings = ['step_size_x', 'start_x_position',
                                               'integration_time', 'pause_time']
 
 beam_mapper_settings.beam_map_pulldown_run_settings = ['x_motor', 'y_motor', 'signal_channel', 'sample_rate']
+
+
+beam_mapper_settings.beam_mapper_params = ['pause_time_lineedit',
+                                           'start_x_position_lineedit',
+                                           'end_x_position_lineedit',
+                                           'n_points_x_label',
+                                           'step_size_x_lineedit',
+                                           'start_y_position_lineedit',
+                                           'end_y_position_lineedit',
+                                           'n_points_y_label',
+                                           'step_size_y_lineedit',
+                                           ]
+
 
 

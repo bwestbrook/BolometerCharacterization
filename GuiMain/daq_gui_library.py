@@ -28,7 +28,6 @@ from FTS_Curves.numerical_processing import Fourier
 from POL_Curves.plot_pol_curves import POLCurve
 from TAU_Curves.plot_tau_curves import TAUCurve
 from FTS_DAQ.fts_daq import FTSDAQ
-from BeamMapping.beam_map_daq import BeamMapDAQ
 from Motor_Driver.stepper_motor import stepper_motor
 from FTS_DAQ.analyzeFTS import FTSanalyzer
 from realDAQ.daq import DAQ
@@ -266,11 +265,12 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
         sender = str(self.sender().whatsThis())
         if 'xy_collector' in sender:
             run_mode = str(getattr(self, '_xy_collector_popup_mode_combobox').currentText())
-            plot_params = self._get_params_from_xy_collector()
-            squid = plot_params['squid']
-            label = plot_params['label']
-            temp = plot_params['temp'].replace('.', 'p')
-            drift = plot_params['drift']
+            meta_data = self._get_all_meta_data(popup='xy_collector')
+            plot_params = self._get_all_params(meta_data, settings.xy_collector_plot_params, 'xy_collector')
+            squid = plot_params['squid_select']
+            label = plot_params['sample_name']
+            temp = plot_params['sample_temp'].replace('.', 'p')
+            drift = plot_params['sample_drift_direction']
             optical_load = plot_params['optical_load']
             if run_mode == 'IV':
                 suggested_file_name = 'SQ{0}_{1}_IVCurve_at_Tbath_{2}_w_{3}_Load_Raw_'.format(squid, label, temp, optical_load)
@@ -280,28 +280,27 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
             paths = [os.path.join(self.data_folder, suggested_file_name)]
         elif 'time_constant' in sender:
             plot_params = self._get_params_from_time_constant()
-            squid = plot_params['squid']
-            label = plot_params['label']
+            squid = plot_params['squid_select']
+            label = plot_params['sample_name']
             signal_voltage = plot_params['signal_voltage'].replace('.', 'p')
             voltage_bias = plot_params['voltage_bias'].replace('.', 'p')
             suggested_file_name = 'SQ{0}_{1}_TauCurve_Vbias_of_{2}uV_w_Vsignal_of_{3}V_Raw_'.format(squid, label, voltage_bias, signal_voltage)
             suggested_file_name = self._add_index_to_suggested_file_name(suggested_file_name)
             paths = [os.path.join(self.data_folder, suggested_file_name)]
         elif 'cosmic_rays' in sender:
-            plot_params = self._get_params_from_cosmic_rays()
+            meta_data = self._get_all_meta_data(popup='xy_collector')
+            plot_params = self._get_all_params(meta_data, settings.cosmic_rays_run_params, 'cosmic_rays')
             paths = []
             for i in range(1, 3):
-                squid = plot_params['squid_{0}'.format(i)]
-                label = plot_params['label_{0}'.format(i)]
-                sample_rate = plot_params['sample_rate_{0}'.format(i)]
-                integration_time = int(plot_params['integration_time_{0}'.format(i)]) / 1000
-                suggested_file_name = 'SQ{0}_{1}_CR_Timestream_Int_Time_{2}s_Sample_Rate_{3}_Raw_'.format(squid, label, integration_time, sample_rate)
-                suggested_file_name = self._add_index_to_suggested_file_name(suggested_file_name)
+                squid = plot_params['squid_{0}_select'.format(i)]
+                label = plot_params['sample_{0}_name'.format(i)]
+                now_str = datetime.strftime(datetime.now(), '%m_%d_%H_%M')
+                suggested_file_name = '{0}_SQ{1}_{2}_Cosmic_Ray_Data'.format(now_str, squid, label)
                 path = os.path.join(self.data_folder, suggested_file_name)
                 paths.append(path)
         elif 'single_channel_fts' in sender:
             meta_data = self._get_all_meta_data(popup='_single_channel_fts')
-            scan_params = self._get_all_params(meta_data, settings.fts_scan_params, 'single_channel_fts')
+            plot_params = self._get_all_params(meta_data, settings.xy_collector_plot_params, 'xy_collector')
             squid = scan_params['squid_select']
             label = scan_params['sample_name']
             resolution = scan_params['resolution']
@@ -372,12 +371,16 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
         Collect Settings from panel
         '''
         scan_params = {}
+        pprint(meta_data)
         for scan_param_widget_end in scan_param_list:
             widget = '_{0}_popup_{1}'.format(popup, scan_param_widget_end)
             scan_param = '_'.join(scan_param_widget_end.split('_')[:-1])
+            print(widget, scan_param)
             if widget in meta_data:
                 value = meta_data[widget]
                 scan_params[scan_param] = value
+        pprint(scan_params)
+        #import ipdb;ipdb.set_trace()
         return scan_params
 
     def _draw_time_stream(self, data_time_stream=[], min_=0.0, max_=1.0, set_to_widget=''):
@@ -490,7 +493,8 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
         self.raw_data_path = [QtWidgets.QFileDialog.getOpenFileName(self, directory=data_folder)[0]]
         self.parsed_data_path = [self.raw_data_path[0].replace('.dat', '_calibrated.dat')]
         self.plotted_data_path = [self.raw_data_path[0].replace('.dat', '_plotted.png')]
-        plot_params = self._get_params_from_xy_collector()
+        meta_data = self._get_all_meta_data(popup='xy_collector')
+        plot_params = self._get_all_params(meta_data, settings.xy_collector_plot_params, 'xy_collector')
         self.xdata, self.ydata, self.ystd = [], [], []
         with open(self.raw_data_path[0], 'r') as data_file_handle:
             for line in data_file_handle.readlines():
@@ -550,7 +554,8 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
         if sender is not None:
             sender = str(self.sender().whatsThis())
         if sender == '_xy_collector_popup_save_pushbutton':
-            plot_params = self._get_params_from_xy_collector()
+            meta_data = self._get_all_meta_data(popup='xy_collector')
+            plot_params = self._get_all_params(meta_data, settings.xy_collector_plot_params, 'xy_collector')
             if plot_params['mode'] == 'IV':
                 self._final_iv_plot()
             elif plot_params['mode'] == 'RT':
@@ -610,7 +615,8 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
             self._adjust_final_plot_popup('new')
 
     def _final_rt_plot(self):
-        plot_params = self._get_params_from_xy_collector()
+        meta_data = self._get_all_meta_data(popup='xy_collector')
+        plot_params = self._get_all_params(meta_data, settings.xy_collector_plot_params, 'xy_collector')
         rtc = RTCurve([])
         invert = getattr(self, '_xy_collector_popup_invert_output_checkbox').isChecked()
         normal_res = str(getattr(self, '_xy_collector_popup_sample_res_lineedit').text())
@@ -636,7 +642,8 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
 
 
     def _final_iv_plot(self):
-        plot_params = self._get_params_from_xy_collector()
+        meta_data = self._get_all_meta_data(popup='xy_collector')
+        plot_params = self._get_all_params(meta_data, settings.xy_collector_plot_params, 'xy_collector')
         label = plot_params['label']
         fit_clip = plot_params['fit_clip']
         data_clip = plot_params['data_clip']
@@ -906,7 +913,7 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
         grt_data, grt_data_mean, grt_data_min, grt_data_max, grt_data_std = self.real_daq.get_data(signal_channel=fc_params['grt_daq_channel'],
                                                                                                    integration_time=100,
                                                                                                    sample_rate=1000,
-                                                                                                   active_devices=self.active_devices)
+                                                                                                   active_devices=[self.active_devices[0]])
         rtc = RTCurve([])
         voltage_factor = float(self.multimeter_voltage_factor_range_dict[fc_params['grt_range']])
         grt_serial = fc_params['grt_serial']
@@ -1195,56 +1202,12 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
             self._update_multimeter(channel='2')
             root.update()
 
-
     #################################################
     # COSMIC RAYS
     #################################################
 
     def _close_cosmic_rays(self):
         self.cosmic_rays_popup.close()
-
-    def _get_params_from_cosmic_rays(self):
-        params = {}
-        for i in range(1, 3):
-            squid = str(getattr(self, '_cosmic_rays_popup_squid_{0}_select_combobox'.format(i)).currentText())
-            label = str(getattr(self, '_cosmic_rays_popup_sample_{0}_name_lineedit'.format(i)).text())
-            integration_time = str(getattr(self, '_cosmic_rays_popup_daq_{0}_integration_time_combobox'.format(i)).currentText())
-            sample_rate = str(getattr(self, '_cosmic_rays_popup_daq_{0}_sample_rate_combobox'.format(i)).currentText())
-            daq_channel = str(getattr(self, '_cosmic_rays_popup_daq_channel_{0}_combobox'.format(i)).currentText())
-            params.update({'squid_{0}'.format(i): squid})
-            params.update({'label_{0}'.format(i): label})
-            params.update({'sample_rate_{0}'.format(i): sample_rate})
-            params.update({'daq_channel_{0}'.format(i): daq_channel})
-            params.update({'integration_time_{0}'.format(i): integration_time})
-        return params
-
-    def _run_cosmic_rays(self):
-        self._get_raw_data_save_path()
-        if self.raw_data_path is not None:
-            params = self._get_params_from_cosmic_rays()
-            for i in range(len(self.raw_data_path)):
-                setattr(self, 'cr_data_path_{0}'.format(i + 1), self.raw_data_path[i])
-            daq_channel_1 = params['daq_channel_1']
-            integration_time_1 = params['integration_time_1']
-            sample_rate_1 = params['sample_rate_1']
-            daq_channel_2 = params['daq_channel_2']
-            integration_time_2 = params['integration_time_2']
-            sample_rate_2 = params['sample_rate_2']
-            data_1, mean_1, min_1, max_1, std_1 = self.real_daq.get_data(signal_channel=daq_channel_1,
-                                                                         integration_time=integration_time_1,
-                                                                         sample_rate=sample_rate_1)
-            data_2, mean_2, min_2, max_2, std_2 = self.real_daq.get_data(signal_channel=daq_channel_2,
-                                                                         integration_time=integration_time_2,
-                                                                         sample_rate=sample_rate_2)
-            getattr(self, '_cosmic_rays_popup_data_1_std_label').setText('{0:.3f}'.format(std_1))
-            getattr(self, '_cosmic_rays_popup_data_2_std_label').setText('{0:.3f}'.format(std_2))
-            getattr(self, '_cosmic_rays_popup_data_1_mean_label').setText('{0:.3f}'.format(mean_1))
-            getattr(self, '_cosmic_rays_popup_data_2_mean_label').setText('{0:.3f}'.format(mean_2))
-            self._draw_cr_timestream(data_1, '1', title='CR Timestream', ylabel='SQUID Output Voltage', xlabel='Time (ms)')
-            self._draw_cr_timestream(data_2, '2', title='CR Timestream', ylabel='SQUID Output Voltage', xlabel='Time (ms)')
-            setattr(self, 'cr_data_1', data_1)
-            setattr(self, 'cr_data_2', data_2)
-        delattr(self, 'raw_data_path')
 
     def _cosmic_rays(self):
         if not hasattr(self, 'cosmic_rays_popup'):
@@ -1261,7 +1224,7 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
         getattr(self, '_cosmic_rays_popup_daq_channel_1_combobox').setCurrentIndex(2)
         getattr(self, '_cosmic_rays_popup_daq_channel_2_combobox').setCurrentIndex(3)
 
-    def _draw_cr_timestream(self, data, channel, title='', xlabel='', ylabel=''):
+    def _draw_cr_timestream(self, data, channel, sub_file_path, title='', xlabel='', ylabel='', save_data=True):
         fig, ax = self._create_blank_fig()
         ax.plot(data)
         ax.set_title(title, fontsize=10)
@@ -1271,7 +1234,60 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
         fig.savefig(save_path)
         pl.close('all')
         image_to_display = QtGui.QPixmap(save_path)
+        if save_data:
+            with open(sub_file_path, 'w') as save_handle:
+                for data_point in data:
+                    line = '{0:.6f}\n'.format(data_point)
+                    save_handle.write(line)
+            shutil.copy(save_path, sub_file_path.replace('.dat', '.png'))
         getattr(self, '_cosmic_rays_popup_data_{0}_label'.format(channel)).setPixmap(image_to_display)
+
+    def _run_cosmic_rays(self):
+        global continue_run
+        continue_run = True
+        self._get_raw_data_save_path()
+        if self.raw_data_path is not None:
+            while continue_run:
+                meta_data = self._get_all_meta_data(popup='cosmic_rays')
+                params = self._get_all_params(meta_data, settings.cosmic_rays_run_params, 'cosmic_rays')
+                for i in range(len(self.raw_data_path)):
+                    if not os.path.exists(self.raw_data_path[i]):
+                        os.makedirs(self.raw_data_path[i])
+                number_of_data_files = int(params['number_of_data_files'])
+                for j in range(number_of_data_files):
+                    sub_file_path_1 = os.path.join(self.raw_data_path[0], '{0}.dat'.format(str(j).zfill(4)))
+                    sub_file_path_2 = os.path.join(self.raw_data_path[1], '{0}.dat'.format(str(j).zfill(4)))
+                    daq_channel_1 = params['daq_channel_1']
+                    integration_time_1 = params['daq_1_integration_time']
+                    sample_rate_1 = params['daq_1_sample_rate']
+                    daq_channel_2 = params['daq_channel_2']
+                    integration_time_2 = params['daq_2_integration_time']
+                    sample_rate_2 = params['daq_2_sample_rate']
+                    data_1, mean_1, min_1, max_1, std_1 = self.real_daq.get_data(signal_channel=daq_channel_1,
+                                                                                 integration_time=integration_time_1,
+                                                                                 sample_rate=sample_rate_1,
+                                                                                 active_devices=self.active_devices)
+                    data_2, mean_2, min_2, max_2, std_2 = self.real_daq.get_data(signal_channel=daq_channel_2,
+                                                                                 integration_time=integration_time_2,
+                                                                                 sample_rate=sample_rate_2,
+                                                                                 active_devices=self.active_devices)
+                    getattr(self, '_cosmic_rays_popup_data_1_std_label').setText('{0:.3f}'.format(std_1))
+                    getattr(self, '_cosmic_rays_popup_data_2_std_label').setText('{0:.3f}'.format(std_2))
+                    getattr(self, '_cosmic_rays_popup_data_1_mean_label').setText('{0:.3f}'.format(mean_1))
+                    getattr(self, '_cosmic_rays_popup_data_2_mean_label').setText('{0:.3f}'.format(mean_2))
+                    self._draw_cr_timestream(data_1, '1', sub_file_path_1,
+                                             title='CR Timestream {0}'.format(params['sample_1_name']),
+                                             ylabel='SQUID Output Voltage', xlabel='Time (ms)', save_data=True)
+                    self._draw_cr_timestream(data_2, '2', sub_file_path_2,
+                                             title='CR Timestream {0}'.format(params['sample_2_name']),
+                                             ylabel='SQUID Output Voltage', xlabel='Time (ms)', save_data=True)
+                    status_msg = 'Finished {0} of {1}'.format(j + 1, number_of_data_files)
+                    getattr(self, '_cosmic_rays_popup_status_label').setText(status_msg)
+                    self.repaint()
+                    root.update()
+                    if j + 1 == number_of_data_files:
+                        continue_run = False
+        delattr(self, 'raw_data_path')
 
     #################################################
     # XY COLLECTOR
@@ -1371,7 +1387,7 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
         getattr(self, '_xy_collector_popup_xydata_label').setPixmap(image_to_display)
         self.repaint()
 
-    def _get_params_from_xy_collector(self):
+    def _get_params_from_xy_collector(self, meta_data):
         '''
         Collects the parameters from the panel
         '''
@@ -1440,6 +1456,7 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
         global continue_run
         continue_run = True
         self._get_raw_data_save_path()
+        meta_data = self._get_all_meta_data(popup='xy_collector')
         if self.raw_data_path[0] is not None:
             start_time = datetime.now()
             sender_text = str(self.sender().text())
@@ -1461,6 +1478,8 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
                 grt_serial = str(getattr(self, '_xy_collector_popup_grt_serial_combobox').currentText())
                 voltage_factor = float(self.multimeter_voltage_factor_range_dict[grt_range])
                 first_x_point = 600
+            with open(self.raw_data_path[0].replace('.dat', '.json'), 'w') as meta_data_handle:
+                json.dump(meta_data, meta_data_handle)
             with open(self.raw_data_path[0], 'w') as data_handle:
                 while continue_run:
                     data_time = datetime.now()
@@ -1696,7 +1715,8 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
 
 
     def _update_pol_efficiency_popup(self):
-        scan_params = self._get_all_scan_params(popup='_pol_efficiency')
+        meta_data = self._get_all_meta_data(popup='pol_efficiency')
+        scan_params = self._get_params(meta_data, settings.pol_efficiency_params, 'pol_efficiency')
         if type(scan_params) is not dict:
             return None
         if 'starting_angle' in scan_params and 'ending_angle' in scan_params:
@@ -2232,67 +2252,54 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
             self.beam_mapper_popup.close()
             continue_run = False
 
-
     def _beam_mapper(self):
         '''
         Opens the panel
         '''
-        self.beam_map_daq = BeamMapDAQ()
         if not hasattr(self, 'beam_mapper_popup'):
             self._create_popup_window('beam_mapper_popup')
         else:
             self._initialize_panel('beam_mapper_popup')
         self._build_panel(settings.beam_mapper_build_dict)
-        for combobox_widget, entry_list in self.beam_mapper_combobox_entry_dict.items():
-            self.populate_combobox(combobox_widget, entry_list)
-        #self._connect_to_com_port(beammapper=1)
-        #self._connect_to_com_port(beammapper=2)
+        #for combobox_widget, entry_list in self.beam_mapper_combobox_entry_dict.items():
+            #self.populate_combobox(combobox_widget, entry_list)
         self._draw_time_stream([0]*5, -1, -1,'_beam_mapper_popup_time_stream_label')
         self.beam_mapper_popup.showMaximized()
         self._initialize_beam_mapper()
         self.beam_mapper_popup.repaint()
         getattr(self, '_beam_mapper_popup_save_pushbutton').setDisabled(True)
 
-
-    def _get_all_beam_mapper_scan_params(self):
-        '''
-        Collects the parameters from the panel
-        '''
-        scan_params = {}
-        for beam_map_setting in settings.beam_map_int_settings:
-            pull_from_widget_name = '_beam_mapper_popup_{0}_lineedit'.format(beam_map_setting)
-            if hasattr(self, pull_from_widget_name):
-                value = getattr(self, pull_from_widget_name).text()
-                if len(str(value)) == 0:
-                    value = 0
-                else:
-                    value = int(value)
-                scan_params[beam_map_setting] = value
-        for beam_map_setting in settings.beam_map_pulldown_run_settings:
-            pull_from_widget_name = '_beam_mapper_popup_{0}_combobox'.format(beam_map_setting)
-            if hasattr(self, pull_from_widget_name):
-                value = str(getattr(self, pull_from_widget_name).currentText())
-                scan_params[beam_map_setting] = value
-        scan_params = self._get_grid(scan_params)
-        return scan_params
-
     def _get_grid(self, scan_params):
         '''
         Sets up a gride to place data points into base on specfied params
         '''
-        x_total = scan_params['end_x_position'] - scan_params['start_x_position']
-        x_steps = scan_params['step_size_x']
-        n_points_x = (scan_params['end_x_position']-scan_params['start_x_position'])/scan_params['step_size_x']
-        n_points_y = (scan_params['end_y_position']-scan_params['start_y_position'])/scan_params['step_size_y']
+        x_total = int(scan_params['end_x_position']) - int(scan_params['start_x_position'])
+        x_steps = int(scan_params['step_size_x'])
+        n_points_x = (int(scan_params['end_x_position']) - int(scan_params['start_x_position'])) / int(scan_params['step_size_x'])
+        n_points_y = (int(scan_params['end_y_position']) - int(scan_params['start_y_position'])) / int(scan_params['step_size_y'])
         scan_params['n_points_x'] = n_points_x
         scan_params['n_points_y'] = n_points_y
         scan_params['x_total'] = x_total
         getattr(self, '_beam_mapper_popup_total_x_label').setText('{0} in'.format(str(x_total)))
-        y_total = scan_params['end_y_position'] - scan_params['start_y_position']
-        y_steps = scan_params['step_size_y']
+        y_total = int(scan_params['end_y_position']) - int(scan_params['start_y_position'])
+        y_steps = int(scan_params['step_size_y'])
         getattr(self, '_beam_mapper_popup_total_y_label').setText('{0} in'.format(str(y_total)))
         scan_params['y_total'] = y_total
         return scan_params
+
+    def simulate_beam(self, scan_params):
+        x_grid = np.linspace(int(scan_params['start_x_position']), int(scan_params['end_x_position']),  int(scan_params['n_points_x']))
+        y_grid = np.linspace(int(scan_params['start_y_position']), int(scan_params['end_y_position']),  int(scan_params['n_points_y']))
+        X, Y = np.meshgrid(x_grid, y_grid)
+        fit_params = {'amplitude': 100, 'x_0': 0, 'y_0': 0, 'sigma_x': 15, 'sigma_y': 15, 'theta': 1}
+        Z = self.twoD_Gaussian((X, Y), **fit_params)
+        Z = Z.reshape(X.shape)
+        fig = pl.figure()
+        ax = fig.add_subplot(111)
+        ax.pcolor(X, Y, Z)
+        fig.savefig('temp_beam.png')
+        pl.close('all')
+        return X, Y, Z
 
     def _initialize_beam_mapper(self):
         '''
@@ -2301,14 +2308,16 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
         if len(str(self.sender().whatsThis())) == 0:
             return None
         else:
-            scan_params = self._get_all_scan_params(popup='_beam_mapper')
+            meta_data = self._get_all_meta_data(popup='beam_mapper')
+            scan_params = self._get_all_params(meta_data, settings.beam_mapper_params, 'beam_mapper')
+            scan_params = self._get_grid(scan_params)
             if scan_params is not None and len(scan_params) > 0:
-                self.beam_map_daq.simulate_beam(scan_params)
-                image = QtWidgets.QPixmap('temp_files/temp_beam.png')
+                self.simulate_beam(scan_params)
+                image = QtGui.QPixmap('temp_files/temp_beam.png')
                 image = image.scaled(600, 300)
                 getattr(self, '_beam_mapper_popup_2D_plot_label').setPixmap(image)
-                n_points_x= scan_params['n_points_x']
-                n_points_y= scan_params['n_points_y']
+                n_points_x = scan_params['n_points_x']
+                n_points_y = scan_params['n_points_y']
                 getattr(self,'_beam_mapper_popup_n_points_x_label').setText(str(n_points_x))
                 getattr(self,'_beam_mapper_popup_n_points_y_label').setText(str(n_points_y))
 
@@ -2318,7 +2327,8 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
         '''
         global continue_run
         continue_run = True
-        scan_params = self._get_all_scan_params(popup='_beam_mapper')
+        meta_data = self._get_all_meta_data()
+        scan_params = self._get_all_params(meta_data, settings.beam_mapper_params, 'beam_mapper')
         x_grid = np.linspace(scan_params['start_x_position'], scan_params['end_x_position'],  scan_params['n_points_x'])
         y_grid = np.linspace(scan_params['start_y_position'], scan_params['end_y_position'],  scan_params['n_points_y'])
         X, Y = np.meshgrid(x_grid, y_grid)
