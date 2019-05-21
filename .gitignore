@@ -1,11 +1,6 @@
-*pyc
-*fft
-*pdf
-*png
-*Data/
+temp_files/*
+Sample_Dicts/*
+Fridge_Cycles/*
+FTS_Curves/temp/*
+*__pycache__*
 Data/*
-FTS_Curves/Output/*
-*~
-*csv
-*xls
-*xlsx

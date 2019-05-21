@@ -5,14 +5,26 @@ import pylab as pl
 import numpy as np
 from copy import copy
 from pprint import pprint
-from foreground_plotter import ForegroundPlotter
-from numerical_processing import Fourier
+from .foreground_plotter import ForegroundPlotter
+from .numerical_processing import Fourier
 
 
 class FTSCurve():
 
-    def __init__(self):
+    def __init__(self, custom_order=None):
         self.fourier = Fourier()
+        if custom_order is None:
+            self.custom_order = ['ATM Model', 'CO 110 GHz', 'CO 115 GHz', '90 GHz Sim', '90 GHz Bottom', '90 GHz Top', '150 GHz Sim', '150 GHz Bottom', '150 GHz Top']
+            self.custom_order = ['ATM Model', 'CO 110 GHz', 'CO 115 GHz', '90 GHz Sim', '90 GHz Bottom', '90 GHz Top', '150 GHz Sim', '150 GHz Bottom', '150 GHz Top']
+            self.custom_order = ['ATM Model', 'CO 110 GHz', 'CO 115 GHz', '90 GHz Sim', 'Pix 118 90 GHz Top', 'Pix 101 90 GHz Top',
+                                 '150 GHz Sim', 'Pix 118 150 GHz Top', 'Pix 100 150 GHz Bottom']
+            self.custom_order = ['CO 110 GHz', 'CO 115 GHz', 'PB2C 220', 'PB2C 270']
+            self.custom_order = ['ATM Model', 'CO 110 GHz', 'CO 115 GHz', '90 GHz Sim', 'PB2-13-10 Witness', 'PB2-13-20 Witness', 'PB2-13-26 Witness']
+            self.custom_order = ['ATM Model', 'CO 110 GHz', 'CO 115 GHz', '150 GHz Sim', 'PB2-13-10 Witness', 'PB2-13-20 Witness', 'PB2-13-26 Witness']
+            self.custom_order = ['ATM Model', 'CO 110 GHz', 'CO 115 GHz', '90 GHz Sim', 'PB2-13-26 Wit-90', 'PB2-13-26 P101-90T',
+                                 '150 GHz Sim', 'PB2-13-26 Wit-150', 'PB2-13-26 P100-150B']
+            self.custom_order = ['ATM Model', 'CO 110 GHz', 'CO 115 GHz', '220 GHz Sim', '270 GHz Sim', 'PB2-14-02 Ub-220B', 'PB2-14-02 Ub-270T']
+            self.custom_order = ['ATM Model', 'CO 110 GHz', 'CO 115 GHz', '150 GHz Sim', '13-35-Wit-150B', '13-35-Wit-150T']
 
     def load_simulation_data(self, data_path):
         '''
@@ -75,7 +87,6 @@ class FTSCurve():
         transmission = []
         with open('.\FTS_Curves\Simulations\PB2abcBands.csv', 'r') as file_handle:
             for line in file_handle.readlines()[1:]:
-                print line
                 if len(line.split(',')[freq_column]) > 0:
                     freq_value = float(line.split(',')[freq_column])
                     frequency.append(freq_value)
@@ -107,6 +118,7 @@ class FTSCurve():
             frequency_vector = np.zeros(len(lines))
             transmission_vector = np.zeros(len(lines))
             for i, line in enumerate(lines):
+                print(line)
                 if ',' in line:
                     frequency = line.split(', ')[0]
                     transmission = line.split(', ')[1]
@@ -116,8 +128,8 @@ class FTSCurve():
                 if float(xlim_clip[0]) < float(frequency) < float(xlim_clip[1]):
                     np.put(frequency_vector, i, frequency)
                     np.put(transmission_vector, i, transmission)
-        transmission_vector = transmission_vector[frequency_vector != 0.0]
-        frequency_vector = frequency_vector[frequency_vector != 0.0]
+        transmission_vector = transmission_vector[frequency_vector > 0.0]
+        frequency_vector = frequency_vector[frequency_vector > 0.0]
         if smoothing_factor > 0.0:
             transmission_vector = self.running_mean(transmission_vector, smoothing_factor=smoothing_factor)
         normalized_transmission_vector = transmission_vector / max(transmission_vector)
@@ -142,48 +154,33 @@ class FTSCurve():
                 signal = line.split('\t')[1]
                 np.put(position_vector, i, position)
                 np.put(signal_vector, i, signal)
-        print position_vector, signal_vector
         return position_vector, signal_vector
 
-    def plot_IF_data(self, position_vector, signal_vector, color='b',
-                     label='', fig=None, plot_if=False, plot_fft=False,
-                     scan_param_dict={}):
-        if fig is None:
-            fig = pl.figure()
-            fig.add_subplot(311)
-            fig.add_subplot(312)
-            fig.add_subplot(313)
-            ax1 = fig.get_axes()[0]
-            ax2 = fig.get_axes()[1]
-            ax3 = fig.get_axes()[2]
-            fig.subplots_adjust(hspace=0.26, bottom=0.12, top =0.96, left=0.16, right=0.84)
-        frequency_vector, transmission_vector, symmetric_position_vector, symmetric_signal_vector  = self.fourier.convert_IF_to_FFT_data(position_vector,
-                                                                                                                                         signal_vector,
-                                                                                                                                         scan_param_dict=scan_param_dict,
-                                                                                                                                         quick_plot=False)
-        ax1.set_xlabel('Mirror Position', fontsize=14)
-        ax1.set_ylabel('IF Signal ', fontsize=14)
-        ax1.plot(position_vector, signal_vector, color, label=label, lw=2)
-        ax2.plot(symmetric_position_vector, symmetric_signal_vector, color, label=label, lw=2)
-        if plot_fft:
-            self.plot_FFT_data(frequency_vector, transmission_vector, fig=fig, xlim=(0, 1200))
-        pl.show()
+    def plot_IF_data(self, position_vector, signal_vector, fig, row_col,
+                     color='b', label='', plot_if=False, ax=0,
+                     plot_fft=True, scan_param_dict={}):
+
+        '''
+        Old args maybe will ressurection
+        #symmetric_position_vector, symmetric_signal_vector,
+        #frequency_vector, transmission_vector,
+        '''
+        ax = self.axis_dict[row_col]
+        ax.set_xlabel('Mirror Position', fontsize=14)
+        ax.set_ylabel('IF Signal ', fontsize=14)
+        ax.plot(position_vector, signal_vector, color, label=label, lw=0.5)
+        handles, labels = ax.get_legend_handles_labels()
+        ax.legend(handles, labels, numpoints=1, borderaxespad=0.0, loc=2, bbox_to_anchor=(1.01, 1.0))
         return fig
 
-    def plot_FFT_data(self, frequency_vector, transmission_vector, color='b',
-                      title='', label='', xlim=(100,400), fig=None, add_FFT=False,
+    def plot_FFT_data(self, frequency_vector, transmission_vector, fig,
+                      color='b', title='', label='', xlim=(100,400),
                       add_atmosphere=False, save_data=True, add_90_sim=False, add_150_sim=False,
                       add_220_sim=False, add_270_sim=False, add_co_lines=False, custom_order=[]):
         '''
         This function will take the output of Load_FFT_Data
         '''
-        if fig is None:
-            fig = pl.figure(figsize=(8,4))
-            fig.add_subplot(111)
-            fig.subplots_adjust(hspace=0.26, bottom=0.15, top =0.90, left=0.16, right=0.70)
-            ax = fig.get_axes()[0]
-        else:
-            ax = fig.get_axes()[0]
+        ax = fig.axes[-1]
         if add_atmosphere:
             ax = self.add_atmospheric_lines(ax)
             add_atmosphere = False
@@ -206,13 +203,7 @@ class FTSCurve():
         ax.set_ylim((-0.05, 1.05))
         # Add Legend
         handles, labels = ax.get_legend_handles_labels()
-        #order = [custom_order.index(label) for label in labels if label in custom_order]
-        #import ipdb;ipdb.set_trace()
-        #print handles, 
         order = [labels.index(label) for label in custom_order if label in labels]
-        print handles, labels
-        print custom_order
-        print order
         if len(custom_order) > 0:
             ax.legend([handles[idx] for idx in order], [labels[idx] for idx in order],
                       numpoints=1, borderaxespad=0.0, loc=2, bbox_to_anchor=(1.01, 1.0))
@@ -220,7 +211,7 @@ class FTSCurve():
             ax.legend(handles, labels, numpoints=1,
                       borderaxespad=0.0, loc=2,
                       bbox_to_anchor=(1.01, 1.0))
-        return fig, ax, add_atmosphere
+        return fig
 
 
     def _ask_user_if_they_want_to_quit(self):
@@ -331,16 +322,45 @@ class FTSCurve():
     def close_fig(self):
         pl.close()
 
-    def run(self, list_of_input_dicts, save_fft=True, run_open_comparison=False,
-            add_atmosphere=False, add_foreground=False, fig=None):
+    def create_plot_for_if_and_fft(self, col_count, row_count=3):
+        fig = pl.figure()
+        self.axis_dict = {}
+        for i in range(0, row_count):
+            for j in range(0, col_count):
+                if i == row_count - 1 and j == 0:
+                    colspan = col_count
+                    ax = pl.subplot2grid((row_count, col_count), (i, j), colspan=colspan)
+                    print('{0}{1}'.format(i, j))
+                    self.axis_dict['{0}{1}'.format(i, j)] = ax
+                elif i == row_count - 1 and j == col_count - 1:
+                    pass
+                else:
+                    colspan = 1
+                    ax = pl.subplot2grid((row_count, col_count), (i, j), colspan=colspan)
+                    print('{0}{1}'.format(i, j))
+                    self.axis_dict['{0}{1}'.format(i, j)] = ax
+        return fig
+
+    def create_plot_for_fft_only(self):
+        fig = pl.figure()
+        fig.add_subplot(111)
+        return fig
+
+    def convert_if_to_fft(self, data_path, input_dict):
+        if_data_path = data_path.replace('.fft', '.if')
+        data_selector = input_dict['measurements']['interferogram_data_select']
+        position_vector, efficiency_vector = self.load_IF_data(if_data_path)
+        fft_freq_vector, fft_vector, phase_corrected_fft_vector, position_vector, efficiency_vector\
+                = self.fourier.convert_IF_to_FFT_data(position_vector, efficiency_vector, scan_param_dict=input_dict, data_selector=data_selector)
+        return fft_freq_vector, fft_vector, phase_corrected_fft_vector, position_vector, efficiency_vector
+
+    def run(self, list_of_input_dicts, save_fft=False, run_open_comparison=False,
+            add_atmosphere=False, add_foreground=False):
+        col_count = len(list_of_input_dicts)
+        #fig = None
+        row = 0
+        col = 0
         fig = None
-        plot_if = False
-        plot_fft = False
-        for dict_ in list_of_input_dicts:
-            if '.if' == dict_['measurements']['data_path'][-3:]:
-                plot_if = True
-            elif '.fft' == dict_['measurements']['data_path'][-4:]:
-                plot_fft = True
         for dict_ in list_of_input_dicts:
             data_path = dict_['measurements']['data_path']
             label = dict_['measurements']['plot_label']
@@ -358,47 +378,55 @@ class FTSCurve():
             add_220_sim = float(dict_['measurements']['add_sim_band_220'])
             add_270_sim = float(dict_['measurements']['add_sim_band_270'])
             smoothing_factor = float(dict_['measurements']['smoothing_factor'])
-            if data_path[-4:] == '.fft':
-                frequency_vector, transmission_vector, normalized_transmission_vector = self.load_FFT_data(data_path, smoothing_factor=smoothing_factor,
-                                                                                                           xlim_clip=xlim_clip)
-                if run_open_comparison:
-                    open_data_path = dict_['open_air']['data_path']
-                    data_path = dict_['measurements']['data_path']
-                    open_frequency_vector, open_transmission_vector, open_normalized_transmission_vector = self.load_FFT_data(open_data_path)
-                    divided_transmission_vector = transmission_vector / open_transmission_vector
-                elif divide_bs_5:
-                    divided_transmission_vector = self.divide_out_optical_element_response(frequency_vector, normalized_transmission_vector,
-                                                                                           optical_element='bs', bs_thickness=5)
-                elif divide_bs_10:
-                    divided_transmission_vector = self.divide_out_optical_element_response(frequency_vector, normalized_transmission_vector,
-                                                                                           optical_element='bs', bs_thickness=10)
+            interferogram_data_select = dict_['measurements']['interferogram_data_select']
+            plot_interferogram = float(dict_['measurements']['plot_interferogram'])
+            add_local_fft = float(dict_['measurements']['add_local_fft'])
+            if fig is None:
+                if plot_interferogram:
+                    fig = self.create_plot_for_if_and_fft(col_count=len(list_of_input_dicts))
                 else:
-                    divided_transmission_vector = normalized_transmission_vector
-                if save_fft and len(label) > 0:
-                    save_path = './FTS_Curves/temp/{0}.fft'.format(label)
-                    if os.path.exists(save_path):
-                        os.remove(save_path)
-                    self.save_FFT_data(frequency_vector, transmission_vector, save_path)
-                custom_order = []
-                #custom_order = ['ATM Model', '90T', '90B', '150T', '150B']
-                custom_order = ['ATM Model', 'CO 110 GHz', 'CO 115 GHz', '90 GHz Sim', '90 GHz Bottom', '90 GHz Top', '150 GHz Sim', '150 GHz Bottom', '150 GHz Top']
-                custom_order = ['ATM Model', 'CO 110 GHz', 'CO 115 GHz', '90 GHz Sim', '90 GHz Bottom', '90 GHz Top', '150 GHz Sim', '150 GHz Bottom', '150 GHz Top']
-                custom_order = ['ATM Model', 'CO 110 GHz', 'CO 115 GHz', '90 GHz Sim', 'Pix 118 90 GHz Top', 'Pix 101 90 GHz Top',
-                                '150 GHz Sim', 'Pix 118 150 GHz Top', 'Pix 100 150 GHz Bottom']
-                custom_order = ['CO 110 GHz', 'CO 115 GHz', 'PB2C 220', 'PB2C 270']
-                custom_order = ['ATM Model', 'CO 110 GHz', 'CO 115 GHz', '90 GHz Sim', 'PB2-13-10 Witness', 'PB2-13-20 Witness', 'PB2-13-26 Witness']
-                custom_order = ['ATM Model', 'CO 110 GHz', 'CO 115 GHz', '150 GHz Sim', 'PB2-13-10 Witness', 'PB2-13-20 Witness', 'PB2-13-26 Witness']
-                custom_order = ['ATM Model', 'CO 110 GHz', 'CO 115 GHz', '90 GHz Sim', 'PB2-13-26 Wit-90', 'PB2-13-26 P101-90T',
-                                '150 GHz Sim', 'PB2-13-26 Wit-150', 'PB2-13-26 P100-150B']
-                custom_order = ['ATM Model', 'CO 110 GHz', 'CO 115 GHz', '220 GHz Sim', '270 GHz Sim', 'PB2-14-02 Ub-220B', 'PB2-14-02 Ub-270T']
-                fig, ax, add_atmosphere = self.plot_FFT_data(frequency_vector, divided_transmission_vector, color=color, title=title, label=label, xlim=xlim_plot,
-                                                             fig=fig, add_atmosphere=add_atmosphere, add_90_sim=add_90_sim, add_150_sim=add_150_sim, add_220_sim=add_220_sim,
-                                                             add_270_sim=add_270_sim, add_co_lines=add_co_lines, custom_order=custom_order)
-            elif data_path[-3:] == '.if':
-                plot_fft = True
-                position_vector, signal_vector = self.load_IF_data(data_path)
-                fig = self.plot_IF_data(position_vector, signal_vector, color=color, label=label, fig=fig,
-                                        plot_if=plot_if, plot_fft=plot_fft, scan_param_dict=dict_)
+                    fig = self.create_plot_for_fft_only()
+            if plot_interferogram:
+                if_data_path = data_path.replace('.fft', '.if')
+                position_vector, efficiency_vector = self.load_IF_data(if_data_path)
+                fft_freq_vector, fft_vector, phase_corrected_fft_vector, symmetric_position_vector, symmetric_efficiency_vector\
+                    = self.fourier.convert_IF_to_FFT_data(position_vector, efficiency_vector, dict_)
+                row_col = '{0}{1}'.format(row, col)
+                fig = self.plot_IF_data(position_vector, efficiency_vector, fig, row_col=row_col, color='r', label='Raw IF', ax=0)
+                row_col = '{0}{1}'.format(row + 1, col)
+                fig = self.plot_IF_data(symmetric_position_vector, symmetric_efficiency_vector, fig,
+                                        row_col=row_col, color='b', label='Processed IF', ax=1)
+                col += 1
+            if add_local_fft:
+                fft_freq_vector, fft_vector, phase_corrected_fft_vector, position_vector, efficiency_vector\
+                    = self.convert_if_to_fft(data_path, dict_)
+                normalized_phase_corrected_fft_vector = np.abs(phase_corrected_fft_vector.real / np.max(phase_corrected_fft_vector.real))
+                fig = self.plot_FFT_data(fft_freq_vector * 1e-9, normalized_phase_corrected_fft_vector, fig, label='Local {0} {1}'.format(interferogram_data_select, label))
+            frequency_vector, transmission_vector, normalized_transmission_vector = self.load_FFT_data(data_path, smoothing_factor=smoothing_factor,
+                                                                                                       xlim_clip=xlim_clip)
+            if run_open_comparison:
+                open_data_path = dict_['open_air']['data_path']
+                data_path = dict_['measurements']['data_path']
+                open_frequency_vector, open_transmission_vector, open_normalized_transmission_vector = self.load_FFT_data(open_data_path)
+                divided_transmission_vector = transmission_vector / open_transmission_vector
+            elif divide_bs_5:
+                divided_transmission_vector = self.divide_out_optical_element_response(frequency_vector, normalized_transmission_vector,
+                                                                                       optical_element='bs', bs_thickness=5)
+            elif divide_bs_10:
+                divided_transmission_vector = self.divide_out_optical_element_response(frequency_vector, normalized_transmission_vector,
+                                                                                       optical_element='bs', bs_thickness=10)
+            else:
+                divided_transmission_vector = normalized_transmission_vector
+            if save_fft and len(label) > 0:
+                save_path = './FTS_Curves/temp/{0}.fft'.format(label)
+                if os.path.exists(save_path):
+                    os.remove(save_path)
+                self.save_FFT_data(frequency_vector, transmission_vector, save_path)
+            custom_order = []
+            fig = self.plot_FFT_data(frequency_vector, divided_transmission_vector, fig=fig,
+                                     color=color, title=title, label=label, xlim=xlim_plot,
+                                     add_atmosphere=add_atmosphere, add_90_sim=add_90_sim, add_150_sim=add_150_sim, add_220_sim=add_220_sim,
+                                     add_270_sim=add_270_sim, add_co_lines=add_co_lines, custom_order=custom_order)
         if len(title) > 0:
             fig.savefig('./FTS_Curves/temp/{0}.png'.format(title))
         elif len(label) > 0:

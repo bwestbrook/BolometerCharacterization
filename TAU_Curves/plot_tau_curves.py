@@ -18,7 +18,7 @@ class TAUCurve():
                 freq = float(split_line[0])
                 amp = float(split_line[1])
                 error = float(split_line[2].replace('\n', ''))
-                print freq, amp, error
+                print(freq, amp, error)
                 freq_vector.append(freq)
                 amp_vector.append(amp)
                 error_vector.append(error)

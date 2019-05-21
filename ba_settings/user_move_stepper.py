@@ -5,13 +5,12 @@ user_move_stepper_settings = Class()
 user_move_stepper_settings.user_move_stepper_build_dict = {
                                                            '_common_settings': {'font': 'large'},
 
-
                                                            '_user_move_stepper_popup_control_label': {'text': 'CONTROL', 'font': 'huge', 'position': (0, 0, 1, 1)},
                                                            '_user_move_stepper_popup_set_to_label': {'text': 'SET TO', 'font': 'huge', 'position': (0, 1, 1, 1)},
                                                            '_user_move_stepper_popup_actual_label': {'text': 'ACTUAL', 'font': 'huge', 'position': (0, 2, 1, 1)},
 
                                                            '_user_move_stepper_popup_com_ports_header_label': {'text': 'Select a Com Port:', 'color': 'red', 'position': (1, 0, 1, 1)},
-                                                           '_user_move_stepper_popup_com_ports_combobox': {'function': '_connect_to_com_port', 'height': 150, 'position': (1, 1, 1, 1)},
+                                                           '_user_move_stepper_popup_com_ports_combobox': {'function': '_connect_to_com_port', 'position': (1, 1, 1, 1)},
                                                            '_user_move_stepper_popup_successful_connection_header_label': {'position': (1, 2, 1, 1)},
 
                                                            '_user_move_stepper_popup_move_pushbutton': {'text': 'Move Stepper To:', 'function': '_move_stepper', 'position': (2, 0, 1, 1)},
@@ -38,5 +37,5 @@ user_move_stepper_settings.user_move_stepper_build_dict = {
 
 
 user_move_stepper_settings.user_move_stepper_combobox_entry_dict = {
-                                                                    '_user_move_stepper_popup_current_com_port_combobox': ['COM8'],
+                                                                    '_user_move_stepper_popup_com_ports_combobox': ['COM5', 'COM12'],
                                                                     }

@@ -4,7 +4,7 @@ import numpy as np
 import pylab as pl
 from pprint import pprint
 from copy import copy
-from settings import settings
+from .settings import settings
 
 
 class IVCurve():
@@ -126,7 +126,7 @@ class IVCurve():
         fit_vals = np.polyfit(v_bias_real, corrected_squid_voltage, 1)
         slope = fit_vals[0]
         squid_conv = 1.0 / (slope * calibration_resistor_val)
-        print '\n\n Transimpedance Value: {0}\n\n'.format(squid_conv)
+        print('\n\n Transimpedance Value: {0}\n\n'.format(squid_conv))
         return squid_conv
 
     def find_nearest_r_bolo(self, r_bolo, r_n, fracrn):
@@ -137,7 +137,7 @@ class IVCurve():
 
 ## Plotting
 
-    def plot_differenced_ivs(self, v_biases, i_bolos, fracrns, colors, labels, spectra_paths):
+    def plot_differenced_ivs(self, v_biases, i_bolos, fracrns, colors, labels, spectra_paths, plot_clips):
         '''
         This code takes to sets of IV curves and takes a differenc in power at the same fracrn
         '''
@@ -149,12 +149,14 @@ class IVCurve():
         ax.set_ylabel('Power ($\mu$V)', fontsize=16)
         p_at_same_rfracs = []
         for i, v_bias in enumerate(v_biases):
-            print i, v_bias
+            plot_clip = plot_clips[i]
             fracrn = fracrns[i]
             i_bolo = i_bolos[i]
-            r_bolo = v_bias / i_bolo
+            #import ipdb;ipdb.set_trace()
+            selector = np.logical_and(plot_clip[0] < v_bias, plot_clip[1] > v_bias)
+            r_bolo = v_bias[selector] / i_bolo[selector]
             r_bolo_norm = r_bolo / np.max(r_bolo)
-            p_bolo = v_bias * i_bolo
+            p_bolo = v_bias[selector] * i_bolo[selector]
             #ax.plot(r_bolo, p_bolo, color=colors[i], label=labels[i])
             ax.plot(r_bolo_norm, p_bolo, color=colors[i], label=labels[i])
             #r_n = r_bolo[10] # some value near the start
@@ -168,11 +170,12 @@ class IVCurve():
         p_window = self.compute_delta_power_at_window(spectra_path)
         p_sensed = np.abs(p_at_same_rfracs[1] - p_at_same_rfracs[0])
         efficiency = 100.0 * p_sensed / p_window
-        print
-        title =  'Power diff {0:.2f} / {1:.2f} (sensed / window) pW'.format(p_sensed, p_window)
-        title += '\nEffiency is {0:.2f}%'.format(efficiency)
-        print title
-        print
+        pk_per_K_efficiency = p_sensed / (300.0 - 77.0)
+        print()
+        title =  'Power diff {0:.2f} / {1:.2f} (sensed / window) {2:.3f} pW/K'.format(p_sensed, p_window, pk_per_K_efficiency)
+        title += '\nEfficiency is {0:.2f}%'.format(efficiency)
+        print(title)
+        print()
         ax.set_title(title)
         ax.legend(numpoints=1)
         #, loc=2, bbox_to_anchor=(1.01, 1), borderaxespad=0.0)
@@ -210,7 +213,7 @@ class IVCurve():
         if stds is not None:
             ax1.errorbar(bolo_voltage_bias[plot_selector], bolo_current[plot_selector], yerr=stds[plot_selector],
                          label='error', marker='.', linestyle='None', alpha=0.25)
-        if pturn:
+        if pturn and len(bolo_voltage_bias) > 2:
             pt_idx = np.where(bolo_current[plot_selector] == min(bolo_current[plot_selector]))[0][0]
             pl_idx = np.where(bolo_voltage_bias[plot_selector] == min(bolo_voltage_bias[plot_selector]))[0][0]
             pturn_pw = bolo_current[plot_selector][pt_idx] * bolo_voltage_bias[plot_selector][pt_idx]
@@ -307,7 +310,7 @@ class IVCurve():
             difference = input_dict['difference']
             if difference:
                 break
-        v_biases, i_bolos, colors, label_strs, fracrns, spectra_paths = [], [], [], [], [], []
+        v_biases, i_bolos, colors, label_strs, fracrns, spectra_paths, plot_clips = [], [], [], [], [], [], []
         for input_dict in self.list_of_input_dicts:
             data_path = input_dict['data_path']
             label = input_dict['label']
@@ -326,6 +329,7 @@ class IVCurve():
                                                                                  determine_calibration=input_dict['calibrate'],
                                                                                  clip=fit_clip, label=label)
             v_biases.append(v_bias_real)
+            plot_clips.append(plot_clip)
             i_bolos.append(i_bolo_real)
             label_strs.append(label)
             colors.append(color)
@@ -337,7 +341,7 @@ class IVCurve():
                                       show_plot=True)
 
         if difference:
-            self.plot_differenced_ivs(v_biases, i_bolos, fracrns, colors, label_strs, spectra_paths)
+            self.plot_differenced_ivs(v_biases, i_bolos, fracrns, colors, label_strs, spectra_paths, plot_clips)
 
 if __name__ == '__main__':
     ivc = IVCurve()

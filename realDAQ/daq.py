@@ -2,13 +2,12 @@ import nidaqmx
 import os
 import sys
 import glob
-import serial
+#import serial
 import time
 import numpy as np
-from nidaqmx.constants import AcquisitionType, Edge
+from nidaqmx.constants import AcquisitionType, Edge, WAIT_INFINITELY
 
 class DAQ():
-
 
     def get_data(self, signal_channel=3, integration_time=50, sample_rate=500, central_value=1.0, active_devices=[]):
         with nidaqmx.Task() as task:
@@ -16,8 +15,8 @@ class DAQ():
                 device = active_devices[0]
             else:
                 device = active_devices[-1]
-                print 'Found multiple devices when trying to get data'
-                print 'Chose {0}'.format(device)
+                #print('Found multiple devices when trying to get data')
+                #print('Chose {0}'.format(device))
             voltage_chan_str = '{0}/ai{1}'.format(device, signal_channel)
             task.ai_channels.add_ai_voltage_chan(voltage_chan_str)
             integration_time = int(integration_time)
@@ -25,20 +24,12 @@ class DAQ():
             num = int(integration_time * sample_rate / 1000)
             task.timing.cfg_samp_clk_timing(rate=sample_rate, sample_mode=AcquisitionType.FINITE,
                                             samps_per_chan=num)
-            data_time_stream = np.asarray(task.read(number_of_samples_per_channel=num))
+            data_time_stream = np.asarray(task.read(number_of_samples_per_channel=num, timeout=60*20))
         mean = np.mean(data_time_stream)
         min_ = np.min(data_time_stream)
         max_ = np.max(data_time_stream)
         std_ = np.std(data_time_stream)
         return data_time_stream, mean, min_, max_, std_
-
-    def get_data2(self, daq_x=0, daq_y=1):
-        with nidaqmx.Task() as task:
-            task.ai_channels.add_ai_voltage_chan("Dev4/ai{0}".format(int(daq_x)))
-            task.ai_channels.add_ai_voltage_chan("Dev4/ai{0}".format(int(daq_y)))
-            task.timing.cfg_samp_clk_timing(rate = 10, sample_mode=AcquisitionType.FINITE)
-            data_time_stream = task.read()
-        return data_time_stream[0], data_time_stream[1]
 
     def get_active_devices(self):
         active_devices = []
@@ -48,8 +39,9 @@ class DAQ():
                 try:
                     task.ai_channels.add_ai_voltage_chan("{0}/ai0".format(device))
                     active_devices.append(device)
+                    print('Found an active DAQ at {0}'.format(device))
                 except nidaqmx.DaqError:
-                    print '{0} not present'.format(device)
+                    pass
         return active_devices
 
 if __name__ == '__main__':

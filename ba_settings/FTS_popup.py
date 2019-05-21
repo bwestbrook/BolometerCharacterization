@@ -23,4 +23,7 @@ ftscurve_settings_popup_settings.ftscurve_popup_build_dict = {
                                                               '_ftscurve_settings_popup_xlim_clip_label': {'text': 'X Lim Clip', 'position': (16, 0, 1, 1)},
                                                               '_ftscurve_settings_popup_xlim_plot_label': {'text': 'X Lim Plot', 'position': (17, 0, 1, 1)},
                                                               '_ftscurve_settings_popup_smoothing_factor_label': {'text': 'Smoothing:', 'position': (18, 0, 1, 1)},
+                                                              '_ftscurve_settings_popup_interferogram_data_select_label': {'text': 'Int Side:', 'position': (19, 0, 1, 1)},
+                                                              '_ftscurve_settings_popup_plot_interferogram_label': {'text': 'Plot Interferogram?', 'position': (20, 0, 1, 1)},
+                                                              '_ftscurve_settings_popup_add_loacl_fft_label': {'text': 'Plot Local FFT?', 'position': (21, 0, 1, 1)},
                                                               }

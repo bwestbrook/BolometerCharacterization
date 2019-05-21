@@ -1,6 +1,6 @@
 import numpy as np
 import pylab as pl
-from grt_calibration import resistance_to_temp
+from .grt_calibration import resistance_to_temp
 
 
 class RTCurve():

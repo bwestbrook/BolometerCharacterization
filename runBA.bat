@@ -1,1 +1,1 @@
-python GuiMain\BoloAnalyzer.py
+python3 GuiMain\BoloAnalyzer.py
