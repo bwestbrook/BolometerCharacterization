@@ -111,8 +111,8 @@ beam_mapper_settings.beam_mapper_build_dict = {
                                                }
 
 beam_mapper_settings.motor_currents = np.linspace(1, 1, 10)
-beam_mapper_settings.beam_mapper_combobox_entry_dict = {'_beam_mapper_popup_x_current_com_port_combobox': ['COM5'],
-                                                        '_beam_mapper_popup_y_current_com_port_combobox': ['COM12'],
+beam_mapper_settings.beam_mapper_combobox_entry_dict = {'_beam_mapper_popup_x_current_com_port_combobox': ['COM12'],
+                                                        '_beam_mapper_popup_y_current_com_port_combobox': ['COM5'],
                                                         '_beam_mapper_popup_integration_time_combobox': ['500', '1000'],
                                                         '_beam_mapper_popup_pause_time_combobox': ['500', '1000'],
                                                         '_beam_mapper_popup_sample_rate_combobox': ['1000', '2500', '5000'],
