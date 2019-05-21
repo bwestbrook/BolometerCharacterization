@@ -289,7 +289,7 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
             suggested_file_name = self._add_index_to_suggested_file_name(suggested_file_name)
             paths = [os.path.join(self.data_folder, suggested_file_name)]
         elif 'cosmic_rays' in sender:
-            meta_data = self._get_all_meta_data(popup='xy_collector')
+            meta_data = self._get_all_meta_data(popup='cosmic_rays')
             plot_params = self._get_all_params(meta_data, settings.cosmic_rays_run_params, 'cosmic_rays')
             paths = []
             for i in range(1, 3):
@@ -2369,10 +2369,12 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
                 for i, x_pos in enumerate(x_grid):
                     x_pos = x_grid[i]
                     getattr(self, 'sm_{0}'.format(x_com_port)).move_to_position(x_pos)
-                    act_x_pos = getattr(self, 'sm_{0}'.format(x_com_port)).get_position()
+                    act_x_pos = str(getattr(self, 'sm_{0}'.format(x_com_port)).get_position()).replace('SP=', '')
                     for j, y_pos in enumerate(y_grid):
+                        #self.lock_in._zero_lock_in_phase()
                         getattr(self, 'sm_{0}'.format(y_com_port)).move_to_position(y_pos)
-                        act_y_pos = getattr(self, 'sm_{0}'.format(y_com_port)).get_position()
+                        act_y_pos = str(getattr(self, 'sm_{0}'.format(y_com_port)).get_position()).replace('SP=', '')
+                        time.sleep(int(scan_params['pause_time']) * 1e-3)
                         data_time_stream, mean, min_, max_, std = self.real_daq.get_data(signal_channel=scan_params['signal_channel'], integration_time=scan_params['integration_time'],
                                                                                          sample_rate=scan_params['sample_rate'], active_devices=self.active_devices)
                         self._draw_time_stream(data_time_stream, min_, max_,'_beam_mapper_popup_time_stream_label')
@@ -2386,6 +2388,7 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
                         ax.set_xlabel('Position (cm)', fontsize=12)
                         ax.set_ylabel('Position (cm)', fontsize=12)
                         fig.savefig('temp_files/temp_beam.png')
+                        shutil.copy('temp_files/temp_beam.png', self.raw_data_path[0].replace('.dat', '.png'))
                         pl.close('all')
                         image = QtGui.QPixmap('temp_files/temp_beam.png')
                         getattr(self, '_beam_mapper_popup_2D_plot_label').setPixmap(image)
@@ -2396,10 +2399,10 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
                         data_line = '{0}\t{1}\t{2:.4f}\t{3:.4f}\n'.format(act_x_pos, act_y_pos, Z_datum, std)
                         data_handle.write(data_line)
                         root.update()
-                        time.sleep(int(scan_params['pause_time']) * 1e-3)
                         status_msg = '{0} of {1}'.format(count, total_points)
                         getattr(self, '_beam_mapper_popup_status_label').setText(status_msg)
                         count += 1
+                        self.repaint()
                     if i + 1 == len(x_grid):
                         continue_run = False
         self.X = X
