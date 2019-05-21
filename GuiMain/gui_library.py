@@ -640,11 +640,13 @@ class GuiTemplate(QtWidgets.QWidget, GuiBuilder):
         row = 3
         self.selected_files_col_dict = {}
         json_path = self.selected_files[0].replace('.fft', '.json')
+        distance_per_step = '250.39'
+        step_size = '500'
         if os.path.exists(json_path):
             with open(json_path, 'r') as json_handle:
                 meta_data = json.load(json_handle)
-        distance_per_step = meta_data['_single_channel_fts_popup_distance_per_step_combobox']
-        step_size = meta_data['_single_channel_fts_popup_step_size_lineedit']
+            distance_per_step = meta_data['_single_channel_fts_popup_distance_per_step_combobox']
+            step_size = meta_data['_single_channel_fts_popup_step_size_lineedit']
         for i, selected_file in enumerate(self.selected_files):
             # update dict with column file mapping
             col = 1 + i * 2

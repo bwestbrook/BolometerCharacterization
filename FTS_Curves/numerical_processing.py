@@ -130,9 +130,9 @@ class Fourier():
         '''
         start_of_center_burst_index = np.where(np.abs(apodized_efficiency_vector) > 0.8)[-1][0]
         end_of_center_burst_index = np.where(np.abs(apodized_efficiency_vector) > 0.8)[-1][-1]
-        pl.plot(np.abs(apodized_efficiency_vector))
-        pl.show()
-        import ipdb;ipdb.set_trace()
+        #pl.plot(np.abs(apodized_efficiency_vector))
+        #pl.show()
+        #import ipdb;ipdb.set_trace()
         center_burst = np.zeros(len(apodized_efficiency_vector))
         if symmetric:
             start = int(len(apodized_efficiency_vector) / 2) - end_of_center_burst_index

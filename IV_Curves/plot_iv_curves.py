@@ -142,11 +142,13 @@ class IVCurve():
         This code takes to sets of IV curves and takes a differenc in power at the same fracrn
         '''
         fig = pl.figure(figsize=(10, 5))
-        ax = fig.add_subplot(111)
-        fig.subplots_adjust(right=0.8, left=0.10, bottom=0.15)
-        ax.set_xlabel('Resistance ($\Omega$)', fontsize=16)
-        ax.set_xlabel('Normalized Resistance ($\Omega$)', fontsize=16)
-        ax.set_ylabel('Power ($\mu$V)', fontsize=16)
+        ax1 = fig.add_subplot(121)
+        ax2 = fig.add_subplot(122)
+        fig.subplots_adjust(right=0.95, left=0.10, bottom=0.15)
+        ax1.set_xlabel('Normalized Resistance ($\Omega$)', fontsize=16)
+        ax1.set_ylabel('Power ($\mu$V)', fontsize=16)
+        ax2.set_xlabel('Frequency(GHz)', fontsize=16)
+        ax2.set_ylabel('Transmission', fontsize=16)
         p_at_same_rfracs = []
         for i, v_bias in enumerate(v_biases):
             plot_clip = plot_clips[i]
@@ -158,27 +160,28 @@ class IVCurve():
             r_bolo_norm = r_bolo / np.max(r_bolo)
             p_bolo = v_bias[selector] * i_bolo[selector]
             #ax.plot(r_bolo, p_bolo, color=colors[i], label=labels[i])
-            ax.plot(r_bolo_norm, p_bolo, color=colors[i], label=labels[i])
+            ax1.plot(r_bolo_norm, p_bolo, color=colors[i], label=labels[i])
             #r_n = r_bolo[10] # some value near the start
             r_n = r_bolo_norm[10] # some value near the start
             nearest_r_bolo, nearest_r_bolo_index = self.find_nearest_r_bolo(r_bolo_norm, r_n, fracrn)
             p_at_same_rfrac = p_bolo[nearest_r_bolo_index]
             p_at_same_rfracs.append(p_at_same_rfrac)
             #ax.axvline(r_bolo[nearest_r_bolo_index], color=colors[i], label=labels[i])
-            ax.axvline(r_bolo_norm[nearest_r_bolo_index], color=colors[i])
+            ax1.axvline(r_bolo_norm[nearest_r_bolo_index], color=colors[i])
             spectra_path = spectra_paths[i]
-        p_window = self.compute_delta_power_at_window(spectra_path)
+        p_window, integrated_bandwidth, fft_data = self.compute_delta_power_at_window(spectra_path)
+        selector = np.where(fft_data[0] > 0)
+        ax2.plot(fft_data[0][selector], fft_data[1][selector], label='spectra')
         p_sensed = np.abs(p_at_same_rfracs[1] - p_at_same_rfracs[0])
         efficiency = 100.0 * p_sensed / p_window
+        pix_efficiency = efficiency / 0.75
         pk_per_K_efficiency = p_sensed / (300.0 - 77.0)
-        print()
-        title =  'Power diff {0:.2f} / {1:.2f} (sensed / window) {2:.3f} pW/K'.format(p_sensed, p_window, pk_per_K_efficiency)
-        title += '\nEfficiency is {0:.2f}%'.format(efficiency)
-        print(title)
-        print()
-        ax.set_title(title)
-        ax.legend(numpoints=1)
-        #, loc=2, bbox_to_anchor=(1.01, 1), borderaxespad=0.0)
+        title =  'Power diff {0:.2f} / {1:.2f} (sensed / window) or [{2:.3f} pW/K]'.format(p_sensed, p_window, pk_per_K_efficiency)
+        title += '\nEnd-to-Efficiency is {0:.2f}%, Pixel Efficiency >= {1:.2f}%\n'.format(efficiency, pix_efficiency)
+        title +=  'Integradted band with from 0 GHz to Max {0:.2f} GHz'.format(integrated_bandwidth * 1e-9)
+        pl.suptitle(title)
+        ax1.legend(numpoints=1)
+        ax2.legend(numpoints=1)
         pl.show()
 
 
@@ -292,15 +295,16 @@ class IVCurve():
         boltzmann_constant = 1.38e-23
         fft_data = self.load_FFT_data(spectra_path)
         frequency_vector = fft_data[0]
+        selector = np.where(frequency_vector > 0)
         normalized_transmission_vector = fft_data[2]
-        integrated_bandwidth = np.trapz(normalized_transmission_vector, frequency_vector) * 1e9
+        integrated_bandwidth = np.trapz(normalized_transmission_vector[selector], frequency_vector[selector]) * 1e9
         delta_power = boltzmann_constant * (t_source_high - t_source_low) * integrated_bandwidth  # in W
         delta_power *= 1e12 # pW
         if show_spectra:
             pl.plot(frequency_vector, normalized_transmission_vector)
             pl.plot(normalized_transmission_vector)
             pl.show()
-        return delta_power
+        return delta_power, integrated_bandwidth, fft_data
 
     def run(self):
         '''

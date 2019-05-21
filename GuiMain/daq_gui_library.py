@@ -1086,11 +1086,12 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
     def _update_fridge_cycle(self, data_path=None):
         fc_params = self._get_params_from_fride_cycle()
         fig, ax = self._create_blank_fig(frac_screen_width=0.95, frac_screen_height=0.7,
-                                         left=0.05, right=0.98, top=0.9, bottom=0.1,
+                                         left=0.08, right=0.98, top=0.9, bottom=0.1,
                                          multiple_axes=True)
-        ax1 = fig.add_subplot(311)
-        ax2 = fig.add_subplot(312)
-        ax3 = fig.add_subplot(313)
+        ax1 = fig.add_subplot(411)
+        ax2 = fig.add_subplot(412)
+        ax3 = fig.add_subplot(413)
+        ax4 = fig.add_subplot(414)
         time_stamp_vector = [datetime.strptime(x, '%Y_%m_%d_%H_%M_%S') for x in self.fc_time_stamp_vector]
         ax1.plot(time_stamp_vector, self.ps_voltage_vector, color='r', label='PS Voltage (V)')
         date = datetime.strftime(datetime.now(), '%Y_%m_%d')
@@ -1099,12 +1100,16 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
         ax1.set_ylim([0, 26])
         ax2.plot(time_stamp_vector, self.abr_temperature_vector, color='g', label='ABR Temp (K)')
         ax2.set_ylabel('ABR Temp (K)')
-        ax3.plot(time_stamp_vector, self.grt_temperature_vector, color='c', label='GRT Temp (mK)')
         ax2.axhline(float(self.fc.abr_resistance_to_kelvin(float(fc_params['charcoal_end_resistance']))[0]), color='b', label='ABR End')
         ax2.axhline(float(self.fc.abr_resistance_to_kelvin(float(fc_params['charcoal_start_resistance']))[0]), color='m', label='ABR Start')
-        ax3.axhline(float(fc_params['cycle_end_temperature']), color='b', label='Approx GRT Base')
-        ax3.set_ylabel('GRT Temp (mK)')
-        ax3.set_xlabel('Time Stamps')
+        ax3.plot(time_stamp_vector, np.asarray(self.abr_resistance_vector) * 1e-3, color='c', label='GRT Temp (mK)')
+        ax3.axhline(float(fc_params['charcoal_end_resistance']) * 1e-3, color='b', label='ABR End')
+        ax3.axhline(float(fc_params['charcoal_start_resistance']) * 1e-3, color='m', label='ABR Start')
+        ax3.set_ylabel('ABR Res (kOhms)')
+        ax4.plot(time_stamp_vector, self.grt_temperature_vector, color='c', label='GRT Temp (mK)')
+        ax4.axhline(float(fc_params['cycle_end_temperature']), color='b', label='Approx GRT Base')
+        ax4.set_ylabel('GRT Temp (mK)')
+        ax4.set_xlabel('Time Stamps')
         # Add legends
         handles, labels = ax1.get_legend_handles_labels()
         ax1.legend(handles, labels, numpoints=1)

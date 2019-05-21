@@ -78,11 +78,11 @@ class FTSCurve():
             elif band == '150':
                 data_column = 2
         elif band in ['220', '270']:
-            freq_column = 4
+            freq_column = 8
             if band == '220':
-                data_column = 5
+                data_column = 11
             elif band == '270':
-                data_column = 6
+                data_column = 12
         frequency = []
         transmission = []
         with open('.\FTS_Curves\Simulations\PB2abcBands.csv', 'r') as file_handle:
@@ -118,7 +118,6 @@ class FTSCurve():
             frequency_vector = np.zeros(len(lines))
             transmission_vector = np.zeros(len(lines))
             for i, line in enumerate(lines):
-                print(line)
                 if ',' in line:
                     frequency = line.split(', ')[0]
                     transmission = line.split(', ')[1]
@@ -132,6 +131,12 @@ class FTSCurve():
         frequency_vector = frequency_vector[frequency_vector > 0.0]
         if smoothing_factor > 0.0:
             transmission_vector = self.running_mean(transmission_vector, smoothing_factor=smoothing_factor)
+            normalized_transmission_vector = transmission_vector / max(transmission_vector)
+            with open(data_path.replace('.fft', '_smoothed.fft'), 'w') as smoothed_data_handle:
+                for i, transmission_value in enumerate(normalized_transmission_vector):
+                    frequency_value = frequency_vector[i]
+                    line = '{0:.4f}\t{1:.4f}\n'.format(frequency_value, transmission_value)
+                    smoothed_data_handle.write(line)
         normalized_transmission_vector = transmission_vector / max(transmission_vector)
         return frequency_vector, transmission_vector, normalized_transmission_vector
 
@@ -169,8 +174,9 @@ class FTSCurve():
         ax.set_xlabel('Mirror Position', fontsize=14)
         ax.set_ylabel('IF Signal ', fontsize=14)
         ax.plot(position_vector, signal_vector, color, label=label, lw=0.5)
-        handles, labels = ax.get_legend_handles_labels()
-        ax.legend(handles, labels, numpoints=1, borderaxespad=0.0, loc=2, bbox_to_anchor=(1.01, 1.0))
+        #handles, labels = ax.get_legend_handles_labels()
+        ax.legend(numpoints=1)
+        #handles, labels, numpoints=1, borderaxespad=0.0, loc=2, bbox_to_anchor=(1.01, 1.0))
         return fig
 
     def plot_FFT_data(self, frequency_vector, transmission_vector, fig,
@@ -372,7 +378,6 @@ class FTSCurve():
             divide_bs_10 = dict_['measurements']['divide_bs_10']
             add_atmosphere = dict_['measurements']['add_atm_model']
             add_co_lines = dict_['measurements']['add_co_lines']
-            smoothing_factor = float(dict_['measurements']['smoothing_factor'])
             add_90_sim = float(dict_['measurements']['add_sim_band_90'])
             add_150_sim = float(dict_['measurements']['add_sim_band_150'])
             add_220_sim = float(dict_['measurements']['add_sim_band_220'])
@@ -392,16 +397,16 @@ class FTSCurve():
                 fft_freq_vector, fft_vector, phase_corrected_fft_vector, symmetric_position_vector, symmetric_efficiency_vector\
                     = self.fourier.convert_IF_to_FFT_data(position_vector, efficiency_vector, dict_)
                 row_col = '{0}{1}'.format(row, col)
-                fig = self.plot_IF_data(position_vector, efficiency_vector, fig, row_col=row_col, color='r', label='Raw IF', ax=0)
+                fig = self.plot_IF_data(position_vector, efficiency_vector, fig, row_col=row_col, color=color, label='Raw IF', ax=0)
                 row_col = '{0}{1}'.format(row + 1, col)
                 fig = self.plot_IF_data(symmetric_position_vector, symmetric_efficiency_vector, fig,
-                                        row_col=row_col, color='b', label='Processed IF', ax=1)
+                                        row_col=row_col, color=color, label='Processed IF', ax=1)
                 col += 1
             if add_local_fft:
                 fft_freq_vector, fft_vector, phase_corrected_fft_vector, position_vector, efficiency_vector\
                     = self.convert_if_to_fft(data_path, dict_)
                 normalized_phase_corrected_fft_vector = np.abs(phase_corrected_fft_vector.real / np.max(phase_corrected_fft_vector.real))
-                fig = self.plot_FFT_data(fft_freq_vector * 1e-9, normalized_phase_corrected_fft_vector, fig, label='Local {0} {1}'.format(interferogram_data_select, label))
+                fig = self.plot_FFT_data(fft_freq_vector * 1e-9, normalized_phase_corrected_fft_vector, fig, color=color, label='Local {0} {1}'.format(interferogram_data_select, label))
             frequency_vector, transmission_vector, normalized_transmission_vector = self.load_FFT_data(data_path, smoothing_factor=smoothing_factor,
                                                                                                        xlim_clip=xlim_clip)
             if run_open_comparison:
