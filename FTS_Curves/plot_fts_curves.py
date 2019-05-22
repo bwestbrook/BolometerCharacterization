@@ -180,7 +180,7 @@ class FTSCurve():
         return fig
 
     def plot_FFT_data(self, frequency_vector, transmission_vector, fig,
-                      color='b', title='', label='', xlim=(100,400),
+                      color='b', title='', label='', xlim=(100,400), min_frequency=50.0,
                       add_atmosphere=False, save_data=True, add_90_sim=False, add_150_sim=False,
                       add_220_sim=False, add_270_sim=False, add_co_lines=False, custom_order=[]):
         '''

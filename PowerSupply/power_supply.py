@@ -9,7 +9,7 @@ do_cycle_fridge = False
 
 class PowerSupply():
 
-    def __init__(self, ps_port='COM3'):
+    def __init__(self, ps_port='COM16'):
         self.ps_port = ps_port
         self.ps_connection = lab_serial(port=self.ps_port, parity=None)
         self.initialize_ps()

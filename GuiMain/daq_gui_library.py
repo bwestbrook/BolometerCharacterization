@@ -15,7 +15,7 @@ import time
 import threading
 from tkinter import *
 from PyPDF2 import PdfFileMerger
-from pprint import pprint
+from pprint import pprint, pformat
 from datetime import datetime
 from copy import copy
 from PyQt5 import QtCore, QtGui, QtWidgets
@@ -194,6 +194,16 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
         self.last_current_string, self.last_position_string, self.last_velocity_string, self.last_acceleration_string = current_string, position_string, velocity_string, acceleration_string
         return current_string, position_string, velocity_string, acceleration_string
 
+    def _verify_params(self):
+        meta_data = self._get_all_meta_data(popup='_single_channel_fts')
+        scan_params = self._get_all_params(meta_data, settings.fts_scan_params, 'single_channel_fts')
+        params_str = pformat(scan_params, indent=2)
+        response = self._quick_message(params_str, add_cancel=True, add_apply=True)
+        if response == QtWidgets.QMessageBox.Cancel:
+            return True
+        elif response == QtWidgets.QMessageBox.Apply:
+            return False
+
     #################################################
     # Generica Control Function (Common to all DAQ Types)
     #################################################
@@ -301,7 +311,7 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
                 paths.append(path)
         elif 'single_channel_fts' in sender:
             meta_data = self._get_all_meta_data(popup='single_channel_fts')
-            plot_params = self._get_all_params(meta_data, settings.xy_collector_plot_params, 'xy_collector')
+            scan_params = self._get_all_params(meta_data, settings.fts_scan_params, 'single_channel_fts')
             squid = scan_params['squid_select']
             label = scan_params['sample_name']
             resolution = scan_params['resolution']
@@ -431,9 +441,12 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
         if value < min_value:
             self.sender().setText(str(40))
 
-    def _quick_message(self, msg='', add_save=False, add_cancel=False, add_yes_to_all=False):
+    def _quick_message(self, msg='', add_apply=False, add_save=False, add_cancel=False, add_yes_to_all=False):
         message_box = QtWidgets.QMessageBox()
         message_box.setText(msg)
+        if add_apply:
+            apply_button = QtWidgets.QMessageBox.Apply
+            message_box.addButton(apply_button)
         if add_save:
             save_button = QtWidgets.QMessageBox.Save
             message_box.addButton(save_button)
@@ -1092,7 +1105,7 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
 
     def _update_fridge_cycle(self, data_path=None):
         fc_params = self._get_params_from_fride_cycle()
-        fig, ax = self._create_blank_fig(frac_screen_width=0.95, frac_screen_height=0.7,
+        fig, ax = self._create_blank_fig(frac_screen_width=0.75, frac_screen_height=0.7,
                                          left=0.08, right=0.98, top=0.9, bottom=0.1,
                                          multiple_axes=True)
         ax1 = fig.add_subplot(411)
@@ -1977,8 +1990,6 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
         '''
         Creates the panel
         '''
-        if not hasattr(self, 'fts_daq'):
-            self.fts_daq = FTSDAQ()
         if not hasattr(self, 'fourier'):
             self.fourier = Fourier()
         if not hasattr(self, 'lock_in'):
@@ -1996,6 +2007,8 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
         getattr(self, '_single_channel_fts_popup_sample_rate_combobox').setCurrentIndex(8)
         #getattr(self, '_single_channel_fts_popup_grid_sm_com_port_combobox').setCurrentIndex(0
         getattr(self, '_single_channel_fts_popup_fts_sm_com_port_combobox').setCurrentIndex(0)
+        getattr(self, '_single_channel_fts_popup_verify_parameters_checkbox').setCheckState(True)
+        getattr(self, '_single_channel_fts_popup_signal_channel_combobox').setCurrentIndex(2)
         self.fts_positions_steps, self.fts_positions_m, self.fts_amplitudes, self.fts_stds = [], [], [], []
         self._update_single_channel_fts()
         self._plot_interferogram()
@@ -2147,6 +2160,12 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
         '''
         global continue_run
         continue_run = True
+        # Verify params via popu first
+        if getattr(self, '_single_channel_fts_popup_verify_parameters_checkbox').isChecked():
+            cancel_run = self._verify_params()
+            if cancel_run:
+                continue_run = False
+                return None
         meta_data = self._get_all_meta_data(popup='_single_channel_fts')
         scan_params = self._get_all_params(meta_data, settings.fts_scan_params, 'single_channel_fts')
         pause = float(scan_params['pause_time']) / 1e3

@@ -3,13 +3,15 @@ import visa
 #from datetime import datetime
 from lab_code.lab_serial import lab_serial
 
-class LockIn():
+class FunctionGenerator():
 
-    def __init__(self, port='COM10'):
+    def __init__(self, port='COM17'):
         self.port = port
         self._connection = lab_serial(port=self.port)
-        self._set_lock_in_defaults()
-        #import ipdb;ipdb.set_trace()
+        rsp = self._query('*IDN?\r\n')
+        print(rsp)
+        #self._set_lock_in_defaults()
+        import ipdb;ipdb.set_trace()
 
     def _send_command(self, msg):
         self._connection.write(msg)
@@ -92,5 +94,5 @@ class LockIn():
         print('running')
 
 if __name__ == '__main__':
-    li = LockIn()
-    li.run()
+    fg = FunctionGenerator()
+    fg.run()
