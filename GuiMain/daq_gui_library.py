@@ -40,6 +40,7 @@ from GuiBuilder.gui_builder import GuiBuilder
 
 #Global variables
 continue_run = False
+pause_run = False
 do_cycle_fridge = False
 root = Tk()
 
@@ -419,6 +420,16 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
         image = QtGui.QPixmap('temp_files/temp_ts.png')
         getattr(self, set_to_widget).setPixmap(image)
 
+    def _pause(self):
+        global pause_run
+        if 'beam_mapper' in str(self.sender().whatsThis()):
+            if str(self.sender().text()) == 'Restart':
+                pause_run = False
+                self.sender().setText('Pause')
+            else:
+                pause_run = True
+                self.sender().setText('Restart')
+
     def _stop(self):
         global continue_run
         print(self.sender().whatsThis())
@@ -429,6 +440,9 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
         elif 'multimeter' in str(self.sender().whatsThis()):
             getattr(self, '_multimeter_popup_get_data_pushbutton').setFlat(False)
             getattr(self, '_multimeter_popup_get_data_pushbutton').setText('Get Data')
+        elif 'beam_mapper' in str(self.sender().whatsThis()):
+            getattr(self, '_beam_mapper_popup_start_pushbutton').setDisabled(False)
+            getattr(self, '_beam_mapper_popup_status_label').setText('Scan Aborted')
         self.repaint()
         continue_run = False
 
@@ -2306,10 +2320,8 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
         '''
         Opens the panel
         '''
-#        if not hasattr(self, 'lock_in'):
-#            self.lock_in = LockIn()
-        #if not hasattr(self, 'bmt'):
-            #self.bmt = BeamMapperTools()
+        if not hasattr(self, 'lock_in'):
+            self.lock_in = LockIn()
         if not hasattr(self, 'beam_mapper_popup'):
             self._create_popup_window('beam_mapper_popup')
         else:
@@ -2334,9 +2346,10 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
         getattr(self, '_beam_mapper_popup_y_motor_current_label').setText(y_motor_current)
         getattr(self, '_beam_mapper_popup_y_motor_velocity_label').setText(y_motor_velocity)
         getattr(self, '_beam_mapper_popup_signal_channel_combobox').setCurrentIndex(1)
-        getattr(self, '_beam_mapper_popup_save_pushbutton').setDisabled(True)
         getattr(self, '_beam_mapper_popup_aperature_size_combobox').setCurrentIndex(1)
         getattr(self, '_beam_mapper_popup_sample_rate_combobox').setCurrentIndex(2)
+        getattr(self, '_beam_mapper_popup_integration_time_combobox').setCurrentIndex(0)
+        getattr(self, '_beam_mapper_popup_pause_time_combobox').setCurrentIndex(0)
         self.beam_mapper_popup.repaint()
 
     def _initialize_beam_mapper(self):
@@ -2383,7 +2396,7 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
     def _plot_beam_map(self, x_ticks, y_ticks, Z, scan_params):
         '''
         '''
-        fig, ax = self._create_blank_fig(left=0.02, bottom=0.16, right=0.98, top=0.9,
+        fig, ax = self._create_blank_fig(left=0.02, bottom=0.19, right=0.98, top=0.9,
                                          frac_screen_width=None, frac_screen_height=None,
                                          aspect='equal')
         #ax_image = ax.imshow(Z)
@@ -2411,7 +2424,9 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
         Executes a data taking run
         '''
         global continue_run
+        global pause_run
         continue_run = True
+        pause_run = False
         meta_data = self._get_all_meta_data()
         scan_params = self._get_all_params(meta_data, settings.beam_mapper_params, 'beam_mapper')
         x_start = int(scan_params['start_x_position'])
@@ -2436,14 +2451,15 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
         total_points = int(scan_params['n_points_x']) * int(scan_params['n_points_y'])
         self._get_raw_data_save_path()
         direction = -1
-        if self.raw_data_path is not None and continue_run:
+        if self.raw_data_path is not None:
             start_time = datetime.now()
             getattr(self, '_beam_mapper_popup_start_pushbutton').setDisabled(True)
             with open(self.raw_data_path[0], 'w') as data_handle:
                 count = 1
                 with open(self.raw_data_path[0].replace('.dat', '.json'), 'w') as meta_data_handle:
                     json.dump(meta_data, meta_data_handle)
-                for i, x_pos in enumerate(x_grid):
+                i = 0
+                while (i + 1) < len(x_grid) and continue_run:
                     x_pos = x_grid[i]
                     getattr(self, 'sm_{0}'.format(x_com_port)).move_to_position(x_pos)
                     act_x_pos = str(getattr(self, 'sm_{0}'.format(x_com_port)).get_position()).replace('SP=', '')
@@ -2452,14 +2468,26 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
                         y_scan = y_grid_reversed
                     else:
                         y_scan = y_grid
-                    for j, y_pos in enumerate(y_scan):
-                        #self.lock_in._zero_lock_in_phase()
+                    j = 0
+                    while (j + 1) < len(y_scan) and continue_run:
+                        y_pos = y_grid[j]
+                        print('start', datetime.now())
                         getattr(self, 'sm_{0}'.format(y_com_port)).move_to_position(y_pos)
+                        print('move_to_pos', datetime.now())
                         act_y_pos = str(getattr(self, 'sm_{0}'.format(y_com_port)).get_position()).replace('SP=', '')
-                        time.sleep(int(scan_params['pause_time']) * 1e-3)
+                        print('get_pos', datetime.now())
+                        self.lock_in._zero_lock_in_phase()
+                        print('zero_lockin', datetime.now())
+                        if j == 0:
+                            time.sleep(3)
+                        else:
+                            time.sleep(int(scan_params['pause_time']) * 1e-3)
+                        print('sleep', datetime.now())
                         data_time_stream, mean, min_, max_, std = self.real_daq.get_data(signal_channel=scan_params['signal_channel'], integration_time=scan_params['integration_time'],
                                                                                          sample_rate=scan_params['sample_rate'], active_devices=self.active_devices)
+                        print('aquire_data', datetime.now())
                         self._draw_time_stream(data_time_stream, min_, max_,'_beam_mapper_popup_time_stream_label')
+                        print('draw_time_tream', datetime.now())
                         Z_datum = mean
                         if direction == -1:
                             self.stds[len(y_scan) -1 - j][i] = std
@@ -2467,16 +2495,15 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
                         else:
                             self.stds[j][i] = std
                             Z_data[j][i] = Z_datum
-                        print(x_pos, y_pos, Z_datum)
-                        print()
-                        #print(Z_data)
                         self._plot_beam_map(x_ticks, y_ticks, Z_data, scan_params)
+                        print('organize_data and plot beam map', datetime.now())
                         getattr(self, '_beam_mapper_popup_data_mean_label').setText('{0:.3f}'.format(mean))
                         getattr(self, '_beam_mapper_popup_x_position_label').setText('{0}'.format(act_x_pos))
                         getattr(self, '_beam_mapper_popup_y_position_label').setText('{0}'.format(act_y_pos))
                         getattr(self, '_beam_mapper_popup_data_std_label').setText('{0:.3f}'.format(std))
                         data_line = '{0}\t{1}\t{2:.4f}\t{3:.4f}\n'.format(act_x_pos, act_y_pos, Z_datum, std)
                         data_handle.write(data_line)
+                        print('update gui and write to file', datetime.now())
                         now_time = datetime.now()
                         now_time_str = datetime.strftime(now_time, '%H:%M')
                         duration = now_time - start_time
@@ -2486,9 +2513,18 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
                         status_msg = '{0} of {1} ::: Total Duration {2:.2f} (m) ::: Time per Point {3:.2f} (s) ::: Time Left {4:.2f} (m)'.format(count, total_points, duration.seconds / 60,
                                                                                                                                                  time_per_step, time_left)
                         getattr(self, '_beam_mapper_popup_status_label').setText(status_msg)
+                        print('update status', datetime.now())
                         self.repaint()
                         root.update()
                         count += 1
+                        j += 1
+                        print('pause_run', pause_run)
+                        while pause_run:
+                            print('pausing beam mapper')
+                            time.sleep(1)
+                            root.update()
+                        print('repaint, update root, advance status', datetime.now())
+                    i += 1
                     if i + 1 == len(x_grid):
                         continue_run = False
         #import ipdb;ipdb.set_trace()
@@ -2497,5 +2533,6 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
         getattr(self, 'sm_{0}'.format(x_com_port)).move_to_position(0)
         getattr(self, 'sm_{0}'.format(y_com_port)).move_to_position(0)
         getattr(self, '_beam_mapper_popup_start_pushbutton').setEnabled(True)
+        self.lock_in._zero_lock_in_phase()
         Z_data = np.zeros(shape=X.shape)
 

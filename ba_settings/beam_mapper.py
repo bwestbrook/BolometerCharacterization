@@ -78,7 +78,7 @@ beam_mapper_settings.beam_mapper_build_dict = {
                                                '_beam_mapper_popup_squid_select_header_label': {'text': 'SQUID:', 'position': (14, 0, 1, 1)},
                                                '_beam_mapper_popup_squid_select_combobox': {'function': '_update_squid_calibration', 'position': (14, 1, 1, 1)},
 
-                                               '_beam_mapper_popup_sample_name_header_label': {'text': 'SQUID:', 'position': (14, 2, 1, 1)},
+                                               '_beam_mapper_popup_sample_name_header_label': {'text': 'Sample Name:', 'position': (14, 2, 1, 1)},
                                                '_beam_mapper_popup_sample_name_lineedit': {'position': (14, 3, 1, 1)},
 
                                                '_beam_mapper_popup_aperature_size_header_label': {'text': 'Aperature Size (in):', 'position': (15, 0, 1, 1)},
@@ -90,9 +90,9 @@ beam_mapper_settings.beam_mapper_build_dict = {
                                                '_beam_mapper_popup_controls_label': {'text': 'CONTROLS', 'alignment': 'Center', 'font': 'huge', 'color': 'blue', 'position': (16, 0, 1, 6)},
 
                                                '_beam_mapper_popup_start_pushbutton': {'text': 'Start', 'function': '_take_beam_map', 'position': (17, 0, 1, 2)},
-                                               '_beam_mapper_popup_cancel_pushbutton': {'text': 'Cancel', 'color': 'red', 'function': '_stop', 'position': (17, 2, 1, 2)},
-                                               '_beam_mapper_popup_close_pushbutton': {'function': '_close_beam_mapper', 'text': 'Close', 'position': (18, 0, 1, 4)},
-                                               '_beam_mapper_popup_save_pushbutton': {'text': 'Save', 'function': '_final_plot', 'position': (19, 0, 1, 4)},
+                                               '_beam_mapper_popup_stop_pushbutton': {'text': 'Stop', 'color': 'red', 'function': '_stop', 'position': (17, 2, 1, 2)},
+                                               '_beam_mapper_popup_pause_pushbutton': {'text': 'Pause', 'function': '_pause', 'position': (18, 0, 1, 4)},
+                                               '_beam_mapper_popup_close_pushbutton': {'function': '_close_beam_mapper', 'text': 'Close', 'position': (19, 0, 1, 4)},
 #SCAN MONITOR
                                                '_beam_mapper_popup_scan_monitor_label': {'text': 'SCAN MONITOR', 'alignment': 'Center', 'font': 'huge', 'color': 'blue', 'position': (0, 8, 1, 6)},
 
@@ -119,8 +119,8 @@ beam_mapper_settings.motor_currents = np.linspace(1, 1, 10)
 beam_mapper_settings.beam_mapper_combobox_entry_dict = {
                                                         '_beam_mapper_popup_x_current_com_port_combobox': ['COM13'],
                                                         '_beam_mapper_popup_y_current_com_port_combobox': ['COM14'],
-                                                        '_beam_mapper_popup_integration_time_combobox': ['500', '1000'],
-                                                        '_beam_mapper_popup_pause_time_combobox': ['500', '1000'],
+                                                        '_beam_mapper_popup_integration_time_combobox': ['100', '1000'],
+                                                        '_beam_mapper_popup_pause_time_combobox': ['100', '500', '1000'],
                                                         '_beam_mapper_popup_sample_rate_combobox': ['1000', '2500', '5000'],
                                                         '_beam_mapper_popup_squid_select_combobox': ['', '1', '2', '3', '4', '5', '6'],
                                                         '_beam_mapper_popup_aperature_size_combobox': ['0.25', '0.5', '1.0', '2.0'],
