@@ -5,7 +5,7 @@ from lab_code.lab_serial import lab_serial
 
 class LockIn():
 
-    def __init__(self, port='COM3'):
+    def __init__(self, port='COM12'):
         self.port = port
         self._connection = lab_serial(port=self.port)
         self._set_lock_in_defaults()

@@ -18,7 +18,8 @@ single_channel_fts_settings.single_channel_fts_build_dict = {
                                                              '_single_channel_fts_popup_grid_angle_lineedit': {'text': '',  'position': (2, 4, 1, 1)},
 
 # SCAN SETUP 
-                                                             '_single_channel_fts_popup_scan_setup_label': {'text': 'SCAN SETUP', 'font': 'huge', 'color': 'blue', 'alignment': 'Center', 'position': (4, 0, 1, 6)},
+                                                             '_single_channel_fts_popup_scan_setup_label': {'text': 'SCAN SETUP', 'font': 'huge', 'color': 'blue',
+                                                                                                            'alignment': 'Center', 'position': (4, 0, 1, 6)},
 
                                                              '_single_channel_fts_popup_starting_position_header_label': {'text': 'Starting Position:', 'position': (5, 0, 1, 1)},
                                                              '_single_channel_fts_popup_starting_position_lineedit': {'text': '-10000', 'function': '_update_single_channel_fts', 'position': (5, 1, 1, 1)},

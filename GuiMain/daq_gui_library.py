@@ -451,8 +451,8 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
         if frac_screen_width is None and frac_screen_height is None:
             fig = pl.figure()
         else:
-            width = (0.5 * float(self.screen_resolution.width())) / self.monitor_dpi
-            height = (0.3 * float(self.screen_resolution.height())) / self.monitor_dpi
+            width = (frac_screen_width * float(self.screen_resolution.width())) / self.monitor_dpi
+            height = (frac_screen_height * float(self.screen_resolution.height())) / self.monitor_dpi
             fig = pl.figure(figsize=(width, height))
         if not multiple_axes:
             if aspect is None:
@@ -1109,7 +1109,7 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
         ax2.set_ylabel('ABR Temp (K)')
         ax2.axhline(float(self.fc.abr_resistance_to_kelvin(float(fc_params['charcoal_end_resistance']))[0]), color='b', label='ABR End')
         ax2.axhline(float(self.fc.abr_resistance_to_kelvin(float(fc_params['charcoal_start_resistance']))[0]), color='m', label='ABR Start')
-        ax3.plot(time_stamp_vector, np.asarray(self.abr_resistance_vector) * 1e-3, color='c', label='GRT Temp (mK)')
+        ax3.plot(time_stamp_vector, np.asarray(self.abr_resistance_vector) * 1e-3, color='k', label='GRT Temp (mK)')
         ax3.axhline(float(fc_params['charcoal_end_resistance']) * 1e-3, color='b', label='ABR End')
         ax3.axhline(float(fc_params['charcoal_start_resistance']) * 1e-3, color='m', label='ABR Start')
         ax3.set_ylabel('ABR Res (kOhms)')
