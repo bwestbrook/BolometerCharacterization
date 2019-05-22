@@ -108,7 +108,7 @@ beam_mapper_settings.beam_mapper_build_dict = {
                                                '_beam_mapper_popup_data_std_header_label': {'text': 'Data STD:', 'position': (2, 10, 1, 1)},
                                                '_beam_mapper_popup_data_std_label': {'text': '', 'position': (2, 11, 1, 1)},
 
-                                               '_beam_mapper_popup_status_label': {'position': (3, 8, 1, 2)},
+                                               '_beam_mapper_popup_status_label': {'position': (3, 8, 1, 4)},
 
                                                '_beam_mapper_popup_time_stream_label': {'position': (4, 8, 5, 4)},
 

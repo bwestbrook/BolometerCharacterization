@@ -68,7 +68,8 @@ class GuiTemplate(QtWidgets.QWidget, GuiBuilder):
         sender_name = str(self.sender().whatsThis())
         pushbuttons = ['_main_panel_polcurve_pushbutton', '_main_panel_ivcurve_pushbutton',
                        '_main_panel_rtcurve_pushbutton', '_main_panel_ftscurve_pushbutton',
-                       '_main_panel_ifcurve_pushbutton', '_main_panel_taucurve_pushbutton']
+                       '_main_panel_ifcurve_pushbutton', '_main_panel_taucurve_pushbutton',
+                       '_main_panel_beammap_pushbutton']
         for pushbutton in pushbuttons:
             if sender_name == pushbutton:
                 self.analysis_type = pushbutton.split('_')[3]
@@ -121,6 +122,27 @@ class GuiTemplate(QtWidgets.QWidget, GuiBuilder):
     # Tau Curves 
     #################################################
 
+    def _close_beammap(self):
+        self.beammap_settings_popup.close()
+
+    def _build_beammap_settings_popup(self):
+        popup_name = '{0}_settings_popup'.format(self.analysis_type)
+        print(popup_name)
+        if hasattr(self, popup_name):
+            self._initialize_panel(popup_name)
+            self._build_panel(settings.beammap_settings_popup_build_dict)
+        else:
+            self._create_popup_window(popup_name)
+            self._build_panel(settings.beammap_settings_popup_build_dict)
+        getattr(self, popup_name).show()
+
+    #################################################
+    # Tau Curves 
+    #################################################
+
+    def _close_tau_popup(self):
+        self.taucurve_settings_popup.close()
+
     def _build_taucurve_settings_popup(self):
         popup_name = '{0}_settings_popup'.format(self.analysis_type)
         if hasattr(self, popup_name):
@@ -159,8 +181,6 @@ class GuiTemplate(QtWidgets.QWidget, GuiBuilder):
             self._create_and_place_widget(unique_widget_name, **widget_settings)
             row = 2
 
-    def _close_tau_popup(self):
-        self.taucurve_settings_popup.close()
 
     def _build_tau_input_dicts(self):
         list_of_input_dicts = []
