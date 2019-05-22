@@ -13,6 +13,7 @@ class BeamMap():
 
     def __init__(self):
         self.hi = 'hello'
+        self.good_bye = 'good bye'
 
     # Data Loading
     def load_beam_map_data(self, data_path, map_limit=2.5e6):
