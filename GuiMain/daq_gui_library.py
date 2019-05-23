@@ -1886,6 +1886,7 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
         self.pol_efficiency_popup.showMaximized()
         getattr(self, '_pol_efficiency_popup_verify_parameters_checkbox').setChecked(True)
         getattr(self, '_pol_efficiency_popup_signal_channel_combobox').setCurrentIndex(2)
+        getattr(self, '_pol_efficiency_popup_pause_time_combobox').setCurrentIndex(2)
         self.pol_efficiency_popup.setWindowTitle('POL EFFICIENCY')
 
     def _update_pol_efficiency(self):
@@ -1897,12 +1898,13 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
             start_angle = scan_params['starting_position']
             end_angle = scan_params['ending_position']
             step_size = scan_params['step_size']
-            num_steps = (int(end_angle) - int(start_angle)) / int(step_size)
-            getattr(self,'_pol_efficiency_popup_number_of_steps_label').setText(str(num_steps))
-            getattr(self,'_pol_efficiency_popup_position_slider_min_label').setText(str(start_angle))
-            getattr(self,'_pol_efficiency_popup_position_slider_max_label').setText(str(end_angle))
-            getattr(self, '_pol_efficiency_popup_position_monitor_slider').setMinimum(int(start_angle))
-            getattr(self, '_pol_efficiency_popup_position_monitor_slider').setMaximum(int(end_angle))
+            if int(step_size) > 0:
+                num_steps = (int(end_angle) - int(start_angle)) / int(step_size)
+                getattr(self,'_pol_efficiency_popup_number_of_steps_label').setText(str(num_steps))
+                getattr(self,'_pol_efficiency_popup_position_slider_min_label').setText(str(start_angle))
+                getattr(self,'_pol_efficiency_popup_position_slider_max_label').setText(str(end_angle))
+                getattr(self, '_pol_efficiency_popup_position_monitor_slider').setMinimum(int(start_angle))
+                getattr(self, '_pol_efficiency_popup_position_monitor_slider').setMaximum(int(end_angle))
         self.pol_efficiency_popup.repaint()
 
     def get_simulated_data(self, datatype, current_position, noise=10):
@@ -1972,10 +1974,10 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
                     data_dict = {'x_position': x_data, 'amplitude': y_data, 'error': error_data}
                     self._plot_pol_efficiency(data_dict, scan_params['sample_name'])
                     # Update IF linearity info
-                    data_mean = np.mean(y_data)
-                    min_over_max = np.min(y_data) / np.max(y_data)
-                    getattr(self, '_pol_efficiency_popup_data_mean_label').setText('{0:.3f}'.format(data_mean))
-                    getattr(self, '_pol_efficiency_popup_min_over_max_label').setText('{0:.3f}'.format(min_over_max))
+                    min_, max_ = np.min(y_data), np.mean(y_data)
+                    min_over_max = min_ / max_
+                    getattr(self, '_pol_efficiency_popup_min_max_mean_label').setText('Min: {0:.2f} Max: {1:.2f}'.format(min_, max_))
+                    getattr(self, '_pol_efficiency_popup_min_over_max_label').setText('{0:.3f} %'.format(1e2 * min_over_max))
                     # Save the data
                     data_line ='{0}\t{1}\t{2}\n'.format(x_pos, mean, std)
                     pc_save_handle.write(data_line)
@@ -1988,12 +1990,11 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
     def _plot_pol_efficiency(self, data_dict, sample_name):
         if not hasattr(self, 'pc'):
             self.pc = PolCurve()
-        fig, ax = self._create_blank_fig(left=0.08, right=0.95, top=0.9, bottom=0.08)
-        if len(data_dict['x_position']) > 5:
+        fig, ax = self._create_blank_fig(left=0.06, right=0.95, top=0.9, bottom=0.15)
+        if len(data_dict['x_position']) > 5 and False:
             processed_data_dict = self.pc.parse_data(data_dict, degsperpoint=5)
-            self.pc.plot_polarization_efficiency(processed_data_dict, sample_name, fig=fig)
-        else:
-            ax.plot(data_dict['x_position'], data_dict['amplitude'])
+            fig = self.pc.plot_polarization_efficiency(processed_data_dict, sample_name, fig=fig)
+        ax.plot(data_dict['x_position'], data_dict['amplitude'])
         ax.set_title('POL EFFICICENCY', fontsize=12)
         ax.set_xlabel('Steps', fontsize=10)
         ax.set_ylabel('Amplitude', fontsize=10)

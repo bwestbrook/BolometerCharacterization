@@ -100,10 +100,10 @@ pol_efficiency_settings.pol_efficiency_build_dict = {
 
                                                      '_pol_efficiency_popup_data_label': {'alignment': 'Center', 'position': (10, 7, 8, 4)},
 
-                                                     '_pol_efficiency_popup_data_mean_header_label': {'text': 'IF Mean:', 'position': (18, 7, 1, 1)},
-                                                     '_pol_efficiency_popup_data_mean_label': {'text': '0', 'position': (18, 8, 1, 1)},
+                                                     '_pol_efficiency_popup_min_max_header_label': {'text': 'Min/Max:', 'position': (18, 7, 1, 1)},
+                                                     '_pol_efficiency_popup_min_max_label': {'text': '0', 'position': (18, 8, 1, 1)},
 
-                                                     '_pol_efficiency_popup_min_over_max_header_label': {'text': 'If Max - Min:', 'position': (18, 9, 1, 1)},
+                                                     '_pol_efficiency_popup_min_over_max_header_label': {'text': 'Min/Max:', 'position': (18, 9, 1, 1)},
                                                      '_pol_efficiency_popup_min_over_max_label': {'text': '0', 'position': (18, 10, 1, 1)},
 
 }

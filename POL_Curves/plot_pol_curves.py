@@ -67,7 +67,9 @@ class PolCurve():
         # crete a figure if needed
         if fig is None:
             fig = plt.figure(figsize=(7.25,6))
+            fig.add_subplot(111)
             fig.subplots_adjust(top=0.93, bottom=0.13)
+        ax = fig.axes[0]
         ax.tick_params(labelsize=18)
         # Create the color map
         ax.plot(data_dict['angle_vector'], data_dict['normalized_amplitude'], '*', ms=5.0, label='Data', lw=3)
