@@ -10,7 +10,8 @@ import matplotlib.mlab as mlab
 import matplotlib.pyplot as plt
 
 
-class POLCurve():
+class PolCurve():
+
     def __init__self(self):
         self.hello = 'hi'
 
@@ -67,8 +68,6 @@ class POLCurve():
         if fig is None:
             fig = plt.figure(figsize=(7.25,6))
             fig.subplots_adjust(top=0.93, bottom=0.13)
-        ax = fig.add_subplot(111)
-        fig.subplots_adjust(top=0.85)
         ax.tick_params(labelsize=18)
         # Create the color map
         ax.plot(data_dict['angle_vector'], data_dict['normalized_amplitude'], '*', ms=5.0, label='Data', lw=3)
@@ -85,7 +84,8 @@ class POLCurve():
         ax.set_ylim([-0.05, 1.05])
         ax.set_xlim([-0., 450.])
         ax.legend(loc='lower right', numpoints=1)
-        pl.show()
+        #pl.show()
+        return fig
 
     ## Fitting Utilities
     def arbitrary_sine(self, amplitude, period, y_offset):

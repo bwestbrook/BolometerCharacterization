@@ -26,7 +26,7 @@ from IV_Curves.plot_iv_curves import IVCurve
 from FTS_Curves.plot_fts_curves import FTSCurve
 from FTS_Curves.numerical_processing import Fourier
 from Beam_Maps.beam_mapper_tools import BeamMapperTools
-from POL_Curves.plot_pol_curves import POLCurve
+from POL_Curves.plot_pol_curves import PolCurve
 from TAU_Curves.plot_tau_curves import TAUCurve
 from FTS_DAQ.fts_daq import FTSDAQ
 from Motor_Driver.stepper_motor import stepper_motor
@@ -73,6 +73,7 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
             os.makedirs(self.data_folder)
         self.daq_main_panel_widget.showMaximized()
         self.active_ports = self.get_active_serial_ports()
+        self._create_log()
 
     def __apply_settings__(self, settings):
         for setting in dir(settings):
@@ -93,6 +94,32 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
 
     def _final_plot(self):
         print('Dummy Function')
+
+    def _create_log(self):
+        date_str = datetime.strftime(datetime.now(), '%Y_%m_%d')
+        log_file_name = 'Data_Log_{0}.txt'.format(date_str)
+        self.data_log_path = os.path.join(self.data_folder, log_file_name)
+        if not os.path.exists(self.data_log_path):
+            header = 'Data log for {0}\n'.format(date_str)
+            with open(self.data_log_path, 'w') as data_log_handle:
+                data_log_handle.write(header)
+
+    def _update_log(self):
+        temp_log_file_name = 'temp_log.txt'
+        response = self._quick_message('Flag Data as Good?', add_yes=True, add_no=True)
+        if response == QtWidgets.QMessageBox.Yes:
+            data_quality = 'good'
+        elif response == QtWidgets.QMessageBox.No:
+            data_quality = 'poor'
+        else:
+            data_quality = ''
+        with open(temp_log_file_name, 'w') as temp_log_handle:
+            with open(self.data_log_path, 'r') as log_handle:
+                for line in log_handle.readlines():
+                    temp_log_handle.write(line)
+                new_line = '{0}\t{1}\n'.format(self.raw_data_path[0], data_quality)
+                temp_log_handle.write(new_line)
+        shutil.copy(temp_log_file_name, self.data_log_path)
 
     #################################################
     # Stepper Motor and Com ports
@@ -196,9 +223,15 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
         return current_string, position_string, velocity_string, acceleration_string
 
     def _verify_params(self):
-        meta_data = self._get_all_meta_data(popup='_single_channel_fts')
-        scan_params = self._get_all_params(meta_data, settings.fts_scan_params, 'single_channel_fts')
-        params_str = pformat(scan_params, indent=2)
+        sender = str(self.sender().whatsThis())
+        if '_single_channel_fts' in sender:
+            meta_data = self._get_all_meta_data(popup='_single_channel_fts')
+            scan_params = self._get_all_params(meta_data, settings.fts_scan_params, 'single_channel_fts')
+            params_str = pformat(scan_params, indent=2)
+        if '_pol_efficiency' in sender:
+            meta_data = self._get_all_meta_data(popup='_pol_efficiency')
+            scan_params = self._get_all_params(meta_data, settings.pol_efficiency_scan_params, 'pol_efficiency')
+            params_str = pformat(scan_params, indent=2)
         response = self._quick_message(params_str, add_cancel=True, add_apply=True)
         if response == QtWidgets.QMessageBox.Cancel:
             return True
@@ -334,6 +367,15 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
             suggested_file_name = suggested_file_name.replace(' ', '_')
             suggested_file_name = self._add_index_to_suggested_file_name(suggested_file_name)
             paths = [os.path.join(self.data_folder, suggested_file_name)]
+        elif 'pol_efficiency' in sender:
+            meta_data = self._get_all_meta_data(popup='pol_efficiency')
+            scan_params = self._get_all_params(meta_data, settings.pol_efficiency_scan_params, 'pol_efficiency')
+            squid = scan_params['squid_select']
+            label = scan_params['sample_name']
+            suggested_file_name = 'SQ{0}_{1}_Pol_Eff_'.format(squid, label)
+            suggested_file_name = suggested_file_name.replace(' ', '_')
+            suggested_file_name = self._add_index_to_suggested_file_name(suggested_file_name)
+            paths = [os.path.join(self.data_folder, suggested_file_name)]
         self.raw_data_path = []
         self.parsed_data_path = []
         self.plotted_data_path = []
@@ -455,9 +497,15 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
         if value < min_value:
             self.sender().setText(str(40))
 
-    def _quick_message(self, msg='', add_apply=False, add_save=False, add_cancel=False, add_yes_to_all=False):
+    def _quick_message(self, msg='', add_apply=False, add_yes=False, add_no=False, add_save=False, add_cancel=False, add_yes_to_all=False):
         message_box = QtWidgets.QMessageBox()
         message_box.setText(msg)
+        if add_yes:
+            yes_button = QtWidgets.QMessageBox.Yes
+            message_box.addButton(yes_button)
+        if add_no:
+            no_button = QtWidgets.QMessageBox.No
+            message_box.addButton(no_button)
         if add_apply:
             apply_button = QtWidgets.QMessageBox.Apply
             message_box.addButton(apply_button)
@@ -524,6 +572,12 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
                     widget_name = whats_this_str.replace('squid_select_combobox', 'sample_name_lineedit')
                     getattr(self, widget_name).setText(self.sample_dict[selected_squid])
             elif 'beam_mapper' in str(combobox.whatsThis()):
+                #import ipdb;ipdb.set_trace()
+                if hasattr(self, 'sample_dict') > 0 and selected_squid in self.sample_dict:
+                    whats_this_str = str(combobox.whatsThis())
+                    widget_name = whats_this_str.replace('squid_select_combobox', 'sample_name_lineedit')
+                    getattr(self, widget_name).setText(self.sample_dict[selected_squid])
+            elif 'pol_efficiency' in str(combobox.whatsThis()):
                 #import ipdb;ipdb.set_trace()
                 if hasattr(self, 'sample_dict') > 0 and selected_squid in self.sample_dict:
                     whats_this_str = str(combobox.whatsThis())
@@ -825,6 +879,13 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
                     for j, y in enumerate(self.y_grid):
                         f.write('{0},{1},{2},{3}\n'.format(x, y, zdata[j,i], stds[j,i]))
 
+    def _is_float(self, value):
+        try:
+            float(value)
+            is_float = True
+        except ValueError:
+            is_float = False
+        return is_float
 
     #################################################
     #################################################
@@ -1344,6 +1405,7 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
                     if j + 1 == number_of_data_files:
                         continue_run = False
         delattr(self, 'raw_data_path')
+        self._update_log()
 
     #################################################
     # XY COLLECTOR
@@ -1584,7 +1646,7 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
                     first_x_point = x_mean
                     last_time = data_time
                     root.update()
-
+        self._update_log()
 
     #################################################
     # TIME CONSTANT 
@@ -1738,169 +1800,6 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
         self.time_constant_popup.showMaximized()
 
     #################################################
-    # POL EFFICIENCY
-    #################################################
-
-
-    def _close_pol_efficiency(self):
-        '''
-        Closes the panel with a warning if data is being collected
-        '''
-        global continue_run
-        if continue_run:
-            self._quick_message('Taking data!!!\nPlease stop taking data before closing Pol Efficiency!')
-        else:
-            self.pol_efficiency_popup.close()
-            continue_run = False
-
-    def _pol_efficiency(self):
-        if not hasattr(self, 'pol_efficiency_popup'):
-            self._create_popup_window('pol_efficiency_popup')
-        else:
-            self._initialize_panel('pol_efficiency_popup')
-        self._build_panel(settings.pol_efficiency_build_dict)
-        for combobox_widget, entry_list in self.pol_efficiency_combobox_entry_dict.items():
-            self.populate_combobox(combobox_widget, entry_list)
-        self._connect_to_com_port()
-        self.pol_efficiency_popup.showMaximized()
-        self.pol_efficiency_popup.setWindowTitle('POL EFFICIENCY')
-        self._update_pol_efficiency_popup()
-        self._blank_pol_plot()
-        getattr(self, '_pol_efficiency_popup_save_pushbutton').setDisabled(True)
-        self._draw_time_stream([0]*5, -1, -1,'_pol_efficiency_popup_time_stream_label')
-
-
-    def _update_pol_efficiency_popup(self):
-        meta_data = self._get_all_meta_data(popup='pol_efficiency')
-        scan_params = self._get_params(meta_data, settings.pol_efficiency_params, 'pol_efficiency')
-        if type(scan_params) is not dict:
-            return None
-        if 'starting_angle' in scan_params and 'ending_angle' in scan_params:
-            start_angle = scan_params['starting_angle']
-            end_angle = scan_params['ending_angle']
-            step_size = scan_params['step_size']
-            num_steps = (end_angle - start_angle) / step_size
-            getattr(self,'_pol_efficiency_popup_number_of_steps_label').setText(str(num_steps))
-            getattr(self,'_pol_efficiency_popup_position_slider_min_label').setText(str(start_angle))
-            getattr(self,'_pol_efficiency_popup_position_slider_max_label').setText(str(end_angle))
-            getattr(self, '_pol_efficiency_popup_position_monitor_slider').setMinimum(start_angle)
-            getattr(self, '_pol_efficiency_popup_position_monitor_slider').setMaximum(end_angle)
-        self.pol_efficiency_popup.repaint()
-
-    def _run_pol_efficiency(self):
-        scan_params = self._get_all_pol_efficiency_scan_params()
-        self.take_pol_efficiency(scan_params,1)
-
-    def get_simulated_data(self, datatype, current_position, noise=10):
-        '''
-        noise is in percent and is of the max-min of data
-        '''
-        in_degree = current_position*np.pi/180
-        dev = (np.random.randn()-0.5)*2/100*noise
-        simulated_data = np.sin(in_degree) + dev
-        return simulated_data
-
-
-    def _blank_pol_plot(self):
-        fig = pl.figure(figsize=(3,1.5))
-        ax = fig.add_subplot(111)
-        fig.subplots_adjust(left=0.24, right=0.95, top=0.80, bottom=0.35)
-        ax.plot([0]*5)
-        ax.set_title('POL EFFICICENCY', fontsize=12)
-        ax.set_xlabel('Angle', fontsize=10)
-        ax.set_ylabel('Amplitude', fontsize=10)
-        fig.savefig('temp_files/temp_pol.png')
-        pl.close('all')
-        image = QtWidgets.QPixmap('temp_files/temp_pol.png')
-        image = image.scaled(600,300)
-        getattr(self, '_pol_efficiency_popup_data_label').setPixmap(image)
-
-    def take_pol_efficiency(self, scan_params, noise=10):
-        global continue_run
-        continue_run = True
-        com_port = self._get_com_port('_pol_efficiency_popup_com_ports_combobox')
-        stepnum = (scan_params['ending_angle']-scan_params['starting_angle'])/scan_params['step_size']+1
-        self.xdata = np.linspace(scan_params['starting_angle'],scan_params['ending_angle'],stepnum)
-        self.ydata = []
-        angles = []
-        self.stds = []
-        i = 0
-        while continue_run and i < len(self.xdata):
-            step = self.xdata[i]
-#        for i, step in enumerate(self.xdata):
-            data_point = self.get_simulated_data(int, step, noise=noise)
-            angles.append(step)
-            if step != 0:
-                getattr(self, 'sm_{0}'.format(com_port)).finite_rotation(scan_params['step_size'])
-                time.sleep(scan_params['pause_time']/1000)
-            current_angle = getattr(self, 'sm_{0}'.format(com_port)).get_position()
-            data_time_stream, mean, min_, max_, std = self.real_daq.get_data(signal_channel=scan_params['signal_channel'], integration_time=scan_params['integration_time'],
-                                                                        sample_rate=scan_params['sample_rate'],central_value=data_point)
-            self.ydata.append(mean)
-            self.stds.append(std)
-            getattr(self,'_pol_efficiency_popup_mean_label').setText('{0:.3f}'.format(mean))
-            getattr(self,'_pol_efficiency_popup_current_angle_label').setText(str(step))
-            getattr(self,'_pol_efficiency_popup_std_label').setText('{0:.3f}'.format(std))
-            start = scan_params['starting_angle']
-            end = scan_params['ending_angle']
-
-            self._draw_time_stream(data_time_stream, min_, max_, '_pol_efficiency_popup_time_stream_label',int(scan_params['integration_time']))
-            fig = pl.figure(figsize=(3,2))
-            ax = fig.add_subplot(111)
-            fig.subplots_adjust(left=0.24, right=0.95, top=0.80, bottom=0.35)
-            ax.plot(angles,self.ydata)
-            ax.set_title('POL EFFICICENCY', fontsize=12)
-            yticks = np.linspace(min(self.ydata),max(self.ydata),5)
-            yticks = [round(x,2) for x in yticks]
-            ax.set_yticks(yticks)
-            ax.set_yticklabels(yticks,fontsize = 6)
-            xticks = np.linspace(start,end,5)
-            ax.set_xticks(xticks)
-            ax.set_xlabel('Angle', fontsize=10)
-            ax.set_ylabel('Amplitude', fontsize=10)
-            fig.savefig('temp_files/temp_pol.png')
-            pl.close('all')
-            image = QtWidgets.QPixmap('temp_files/temp_pol.png')
-            image = image.scaled(600,400)
-            getattr(self, '_pol_efficiency_popup_data_label').setPixmap(image)
-            self.pol_efficiency_popup.repaint()
-            getattr(self, '_pol_efficiency_popup_position_monitor_slider').setSliderPosition(step)
-            i += 1
-            root.update()
-        getattr(self, '_pol_efficiency_popup_save_pushbutton').setEnabled(True)
-#        return steps, data
-
-    def read_file(self, filename):
-        x, y = np.loadtxt(filename, unpack=True)
-        return x,y
-
-    def _get_all_pol_efficiency_scan_params(self):
-        scan_params = {}
-        for pol_efficiency_setting in settings.pol_int_run_settings:
-            pull_from_widget_name = '_pol_efficiency_popup_{0}_lineedit'.format(pol_efficiency_setting)
-            if hasattr(self, pull_from_widget_name):
-                value = getattr(self, pull_from_widget_name).text()
-                if len(str(value)) == 0:
-                    value = 0
-                else:
-                    value = int(value)
-                scan_params[pol_efficiency_setting] = value
-        for pol_efficiency_setting in settings.pol_pulldown_run_settings:
-            pull_from_widget_name = '_pol_efficiency_popup_{0}_combobox'.format(pol_efficiency_setting)
-            if hasattr(self, pull_from_widget_name):
-                value = str(getattr(self, pull_from_widget_name).currentText())
-                scan_params[pol_efficiency_setting] = value
-        return scan_params
-
-    def _is_float(self, value):
-        try:
-            float(value)
-            is_float = True
-        except ValueError:
-            is_float = False
-        return is_float
-
-    #################################################
     # USER MOVE STEPPER
     #################################################
 
@@ -1986,6 +1885,151 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
         self.last_position_string = stepper_position
 
     #################################################
+    # POL EFFICIENCY
+    #################################################
+
+    def _close_pol_efficiency(self):
+        '''
+        Closes the panel with a warning if data is being collected
+        '''
+        global continue_run
+        if continue_run:
+            self._quick_message('Taking data!!!\nPlease stop taking data before closing Pol Efficiency!')
+        else:
+            self.pol_efficiency_popup.close()
+            continue_run = False
+
+    def _pol_efficiency(self):
+        if not hasattr(self, 'lock_in'):
+            self.lock_in = LockIn()
+        if not hasattr(self, 'pol_efficiency_popup'):
+            self._create_popup_window('pol_efficiency_popup')
+        else:
+            self._initialize_panel('pol_efficiency_popup')
+        self._build_panel(settings.pol_efficiency_build_dict)
+        for combobox_widget, entry_list in self.pol_efficiency_combobox_entry_dict.items():
+            self.populate_combobox(combobox_widget, entry_list)
+        self._update_pol_efficiency()
+        self.pol_efficiency_popup.showMaximized()
+        getattr(self, '_pol_efficiency_popup_verify_parameters_checkbox').setChecked(True)
+        getattr(self, '_pol_efficiency_popup_signal_channel_combobox').setCurrentIndex(2)
+        self.pol_efficiency_popup.setWindowTitle('POL EFFICIENCY')
+
+    def _update_pol_efficiency(self):
+        meta_data = self._get_all_meta_data(popup='_pol_efficiency')
+        scan_params = self._get_all_params(meta_data, settings.pol_efficiency_scan_params, 'pol_efficiency')
+        if type(scan_params) is not dict:
+            return None
+        if 'starting_position' in scan_params and 'ending_position' in scan_params and 'step_size' in scan_params:
+            start_angle = scan_params['starting_position']
+            end_angle = scan_params['ending_position']
+            step_size = scan_params['step_size']
+            num_steps = (int(end_angle) - int(start_angle)) / int(step_size)
+            getattr(self,'_pol_efficiency_popup_number_of_steps_label').setText(str(num_steps))
+            getattr(self,'_pol_efficiency_popup_position_slider_min_label').setText(str(start_angle))
+            getattr(self,'_pol_efficiency_popup_position_slider_max_label').setText(str(end_angle))
+            getattr(self, '_pol_efficiency_popup_position_monitor_slider').setMinimum(int(start_angle))
+            getattr(self, '_pol_efficiency_popup_position_monitor_slider').setMaximum(int(end_angle))
+        self.pol_efficiency_popup.repaint()
+
+    def get_simulated_data(self, datatype, current_position, noise=10):
+        '''
+        noise is in percent and is of the max-min of data
+        '''
+        in_degree = current_position*np.pi/180
+        dev = (np.random.randn()-0.5)*2/100*noise
+        simulated_data = np.sin(in_degree) + dev
+        return simulated_data
+
+    def _run_pol_efficiency(self, resume_run=False):
+        '''
+        Execute a data taking run
+        '''
+        global continue_run
+        continue_run = True
+        meta_data = self._get_all_meta_data(popup='pol_efficiency')
+        scan_params = self._get_all_params(meta_data, settings.pol_efficiency_scan_params, 'pol_efficiency')
+        # Verify params via popu first
+        if getattr(self, '_pol_efficiency_popup_verify_parameters_checkbox').isChecked():
+            cancel_run = self._verify_params()
+            if cancel_run:
+                continue_run = False
+                return None
+        pause = float(scan_params['pause_time']) / 1e3
+        self._get_raw_data_save_path()
+        if (self.raw_data_path is not None and len(scan_params['signal_channel']) > 0):
+            x_data, y_data, error_data = [], [], []
+            start_time = datetime.now()
+            start_time_str = datetime.strftime(start_time, '%H:%M')
+            x_positions = np.arange(int(scan_params['starting_position']), int(scan_params['ending_position']) + int(scan_params['step_size']), int(scan_params['step_size']))
+            with open(self.raw_data_path[0].replace('.dat', '.json'), 'w') as meta_data_handle:
+                json.dump(meta_data, meta_data_handle)
+            with open(self.raw_data_path[0], 'w') as pc_save_handle:
+                i = 0
+                while continue_run and i < len(x_positions):
+                    x_pos = x_positions[i]
+                    getattr(self, '_pol_efficiency_popup_position_monitor_slider').setSliderPosition(x_pos)
+                    self.repaint()
+                    getattr(self, 'sm_{0}'.format(scan_params['sm_com_port'])).move_to_position(x_pos)
+                    self.lock_in._zero_lock_in_phase()
+                    time.sleep(pause)
+                    data_time_stream, mean, min_, max_, std = self.real_daq.get_data(signal_channel=scan_params['signal_channel'], integration_time=scan_params['integration_time'],
+                                                                                     sample_rate=scan_params['sample_rate'], active_devices=self.active_devices)
+                    # Update data point info
+                    std_pct = 100 * (std / mean)
+                    std_pct = '({0:.2f}'.format(std_pct)
+                    std_pct += '%)'
+                    now_time = datetime.now()
+                    now_time_str = datetime.strftime(now_time, '%H:%M')
+                    duration = now_time - start_time
+                    time_per_step = duration.seconds / (i + 1)
+                    steps_left = len(x_positions) - i
+                    time_left = time_per_step * steps_left / 60
+                    getattr(self, '_pol_efficiency_popup_mean_label').setText('{0:.4f}'.format(mean))
+                    getattr(self, '_pol_efficiency_popup_std_label').setText('{0:.4f} {1}'.format(std, std_pct))
+                    getattr(self, '_pol_efficiency_popup_current_position_label').setText('{0:.3f} [{1}/{2} complete]'.format(x_pos, i, len(x_positions) - 1))
+                    status_str = 'Start: {0} ::::: Tot Duration: {1} (s) ::::: Time Per Step {2:.2f} (s) ::::: Estimated Time Left: {3:.2f} (m)'.format(start_time_str, duration.seconds,
+                                                                                                                                                        time_per_step, time_left)
+                    getattr(self, '_pol_efficiency_popup_duration_label').setText(status_str)
+                    self._draw_time_stream(data_time_stream, min_, max_, '_pol_efficiency_popup_time_stream_label')
+                    # Update IF plots and vectors
+                    x_data.append(x_pos)
+                    y_data.append(mean)
+                    error_data.append(std)
+                    data_dict = {'x_position': x_data, 'amplitude': y_data, 'error': error_data}
+                    self._plot_pol_efficiency(data_dict, scan_params['sample_name'])
+                    # Update IF linearity info
+                    data_mean = np.mean(y_data)
+                    min_over_max = np.min(y_data) / np.max(y_data)
+                    getattr(self, '_pol_efficiency_popup_data_mean_label').setText('{0:.3f}'.format(data_mean))
+                    getattr(self, '_pol_efficiency_popup_min_over_max_label').setText('{0:.3f}'.format(min_over_max))
+                    # Save the data
+                    data_line ='{0}\t{1}\t{2}\n'.format(x_pos, mean, std)
+                    pc_save_handle.write(data_line)
+                    # Update the FFT of the data
+                    i += 1
+                    root.update()
+        continue_run = False
+        self._update_log()
+
+    def _plot_pol_efficiency(self, data_dict, sample_name):
+        if not hasattr(self, 'pc'):
+            self.pc = PolCurve()
+        fig, ax = self._create_blank_fig(left=0.08, right=0.95, top=0.9, bottom=0.08)
+        if len(data_dict['x_position']) > 5:
+            processed_data_dict = self.pc.parse_data(data_dict, degsperpoint=5)
+            self.pc.plot_polarization_efficiency(processed_data_dict, sample_name, fig=fig)
+        else:
+            ax.plot(data_dict['x_position'], data_dict['amplitude'])
+        ax.set_title('POL EFFICICENCY', fontsize=12)
+        ax.set_xlabel('Steps', fontsize=10)
+        ax.set_ylabel('Amplitude', fontsize=10)
+        fig.savefig('temp_files/temp_pol.png')
+        image = QtGui.QPixmap('temp_files/temp_pol.png')
+        getattr(self, '_pol_efficiency_popup_data_label').setPixmap(image)
+        pl.close('all')
+
+    #################################################
     # SINGLE CHANNEL FTS BILLS
     #################################################
 
@@ -2017,7 +2061,7 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
         for unique_combobox, entries in settings.fts_combobox_entry_dict.items():
             self.populate_combobox(unique_combobox, entries)
         getattr(self, '_single_channel_fts_popup_integration_time_combobox').setCurrentIndex(0)
-        getattr(self, '_single_channel_fts_popup_pause_time_combobox').setCurrentIndex(1)
+        getattr(self, '_single_channel_fts_popup_pause_time_combobox').setCurrentIndex(2)
         getattr(self, '_single_channel_fts_popup_sample_rate_combobox').setCurrentIndex(8)
         #getattr(self, '_single_channel_fts_popup_grid_sm_com_port_combobox').setCurrentIndex(0
         getattr(self, '_single_channel_fts_popup_fts_sm_com_port_combobox').setCurrentIndex(0)
@@ -2196,7 +2240,7 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
                 self._connect_to_com_port(com_port=scan_params['grid_sm_com_port'])
             getattr(self, '_single_channel_fts_popup_start_pushbutton').setText('Taking Data')
             i = 0
-            helper = np.arange(int(scan_params['starting_position']), int(scan_params['ending_position']) + int(scan_params['step_size']), int(scan_params['step_size']))
+            x_positions = np.arange(int(scan_params['starting_position']), int(scan_params['ending_position']) + int(scan_params['step_size']), int(scan_params['step_size']))
             getattr(self, 'sm_{0}'.format(scan_params['fts_sm_com_port'])).move_to_position(int(scan_params['starting_position']))
             time.sleep(2)
             self._get_raw_data_save_path()
@@ -2204,7 +2248,7 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
             if resume_run:
                 i = 0
                 time.sleep(2)
-                helper = np.arange(self.last_fts_position, int(scan_params['ending_position']) + int(scan_params['step_size']), int(scan_params['step_size']))
+                x_positions = np.arange(self.last_fts_position, int(scan_params['ending_position']) + int(scan_params['step_size']), int(scan_params['step_size']))
             else:
                 # reset these to zero
                 self.fts_positions_steps, self.fts_positions_m, self.fts_amplitudes, self.fts_stds = [], [], [], []
@@ -2214,8 +2258,8 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
             with open(self.raw_data_path[0].replace('.if', '.json'), 'w') as meta_data_handle:
                 json.dump(meta_data, meta_data_handle)
             with open(self.raw_data_path[0], 'w') as if_save_handle:
-                while continue_run and i < len(helper):
-                    position = helper[i]
+                while continue_run and i < len(x_positions):
+                    position = x_positions[i]
                     getattr(self, '_single_channel_fts_popup_position_monitor_slider').setSliderPosition(position)
                     self.repaint()
                     getattr(self, 'sm_{0}'.format(scan_params['fts_sm_com_port'])).move_to_position(position)
@@ -2231,11 +2275,11 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
                     now_time_str = datetime.strftime(now_time, '%H:%M')
                     duration = now_time - start_time
                     time_per_step = duration.seconds / (i + 1)
-                    steps_left = len(helper) - i
+                    steps_left = len(x_positions) - i
                     time_left = time_per_step * steps_left / 60
                     getattr(self, '_single_channel_fts_popup_mean_label').setText('{0:.4f}'.format(mean))
                     getattr(self, '_single_channel_fts_popup_std_label').setText('{0:.4f} {1}'.format(std, std_pct))
-                    getattr(self, '_single_channel_fts_popup_current_position_label').setText('{0:.3f} [{1}/{2} complete]'.format(position, i, len(helper) - 1))
+                    getattr(self, '_single_channel_fts_popup_current_position_label').setText('{0:.3f} [{1}/{2} complete]'.format(position, i, len(x_positions) - 1))
                     status_str = 'Start: {0} ::::: Tot Duration: {1} (s) ::::: Time Per Step {2:.2f} (s) ::::: Estimated Time Left: {3:.2f} (m)'.format(start_time_str, duration.seconds,
                                                                                                                                                         time_per_step, time_left)
                     getattr(self, '_single_channel_fts_popup_duration_label').setText(status_str)
@@ -2251,8 +2295,8 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
                     if_max_min_avg = np.mean([np.max(self.fts_amplitudes), np.min(self.fts_amplitudes)])
                     if_min_over_max = np.min(self.fts_amplitudes) / np.max(self.fts_amplitudes)
                     getattr(self, '_single_channel_fts_popup_if_mean_label').setText('{0:.3f}'.format(if_mean))
-                    #getattr(self, '_single_channel_fts_popup_if_max_min_label').setText('{0:.3f}'.format(if_max_min_avg))
-                    getattr(self, '_single_channel_fts_popup_if_max_min_label').setText('{0:.3f}'.format(if_min_over_max))
+                    getattr(self, '_single_channel_fts_popup_if_max_min_label').setText('{0:.3f}'.format(if_max_min_avg))
+                    #getattr(self, '_single_channel_fts_popup_if_max_min_label').setText('{0:.3f}'.format(if_min_over_max))
                     # Save the data
                     data_line ='{0}\t{1}\t{2}\n'.format(position, mean, std)
                     if_save_handle.write(data_line)
@@ -2273,7 +2317,7 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
         getattr(self, '_single_channel_fts_popup_current_position_label').setText('{0:.3f}'.format(0))
         continue_run = False
         getattr(self, '_single_channel_fts_popup_stop_pushbutton').setText('Pause')
-        #self._make_if_fft_gif()
+        self._update_log()
 
     def _save_if_and_fft(self, position_vector, efficiency_vector, scan_params):
         fft_freq_vector, phase_corrected_fft_vector, fig = self._compute_and_plot_fft(self.fts_positions_steps, self.fts_amplitudes, scan_params, fig=None)
@@ -2527,4 +2571,5 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
         getattr(self, '_beam_mapper_popup_start_pushbutton').setEnabled(True)
         self.lock_in._zero_lock_in_phase()
         Z_data = np.zeros(shape=X.shape)
+        self._update_log()
 
