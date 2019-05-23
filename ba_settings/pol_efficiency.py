@@ -64,8 +64,8 @@ pol_efficiency_settings.pol_efficiency_build_dict = {
                                                      '_pol_efficiency_popup_voltage_bias_header_label': {'text': 'Voltage bias (uV):', 'position': (13, 0, 1, 1)},
                                                      '_pol_efficiency_popup_voltage_bias_lineedit': {'position': (13, 1, 1, 1)},
 #
-                                                     '_pol_efficiency_popup_heater_voltage_header_label': {'text': 'Heater Voltage:', 'position': (13, 2, 1, 1)},
-                                                     '_pol_efficiency_popup_heater_voltage_lineedit': {'text': 'LN2', 'position': (13, 3, 1, 1)},
+                                                     '_pol_efficiency_popup_heater_voltage_header_label': {'text': 'Thermal Source (T):', 'position': (13, 2, 1, 1)},
+                                                     '_pol_efficiency_popup_heater_voltage_lineedit': {'text': '77K', 'position': (13, 3, 1, 1)},
 
                                                      '_pol_efficiency_popup_verify_parameters_checkbox': {'text': 'Verify Before Start?', 'position': (13, 4, 1, 1)},
 #

@@ -106,18 +106,12 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
 
     def _update_log(self):
         temp_log_file_name = 'temp_log.txt'
-        response = self._quick_message('Flag Data as Good?', add_yes=True, add_no=True)
-        if response == QtWidgets.QMessageBox.Yes:
-            data_quality = 'good'
-        elif response == QtWidgets.QMessageBox.No:
-            data_quality = 'poor'
-        else:
-            data_quality = ''
+        notes = self._quick_info_gather()
         with open(temp_log_file_name, 'w') as temp_log_handle:
             with open(self.data_log_path, 'r') as log_handle:
                 for line in log_handle.readlines():
                     temp_log_handle.write(line)
-                new_line = '{0}\t{1}\n'.format(self.raw_data_path[0], data_quality)
+                new_line = '{0}\t{1}\n'.format(self.raw_data_path[0], notes)
                 temp_log_handle.write(new_line)
         shutil.copy(temp_log_file_name, self.data_log_path)
 
@@ -262,7 +256,9 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
         if total_len_of_names == 0 and os.path.exists(sample_dict_path):
             warning_msg = 'Warning! {0} exists and you are '.format(sample_dict_path)
             warning_msg += 'going to overwrite with blank names for all channels'
-            response = self._quick_message(warning_msg, add_save=True, add_cancel=True)
+            response = self._quick_info_gather(warning_msg)
+            #response = self._quick_message(warning_msg, add_save=True, add_cancel=True)
+
             if response == QtWidgets.QMessageBox.Save:
                 with open(sample_dict_path, 'w') as sample_dict_file_handle:
                     json.dump(self.sample_dict, sample_dict_file_handle)
@@ -295,10 +291,10 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
                 appendix = file_name.split(suggested_file_name)[1]
                 if len(appendix) == 6:
                     last_index = appendix.replace('.dat', '')
-            #if suggested_file_name in file_name and '.ifdat' in file_name:
-                #appendix = file_name.split(suggested_file_name)[1]
-                #if len(appendix) == 6:
-                    #last_index = appendix.replace('.dat', '')
+            if suggested_file_name in file_name and '.if' in file_name:
+                appendix = file_name.split(suggested_file_name)[1]
+                if len(appendix) == 6:
+                    last_index = appendix.replace('.if', '')
         new_index = '{0}'.format(int(last_index) + 1).zfill(2)
         if 'FTS' in suggested_file_name:
             suggested_file_name = '{0}{1}.if'.format(suggested_file_name, new_index)
@@ -496,29 +492,6 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
         value = float(str(self.sender().text()))
         if value < min_value:
             self.sender().setText(str(40))
-
-    def _quick_message(self, msg='', add_apply=False, add_yes=False, add_no=False, add_save=False, add_cancel=False, add_yes_to_all=False):
-        message_box = QtWidgets.QMessageBox()
-        message_box.setText(msg)
-        if add_yes:
-            yes_button = QtWidgets.QMessageBox.Yes
-            message_box.addButton(yes_button)
-        if add_no:
-            no_button = QtWidgets.QMessageBox.No
-            message_box.addButton(no_button)
-        if add_apply:
-            apply_button = QtWidgets.QMessageBox.Apply
-            message_box.addButton(apply_button)
-        if add_save:
-            save_button = QtWidgets.QMessageBox.Save
-            message_box.addButton(save_button)
-        if add_cancel:
-            cancel_button = QtWidgets.QMessageBox.Cancel
-            message_box.addButton(cancel_button)
-        if add_yes_to_all:
-            yes_to_all_button = QtWidgets.QMessageBox.YesToAll
-            message_box.addButton(yes_to_all_button)
-        return message_box.exec_()
 
     def _create_blank_fig(self, frac_screen_width=0.5, frac_screen_height=0.3,
                           left=0.12, right=0.98, top=0.8, bottom=0.23, multiple_axes=False,
@@ -2026,6 +1999,7 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
         ax.set_ylabel('Amplitude', fontsize=10)
         fig.savefig('temp_files/temp_pol.png')
         image = QtGui.QPixmap('temp_files/temp_pol.png')
+        shutil.copy('temp_files/temp_pol.png', self.raw_data_path[0].replace('.dat', '.png'))
         getattr(self, '_pol_efficiency_popup_data_label').setPixmap(image)
         pl.close('all')
 
@@ -2157,13 +2131,17 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
             = self.fourier.convert_IF_to_FFT_data(position_vector, efficiency_vector, scan_params, data_selector='All')
         normalized_phase_corrected_fft_vector = np.abs(phase_corrected_fft_vector.real / np.max(phase_corrected_fft_vector.real))
         if fig is not None:
+            max_idx = np.where(normalized_phase_corrected_fft_vector == np.max(normalized_phase_corrected_fft_vector))
+            max_frequency = fft_freq_vector[max_idx][0]
+            label = 'Peak Frequency {0:.1f} GHz'.format(max_frequency * 1e-9)
             ax = fig.axes[-1]
             pl.grid(True)
             pos_freq_selector = np.where(fft_freq_vector > 0)
-            ax.plot(fft_freq_vector[pos_freq_selector] * 1e-9, normalized_phase_corrected_fft_vector[pos_freq_selector])
+            ax.plot(fft_freq_vector[pos_freq_selector] * 1e-9, normalized_phase_corrected_fft_vector[pos_freq_selector], label=label)
             ax.set_xlabel('Frequency (GHz)', fontsize=10)
             ax.set_ylabel('Phase Corrected FFT', fontsize=10)
             ax.set_title('Spectral Response {0}'.format(scan_params['sample_name']), fontsize=12)
+            ax.legend()
             #fig.savefig('temp_files/temp_fft.png')
             #fig.savefig('temp_files/IF_GIF/FFT_{0}.png'.format(str(self.if_count).zfill(3)))
             #image = QtGui.QPixmap('temp_files/temp_fft.png')
@@ -2183,7 +2161,7 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
             fig.add_subplot(211)
             fig.add_subplot(212)
             fig.subplots_adjust(left=0.12, bottom=0.12, top=0.92, right=0.98, hspace=0.45, wspace=0.20)
-            fft_vector, normalized_phase_corrected_fft_vector, fig = self._compute_and_plot_fft(self.fts_positions_steps, self.fts_amplitudes, scan_params, fig)
+            fft_frequency_vector, normalized_phase_corrected_fft_vector, fig = self._compute_and_plot_fft(self.fts_positions_steps, self.fts_amplitudes, scan_params, fig)
             ax = fig.axes[0]
             pl.grid(True)
             ax.set_xlabel('Mirror Position (cm)',fontsize = 10)
