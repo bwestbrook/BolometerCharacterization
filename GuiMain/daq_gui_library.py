@@ -1976,7 +1976,7 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
                     # Update IF linearity info
                     min_, max_ = np.min(y_data), np.mean(y_data)
                     min_over_max = min_ / max_
-                    getattr(self, '_pol_efficiency_popup_min_max_mean_label').setText('Min: {0:.2f} Max: {1:.2f}'.format(min_, max_))
+                    getattr(self, '_pol_efficiency_popup_min_max_label').setText('Min: {0:.2f} Max: {1:.2f}'.format(min_, max_))
                     getattr(self, '_pol_efficiency_popup_min_over_max_label').setText('{0:.3f} %'.format(1e2 * min_over_max))
                     # Save the data
                     data_line ='{0}\t{1}\t{2}\n'.format(x_pos, mean, std)
