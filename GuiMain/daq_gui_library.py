@@ -25,7 +25,7 @@ from RT_Curves.plot_rt_curves import RTCurve
 from IV_Curves.plot_iv_curves import IVCurve
 from FTS_Curves.plot_fts_curves import FTSCurve
 from FTS_Curves.numerical_processing import Fourier
-from Beam_Mapper.beam_mapper_tools import BeamMapperTools
+from Beam_Maps.beam_mapper_tools import BeamMapperTools
 from POL_Curves.plot_pol_curves import POLCurve
 from TAU_Curves.plot_tau_curves import TAUCurve
 from FTS_DAQ.fts_daq import FTSDAQ
@@ -2219,6 +2219,7 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
                     getattr(self, '_single_channel_fts_popup_position_monitor_slider').setSliderPosition(position)
                     self.repaint()
                     getattr(self, 'sm_{0}'.format(scan_params['fts_sm_com_port'])).move_to_position(position)
+                    self.lock_in._zero_lock_in_phase()
                     time.sleep(pause)
                     data_time_stream, mean, min_, max_, std = self.real_daq.get_data(signal_channel=scan_params['signal_channel'], integration_time=scan_params['integration_time'],
                                                                                      sample_rate=scan_params['sample_rate'], active_devices=self.active_devices)
@@ -2247,9 +2248,11 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
                     self._plot_interferogram(self.fts_positions_steps, self.fts_amplitudes, self.fts_stds)
                     # Update IF linearity info
                     if_mean = np.mean(self.fts_amplitudes)
-                    if_max_minus_min = np.mean([np.max(self.fts_amplitudes), np.min(self.fts_amplitudes)])
+                    if_max_min_avg = np.mean([np.max(self.fts_amplitudes), np.min(self.fts_amplitudes)])
+                    if_min_over_max = np.min(self.fts_amplitudes) / np.max(self.fts_amplitudes)
                     getattr(self, '_single_channel_fts_popup_if_mean_label').setText('{0:.3f}'.format(if_mean))
-                    getattr(self, '_single_channel_fts_popup_if_max_min_label').setText('{0:.3f}'.format(if_max_minus_min))
+                    #getattr(self, '_single_channel_fts_popup_if_max_min_label').setText('{0:.3f}'.format(if_max_min_avg))
+                    getattr(self, '_single_channel_fts_popup_if_max_min_label').setText('{0:.3f}'.format(if_min_over_max))
                     # Save the data
                     data_line ='{0}\t{1}\t{2}\n'.format(position, mean, std)
                     if_save_handle.write(data_line)
@@ -2404,14 +2407,12 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
         ax.set_title('BEAM DATA', fontsize=12)
         ax.set_xlabel('X Position (k-steps)', fontsize=12)
         ax.set_ylabel('Y Position (k-steps)', fontsize=12)
-        n_steps_x = scan_params['n_points_x']
-        n_steps_y = scan_params['n_points_y']
         x_tick_locs = [0.5 + x for x in range(len(x_ticks))]
         y_tick_locs = [0.5 + x for x in range(len(x_ticks))]
         ax.set_xticks(x_tick_locs)
         ax.set_yticks(y_tick_locs)
-        ax.set_xticklabels(x_ticks, rotation=40)
-        ax.set_yticklabels(y_ticks)
+        ax.set_xticklabels(x_ticks, rotation=35, fontsize=10)
+        ax.set_yticklabels(y_ticks, fontsize=10)
         color_bar = fig.colorbar(ax_image, ax=ax)
         fig.savefig('temp_files/temp_beam.png')
         shutil.copy('temp_files/temp_beam.png', self.raw_data_path[0].replace('.dat', '.png'))
@@ -2459,35 +2460,31 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
                 with open(self.raw_data_path[0].replace('.dat', '.json'), 'w') as meta_data_handle:
                     json.dump(meta_data, meta_data_handle)
                 i = 0
-                while (i + 1) < len(x_grid) and continue_run:
+                while i < len(x_grid) and continue_run:
                     x_pos = x_grid[i]
                     getattr(self, 'sm_{0}'.format(x_com_port)).move_to_position(x_pos)
-                    act_x_pos = str(getattr(self, 'sm_{0}'.format(x_com_port)).get_position()).replace('SP=', '')
+                    #act_x_pos = str(getattr(self, 'sm_{0}'.format(x_com_port)).get_position()).replace('SP=', '')
+                    act_x_pos = x_pos
                     direction *= -1
                     if direction == -1:
                         y_scan = y_grid_reversed
                     else:
                         y_scan = y_grid
                     j = 0
-                    while (j + 1) < len(y_scan) and continue_run:
-                        y_pos = y_grid[j]
-                        print('start', datetime.now())
+                    while j < len(y_scan) and continue_run:
+                        y_pos = y_scan[j]
                         getattr(self, 'sm_{0}'.format(y_com_port)).move_to_position(y_pos)
-                        print('move_to_pos', datetime.now())
-                        act_y_pos = str(getattr(self, 'sm_{0}'.format(y_com_port)).get_position()).replace('SP=', '')
-                        print('get_pos', datetime.now())
-                        self.lock_in._zero_lock_in_phase()
-                        print('zero_lockin', datetime.now())
-                        if j == 0:
-                            time.sleep(3)
+                        #act_y_pos = str(getattr(self, 'sm_{0}'.format(y_com_port)).get_position()).replace('SP=', '')
+                        act_y_pos = y_pos
+                        if i == 0 and j == 0: #sleep extra long on the first point
+                            time.sleep(4)
                         else:
-                            time.sleep(int(scan_params['pause_time']) * 1e-3)
-                        print('sleep', datetime.now())
+                            time.sleep((int(scan_params['pause_time']) / 2) * 1e-3)
+                        self.lock_in._zero_lock_in_phase()
+                        time.sleep((int(scan_params['pause_time']) / 2) * 1e-3)
                         data_time_stream, mean, min_, max_, std = self.real_daq.get_data(signal_channel=scan_params['signal_channel'], integration_time=scan_params['integration_time'],
                                                                                          sample_rate=scan_params['sample_rate'], active_devices=self.active_devices)
-                        print('aquire_data', datetime.now())
                         self._draw_time_stream(data_time_stream, min_, max_,'_beam_mapper_popup_time_stream_label')
-                        print('draw_time_tream', datetime.now())
                         Z_datum = mean
                         if direction == -1:
                             self.stds[len(y_scan) -1 - j][i] = std
@@ -2496,14 +2493,12 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
                             self.stds[j][i] = std
                             Z_data[j][i] = Z_datum
                         self._plot_beam_map(x_ticks, y_ticks, Z_data, scan_params)
-                        print('organize_data and plot beam map', datetime.now())
                         getattr(self, '_beam_mapper_popup_data_mean_label').setText('{0:.3f}'.format(mean))
                         getattr(self, '_beam_mapper_popup_x_position_label').setText('{0}'.format(act_x_pos))
                         getattr(self, '_beam_mapper_popup_y_position_label').setText('{0}'.format(act_y_pos))
                         getattr(self, '_beam_mapper_popup_data_std_label').setText('{0:.3f}'.format(std))
                         data_line = '{0}\t{1}\t{2:.4f}\t{3:.4f}\n'.format(act_x_pos, act_y_pos, Z_datum, std)
                         data_handle.write(data_line)
-                        print('update gui and write to file', datetime.now())
                         now_time = datetime.now()
                         now_time_str = datetime.strftime(now_time, '%H:%M')
                         duration = now_time - start_time
@@ -2513,20 +2508,17 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
                         status_msg = '{0} of {1} ::: Total Duration {2:.2f} (m) ::: Time per Point {3:.2f} (s) ::: Time Left {4:.2f} (m)'.format(count, total_points, duration.seconds / 60,
                                                                                                                                                  time_per_step, time_left)
                         getattr(self, '_beam_mapper_popup_status_label').setText(status_msg)
-                        print('update status', datetime.now())
                         self.repaint()
                         root.update()
                         count += 1
                         j += 1
-                        print('pause_run', pause_run)
                         while pause_run:
                             print('pausing beam mapper')
                             time.sleep(1)
                             root.update()
-                        print('repaint, update root, advance status', datetime.now())
-                    i += 1
                     if i + 1 == len(x_grid):
                         continue_run = False
+                    i += 1
         #import ipdb;ipdb.set_trace()
         #getattr(self, '_beam_mapper_popup_save_pushbutton').setEnableI#
         # Restore to (0, 0) and erase Z data

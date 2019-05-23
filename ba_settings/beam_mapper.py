@@ -108,9 +108,9 @@ beam_mapper_settings.beam_mapper_build_dict = {
                                                '_beam_mapper_popup_data_std_header_label': {'text': 'Data STD:', 'position': (2, 10, 1, 1)},
                                                '_beam_mapper_popup_data_std_label': {'text': '', 'position': (2, 11, 1, 1)},
 
-                                               '_beam_mapper_popup_status_label': {'position': (3, 8, 1, 4)},
+                                               '_beam_mapper_popup_time_stream_label': {'position': (3, 8, 5, 4)},
 
-                                               '_beam_mapper_popup_time_stream_label': {'position': (4, 8, 5, 4)},
+                                               '_beam_mapper_popup_status_label': {'position': (8, 8, 1, 4)},
 
                                                '_beam_mapper_popup_2D_plot_label': {'alignment': 'Center', 'position': (9, 8, 11, 4)},
                                                }
@@ -119,8 +119,8 @@ beam_mapper_settings.motor_currents = np.linspace(1, 1, 10)
 beam_mapper_settings.beam_mapper_combobox_entry_dict = {
                                                         '_beam_mapper_popup_x_current_com_port_combobox': ['COM13'],
                                                         '_beam_mapper_popup_y_current_com_port_combobox': ['COM14'],
-                                                        '_beam_mapper_popup_integration_time_combobox': ['100', '1000'],
-                                                        '_beam_mapper_popup_pause_time_combobox': ['100', '500', '1000'],
+                                                        '_beam_mapper_popup_integration_time_combobox': ['300', '1000'],
+                                                        '_beam_mapper_popup_pause_time_combobox': ['1000'],
                                                         '_beam_mapper_popup_sample_rate_combobox': ['1000', '2500', '5000'],
                                                         '_beam_mapper_popup_squid_select_combobox': ['', '1', '2', '3', '4', '5', '6'],
                                                         '_beam_mapper_popup_aperature_size_combobox': ['0.25', '0.5', '1.0', '2.0'],

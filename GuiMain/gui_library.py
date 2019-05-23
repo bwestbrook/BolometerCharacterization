@@ -129,13 +129,37 @@ class GuiTemplate(QtWidgets.QWidget, GuiBuilder):
     def _build_beammap_settings_popup(self):
         popup_name = '{0}_settings_popup'.format(self.analysis_type)
         print(popup_name)
+        if not hasattr(self, 'bm'):
+            self.bm = BeamMaps()
         if hasattr(self, popup_name):
             self._initialize_panel(popup_name)
             self._build_panel(settings.beammap_settings_popup_build_dict)
         else:
             self._create_popup_window(popup_name)
             self._build_panel(settings.beammap_settings_popup_build_dict)
+        self.selected_files_col_dict = {}
+        col = 2
+        for i, selected_file in enumerate(self.selected_files):
+            getattr(self, '_beammap_settings_popup_file_path_label').setText(selected_file)
+            self.selected_files_col_dict[col] = selected_file
         getattr(self, popup_name).show()
+
+    def _build_beammap_dicts(self):
+        list_of_input_dicts = []
+        beammap_settings = ['', 'color']
+        for col in sorted(self.selected_files_col_dict.keys()):
+            selected_file = self.selected_files_col_dict[col]
+            self.selected_files_col_dict = {}
+            input_dict = {'data_path': selected_file}
+            for setting in beammap_settings:
+                print(setting)
+            list_of_input_dicts.append(input_dict)
+        return list_of_input_dicts
+
+    def _plot_beammap(self):
+        list_of_input_dicts = self._build_beammap_dicts()
+        self.bm.run2(list_of_input_dicts)
+
 
     #################################################
     # Tau Curves 
@@ -181,7 +205,6 @@ class GuiTemplate(QtWidgets.QWidget, GuiBuilder):
             widget_settings = {'text': '', 'position': (row, col, 1, 1)}
             self._create_and_place_widget(unique_widget_name, **widget_settings)
             row = 2
-
 
     def _build_tau_input_dicts(self):
         list_of_input_dicts = []
@@ -340,17 +363,6 @@ class GuiTemplate(QtWidgets.QWidget, GuiBuilder):
     #################################################
     # IV Curves 
     #################################################
-
-    def _build_ivcurve_settings_popup(self):
-        popup_name = '{0}_settings_popup'.format(self.analysis_type)
-        if hasattr(self, popup_name):
-            self._initialize_panel(popup_name)
-            self._build_panel(settings.ivcurve_popup_build_dict)
-        else:
-            self._create_popup_window(popup_name)
-            self._build_panel(settings.ivcurve_popup_build_dict)
-        row = 3
-        self.selected_files_col_dict = {}
 
     def _close_iv(self):
         self.ivcurve_settings_popup.close()
