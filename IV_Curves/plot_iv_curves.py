@@ -170,7 +170,7 @@ class IVCurve():
             ax1.axvline(r_bolo_norm[nearest_r_bolo_index], color=colors[i])
             spectra_path = spectra_paths[i]
         p_window, integrated_bandwidth, fft_data = self.compute_delta_power_at_window(spectra_path)
-        selector = np.where(fft_data[0] > 0)
+        selector = np.logical_and(np.where(fft_data[0] > 50, True, False), np.where(fft_data[0] < 320, True, False))
         ax2.plot(fft_data[0][selector], fft_data[1][selector], label='spectra')
         p_sensed = np.abs(p_at_same_rfracs[1] - p_at_same_rfracs[0])
         efficiency = 100.0 * p_sensed / p_window
@@ -295,7 +295,7 @@ class IVCurve():
         boltzmann_constant = 1.38e-23
         fft_data = self.load_FFT_data(spectra_path)
         frequency_vector = fft_data[0]
-        selector = np.where(frequency_vector > 0)
+        selector = np.logical_and(np.where(frequency_vector > 50, True, False), np.where(frequency_vector < 320, True, False))
         normalized_transmission_vector = fft_data[2]
         integrated_bandwidth = np.trapz(normalized_transmission_vector[selector], frequency_vector[selector]) * 1e9
         delta_power = boltzmann_constant * (t_source_high - t_source_low) * integrated_bandwidth  # in W

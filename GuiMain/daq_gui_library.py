@@ -521,7 +521,7 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
                 squid_calibration = 'NaN'
             else:
                 squid_calibration = settings.squid_calibration_dict[selected_squid]
-            squid_str = '{0} (uA/V)'.format(squid_calibration)
+            squid_str = '{0}'.format(squid_calibration)
             if 'xy_collector' in str(combobox.whatsThis()):
                 getattr(self, '_xy_collector_popup_squid_conversion_label').setText(squid_str)
                 if hasattr(self, 'sample_dict') > 0 and selected_squid in self.sample_dict:
@@ -722,13 +722,14 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
     def _final_iv_plot(self):
         meta_data = self._get_all_meta_data(popup='xy_collector')
         plot_params = self._get_all_params(meta_data, settings.xy_collector_plot_params, 'xy_collector')
-        label = plot_params['label']
-        fit_clip = plot_params['fit_clip']
-        data_clip = plot_params['data_clip']
-        voltage_factor = plot_params['voltage_factor']
-        squid_conversion = plot_params['squid_conversion']
+        pprint(plot_params)
+        label = plot_params['sample_name']
+        fit_clip = [float(plot_params['fit_clip_lo']), float(plot_params['fit_clip_hi'])]
+        data_clip = [float(plot_params['data_clip_lo']), float(plot_params['data_clip_hi'])]
+        voltage_factor = float(plot_params['voltage_factor'])
+        squid_conversion = float(plot_params['squid_conversion'])
         ivc = IVCurve([])
-        title = '{0} @ {1} w {2} Load'.format(plot_params['label'], plot_params['temp'], plot_params['optical_load'])
+        title = '{0} @ {1} w {2} Load'.format(label, plot_params['sample_temp'], plot_params['optical_load'])
         v_bias_real, i_bolo_real, i_bolo_std = ivc.convert_IV_to_real_units(np.asarray(self.xdata), np.asarray(self.ydata),
                                                                             stds=np.asarray(self.ystd),
                                                                             squid_conv=squid_conversion,

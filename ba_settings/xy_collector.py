@@ -27,7 +27,7 @@ xy_collector_settings.xy_collector_build_dict = {
                                                              '_xy_collector_popup_squid_select_combobox': {'function': '_update_squid_calibration', 'font': 'huge', 'color': 'red',
                                                                                                            'position': (4, 1, 1, 1)},
 
-                                                             '_xy_collector_popup_squid_conversion_header_label': {'text': 'SQUID Calibration:', 'position': (4, 2, 1, 1)},
+                                                             '_xy_collector_popup_squid_conversion_header_label': {'text': 'SQUID Calibration (uA/V):', 'position': (4, 2, 1, 1)},
                                                              '_xy_collector_popup_squid_conversion_label': {'position': (4, 3, 1, 1)},
 
                                                              '_xy_collector_popup_voltage_factor_header_label': {'text': 'Voltage Factor:', 'position': (5, 0, 1, 1)},
@@ -136,9 +136,12 @@ xy_collector_settings.xy_collector_combobox_entry_dict = {
                                                                                                        '350mK', '325mK', '300mK', '290mK', '280mK',
                                                                                                        '275mK', '270mK', '260mK', '250mK'],
                                                           '_xy_collector_popup_sample_drift_direction_combobox': ['Hi2Lo', 'Lo2Hi'],
-                                                          '_xy_collector_popup_optical_load_combobox': ['Dark', '77K', '300K']
+                                                          '_xy_collector_popup_optical_load_combobox': ['Dark', '77K', '300K', 'FTS']
                                                          }
 
 xy_collector_settings.xy_collector_plot_params = ['mode_combobox', 'squid_select_combobox', 'squid_conversion_label', 'grt_serial_combobox', 'voltage_factor_combobox',
-                                                  'sample_name_lineedit', 'sample_temp_combobox', 'sample_drift_direction_combobox', 'fit_clip_lineedit', 'data_clip_lineedit', 'e_bars_checkbox', 'optical_load_combobox']
+                                                  'sample_name_lineedit', 'sample_temp_combobox', 'sample_drift_direction_combobox',
+                                                  'fit_clip_lo_lineedit', 'fit_clip_hi_lineedit',
+                                                  'data_clip_lo_lineedit', 'data_clip_hi_lineedit',
+                                                  'e_bars_checkbox', 'optical_load_combobox']
 

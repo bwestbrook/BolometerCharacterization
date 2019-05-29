@@ -825,7 +825,7 @@ class GuiTemplate(QtWidgets.QWidget, GuiBuilder):
         fts_settings = ['smoothing_factor', 'xlim_plot', 'xlim_clip', 'divide_mmf', 'add_atm_model',
                         'divide_bs_5', 'divide_bs_10', 'step_size', 'steps_per_point', 'add_sim_band',
                         'add_co_lines', 'color', 'normalize', 'plot_title', 'plot_label', 'interferogram_data_select',
-                        'plot_interferogram', 'add_local_fft']
+                        'plot_interferogram', 'add_local_fft', 'data_selector']
         for selected_file, col in self.selected_files_col_dict.items():
             input_dict = {'measurements': {'data_path': selected_file}}
             for setting in fts_settings:
