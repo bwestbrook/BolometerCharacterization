@@ -106,16 +106,16 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
                 data_log_handle.write(header)
 
     def _update_log(self):
-        temp_log_file_name = 'temp_log.txt'
-        notes = self._quick_info_gather()
-        with open(temp_log_file_name, 'w') as temp_log_handle:
-            with open(self.data_log_path, 'r') as log_handle:
-                for line in log_handle.readlines():
-                    temp_log_handle.write(line)
-                if hasattr(self, 'raw_data_path'):
-                    new_line = '{0}\t{1}\n'.format(self.raw_data_path[0], notes)
-                    temp_log_handle.write(new_line)
-        shutil.copy(temp_log_file_name, self.data_log_path)
+        if hasattr(self, 'raw_data_path') and self.raw_data_path is not None:
+            temp_log_file_name = 'temp_log.txt'
+            notes = self._quick_info_gather()
+            with open(temp_log_file_name, 'w') as temp_log_handle:
+                with open(self.data_log_path, 'r') as log_handle:
+                    for line in log_handle.readlines():
+                        temp_log_handle.write(line)
+                        new_line = '{0}\t{1}\n'.format(self.raw_data_path[0], notes)
+                        temp_log_handle.write(new_line)
+            shutil.copy(temp_log_file_name, self.data_log_path)
 
     #################################################
     # Stepper Motor and Com ports
@@ -319,7 +319,9 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
                 suggested_file_name = 'SQ{0}_{1}_IVCurve_at_Tbath_{2}_w_{3}_Load_Raw_'.format(squid, label, temp, optical_load)
             elif run_mode == 'RT':
                 suggested_file_name = 'SQ{0}_{1}_RTCurve_{2}_Raw_'.format(squid, label, drift)
+            print(suggested_file_name)
             suggested_file_name = self._add_index_to_suggested_file_name(suggested_file_name)
+            print(suggested_file_name)
             paths = [os.path.join(self.data_folder, suggested_file_name)]
         elif 'time_constant' in sender:
             plot_params = self._get_params_from_time_constant()
@@ -378,7 +380,7 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
         self.parsed_data_path = []
         self.plotted_data_path = []
         for path in paths:
-            if 'FTS' in suggested_file_name:
+            if 'FTS_Scan' in suggested_file_name:
                 data_name = QtWidgets.QFileDialog.getSaveFileName(self, 'Raw Data Save Location', path, '.if')[0]
             else:
                 data_name = QtWidgets.QFileDialog.getSaveFileName(self, 'Raw Data Save Location', path, '.dat')[0]
