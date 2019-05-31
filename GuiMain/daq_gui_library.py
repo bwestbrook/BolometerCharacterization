@@ -298,7 +298,7 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
                 if len(appendix) == 6:
                     last_index = appendix.replace('.if', '')
         new_index = '{0}'.format(int(last_index) + 1).zfill(2)
-        if 'FTS' in suggested_file_name:
+        if 'FTS_Scan' in suggested_file_name:
             suggested_file_name = '{0}{1}.if'.format(suggested_file_name, new_index)
         else:
             suggested_file_name = '{0}{1}.dat'.format(suggested_file_name, new_index)
