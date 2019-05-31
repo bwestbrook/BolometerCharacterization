@@ -5,7 +5,7 @@ from lab_code.lab_serial import lab_serial
 
 class FunctionGenerator():
 
-    def __init__(self, port='COM17'):
+    def __init__(self, port='COM20'):
         self.port = port
         self._connection = lab_serial(port=self.port)
         rsp = self._query('*IDN?\r\n')

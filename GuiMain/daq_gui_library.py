@@ -73,6 +73,7 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
             os.makedirs(self.data_folder)
         self.daq_main_panel_widget.showMaximized()
         self.active_ports = self.get_active_serial_ports()
+        self.raw_data_path = None
         self._create_log()
 
     def __apply_settings__(self, settings):
@@ -111,8 +112,9 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
             with open(self.data_log_path, 'r') as log_handle:
                 for line in log_handle.readlines():
                     temp_log_handle.write(line)
-                new_line = '{0}\t{1}\n'.format(self.raw_data_path[0], notes)
-                temp_log_handle.write(new_line)
+                if hasattr(self, 'raw_data_path'):
+                    new_line = '{0}\t{1}\n'.format(self.raw_data_path[0], notes)
+                    temp_log_handle.write(new_line)
         shutil.copy(temp_log_file_name, self.data_log_path)
 
     #################################################
@@ -1549,7 +1551,7 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
         continue_run = True
         self._get_raw_data_save_path()
         meta_data = self._get_all_meta_data(popup='xy_collector')
-        if self.raw_data_path[0] is not None:
+        if self.raw_data_path is not None:
             start_time = datetime.now()
             sender_text = str(self.sender().text())
             self.sender().setFlat(True)
@@ -2402,22 +2404,30 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
         '''
         Sets up a gride to place data points into base on specfied params
         '''
-        x_total = int(scan_params['end_x_position']) - int(scan_params['start_x_position'])
-        x_steps = int(scan_params['step_size_x'])
-        if int(scan_params['step_size_x']) == 0 or  int(scan_params['step_size_y']) == 0:
-            n_points_x = 1e9
-            n_points_y = 1e9
-        else:
-            n_points_x = (int(scan_params['end_x_position']) + int(scan_params['step_size_y']) - int(scan_params['start_x_position'])) / int(scan_params['step_size_x'])
-            n_points_y = (int(scan_params['end_y_position']) + int(scan_params['step_size_y']) - int(scan_params['start_y_position'])) / int(scan_params['step_size_y'])
-        scan_params['n_points_x'] = n_points_x
-        scan_params['n_points_y'] = n_points_y
-        scan_params['x_total'] = x_total
-        getattr(self, '_beam_mapper_popup_total_x_label').setText('{0} steps'.format(str(int(x_total))))
-        y_total = int(scan_params['end_y_position']) - int(scan_params['start_y_position'])
-        y_steps = int(scan_params['step_size_y'])
-        getattr(self, '_beam_mapper_popup_total_y_label').setText('{0} steps'.format(str(int(y_total))))
-        scan_params['y_total'] = y_total
+
+        if self._is_float(scan_params['end_x_position']) \
+                and self._is_float(scan_params['end_y_position']) \
+                and self._is_float(scan_params['end_y_position']) \
+                and self._is_float(scan_params['start_x_position']) \
+                and self._is_float(scan_params['start_y_position']) \
+                and self._is_float(scan_params['step_size_x']) \
+                and self._is_float(scan_params['step_size_y']):
+            x_total = int(scan_params['end_x_position']) - int(scan_params['start_x_position'])
+            x_steps = int(scan_params['step_size_x'])
+            if int(scan_params['step_size_x']) == 0 or  int(scan_params['step_size_y']) == 0:
+                n_points_x = 1e9
+                n_points_y = 1e9
+            else:
+                n_points_x = (int(scan_params['end_x_position']) + int(scan_params['step_size_y']) - int(scan_params['start_x_position'])) / int(scan_params['step_size_x'])
+                n_points_y = (int(scan_params['end_y_position']) + int(scan_params['step_size_y']) - int(scan_params['start_y_position'])) / int(scan_params['step_size_y'])
+            scan_params['n_points_x'] = n_points_x
+            scan_params['n_points_y'] = n_points_y
+            scan_params['x_total'] = x_total
+            getattr(self, '_beam_mapper_popup_total_x_label').setText('{0} steps'.format(str(int(x_total))))
+            y_total = int(scan_params['end_y_position']) - int(scan_params['start_y_position'])
+            y_steps = int(scan_params['step_size_y'])
+            getattr(self, '_beam_mapper_popup_total_y_label').setText('{0} steps'.format(str(int(y_total))))
+            scan_params['y_total'] = y_total
         return scan_params
 
     def _plot_beam_map(self, x_ticks, y_ticks, Z, scan_params):
