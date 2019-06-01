@@ -2174,6 +2174,7 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
             ax.set_ylabel('Amplitude',fontsize = 10)
             ax.set_title('Interferogram', fontsize=12)
             ax.plot(positions, amplitudes)
+            pl.grid(True)
             ax.errorbar(positions, amplitudes, stds, marker=',', linestyle='None')
             fig.savefig('temp_files/temp_int.png')
             save_folder = './temp_files/{0}'.format(basename)
@@ -2315,7 +2316,7 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
                 line = '{0}\t{1}\n'.format(freq, fft_val)
                 file_handle.write(line)
         png_save_path = self.raw_data_path[0].replace('.if', '.png')
-        shutil.copy('temp_files/temp_fft.png', png_save_path)
+        shutil.copy('temp_files/temp_int.png', png_save_path)
         response = self._quick_message('Data saved to {0}\n{1}\n{2}\n'.format(self.raw_data_path[0], self.raw_data_path[0].replace('.if', '.fft'), self.raw_data_path[0].replace('.if', '.png')))
 
     def _make_if_fft_gif(self):

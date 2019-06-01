@@ -10,7 +10,7 @@ do_cycle_fridge = False
 
 class FridgeCycle():
 
-    def __init__(self, ps_port='COM19', mm_port='COM18'):
+    def __init__(self, ps_port='COM19', mm_port='COM3'):
         self.ps_port = ps_port
         self.ps_connection = lab_serial(port=self.ps_port, parity=None)
         self.mm_port = mm_port
@@ -39,6 +39,7 @@ class FridgeCycle():
             resistance_str = '{0:.2f} Ohms'.format(float(resistance))
         else:
             resistance_str = resistance
+        print(resistance, resistance_str)
         if self._is_float(resistance):
             return float(resistance), resistance_str
         else:
@@ -130,12 +131,14 @@ class FridgeCycle():
 
 if __name__ == '__main__':
     fc = FridgeCycle()
-    #fc.run_cycle()
-    res_s, temps = [], []
-    for res in np.arange(1501, 200000, 100):
-        temp = fc.abr_resistance_to_kelvin(res)[0]
-        res_s.append(res)
-        temps.append(temp)
-    pl.loglog(res_s, temps)
-    pl.show()
+    fc.initialize_mm_for_resistance()
+
+    if False:
+        res_s, temps = [], []
+        for res in np.arange(1501, 200000, 100):
+            temp = fc.abr_resistance_to_kelvin(res)[0]
+            res_s.append(res)
+            temps.append(temp)
+        pl.loglog(res_s, temps)
+        pl.show()
 
