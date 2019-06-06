@@ -1512,7 +1512,7 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
                 'fit_clip': fit_clip, 'data_clip': data_clip, 'e_bars': e_bars,
                 'optical_load': optical_load}
 
-    def _update_in_xy_mode(self, voltage_factor='1e-5'):
+    def _update_in_xy_mode(self, dummy=None, voltage_factor='1e-5'):
         '''
         Updats the panel with new defaults
         '''
@@ -1522,6 +1522,8 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
                 x_voltage_uV_plotting_factor = 10
             elif voltage_factor == '1e-4':
                 x_voltage_uV_plotting_factor = 100
+            else:
+                import ipdb;ipdb.set_trace()
             if hasattr(self, 'xdata'):
                 self._draw_x(title='X data', xlabel='Sample', ylabel='Bias Voltage @ Box (V)')
                 self._draw_y(title='Y data', xlabel='Sample', ylabel='SQUID Output Voltage (V)')
@@ -1620,7 +1622,7 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
                     getattr(self, '_xy_collector_popup_ydata_std_label').setText('{0:.4f}'.format(y_std))
                     data_line = '{0}\t{1}\t{2}\n'.format(x_mean, y_mean, y_std)
                     data_handle.write(data_line)
-                    self._update_in_xy_mode(voltage_factor)
+                    self._update_in_xy_mode(voltage_factor=voltage_factor)
                     first_x_point = x_mean
                     last_time = data_time
                     root.update()
@@ -2030,6 +2032,8 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
         '''
         if not hasattr(self, 'fourier'):
             self.fourier = Fourier()
+        if not hasattr(self, 'fts_curve'):
+            self.fts_curve = FTSCurve()
         if not hasattr(self, 'lock_in'):
             self.lock_in = LockIn()
         if not hasattr(self, 'single_channel_fts_popup'):
@@ -2147,6 +2151,7 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
             ax.set_xlabel('Frequency (GHz)', fontsize=10)
             ax.set_ylabel('Phase Corrected FFT', fontsize=10)
             ax.set_title('Spectral Response {0}'.format(scan_params['sample_name']), fontsize=12)
+            ax = self.fts_curve.add_sim_data(ax, band=str(scan_params['frequency_band']))
             ax.legend()
             #fig.savefig('temp_files/temp_fft.png')
             #fig.savefig('temp_files/IF_GIF/FFT_{0}.png'.format(str(self.if_count).zfill(3)))

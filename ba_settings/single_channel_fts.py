@@ -82,6 +82,9 @@ single_channel_fts_settings.single_channel_fts_build_dict = {
                                                              '_single_channel_fts_popup_heater_voltage_lineedit': {'position': (13, 3, 1, 1)},
 
                                                              '_single_channel_fts_popup_verify_parameters_checkbox': {'text': 'Verify Before Start?', 'position': (13, 4, 1, 1)},
+
+                                                             '_single_channel_fts_popup_frequency_band_header_label': {'text': 'Frequency Band (GHz):', 'position': (14, 0, 1, 1)},
+                                                             '_single_channel_fts_popup_frequency_band_combobox': {'position': (14, 1, 1, 1)},
 #
 # CONTROL BUTTONS 
                                                              '_single_channel_fts_popup_control_buttons_label': {'text': 'CONTROLS', 'font': 'huge', 'color': 'blue', 'alignment': 'Center', 'position': (16, 0, 1, 6)},
@@ -144,7 +147,8 @@ single_channel_fts_settings.fts_combobox_entry_dict = {
                                                        '_single_channel_fts_popup_integration_time_combobox': ['250', '500', '1000', '1500', '3000'],
                                                        '_single_channel_fts_popup_sample_rate_combobox': ['50', '100', '250', '500', '1000','2000','3000','4000','5000','6000','7000','8000','9000','10000','20000','30000','40000','48000'],
                                                        '_single_channel_fts_popup_fts_sm_com_port_combobox': ['COM12'],
-                                                       '_single_channel_fts_popup_grid_sm_com_port_combobox': ['']
+                                                       '_single_channel_fts_popup_grid_sm_com_port_combobox': [''],
+                                                       '_single_channel_fts_popup_frequency_band_combobox': ['', '30', '40', '90', '150', '220', '270'],
                                                        #'_single_channel_fts_popup_current_com_port_combobox': ['COM1', 'COM2', 'COM3', 'COM4','COM5','COM6'],
                                                        #'_single_channel_fts_popup_grid_current_com_port_combobox': ['COM1', 'COM2', 'COM3', 'COM4'],
                                                        }
@@ -154,5 +158,5 @@ single_channel_fts_settings.fts_scan_params = ['starting_position_lineedit', 'en
                                                'resolution_label', 'max_frequency_label',
                                                'distance_per_step_combobox', 'squid_select_combobox', 'integration_time_combobox', 'pause_time_combobox',
                                                'fts_sm_com_port_combobox', 'grid_sm_com_port_combobox', 'signal_channel_combobox', 'sample_rate_combobox',
-                                               'apodization_type_combobox', 'beam_splitter_combobox'] #combobox
+                                               'apodization_type_combobox', 'beam_splitter_combobox', 'frequency_band_combobox'] #combobox
 

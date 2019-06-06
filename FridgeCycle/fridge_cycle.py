@@ -16,6 +16,7 @@ class FridgeCycle():
         self.mm_port = mm_port
         self.mm_connection = lab_serial(port=self.mm_port, parity=serial.PARITY_NONE)
         self.initialize_mm_for_resistance()
+        self.initialize_ps_for_voltage()
 
     def _send_ps_command(self, msg):
         self.ps_connection.write(msg)
@@ -39,7 +40,6 @@ class FridgeCycle():
             resistance_str = '{0:.2f} Ohms'.format(float(resistance))
         else:
             resistance_str = resistance
-        print(resistance, resistance_str)
         if self._is_float(resistance):
             return float(resistance), resistance_str
         else:
@@ -68,6 +68,7 @@ class FridgeCycle():
             return float(voltage), voltage_str
         else:
             self._send_ps_command("*CLS\r\n;")
+            import ipdb;ipdb.set_trace()
             time.sleep(0.5)
             self.get_voltage()
 
@@ -81,7 +82,7 @@ class FridgeCycle():
         self._send_mm_command("*CLS\r\n;")
         resistance = self.get_resistance()
 
-    def initialize_ps_for_resistance(self):
+    def initialize_ps_for_voltage(self):
         self._send_ps_command("INIT\r\n;")
         self.ps_connection.read()
         self._send_ps_command("*RST\r\n;")
@@ -89,6 +90,7 @@ class FridgeCycle():
         self._query_ps('MEAS:VOLT?')
         self.apply_voltage(0)
         self._query_ps('MEAS:VOLT?')
+        voltage = self.get_voltage()
 
     def run_cycle(self, charcoal_start_resistance=1e3, charcoal_end_resistance=0.5e3, sleep_time=0.5):
         global do_cycle_fridge
@@ -131,7 +133,7 @@ class FridgeCycle():
 
 if __name__ == '__main__':
     fc = FridgeCycle()
-    fc.initialize_mm_for_resistance()
+    fc.initialize_ps_for_resistance()
 
     if False:
         res_s, temps = [], []

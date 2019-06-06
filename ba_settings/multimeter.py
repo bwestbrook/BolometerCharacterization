@@ -66,8 +66,8 @@ multimeter_settings.multimeter_popup_build_dict = {
 multimeter_settings.multimeter_combobox_entry_dict = {
                                                       '_multimeter_popup_daq_channel_1_combobox': ['0', '1', '2', '3', '4', '5', '6', '7'],
                                                       '_multimeter_popup_daq_channel_2_combobox': ['0', '1', '2', '3', '4', '5', '6', '7'],
-                                                      '_multimeter_popup_daq_sample_rate_1_combobox': ['50', '500', '1000'],
-                                                      '_multimeter_popup_daq_sample_rate_2_combobox': ['50', '500', '1000'],
+                                                      '_multimeter_popup_daq_sample_rate_1_combobox': ['50', '500', '1000', '5000'],
+                                                      '_multimeter_popup_daq_sample_rate_2_combobox': ['50', '500', '1000', '5000'],
                                                       '_multimeter_popup_daq_integration_time_1_combobox': ['50', '500', '1000', '10000', '100000'],
                                                       '_multimeter_popup_daq_integration_time_2_combobox': ['50', '500', '1000', '10000', '100000'],
                                                       '_multimeter_popup_grt_serial_1_combobox': ['', '29268', 'X36942'],
