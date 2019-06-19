@@ -952,6 +952,12 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
             else:
                 getattr(self, '_power_supply_popup_which_squid_label').setText('SQUID 2')
             getattr(self, '_power_supply_popup_set_voltage_label').setText(set_voltage_str)
+            getattr(self, '_power_supply_popup_voltage_control_dial').setSliderPosition(int(voltage_to_set))
+
+    def _set_ps_voltage_dial(self):
+        dial_value = float(getattr(self, '_power_supply_popup_voltage_control_dial').value())
+        getattr(self, '_power_supply_popup_test2_label').setText(str(dial_value))
+        self._set_ps_voltage(dial_value)
 
     #################################################
     # Fridge Cycle

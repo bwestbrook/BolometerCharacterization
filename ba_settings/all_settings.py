@@ -33,20 +33,6 @@ settings.larger_font = QtGui.QFont("Times", 16)
 settings.huge_font = QtGui.QFont("Times", 24)
 settings.giant_font = QtGui.QFont("Times", 32)
 
-settings.widget_to_object_dict = {
-                                  'textedit': 'QTextEdit',
-                                  'lineedit': 'QLineEdit',
-                                  'combobox': 'QComboBox',
-                                  'widget': 'QWidget',
-                                  'slider': 'QSlider',
-                                  'label': 'QLabel',
-                                  'panel': 'QWidget',
-                                  'popup': 'QWidget',
-                                  'toolbutton': 'QToolButton',
-                                  'pushbutton': 'QPushButton',
-                                  'checkbox': 'QCheckBox'
-                                 }
-
 # Individual files for various panels
 
 list_of_extra_settings = [main_panel_settings, rtcurve_settings_popup_settings,
