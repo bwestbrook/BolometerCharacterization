@@ -61,7 +61,7 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
         self.user_desktop_path = os.path.expanduser('~')
         self.fts_analyzer = FTSanalyzer()
         self.real_daq = DAQ()
-        self.active_devices = self.real_daq.get_active_devices()
+        #self.active_devices = self.real_daq.get_active_devices()
         self.screen_resolution = screen_resolution
         self.monitor_dpi = 120.0
         self.today = datetime.now()
@@ -933,11 +933,11 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
         self._build_panel(settings.power_supply_popup_build_dict)
         #for combobox_widget, entry_list in self.power_supply_combobox_entry_dict.items():
             #self.populate_combobox(combobox_widget, entry_list)
-        voltage_to_set, voltage_to_set_str = self.ps.get_voltage()
-        if voltage_to_set < 0:
-            voltage_to_set, voltage_to_set_str = 0.0, '0.0'
-        self._set_ps_voltage(voltage_to_set=voltage_to_set)
-        getattr(self, '_power_supply_popup_set_voltage_lineedit').setText(voltage_to_set_str)
+        #voltage_to_set, voltage_to_set_str = self.ps.get_voltage()
+        #if voltage_to_set < 0:
+            #voltage_to_set, voltage_to_set_str = 0.0, '0.0'
+        #self._set_ps_voltage(voltage_to_set=voltage_to_set)
+        #getattr(self, '_power_supply_popup_set_voltage_lineedit').setText(voltage_to_set_str)
         self.power_supply_popup.showMaximized()
         self.repaint()
 
