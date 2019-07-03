@@ -11,8 +11,8 @@ class PowerSupply():
 
     def __init__(self, ps_port='COM19'):
         self.ps_port = ps_port
-        self.ps_connection = lab_serial(port=self.ps_port, parity=None)
-        self.initialize_ps()
+        #self.ps_connection = lab_serial(port=self.ps_port, parity=None)
+        #self.initialize_ps()
 
     def _send_ps_command(self, msg):
         self.ps_connection.write(msg)
