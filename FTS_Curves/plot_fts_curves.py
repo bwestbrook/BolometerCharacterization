@@ -70,7 +70,7 @@ class FTSCurve():
         ax.axvline(115, 0, 1, linestyle=':', color='k', alpha=0.5, label='CO 115 GHz')
         return ax
 
-    def add_sim_data(self, ax, band='150'):
+    def add_sim_data(self, ax, band=None):
         if band in ['90', '150']:
             freq_column = 0
             if band == '90':
@@ -80,27 +80,31 @@ class FTSCurve():
         elif band in ['220', '270']:
             freq_column = 8
             if band == '220':
-                data_column = 11
-            elif band == '270':
                 data_column = 12
+            elif band == '270':
+                data_column = 11
+        elif band is None:
+            freq_column = None
+            data_column = None
         frequency = []
         transmission = []
-        with open('.\FTS_Curves\Simulations\PB2abcBands.csv', 'r') as file_handle:
-            for line in file_handle.readlines()[1:]:
-                if len(line.split(',')[freq_column]) > 0:
-                    freq_value = float(line.split(',')[freq_column])
-                    frequency.append(freq_value)
-                    tran_value = float(line.split(',')[data_column])
-                    transmission.append(tran_value)
-        if band == '150':
-            color = 'c'
-        elif band == '90':
-            color = 'm'
-        elif band == '220':
-            color = 'g'
-        elif band == '270':
-            color = 'r'
-        ax.plot(frequency, transmission, color=color, linestyle=':', lw=3, alpha=0.5, label='{0} GHz Sim'.format(band))
+        if freq_column is not None and data_column is not None:
+            with open('.\FTS_Curves\Simulations\PB2abcBands.csv', 'r') as file_handle:
+                for line in file_handle.readlines()[1:]:
+                    if len(line.split(',')[freq_column]) > 0:
+                        freq_value = float(line.split(',')[freq_column])
+                        frequency.append(freq_value)
+                        tran_value = float(line.split(',')[data_column])
+                        transmission.append(tran_value)
+            if band == '150':
+                color = 'c'
+            elif band == '90':
+                color = 'm'
+            elif band == '220':
+                color = 'g'
+            elif band == '270':
+                color = 'r'
+            ax.plot(frequency, transmission, color=color, linestyle=':', lw=3, alpha=0.5, label='{0} GHz Sim'.format(band))
         return ax
 
     def load_FFT_data(self, data_path, smoothing_factor=0.01, xlim_clip=(10, 600)):

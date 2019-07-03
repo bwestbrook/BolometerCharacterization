@@ -37,7 +37,8 @@ class stepper_motor():
         # tell the motor what to do
         #import ipdb;ipdb.set_trace()
         self._send_command("DI{:d}\r\n".format(int(x)))
-        response = self._query_motor("DI\r\n")
+        #response = self._query_motor("DI\r\n")
+        self._send_command("DI\r\n".format(int(x)))
         self._send_command('FP\r\n')
         # check that the motor did what you wanted
         # IP, EP, commands to see

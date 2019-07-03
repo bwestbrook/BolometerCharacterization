@@ -113,8 +113,8 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
                 with open(self.data_log_path, 'r') as log_handle:
                     for line in log_handle.readlines():
                         temp_log_handle.write(line)
-                        new_line = '{0}\t{1}\n'.format(self.raw_data_path[0], notes)
-                        temp_log_handle.write(new_line)
+                    new_line = '{0}\t{1}\n'.format(self.raw_data_path[0], notes)
+                    temp_log_handle.write(new_line)
             shutil.copy(temp_log_file_name, self.data_log_path)
 
     #################################################
@@ -2146,7 +2146,7 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
         fft_freq_vector, fft_vector, phase_corrected_fft_vector, symmetric_position_vector, symmetric_efficiency_vector\
             = self.fourier.convert_IF_to_FFT_data(position_vector, efficiency_vector, scan_params, data_selector='All')
         normalized_phase_corrected_fft_vector = np.abs(phase_corrected_fft_vector.real / np.max(phase_corrected_fft_vector.real))
-        if fig is not None:
+        if fig is not None and len(fft_freq_vector) > 0:
             max_idx = np.where(normalized_phase_corrected_fft_vector == np.max(normalized_phase_corrected_fft_vector))
             max_frequency = fft_freq_vector[max_idx][0]
             label = 'Peak Frequency {0:.1f} GHz'.format(max_frequency * 1e-9)
@@ -2157,7 +2157,10 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
             ax.set_xlabel('Frequency (GHz)', fontsize=10)
             ax.set_ylabel('Phase Corrected FFT', fontsize=10)
             ax.set_title('Spectral Response {0}'.format(scan_params['sample_name']), fontsize=12)
-            ax = self.fts_curve.add_sim_data(ax, band=str(scan_params['frequency_band']))
+            band = str(scan_params['frequency_band'])
+            if len(band) == 0:
+                band = None
+            ax = self.fts_curve.add_sim_data(ax, band=band)
             ax.legend()
             #fig.savefig('temp_files/temp_fft.png')
             #fig.savefig('temp_files/IF_GIF/FFT_{0}.png'.format(str(self.if_count).zfill(3)))
@@ -2259,6 +2262,7 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
                     getattr(self, '_single_channel_fts_popup_position_monitor_slider').setSliderPosition(position)
                     self.repaint()
                     getattr(self, 'sm_{0}'.format(scan_params['fts_sm_com_port'])).move_to_position(position)
+                    print(pause)
                     self.lock_in._zero_lock_in_phase()
                     time.sleep(pause)
                     data_time_stream, mean, min_, max_, std = self.real_daq.get_data(signal_channel=scan_params['signal_channel'], integration_time=scan_params['integration_time'],
