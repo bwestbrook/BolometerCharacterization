@@ -61,7 +61,7 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
         self.user_desktop_path = os.path.expanduser('~')
         self.fts_analyzer = FTSanalyzer()
         self.real_daq = DAQ()
-        #self.active_devices = self.real_daq.get_active_devices()
+        self.active_devices = self.real_daq.get_active_devices()
         self.screen_resolution = screen_resolution
         self.monitor_dpi = 120.0
         self.today = datetime.now()
@@ -2106,7 +2106,7 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
                 getattr(self, resolution_widget).setText(resolution)
                 max_frequency_widget = '_single_channel_fts_popup_max_frequency_label'
                 getattr(self, max_frequency_widget).setText(max_frequency)
-                if int(scan_params['step_size']) > 0:
+                if self._is_float(scan_params['step_size']) and int(scan_params['step_size']) > 0:
                     num_steps = (int(scan_params['ending_position']) - int(scan_params['starting_position'])) / int(scan_params['step_size'])
                 else:
                     num_steps = 'inf'
@@ -2147,21 +2147,24 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
             = self.fourier.convert_IF_to_FFT_data(position_vector, efficiency_vector, scan_params, data_selector='All')
         normalized_phase_corrected_fft_vector = np.abs(phase_corrected_fft_vector.real / np.max(phase_corrected_fft_vector.real))
         if fig is not None and len(fft_freq_vector) > 0:
-            max_idx = np.where(normalized_phase_corrected_fft_vector == np.max(normalized_phase_corrected_fft_vector))
-            max_frequency = fft_freq_vector[max_idx][0]
-            label = 'Peak Frequency {0:.1f} GHz'.format(max_frequency * 1e-9)
-            ax = fig.axes[-1]
-            pl.grid(True)
-            pos_freq_selector = np.where(fft_freq_vector > 0)
-            ax.plot(fft_freq_vector[pos_freq_selector] * 1e-9, normalized_phase_corrected_fft_vector[pos_freq_selector], label=label)
-            ax.set_xlabel('Frequency (GHz)', fontsize=10)
-            ax.set_ylabel('Phase Corrected FFT', fontsize=10)
-            ax.set_title('Spectral Response {0}'.format(scan_params['sample_name']), fontsize=12)
-            band = str(scan_params['frequency_band'])
-            if len(band) == 0:
-                band = None
-            ax = self.fts_curve.add_sim_data(ax, band=band)
-            ax.legend()
+            try:
+                max_idx = np.where(normalized_phase_corrected_fft_vector == np.max(normalized_phase_corrected_fft_vector))
+                max_frequency = fft_freq_vector[max_idx][0]
+                label = 'Peak Frequency {0:.1f} GHz'.format(max_frequency * 1e-9)
+                ax = fig.axes[-1]
+                pl.grid(True)
+                pos_freq_selector = np.where(fft_freq_vector > 0)
+                ax.plot(fft_freq_vector[pos_freq_selector] * 1e-9, normalized_phase_corrected_fft_vector[pos_freq_selector], label=label)
+                ax.set_xlabel('Frequency (GHz)', fontsize=10)
+                ax.set_ylabel('Phase Corrected FFT', fontsize=10)
+                ax.set_title('Spectral Response {0}'.format(scan_params['sample_name']), fontsize=12)
+                band = str(scan_params['frequency_band'])
+                if len(band) == 0:
+                    band = None
+                ax = self.fts_curve.add_sim_data(ax, band=band)
+                ax.legend()
+            except IndexError:
+                pass
             #fig.savefig('temp_files/temp_fft.png')
             #fig.savefig('temp_files/IF_GIF/FFT_{0}.png'.format(str(self.if_count).zfill(3)))
             #image = QtGui.QPixmap('temp_files/temp_fft.png')

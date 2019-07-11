@@ -8,7 +8,7 @@ class LockIn():
     def __init__(self, port='COM10'):
         self.port = port
         self._connection = lab_serial(port=self.port)
-        self._set_lock_in_defaults()
+        #self._set_lock_in_defaults()
         #import ipdb;ipdb.set_trace()
 
     def _send_command(self, msg):
