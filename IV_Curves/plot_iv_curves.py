@@ -169,8 +169,8 @@ class IVCurve():
             #ax.axvline(r_bolo[nearest_r_bolo_index], color=colors[i], label=labels[i])
             ax1.axvline(r_bolo_norm[nearest_r_bolo_index], color=colors[i])
             spectra_path = spectra_paths[i]
-        p_window, integrated_bandwidth, fft_data = self.compute_delta_power_at_window(spectra_path)
-        selector = np.logical_and(np.where(fft_data[0] > 50, True, False), np.where(fft_data[0] < 320, True, False))
+        p_window, integrated_bandwidth, fft_data = self.compute_delta_power_at_window(spectra_path, band='270')
+        selector = np.logical_and(np.where(fft_data[0] > 50, True, False), np.where(fft_data[0] < 350, True, False))
         ax2.plot(fft_data[0][selector], fft_data[1][selector], label='spectra')
         p_sensed = np.abs(p_at_same_rfracs[1] - p_at_same_rfracs[0])
         efficiency = 100.0 * p_sensed / p_window
@@ -183,7 +183,6 @@ class IVCurve():
         ax1.legend(numpoints=1)
         ax2.legend(numpoints=1)
         pl.show()
-
 
     def plot_all_curves(self, bolo_voltage_bias, bolo_current, stds=None, label='', fit_clip=None, plot_clip=None,
                         show_plot=False, title='', pturn=False):
@@ -230,7 +229,7 @@ class IVCurve():
         power_selector = np.logical_and(0 < power_vector, power_vector < 0.25 * np.max(power_vector))
         ax4.plot(resistance_vector[plot_selector], power_vector[plot_selector], 'r', label='Power (pW)')
         if add_fit:
-            ax1.plot(v_fit_x_vector[selector_2], poly_fit, label='Fit: {0:.2f}$\Omega$'.format(1.0 / fit_vals[0]))
+            ax1.plot(v_fit_x_vector[selector_2], poly_fit, label='Fit: {0:.5f}$\Omega$'.format(1.0 / fit_vals[0]))
         # Label the axis
         ax1.set_xlabel("Voltage ($\mu$V)", fontsize=12)
         ax1.set_ylabel("Current ($\mu$A)", fontsize=12)
@@ -268,7 +267,7 @@ class IVCurve():
         if quit_boolean == 'q':
             exit()
 
-    def load_FFT_data(self, data_path):
+    def load_FFT_data(self, data_path, simulated_band=None):
         '''
         Inputs:
             data_path:  the path to the .fft data file (string)
@@ -278,22 +277,38 @@ class IVCurve():
         Returns a frequency and transmission vector from the data file
         produced by Toki's LabView software
         '''
-        with open(data_path, 'r') as file_handle:
-            lines = file_handle.readlines()
-            frequency_vector = np.zeros(len(lines))
-            transmission_vector = np.zeros(len(lines))
-            for i, line in enumerate(lines):
-                frequency = line.split('\t')[0]
-                transmission = line.split('\t')[1]
-                np.put(frequency_vector, i, frequency)
-                np.put(transmission_vector, i, transmission)
+        if simulated_band is not None:
+            with open(data_path, 'r') as file_handle:
+                lines = file_handle.readlines()
+                frequency_vector = np.zeros(len(lines))
+                transmission_vector = np.zeros(len(lines))
+                for i, line in enumerate(lines[1:]):
+                    if simulated_band == '220':
+                        frequency = line.split(',')[8]
+                        transmission = line.split(',')[12]
+                    if simulated_band == '270':
+                        frequency = line.split(',')[8]
+                        transmission = line.split(',')[11]
+                    print(frequency, transmission)
+                    if self._is_float(frequency) and self._is_float(transmission):
+                        np.put(frequency_vector, i, frequency)
+                        np.put(transmission_vector, i, transmission)
+        else:
+            with open(data_path, 'r') as file_handle:
+                lines = file_handle.readlines()
+                frequency_vector = np.zeros(len(lines))
+                transmission_vector = np.zeros(len(lines))
+                for i, line in enumerate(lines):
+                    frequency = line.split('\t')[0]
+                    transmission = line.split('\t')[1]
+                    np.put(frequency_vector, i, frequency)
+                    np.put(transmission_vector, i, transmission)
         normalized_transmission_vector = transmission_vector / max(transmission_vector)
         return frequency_vector, transmission_vector, normalized_transmission_vector
 
-
-    def compute_delta_power_at_window(self, spectra_path, t_source_low=77, t_source_high=300, show_spectra=False):
+    def compute_delta_power_at_window(self, spectra_path, t_source_low=77, t_source_high=300, band=None, show_spectra=False):
         boltzmann_constant = 1.38e-23
-        fft_data = self.load_FFT_data(spectra_path)
+        fft_data = self.load_FFT_data(spectra_path, simulated_band=band)
         frequency_vector = fft_data[0]
         selector = np.logical_and(np.where(frequency_vector > 50, True, False), np.where(frequency_vector < 320, True, False))
         normalized_transmission_vector = fft_data[2]
@@ -346,6 +361,14 @@ class IVCurve():
 
         if difference:
             self.plot_differenced_ivs(v_biases, i_bolos, fracrns, colors, label_strs, spectra_paths, plot_clips)
+
+    def _is_float(self, value):
+        try:
+            float(value)
+            is_float = True
+        except ValueError:
+            is_float = False
+        return is_float
 
 if __name__ == '__main__':
     ivc = IVCurve()
