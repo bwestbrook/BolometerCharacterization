@@ -146,3 +146,6 @@ xy_collector_settings.xy_collector_plot_params = ['mode_combobox', 'squid_select
                                                   'data_clip_lo_lineedit', 'data_clip_hi_lineedit',
                                                   'e_bars_checkbox', 'optical_load_combobox']
 
+xy_collector_settings.fit_clip_offset = 1.8 #uV
+xy_collector_settings.data_clip_offset = 0.2 #uV
+

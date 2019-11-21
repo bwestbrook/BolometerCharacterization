@@ -12,6 +12,7 @@ def resistance_to_temp(resistance, serial_number):
     #Returns calibrated resistance from GRT thermometer with Serial Number 29312/25312 (same GRT labeled 2x)
     #This is the spare for dewar 576, the main for 575, and sometimes used on the dunk probe
     '''
+    is_valid = True
     if not type(resistance) is np.ndarray:
         if type(resistance) is list:
             resistance = pl.asarray(resistance)
@@ -23,14 +24,21 @@ def resistance_to_temp(resistance, serial_number):
     serial_number = serial_number
     temperature_array = pl.zeros(resistance.size)
     for j, resistance_value in enumerate(resistance):
-        z = np.log10(float(resistance_value))
+        try:
+            z = np.log10(float(resistance_value))
+        except RuntimeWarning:
+            z = np.log10(1e3)
+            is_valid = False
         z_lower, z_upper, a_coefficients = _return_chebychev_coefficients_and_impedance_limits(z, serial_number)
-        x = ((z - z_lower) - (z_upper - z)) / (z_upper - z_lower)
-        temperature = 0.
-        for i, coefficient in enumerate(a_coefficients):
-            temperature += coefficient * np.cos(i * pl.arccos(x))
+        if z_lower is not None:
+            x = ((z - z_lower) - (z_upper - z)) / (z_upper - z_lower)
+            temperature = 0.
+            for i, coefficient in enumerate(a_coefficients):
+                temperature += coefficient * np.cos(i * pl.arccos(x))
+        else:
+            temperature = np.nan
         temperature_array[j] = copy(temperature)
-    return temperature_array
+    return temperature_array, is_valid
 
 
 def make_calibration_curve(serial_number, r_low=2.0, r_upper=2000, r_resolution=1.0, plot_type='loglog'):
@@ -66,6 +74,7 @@ def _return_chebychev_coefficients_and_impedance_limits(z, serial_number):
     From the Lakeshore calibration, we compute the Chebychev polynomial coefficients
     and impedance limits for calculating the temperature from GRT resistance
     '''
+    z_lower, z_upper, a_coefficients = None, None, None
     if serial_number == 25312: #Spare, 576, 575, Dunk P         
         indexLowZ = z < 1.847
         indexHighZ = z >= 1.847

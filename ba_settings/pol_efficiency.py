@@ -37,17 +37,12 @@ pol_efficiency_settings.pol_efficiency_build_dict = {
                                                      '_pol_efficiency_popup_sample_rate_header_label': {'text': 'Sample Rate (Hz):', 'position': (8, 4, 1, 1)},
                                                      '_pol_efficiency_popup_sample_rate_combobox': {'position': (8, 5, 1, 1)},
 
-                                                     '_pol_efficiency_popup_open_lock_in_pushbutton': {'text': 'Open Lock-in', 'function': '_lock_in', 'position': (9, 0, 1, 1)},
+                                                     '_pol_efficiency_popup_open_lock_in_pushbutton': {'text': 'Open Lock-in', 'function': '_sr830_dsp', 'position': (9, 0, 1, 1)},
 # DERIVED QUANTITIES 
 
                                                      '_pol_efficiency_popup_number_of_steps_header_label': {'text': 'Number of Steps:', 'position': (6, 0, 1, 1)},
                                                      '_pol_efficiency_popup_number_of_steps_label': {'text': '0', 'position': (6, 1, 1, 1)},
 
-                                                     '_pol_efficiency_popup_max_frequency_header_label': {'text': 'Max Freq (Ghz):', 'position': (6, 2, 1, 1)},
-                                                     '_pol_efficiency_popup_max_frequency_label': {'text': '0', 'position': (6, 3, 1, 1)},
-
-                                                     '_pol_efficiency_popup_resolution_header_label': {'text': 'Resolution (Ghz):', 'position': (6, 4, 1, 1)},
-                                                     '_pol_efficiency_popup_resolution_label': {'text': '0', 'position': (6, 5, 1, 1)},
 
 # ANALYSIS SETUP 
                                                      '_pol_efficiency_popup_analysis_setup_label': {'text': 'ANALYSIS SETUP', 'font': 'huge', 'color': 'blue', 'alignment': 'Center', 'position': (10, 0, 1, 6)},

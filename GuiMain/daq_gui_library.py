@@ -197,13 +197,13 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
                 getattr(self, '_user_move_stepper_popup_current_position_label').setText('{0} (steps)'.format(position_string))
                 getattr(self, '_user_move_stepper_popup_move_to_position_lineedit').setText('{0}'.format(position_string))
                 getattr(self, '_user_move_stepper_popup_stepper_slider').setSliderPosition(int(position_string))
-            if self._is_float(current_string):
+            if self._is_float(current_string, enforce_positive=True):
                 getattr(self, '_user_move_stepper_popup_actual_current_label').setText('{0} (A)'.format(current_string))
                 getattr(self, '_user_move_stepper_popup_set_current_to_lineedit').setText('{0}'.format(current_string))
-            if self._is_float(velocity_string):
+            if self._is_float(velocity_string, enforce_positive=True):
                 getattr(self, '_user_move_stepper_popup_actual_velocity_label').setText('{0} (mm/s)'.format(velocity_string))
                 getattr(self, '_user_move_stepper_popup_set_velocity_to_lineedit').setText('{0}'.format(velocity_string))
-            if self._is_float(acceleration_string):
+            if self._is_float(acceleration_string, enforce_positive=True):
                 getattr(self, '_user_move_stepper_popup_actual_acceleration_label').setText('{0} (mm/s/s)'.format(acceleration_string))
                 getattr(self, '_user_move_stepper_popup_set_acceleration_to_lineedit').setText('{0}'.format(acceleration_string))
         elif 'single_channel_fts' in sender_whats_this_str and not error:
@@ -272,6 +272,8 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
 
     def _set_sample_dict_path(self):
         sample_dict_path = QtWidgets.QFileDialog.getOpenFileName(self, directory=self.sample_dict_folder, filter='*.json')[0]
+        if len(sample_dict_path) == 0:
+            return None
         with open(sample_dict_path, 'r') as sample_dict_file_handle:
             self.sample_dict = json.load(sample_dict_file_handle)
         getattr(self, '_daq_main_panel_set_sample_dict_path_label').setText(sample_dict_path)
@@ -295,7 +297,8 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
                     last_index = appendix.replace('.dat', '')
             if suggested_file_name in file_name and '.if' in file_name:
                 appendix = file_name.split(suggested_file_name)[1]
-                if len(appendix) == 6:
+                #import ipdb;ipdb.set_trace()
+                if len(appendix) == 5:
                     last_index = appendix.replace('.if', '')
         new_index = '{0}'.format(int(last_index) + 1).zfill(2)
         if 'FTS_Scan' in suggested_file_name:
@@ -702,10 +705,10 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
         rtc = RTCurve([])
         invert = getattr(self, '_xy_collector_popup_invert_output_checkbox').isChecked()
         normal_res = str(getattr(self, '_xy_collector_popup_sample_res_lineedit').text())
-        if self._is_float(normal_res):
+        if self._is_float(normal_res, enforce_positive=True):
             normal_res = float(normal_res)
         else:
-            normal_res = 1.0
+            normal_res = np.nan
         title = '{0} R vs. T'.format(plot_params['label'])
         label = '{0}-{1}'.format(plot_params['label'], plot_params['drift'])
         data_clip = plot_params['data_clip']
@@ -857,10 +860,12 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
                     for j, y in enumerate(self.y_grid):
                         f.write('{0},{1},{2},{3}\n'.format(x, y, zdata[j,i], stds[j,i]))
 
-    def _is_float(self, value):
+    def _is_float(self, value, enforce_positive=False):
         try:
             float(value)
             is_float = True
+            if float(value) <= 0 and enforce_positive:
+                is_float = False
         except ValueError:
             is_float = False
         return is_float
@@ -872,13 +877,20 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
     #################################################
 
     #################################################
-    # Lock in 
+    # Data Analyzer in 
+    #################################################
+
+    def _data_analyzer(self):
+        print('hello')
+
+    #################################################
+    # Lock in SRS SR830 DSP
     #################################################
 
     def _close_lock_in(self):
         self.lock_in_popup.close()
 
-    def _lock_in(self):
+    def _sr830_dsp(self):
         if not hasattr(self, 'lock_in'):
             self.lock_in = LockIn()
         if not hasattr(self, 'lock_in_popup'):
@@ -893,6 +905,7 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
         #getattr(self, '_lock_in_popup_lock_in_time_constant_combobox').setCurrentIndex(time_constant_index)
         getattr(self, '_lock_in_popup_lock_in_sensitivity_range_combobox').setCurrentIndex(22)
         self.lock_in_popup.showMaximized()
+        self.lock_in_popup.setWindowTitle('SR830 DSP')
         self.repaint()
 
     def _change_lock_in_sensitivity_range(self):
@@ -917,13 +930,13 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
         self.lock_in._zero_lock_in_phase()
 
     #################################################
-    # Power Supply 
+    # Power Supply Agilent E3634A
     #################################################
 
     def _close_power_supply(self):
         self.power_supply_popup.close()
 
-    def _power_supply(self):
+    def _e3634a(self):
         if not hasattr(self, 'ps'):
             self.ps = PowerSupply()
         if not hasattr(self, 'power_supply_popup'):
@@ -939,12 +952,13 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
         #self._set_ps_voltage(voltage_to_set=voltage_to_set)
         #getattr(self, '_power_supply_popup_set_voltage_lineedit').setText(voltage_to_set_str)
         self.power_supply_popup.showMaximized()
+        self.power_supply_popup.setWindowTitle('Agilent E3634 A')
         self.repaint()
 
     def _set_ps_voltage(self, voltage_to_set=None):
         if voltage_to_set is None or type(voltage_to_set) is bool:
             voltage_to_set = getattr(self, '_power_supply_popup_set_voltage_lineedit').text()
-        if self._is_float(voltage_to_set):
+        if self._is_float(voltage_to_set, enforce_positive=True):
             self.ps.apply_voltage(float(voltage_to_set))
             set_voltage, set_voltage_str = self.ps.get_voltage()
             if float(voltage_to_set) < 10:
@@ -1013,8 +1027,18 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
         rtc = RTCurve([])
         voltage_factor = float(self.multimeter_voltage_factor_range_dict[fc_params['grt_range']])
         grt_serial = fc_params['grt_serial']
-        temperature = np.mean(1e3 * rtc.resistance_to_temp_grt(grt_data * voltage_factor, serial_number=grt_serial))
-        temperature_str = '{0:.3f} mK'.format(temperature)
+        temperature_array, is_valid = rtc.resistance_to_temp_grt(grt_data * voltage_factor, serial_number=grt_serial)
+        if is_valid:
+            temperature = np.mean(1e3 * temperature_array)
+        else:
+            self._quick_message('GRT config is not correct assuming 1000 Ohms')
+        if self._is_float(temperature, enforce_positive=True):
+            temperature_str = '{0:.3f} mK'.format(temperature)
+        else:
+            temperature_str = 'NaN'
+        pprint(fc_params)
+        print(np.mean(grt_data), voltage_factor, grt_serial, temperature, temperature_str)
+        #import ipdb;ipdb.set_trace()
         return temperature, temperature_str
 
     def _set_ps_voltage_fc(self):
@@ -1039,6 +1063,7 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
         with open(data_path, 'w') as fc_file_handle:
             # Get new data 
             data_line = self._check_cycle_stage_and_update_data(fc_params, data_path, sleep_time)
+            print(data_line)
             fc_file_handle.write(data_line)
             self._update_fridge_cycle(data_path=data_path)
             # Update status
@@ -1196,7 +1221,6 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
         ax2.legend(handles, labels, numpoints=1)
         handles, labels = ax3.get_legend_handles_labels()
         ax3.legend(handles, labels, numpoints=1)
-        #ax.set_ylim([0.01, 3000])
         if data_path is not None:
             save_path = data_path.replace('.dat', '.png')
         else:
@@ -1234,6 +1258,7 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
         getattr(self, '_multimeter_popup_grt_range_1_combobox').setCurrentIndex(3)
         getattr(self, '_multimeter_popup_grt_range_2_combobox').setCurrentIndex(3)
         self.multimeter_popup.showMaximized()
+        self.multimeter_popup.setWindowTitle('Mulitmeter')
 
     def _close_multimeter(self):
         '''
@@ -1256,7 +1281,7 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
         if len(grt_serial) > 1:
             rtc = RTCurve([])
             voltage_factor = float(self.multimeter_voltage_factor_range_dict[grt_range])
-            temp_data = 1e3 * rtc.resistance_to_temp_grt(self.mm_data * voltage_factor, serial_number=grt_serial)
+            temp_data, is_valid = 1e3 * rtc.resistance_to_temp_grt(self.mm_data * voltage_factor, serial_number=grt_serial)
             ax.plot(temp_data)
             temp_data_std = np.std(temp_data)
             temp_data_mean = np.mean(temp_data)
@@ -1605,7 +1630,7 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
                     if run_mode == 'RT':
                         if 3.0 < x_mean * voltage_factor < 600:
                             if grt_serial != '':
-                                x_data = 1e3 * rtc.resistance_to_temp_grt(x_data * voltage_factor, serial_number=grt_serial)
+                                x_data, is_valid = 1e3 * rtc.resistance_to_temp_grt(x_data * voltage_factor, serial_number=grt_serial)
                         #else:
                             #x_data = [np.nan]
                         x_mean = np.mean(x_data)
@@ -1633,6 +1658,20 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
                     last_time = data_time
                     root.update()
         self._update_log()
+        self._update_fit_data(voltage_factor)
+
+    def _update_fit_data(self, voltage_factor):
+        '''
+        Updates fit limits based on IV data
+        '''
+        fit_clip_hi = self.xdata[0] * float(voltage_factor) * 1e6 # uV
+        data_clip_lo = self.xdata[-1] * float(voltage_factor) * 1e6 + self.data_clip_offset # uV
+        data_clip_hi = fit_clip_hi # uV
+        fit_clip_lo = data_clip_lo + self.fit_clip_offset # uV
+        getattr(self, '_xy_collector_popup_data_clip_hi_lineedit').setText('{0:.3f}'.format(data_clip_hi))
+        getattr(self, '_xy_collector_popup_data_clip_lo_lineedit').setText('{0:.3f}'.format(data_clip_lo))
+        getattr(self, '_xy_collector_popup_fit_clip_lo_lineedit').setText('{0:.3f}'.format(fit_clip_lo))
+        getattr(self, '_xy_collector_popup_fit_clip_hi_lineedit').setText('{0:.3f}'.format(fit_clip_hi))
 
     #################################################
     # TIME CONSTANT 
@@ -1647,7 +1686,7 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
         ax.set_xlabel('Time (ms)')
         temp_tau_save_path = './temp_files/temp_tau_data_point.png'
         fig.savefig(temp_tau_save_path)
-        image_to_display = QtWidgets.QPixmap(temp_tau_save_path)
+        image_to_display = QtGui.QPixmap(temp_tau_save_path)
         getattr(self, '_time_constant_popup_data_point_monitor_label').setPixmap(image_to_display)
 
     def _plot_time_constant(self, real_data=True):
@@ -1686,14 +1725,14 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
             ax.set_title(title)
             ax.legend()
             fig.savefig(self.plotted_data_path[0])
-            image_to_display = QtWidgets.QPixmap(self.plotted_data_path[0])
+            image_to_display = QtGui.QPixmap(self.plotted_data_path[0])
             getattr(self, '_time_constant_popup_all_data_monitor_label').setPixmap(image_to_display)
             self.temp_plot_path = self.plotted_data_path
             self.active_fig = fig
         else:
             ax.plot(0.0, 0.0, color=color, alpha=0.7, label=label)
             fig.savefig('./blank_fig.png')
-            image_to_display = QtWidgets.QPixmap('./blank_fig.png')
+            image_to_display = QtGui.QPixmap('./blank_fig.png')
             getattr(self, '_time_constant_popup_all_data_monitor_label').setPixmap(image_to_display)
 
     def _delete_last_point(self):
@@ -1838,7 +1877,7 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
 
     def _limit_current(self):
         value = str(self.sender().text())
-        if self._is_float(value):
+        if self._is_float(value, enforce_positive=True):
             value = float(str(self.sender().text()))
             if value > 4.0:
                 value = 4.0
@@ -1900,7 +1939,7 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
         getattr(self, '_pol_efficiency_popup_verify_parameters_checkbox').setChecked(True)
         getattr(self, '_pol_efficiency_popup_signal_channel_combobox').setCurrentIndex(2)
         getattr(self, '_pol_efficiency_popup_pause_time_combobox').setCurrentIndex(2)
-        self.pol_efficiency_popup.setWindowTitle('POL EFFICIENCY')
+        self.pol_efficiency_popup.setWindowTitle('Polarization Efficiency')
 
     def _update_pol_efficiency(self):
         meta_data = self._get_all_meta_data(popup='_pol_efficiency')
@@ -1911,13 +1950,23 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
             start_angle = scan_params['starting_position']
             end_angle = scan_params['ending_position']
             step_size = scan_params['step_size']
-            if int(step_size) > 0:
+            print(start_angle, end_angle, step_size)
+            print(self._is_float(start_angle), self._is_float(end_angle), self._is_float(step_size, enforce_positive=True))
+            if self._is_float(step_size, enforce_positive=True)\
+                    and self._is_float(start_angle)\
+                    and self._is_float(end_angle):
                 num_steps = (int(end_angle) - int(start_angle)) / int(step_size)
+                print(num_steps)
                 getattr(self,'_pol_efficiency_popup_number_of_steps_label').setText(str(num_steps))
                 getattr(self,'_pol_efficiency_popup_position_slider_min_label').setText(str(start_angle))
                 getattr(self,'_pol_efficiency_popup_position_slider_max_label').setText(str(end_angle))
                 getattr(self, '_pol_efficiency_popup_position_monitor_slider').setMinimum(int(start_angle))
                 getattr(self, '_pol_efficiency_popup_position_monitor_slider').setMaximum(int(end_angle))
+            else:
+                num_steps = 'NaN'
+            getattr(self,'_pol_efficiency_popup_number_of_steps_label').setText(str(num_steps))
+            getattr(self,'_pol_efficiency_popup_position_slider_min_label').setText(str(start_angle))
+            getattr(self,'_pol_efficiency_popup_position_slider_max_label').setText(str(end_angle))
         self.pol_efficiency_popup.repaint()
 
     def get_simulated_data(self, datatype, current_position, noise=10):
@@ -2069,13 +2118,16 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
         Compute the resultant quantities on the panel
         '''
         proceed = False
-        if self._is_float(scan_params['ending_position']) and self._is_float(scan_params['starting_position']) and self._is_float(scan_params['distance_per_step']) and self._is_float(scan_params['step_size']):
+        if self._is_float(scan_params['ending_position'])\
+                and self._is_float(scan_params['starting_position'])\
+                and self._is_float(scan_params['distance_per_step'], enforce_positive=True)\
+                and self._is_float(scan_params['step_size'], enforce_positive=True):
             proceed = True
         if proceed:
             total_steps = int(scan_params['ending_position']) - int(scan_params['starting_position'])
             total_distance = total_steps * float(scan_params['distance_per_step']) #nm
             min_distance = int(scan_params['step_size']) * float(scan_params['distance_per_step']) #m
-            if min_distance > 0:
+            if min_distance > 0 and total_distance > 0:
                 min_distance *= 1e-9 # from nm to m
                 total_distance *= 1e-9 # from nm to m
                 nyquist_distance = 4 * min_distance
@@ -2106,7 +2158,7 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
                 getattr(self, resolution_widget).setText(resolution)
                 max_frequency_widget = '_single_channel_fts_popup_max_frequency_label'
                 getattr(self, max_frequency_widget).setText(max_frequency)
-                if self._is_float(scan_params['step_size']) and int(scan_params['step_size']) > 0:
+                if self._is_float(scan_params['step_size'], enforce_positive=True):
                     num_steps = (int(scan_params['ending_position']) - int(scan_params['starting_position'])) / int(scan_params['step_size'])
                 else:
                     num_steps = 'inf'
@@ -2148,20 +2200,25 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
         normalized_phase_corrected_fft_vector = np.abs(phase_corrected_fft_vector.real / np.max(phase_corrected_fft_vector.real))
         if fig is not None and len(fft_freq_vector) > 0:
             try:
+                pos_freq_selector = np.where(fft_freq_vector > 0)
+                band = str(scan_params['frequency_band'])
+                if len(band) == 0:
+                    band = None
                 max_idx = np.where(normalized_phase_corrected_fft_vector == np.max(normalized_phase_corrected_fft_vector))
                 max_frequency = fft_freq_vector[max_idx][0]
-                label = 'Peak Frequency {0:.1f} GHz'.format(max_frequency * 1e-9)
+                dx = fft_freq_vector[1] - fft_freq_vector[0] 
+                integrated_bandwidth = np.trapz(normalized_phase_corrected_fft_vector[pos_freq_selector], dx=dx) * 1e-9
+                #print(integrated_bandwidth)
+                #import ipdb;ipdb.set_trace()
+                label = 'Peak Frequency {0:.1f} GHz\n'.format(max_frequency * 1e-9)
                 ax = fig.axes[-1]
+                ax, bandwidth = self.fts_curve.add_sim_data(ax, band=band)
+                label += 'Integrated BW ({0:.1f}/{1:.1f}) GHz'.format(integrated_bandwidth, bandwidth)
                 pl.grid(True)
-                pos_freq_selector = np.where(fft_freq_vector > 0)
                 ax.plot(fft_freq_vector[pos_freq_selector] * 1e-9, normalized_phase_corrected_fft_vector[pos_freq_selector], label=label)
                 ax.set_xlabel('Frequency (GHz)', fontsize=10)
                 ax.set_ylabel('Phase Corrected FFT', fontsize=10)
                 ax.set_title('Spectral Response {0}'.format(scan_params['sample_name']), fontsize=12)
-                band = str(scan_params['frequency_band'])
-                if len(band) == 0:
-                    band = None
-                ax = self.fts_curve.add_sim_data(ax, band=band)
                 ax.legend()
             except IndexError:
                 pass
@@ -2198,7 +2255,6 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
             if not os.path.exists(save_folder):
                 os.makedirs(save_folder)
             incremental_save_path = os.path.join(save_folder, '{0}.png'.format(str(self.if_count).zfill(4)))
-            print(incremental_save_path)
             fig.savefig(os.path.join(incremental_save_path))
             self.if_count += 1
 
@@ -2241,6 +2297,7 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
                 self.single_channel_fts_popup.repaint()
                 self._connect_to_com_port(com_port=scan_params['grid_sm_com_port'])
             getattr(self, '_single_channel_fts_popup_start_pushbutton').setText('Taking Data')
+            getattr(self, '_single_channel_fts_popup_start_pushbutton').setFlat(True)
             i = 0
             x_positions = np.arange(int(scan_params['starting_position']), int(scan_params['ending_position']) + int(scan_params['step_size']), int(scan_params['step_size']))
             getattr(self, 'sm_{0}'.format(scan_params['fts_sm_com_port'])).move_to_position(int(scan_params['starting_position']))
@@ -2265,7 +2322,6 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
                     getattr(self, '_single_channel_fts_popup_position_monitor_slider').setSliderPosition(position)
                     self.repaint()
                     getattr(self, 'sm_{0}'.format(scan_params['fts_sm_com_port'])).move_to_position(position)
-                    print(pause)
                     self.lock_in._zero_lock_in_phase()
                     time.sleep(pause)
                     data_time_stream, mean, min_, max_, std = self.real_daq.get_data(signal_channel=scan_params['signal_channel'], integration_time=scan_params['integration_time'],
@@ -2319,7 +2375,7 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
         getattr(self, '_single_channel_fts_popup_position_monitor_slider').setSliderPosition(0)
         getattr(self, '_single_channel_fts_popup_current_position_label').setText('{0:.3f}'.format(0))
         continue_run = False
-        getattr(self, '_single_channel_fts_popup_stop_pushbutton').setText('Pause')
+        #getattr(self, '_single_channel_fts_popup_stop_pushbutton').setText('Pause')
         self._update_log()
 
     def _save_if_and_fft(self, position_vector, efficiency_vector, scan_params):
@@ -2431,8 +2487,8 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
                 and self._is_float(scan_params['end_y_position']) \
                 and self._is_float(scan_params['start_x_position']) \
                 and self._is_float(scan_params['start_y_position']) \
-                and self._is_float(scan_params['step_size_x']) \
-                and self._is_float(scan_params['step_size_y']):
+                and self._is_float(scan_params['step_size_x'], enforce_positive=True) \
+                and self._is_float(scan_params['step_size_y'], enforce_positive=True):
             x_total = int(scan_params['end_x_position']) - int(scan_params['start_x_position'])
             x_steps = int(scan_params['step_size_x'])
             if int(scan_params['step_size_x']) == 0 or  int(scan_params['step_size_y']) == 0:

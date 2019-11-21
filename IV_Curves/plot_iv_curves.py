@@ -169,7 +169,7 @@ class IVCurve():
             #ax.axvline(r_bolo[nearest_r_bolo_index], color=colors[i], label=labels[i])
             ax1.axvline(r_bolo_norm[nearest_r_bolo_index], color=colors[i])
             spectra_path = spectra_paths[i]
-        p_window, integrated_bandwidth, fft_data = self.compute_delta_power_at_window(spectra_path, band='270')
+        p_window, integrated_bandwidth, fft_data = self.compute_delta_power_at_window(spectra_path, band=None)
         selector = np.logical_and(np.where(fft_data[0] > 50, True, False), np.where(fft_data[0] < 350, True, False))
         ax2.plot(fft_data[0][selector], fft_data[1][selector], label='spectra')
         p_sensed = np.abs(p_at_same_rfracs[1] - p_at_same_rfracs[0])
@@ -308,6 +308,7 @@ class IVCurve():
 
     def compute_delta_power_at_window(self, spectra_path, t_source_low=77, t_source_high=300, band=None, show_spectra=False):
         boltzmann_constant = 1.38e-23
+        #band='270'
         fft_data = self.load_FFT_data(spectra_path, simulated_band=band)
         frequency_vector = fft_data[0]
         selector = np.logical_and(np.where(frequency_vector > 50, True, False), np.where(frequency_vector < 320, True, False))

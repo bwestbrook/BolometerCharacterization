@@ -42,7 +42,7 @@ single_channel_fts_settings.single_channel_fts_build_dict = {
                                                              '_single_channel_fts_popup_sample_rate_header_label': {'text': 'Sample Rate (Hz):', 'position': (8, 4, 1, 1)},
                                                              '_single_channel_fts_popup_sample_rate_combobox': {'position': (8, 5, 1, 1)},
 
-                                                             '_single_channel_fts_popup_open_lock_in_pushbutton': {'text': 'Open Lock-in', 'function': '_lock_in', 'position': (9, 0, 1, 1)},
+                                                             '_single_channel_fts_popup_open_lock_in_pushbutton': {'text': 'Open Lock-in', 'function': '_sr830_dsp', 'position': (9, 0, 1, 1)},
 # DERIVED QUANTITIES 
 
                                                              '_single_channel_fts_popup_number_of_steps_header_label': {'text': 'Number of Steps:', 'position': (6, 0, 1, 1)},
@@ -90,7 +90,7 @@ single_channel_fts_settings.single_channel_fts_build_dict = {
                                                              '_single_channel_fts_popup_control_buttons_label': {'text': 'CONTROLS', 'font': 'huge', 'color': 'blue', 'alignment': 'Center', 'position': (16, 0, 1, 6)},
 
                                                              '_single_channel_fts_popup_start_pushbutton': {'text': 'Start', 'function': '_run_fts', 'position': (17, 0, 1, 3)},
-                                                             '_single_channel_fts_popup_stop_pushbutton': {'text': 'Stop', 'function': '_stop_fts', 'position': (17, 3, 1, 3)},
+                                                             '_single_channel_fts_popup_abort_pushbutton': {'text': 'Abort', 'function': '_stop_fts', 'position': (17, 3, 1, 3)},
                                                              '_single_channel_fts_popup_close_pushbutton': {'text': 'Close', 'function': '_close_single_channel_fts', 'position': (18, 0, 1, 3)},
                                                              '_single_channel_fts_popup_save_pushbutton': {'text': 'Save', 'function': '_save_plots_and_data', 'position': (18, 3, 1, 3)},
 
@@ -140,7 +140,7 @@ single_channel_fts_settings.carrier_types = ['phone', 'e-mail']
 single_channel_fts_settings.fts_combobox_entry_dict = {
                                                        '_single_channel_fts_popup_signal_channel_combobox': ['', '0', '1', '2', '3'],
                                                        '_single_channel_fts_popup_squid_select_combobox': ['', '1', '2', '3', '4', '5', '6'],
-                                                       '_single_channel_fts_popup_apodization_type_combobox': ['TRIAGNULAR'],
+                                                       '_single_channel_fts_popup_apodization_type_combobox': ['TRIANGULAR'],
                                                        '_single_channel_fts_popup_distance_per_step_combobox': ["250.39", "4.168"],
                                                        '_single_channel_fts_popup_beam_splitter_combobox': ['5','10'],
                                                        '_single_channel_fts_popup_pause_time_combobox': ['500', '750','1000', '1500', '2000', '3000', '5000', '10000'],

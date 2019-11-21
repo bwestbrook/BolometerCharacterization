@@ -105,7 +105,10 @@ class FTSCurve():
             elif band == '270':
                 color = 'r'
             ax.plot(frequency, transmission, color=color, linestyle=':', lw=3, alpha=0.5, label='{0} GHz Sim'.format(band))
-        return ax
+            print(frequency, transmission)
+        bandwidth = np.trapz(np.asarray(transmission)[np.where(np.asarray(frequency) > 0)])
+        print(bandwidth, np.sum(np.asarray(transmission)))
+        return ax, bandwidth
 
     def load_FFT_data(self, data_path, smoothing_factor=0.01, xlim_clip=(10, 600)):
         '''
@@ -195,13 +198,13 @@ class FTSCurve():
             ax = self.add_atmospheric_lines(ax)
             add_atmosphere = False
         if add_90_sim:
-            ax = self.add_sim_data(ax, band='90')
+            ax, bandwithd = self.add_sim_data(ax, band='90')
         if add_150_sim:
-            ax = self.add_sim_data(ax, band='150')
+            ax, bandwithd = self.add_sim_data(ax, band='150')
         if add_220_sim:
-            ax = self.add_sim_data(ax, band='220')
+            ax, bandwithd = self.add_sim_data(ax, band='220')
         if add_270_sim:
-            ax = self.add_sim_data(ax, band='270')
+            ax, bandwithd = self.add_sim_data(ax, band='270')
         if add_co_lines:
             ax = self.add_co_lines(ax)
         ax.plot(frequency_vector, transmission_vector, color, label=label, lw=1, alpha=0.8)
@@ -221,6 +224,10 @@ class FTSCurve():
             ax.legend(handles, labels, numpoints=1,
                       borderaxespad=0.0, loc=2,
                       bbox_to_anchor=(1.01, 1.0))
+        save_path = './Data/2019_09_06/PB2-14-12-S2-Ua-220T.fft'
+        #print(frequency_vector, transmission_vector)
+        #self.save_FFT_data(frequency_vector, transmission_vector, save_path)
+        #os._exit(0)
         return fig
 
 

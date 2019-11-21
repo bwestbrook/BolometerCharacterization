@@ -672,9 +672,13 @@ class GuiTemplate(QtWidgets.QWidget, GuiBuilder):
             self._build_panel(settings.ftscurve_popup_build_dict)
         row = 3
         self.selected_files_col_dict = {}
-        json_path = self.selected_files[0].replace('.fft', '.json')
+        if '.fft' in self.selected_files[0]:
+            json_path = self.selected_files[0].replace('.fft', '.json')
+        elif '.if' in self.selected_files[0]:
+            json_path = self.selected_files[0].replace('.if', '.json')
         distance_per_step = '250.39'
         step_size = '500'
+        print(json_path)
         if os.path.exists(json_path):
             with open(json_path, 'r') as json_handle:
                 meta_data = json.load(json_handle)
