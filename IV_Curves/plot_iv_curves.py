@@ -289,6 +289,12 @@ class IVCurve():
                     if simulated_band == '270':
                         frequency = line.split(',')[8]
                         transmission = line.split(',')[11]
+                    if simulated_band == '90':
+                        frequency = line.split(',')[0]
+                        transmission = line.split(',')[1]
+                    if simulated_band == '150':
+                        frequency = line.split(',')[0]
+                        transmission = line.split(',')[2]
                     print(frequency, transmission)
                     if self._is_float(frequency) and self._is_float(transmission):
                         np.put(frequency_vector, i, frequency)
@@ -308,7 +314,7 @@ class IVCurve():
 
     def compute_delta_power_at_window(self, spectra_path, t_source_low=77, t_source_high=300, band=None, show_spectra=False):
         boltzmann_constant = 1.38e-23
-        #band='270'
+        band='150'
         fft_data = self.load_FFT_data(spectra_path, simulated_band=band)
         frequency_vector = fft_data[0]
         selector = np.logical_and(np.where(frequency_vector > 50, True, False), np.where(frequency_vector < 320, True, False))
@@ -331,8 +337,15 @@ class IVCurve():
             if difference:
                 break
         v_biases, i_bolos, colors, label_strs, fracrns, spectra_paths, plot_clips = [], [], [], [], [], [], []
+        print()
+        print()
+        print()
+        print()
+        print()
+        pprint(self.list_of_input_dicts)
         for input_dict in self.list_of_input_dicts:
             data_path = input_dict['data_path']
+            print(data_path)
             label = input_dict['label']
             color = input_dict['color']
             fracrn = input_dict['fracrn']
@@ -359,6 +372,7 @@ class IVCurve():
                  self.plot_all_curves(v_bias_real, i_bolo_real, label=label,
                                       fit_clip=fit_clip, plot_clip=plot_clip,
                                       show_plot=True)
+                 print('one')
 
         if difference:
             self.plot_differenced_ivs(v_biases, i_bolos, fracrns, colors, label_strs, spectra_paths, plot_clips)
