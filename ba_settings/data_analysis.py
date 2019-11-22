@@ -15,5 +15,5 @@ data_analysis_popup_settings.data_analysis_popup_build_dict = {
         '_data_analysis_popup_polcurve_pushbutton': {'text': 'POL_Curve', 'function': '_select_analysis_type', 'position': (4, 4, 1, 1)},
         '_data_analysis_popup_taucurve_pushbutton': {'text': 'TAU_Curve', 'function': '_select_analysis_type', 'position': (4, 5, 1, 1)},
         '_data_analysis_popup_beammap_pushbutton': {'text': 'Beam Map', 'function': '_select_analysis_type', 'position': (4, 6, 1, 1)},
-        '_data_analysis_popup_close_pushbutton': {'text': 'Close', 'function': '_close_main', 'position': (6, 0, 1, 7)}
+        '_data_analysis_popup_close_pushbutton': {'text': 'Close', 'function': '_close_data_analysis_popup', 'position': (6, 0, 1, 7)}
         }

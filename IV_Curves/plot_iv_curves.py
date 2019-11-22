@@ -137,7 +137,7 @@ class IVCurve():
 
 ## Plotting
 
-    def plot_differenced_ivs(self, v_biases, i_bolos, fracrns, colors, labels, spectra_paths, plot_clips):
+    def plot_differenced_ivs(self, v_biases, i_bolos, fracrns, colors, labels, spectra_paths, plot_clips, band):
         '''
         This code takes to sets of IV curves and takes a differenc in power at the same fracrn
         '''
@@ -169,7 +169,7 @@ class IVCurve():
             #ax.axvline(r_bolo[nearest_r_bolo_index], color=colors[i], label=labels[i])
             ax1.axvline(r_bolo_norm[nearest_r_bolo_index], color=colors[i])
             spectra_path = spectra_paths[i]
-        p_window, integrated_bandwidth, fft_data = self.compute_delta_power_at_window(spectra_path, band=None)
+        p_window, integrated_bandwidth, fft_data = self.compute_delta_power_at_window(spectra_path, band=band)
         selector = np.logical_and(np.where(fft_data[0] > 50, True, False), np.where(fft_data[0] < 350, True, False))
         ax2.plot(fft_data[0][selector], fft_data[1][selector], label='spectra')
         p_sensed = np.abs(p_at_same_rfracs[1] - p_at_same_rfracs[0])
@@ -277,7 +277,7 @@ class IVCurve():
         Returns a frequency and transmission vector from the data file
         produced by Toki's LabView software
         '''
-        if simulated_band is not None:
+        if simulated_band is not None and 'Simulations' in data_path:
             with open(data_path, 'r') as file_handle:
                 lines = file_handle.readlines()
                 frequency_vector = np.zeros(len(lines))
@@ -314,7 +314,6 @@ class IVCurve():
 
     def compute_delta_power_at_window(self, spectra_path, t_source_low=77, t_source_high=300, band=None, show_spectra=False):
         boltzmann_constant = 1.38e-23
-        band='150'
         fft_data = self.load_FFT_data(spectra_path, simulated_band=band)
         frequency_vector = fft_data[0]
         selector = np.logical_and(np.where(frequency_vector > 50, True, False), np.where(frequency_vector < 320, True, False))
@@ -337,16 +336,12 @@ class IVCurve():
             if difference:
                 break
         v_biases, i_bolos, colors, label_strs, fracrns, spectra_paths, plot_clips = [], [], [], [], [], [], []
-        print()
-        print()
-        print()
-        print()
-        print()
-        pprint(self.list_of_input_dicts)
         for input_dict in self.list_of_input_dicts:
             data_path = input_dict['data_path']
-            print(data_path)
             label = input_dict['label']
+            band = input_dict['band']
+            if band != 'None':
+                band = str(int(input_dict['band']))
             color = input_dict['color']
             fracrn = input_dict['fracrn']
             spectra_path = input_dict['loaded_spectra']
@@ -372,10 +367,9 @@ class IVCurve():
                  self.plot_all_curves(v_bias_real, i_bolo_real, label=label,
                                       fit_clip=fit_clip, plot_clip=plot_clip,
                                       show_plot=True)
-                 print('one')
 
         if difference:
-            self.plot_differenced_ivs(v_biases, i_bolos, fracrns, colors, label_strs, spectra_paths, plot_clips)
+            self.plot_differenced_ivs(v_biases, i_bolos, fracrns, colors, label_strs, spectra_paths, plot_clips, band)
 
     def _is_float(self, value):
         try:

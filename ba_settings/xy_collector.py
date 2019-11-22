@@ -77,6 +77,9 @@ xy_collector_settings.xy_collector_build_dict = {
 
                                                              '_xy_collector_popup_invert_output_checkbox': {'text': 'Invert Output:', 'position': (11, 3, 1, 1)},
 
+                                                             '_xy_collector_popup_sample_band_header_label': {'text': 'Sample Band:', 'position': (12, 0, 1, 1)},
+                                                             '_xy_collector_popup_sample_band_combobox': {'position': (12, 1, 1, 1)},
+
 # CONTROL BUTTONS 
                                                              '_xy_collector_popup_control_buttons_label': {'text': 'CONTROLS', 'font': 'large', 'color': 'blue',
                                                                                                           'alignment': 'Center', 'position': (13, 0, 1, 4)},
@@ -137,6 +140,7 @@ xy_collector_settings.xy_collector_combobox_entry_dict = {
                                                                                                        '275mK', '270mK', '260mK', '250mK'],
                                                           '_xy_collector_popup_sample_drift_direction_combobox': ['Hi2Lo', 'Lo2Hi'],
                                                           '_xy_collector_popup_optical_load_combobox': ['Dark', '77K', '300K', 'FTS'],
+                                                          '_xy_collector_popup_sample_band_combobox': ['', '30', '40', '90', '150', '220', '270'],
 
                                                          }
 

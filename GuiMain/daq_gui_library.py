@@ -562,80 +562,6 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
                     getattr(self, widget_name).setText(self.sample_dict[selected_squid])
 
     #################################################
-    # Data Analysis Integration (Common to all Data Analysis Types)
-    #################################################
-
-    def _select_analysis_type(self):
-        sender_name = str(self.sender().whatsThis())
-        pushbuttons = ['_data_analysis_popup_polcurve_pushbutton', '_data_analysis_popup_ivcurve_pushbutton',
-                       '_data_analysis_popup_rtcurve_pushbutton', '_data_analysis_popup_ftscurve_pushbutton',
-                       '_data_analysis_popup_ifcurve_pushbutton', '_data_analysis_popup_taucurve_pushbutton',
-                       '_data_analysis_popup_beammap_pushbutton']
-        for pushbutton in pushbuttons:
-            if sender_name == pushbutton:
-                self.analysis_type = pushbutton.split('_')[4]
-                preset_parameters = self._get_preset_parameters()
-                getattr(self, '_build_{0}_settings_popup'.format(self.analysis_type))(preset_parameters=preset_parameters)
-
-    def _get_preset_parameters(self):
-        preset_parameters = {}
-        for file_path in self.selected_files:
-            appendix = file_path.split('.')[-1]
-            json_file_path = file_path.replace(appendix, 'json')
-            if os.path.exists(json_file_path):
-                with open(json_file_path, 'r') as preset_file_handle:
-                    preset_dict = json.load(preset_file_handle)
-                    preset_parameters[file_path] = preset_dict
-        return preset_parameters
-
-    def _select_files(self):
-        data_paths = QtWidgets.QFileDialog.getOpenFileNames(self, 'Open file', self.data_folder)[0]
-        for data_path in data_paths:
-            if str(data_path) not in self.selected_files:
-                self.selected_files.append(str(data_path))
-        selected_files_string = ',\n'.join(self.selected_files)
-        getattr(self, '_data_analysis_popup_selected_file_label').setText(selected_files_string)
-
-    def _clear_files(self):
-        self.selected_files = []
-        getattr(self, '_data_analysis_popup_selected_file_label').setText('')
-
-    def _run_analysis(self):
-        if not hasattr(self, 'analysis_type'):
-            getattr(self, '_data_analysis_popup_selected_file_label').setText('Please Select a Analysis Type')
-        else:
-            getattr(self, '_plot_{0}'.format(self.analysis_type))()
-
-    def _add_checkboxes(self, popup_name, name, list_, row, col, squid=None, voltage_conversion=None):
-        if type(list_) is dict:
-            list_ = sorted(list_.keys())
-        for i, item_ in enumerate(list_):
-            reduced_name = name.replace(' ', '_').lower()
-            if len(item_) > 0:
-                unique_widget_name = '_{0}_{1}_{2}_{3}_checkbox'.format(popup_name, col, reduced_name, item_)
-                function = '_select_{0}_checkbox'.format(name.replace(' ', '_')).lower()
-                text = '{0} {1}'.format(name, item_)
-                if 'SQUID' in name:
-                    text = 'SQ{0}'.format(item_)
-                widget_settings = {'text': text,
-                                   'function': getattr(self, function),
-                                   'position': (row, col + i, 1, 1)}
-                self._create_and_place_widget(unique_widget_name, **widget_settings)
-                if 'grt_res_factor_1000.' in unique_widget_name:
-                    getattr(self, unique_widget_name).setCheckState(True)
-                if 'sample_res_factor_1.0' in unique_widget_name:
-                    getattr(self, unique_widget_name).setCheckState(True)
-                if '29268' in unique_widget_name:
-                    getattr(self, unique_widget_name).setCheckState(True)
-                if squid is not None and squid in item_:
-                    getattr(self, unique_widget_name).setCheckState(True)
-                if voltage_conversion is not None and voltage_conversion in item_:
-                    getattr(self, unique_widget_name).setCheckState(True)
-            else:
-                col -= 1
-        return 1
-
-    #################################################
     # Final Plotting and Saving (Common to all DAQ Types)
     #################################################
 
@@ -2497,6 +2423,7 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
                     image = imageio.imread(tiled_filename)
                     writer.append_data(image)
 
+
     #################################################
     # BEAM MAPPER
     #################################################
@@ -2730,6 +2657,82 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
         Z_data = np.zeros(shape=X.shape)
         self._update_log()
 
+    #################################################################################################
+    # Data Analysis Integration (Common to all Data Analysis Types)
+    #################################################################################################
+
+    def _close_data_analysis_popup(self):
+        self.data_analysis_popup.close()
+
+    def _select_analysis_type(self):
+        sender_name = str(self.sender().whatsThis())
+        pushbuttons = ['_data_analysis_popup_polcurve_pushbutton', '_data_analysis_popup_ivcurve_pushbutton',
+                       '_data_analysis_popup_rtcurve_pushbutton', '_data_analysis_popup_ftscurve_pushbutton',
+                       '_data_analysis_popup_ifcurve_pushbutton', '_data_analysis_popup_taucurve_pushbutton',
+                       '_data_analysis_popup_beammap_pushbutton']
+        for pushbutton in pushbuttons:
+            if sender_name == pushbutton:
+                self.analysis_type = pushbutton.split('_')[4]
+                preset_parameters = self._get_preset_parameters()
+                getattr(self, '_build_{0}_settings_popup'.format(self.analysis_type))(preset_parameters=preset_parameters)
+
+    def _get_preset_parameters(self):
+        preset_parameters = {}
+        for file_path in self.selected_files:
+            appendix = file_path.split('.')[-1]
+            json_file_path = file_path.replace(appendix, 'json')
+            if os.path.exists(json_file_path):
+                with open(json_file_path, 'r') as preset_file_handle:
+                    preset_dict = json.load(preset_file_handle)
+                    preset_parameters[file_path] = preset_dict
+        return preset_parameters
+
+    def _select_files(self):
+        data_paths = QtWidgets.QFileDialog.getOpenFileNames(self, 'Open file', self.data_folder)[0]
+        for data_path in data_paths:
+            if str(data_path) not in self.selected_files:
+                self.selected_files.append(str(data_path))
+        selected_files_string = ',\n'.join(self.selected_files)
+        getattr(self, '_data_analysis_popup_selected_file_label').setText(selected_files_string)
+
+    def _clear_files(self):
+        self.selected_files = []
+        getattr(self, '_data_analysis_popup_selected_file_label').setText('')
+
+    def _run_analysis(self):
+        if not hasattr(self, 'analysis_type'):
+            getattr(self, '_data_analysis_popup_selected_file_label').setText('Please Select a Analysis Type')
+        else:
+            getattr(self, '_plot_{0}'.format(self.analysis_type))()
+
+    def _add_checkboxes(self, popup_name, name, list_, row, col, squid=None, voltage_conversion=None):
+        if type(list_) is dict:
+            list_ = sorted(list_.keys())
+        for i, item_ in enumerate(list_):
+            reduced_name = name.replace(' ', '_').lower()
+            if len(item_) > 0:
+                unique_widget_name = '_{0}_{1}_{2}_{3}_checkbox'.format(popup_name, col, reduced_name, item_)
+                function = '_select_{0}_checkbox'.format(name.replace(' ', '_')).lower()
+                text = '{0} {1}'.format(name, item_)
+                if 'SQUID' in name:
+                    text = 'SQ{0}'.format(item_)
+                widget_settings = {'text': text,
+                                   'function': getattr(self, function),
+                                   'position': (row, col + i, 1, 1)}
+                self._create_and_place_widget(unique_widget_name, **widget_settings)
+                if 'grt_res_factor_1000.' in unique_widget_name:
+                    getattr(self, unique_widget_name).setCheckState(True)
+                if 'sample_res_factor_1.0' in unique_widget_name:
+                    getattr(self, unique_widget_name).setCheckState(True)
+                if '29268' in unique_widget_name:
+                    getattr(self, unique_widget_name).setCheckState(True)
+                if squid is not None and squid in item_:
+                    getattr(self, unique_widget_name).setCheckState(True)
+                if voltage_conversion is not None and voltage_conversion in item_:
+                    getattr(self, unique_widget_name).setCheckState(True)
+            else:
+                col -= 1
+        return 1
     #################################################
     # FTS/IF Curves 
     #################################################
@@ -3361,6 +3364,15 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
             self._create_and_place_widget(unique_widget_name, **widget_settings)
             getattr(self, unique_widget_name).setText('0.75')
             row += 1
+            unique_widget_name = '_{0}_{1}_band_lineedit'.format(popup_name, col)
+            widget_settings = {'text': '', 'width': 200,
+                               'position': (row, col, 1, 1)}
+            self._create_and_place_widget(unique_widget_name, **widget_settings)
+            if selected_file in preset_parameters:
+                if '_xy_collector_popup_sample_band_combobox' in preset_parameters[selected_file]:
+                    band = preset_parameters[selected_file]['_xy_collector_popup_sample_band_combobox']
+                    getattr(self, unique_widget_name).setText(band)
+            row += 1
             unique_widget_name = '_{0}_{1}_color_lineedit'.format(popup_name, col)
             widget_settings = {'text': '', 'width': 200,
                                'position': (row, col, 1, 1)}
@@ -3406,7 +3418,7 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
 
     def _build_iv_input_dicts(self):
         list_of_input_dicts = []
-        iv_settings = ['voltage_conversion', 'label', 'squid_conversion', 'color', 'fracrn',
+        iv_settings = ['voltage_conversion', 'label', 'squid_conversion', 'color', 'fracrn', 'band',
                        'v_fit_lo', 'v_fit_hi', 'v_plot_lo', 'v_plot_hi', 'v_plot_lo', 'v_plot_hi',
                        'calibration_resistance', 'calibrate', 'difference', 'loaded_spectra']
         for selected_file, col in self.selected_files_col_dict.items():

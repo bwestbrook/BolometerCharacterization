@@ -27,14 +27,15 @@ ivcurve_settings_popup_settings.ivcurve_popup_build_dict = {
                                                             '_ivcurve_settings_popup_calibration_resistor_label': {'text': 'Cal Res',
                                                                                                                    'position': (12, 0, 1, 1)},
                                                             '_ivcurve_settings_popup_fracrn_label': {'text': 'Frac Rn', 'position': (13, 0, 1, 1)},
+                                                            '_ivcurve_settings_popup_band_label': {'text': 'Band', 'position': (14, 0, 1, 1)},
                                                             '_ivcurve_settings_popup_color_label': {'text': 'Color',
-                                                                                                    'position': (14, 0, 1, 1)},
+                                                                                                    'position': (15, 0, 1, 1)},
                                                             '_ivcurve_settings_popup_calibrate_squid_label': {'text': 'Calibrate?',
-                                                                                                              'position': (15, 0, 1, 1)},
+                                                                                                              'position': (16, 0, 1, 1)},
                                                             '_ivcurve_settings_popup_difference_label': {'text': 'Difference?',
-                                                                                                         'position': (16, 0, 1, 1)},
+                                                                                                         'position': (17, 0, 1, 1)},
                                                             '_ivcurve_settings_popup_spectra_label': {'text': 'Load Spectra:',
-                                                                                                      'position': (17, 0, 1, 1)}
+                                                                                                      'position': (18, 0, 1, 1)}
                                                            }
 
 ivcurve_settings_popup_settings.ivcurve_plot_settings_dict = {
