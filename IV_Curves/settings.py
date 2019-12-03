@@ -8,6 +8,8 @@ class Class(object):
             return "%s(%s)" % (self.__class__.__name__, str(self.__dict__))
 
 settings = Class()
+settings.band_edge_low_default = 25.0
+settings.band_edge_high_default = 350.0
 
 
 # 350 Bolo from Double Slot Dipole 

@@ -3332,8 +3332,7 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
                 squid = preset_parameters[selected_file]['_xy_collector_popup_squid_select_combobox']
             row += self._add_checkboxes(popup_name, 'SQUID Channel', self.squid_channels, row, col, squid=squid)
             unique_widget_name = '_{0}_{1}_squid_conversion_lineedit'.format(popup_name, col)
-            widget_settings = {'text': '',
-                               'position': (row, col, 1, 1)}
+            widget_settings = {'text': '', 'position': (row, col, 1, 1)}
             self._create_and_place_widget(unique_widget_name, **widget_settings)
             if squid is not None:
                 getattr(self, unique_widget_name).setText(str(self.squid_calibration_dict[squid]))
@@ -3345,74 +3344,52 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
             if selected_file in preset_parameters:
                 plot_label = preset_parameters[selected_file]['_xy_collector_popup_sample_name_lineedit']
                 optical_load = preset_parameters[selected_file]['_xy_collector_popup_optical_load_combobox']
-                plot_label += ' {0}'.format(optical_load)
-            widget_settings = {'text': plot_label, 'width': 200,
-                               'position': (row, col, 1, 1)}
+                plot_label += ' {0}K Load'.format(optical_load)
+            widget_settings = {'text': plot_label, 'position': (row, col, 1, 1)}
             self._create_and_place_widget(unique_widget_name, **widget_settings)
             row += 1
             unique_widget_name = '_{0}_{1}_optical_load_lineedit'.format(popup_name, col)
             if selected_file in preset_parameters:
                 optical_load = preset_parameters[selected_file]['_xy_collector_popup_optical_load_combobox']
-            widget_settings = {'text': optical_load, 'width': 200,
-                               'position': (row, col, 1, 1)}
+            widget_settings = {'text': optical_load, 'position': (row, col, 1, 1)}
             self._create_and_place_widget(unique_widget_name, **widget_settings)
             row += 1
             unique_widget_name = '_{0}_{1}_v_fit_lo_lineedit'.format(popup_name, col)
-            widget_settings = {'text': '', 'width': 200,
-                               'position': (row, col, 1, 1)}
+            widget_settings = {'text': '', 'position': (row, col, 1, 1)}
             self._create_and_place_widget(unique_widget_name, **widget_settings)
             if selected_file in preset_parameters:
                 v_fit_lo = preset_parameters[selected_file]['_xy_collector_popup_fit_clip_lo_lineedit']
                 getattr(self, unique_widget_name).setText(v_fit_lo)
             row += 1
             unique_widget_name = '_{0}_{1}_v_fit_hi_lineedit'.format(popup_name, col)
-            widget_settings = {'text': '', 'width': 200,
-                               'position': (row, col, 1, 1)}
+            widget_settings = {'text': '', 'position': (row, col, 1, 1)}
             self._create_and_place_widget(unique_widget_name, **widget_settings)
             if selected_file in preset_parameters:
                 v_fit_hi = preset_parameters[selected_file]['_xy_collector_popup_fit_clip_hi_lineedit']
                 getattr(self, unique_widget_name).setText(v_fit_hi)
             row += 1
             unique_widget_name = '_{0}_{1}_v_plot_lo_lineedit'.format(popup_name, col)
-            widget_settings = {'text': '', 'width': 200,
-                               'position': (row, col, 1, 1)}
+            widget_settings = {'text': '', 'position': (row, col, 1, 1)}
             self._create_and_place_widget(unique_widget_name, **widget_settings)
             if selected_file in preset_parameters:
                 plot_clip_lo = preset_parameters[selected_file]['_xy_collector_popup_data_clip_lo_lineedit']
                 getattr(self, unique_widget_name).setText(plot_clip_lo)
             row += 1
             unique_widget_name = '_{0}_{1}_v_plot_hi_lineedit'.format(popup_name, col)
-            widget_settings = {'text': '', 'width': 200,
-                               'position': (row, col, 1, 1)}
+            widget_settings = {'text': '', 'position': (row, col, 1, 1)}
             self._create_and_place_widget(unique_widget_name, **widget_settings)
             if selected_file in preset_parameters:
                 plot_clip_hi = preset_parameters[selected_file]['_xy_collector_popup_data_clip_hi_lineedit']
                 getattr(self, unique_widget_name).setText(plot_clip_hi)
             row += 1
-            unique_widget_name = '_{0}_{1}_calibration_resistance_lineedit'.format(popup_name, col)
-            widget_settings = {'text': '', 'width': 200,
-                               'position': (row, col, 1, 1)}
-            self._create_and_place_widget(unique_widget_name, **widget_settings)
-            row += 1
             unique_widget_name = '_{0}_{1}_fracrn_lineedit'.format(popup_name, col)
-            widget_settings = {'text': '', 'width': 200,
-                               'position': (row, col, 1, 1)}
+            widget_settings = {'text': '', 'position': (row, col, 1, 1)}
             print(unique_widget_name)
             self._create_and_place_widget(unique_widget_name, **widget_settings)
             getattr(self, unique_widget_name).setText('0.75')
             row += 1
-            unique_widget_name = '_{0}_{1}_band_lineedit'.format(popup_name, col)
-            widget_settings = {'text': '', 'width': 200,
-                               'position': (row, col, 1, 1)}
-            self._create_and_place_widget(unique_widget_name, **widget_settings)
-            if selected_file in preset_parameters:
-                if '_xy_collector_popup_sample_band_combobox' in preset_parameters[selected_file]:
-                    band = preset_parameters[selected_file]['_xy_collector_popup_sample_band_combobox']
-                    getattr(self, unique_widget_name).setText(band)
-            row += 1
             unique_widget_name = '_{0}_{1}_color_lineedit'.format(popup_name, col)
-            widget_settings = {'text': '', 'width': 200,
-                               'position': (row, col, 1, 1)}
+            widget_settings = {'text': '', 'position': (row, col, 1, 1)}
             print(unique_widget_name)
             self._create_and_place_widget(unique_widget_name, **widget_settings)
             if optical_load == '77':
@@ -3422,31 +3399,59 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
             else:
                 getattr(self, unique_widget_name).setText('k')
             row += 1
+            unique_widget_name = '_{0}_{1}_calibration_resistance_lineedit'.format(popup_name, col)
+            widget_settings = {'text': '', 'position': (row, col, 1, 1)}
+            self._create_and_place_widget(unique_widget_name, **widget_settings)
+            row += 1
             unique_widget_name = '_{0}_{1}_calibrate_checkbox'.format(popup_name, col)
-            widget_settings = {'text': 'Calibrate?',
-                               'position': (row, col, 1, 1)}
+            widget_settings = {'text': '', 'position': (row, col, 1, 1)}
             print(unique_widget_name)
             self._create_and_place_widget(unique_widget_name, **widget_settings)
             getattr(self, unique_widget_name).setChecked(False)
             row += 1
-            unique_widget_name = '_{0}_{1}_difference_checkbox'.format(popup_name, col)
-            widget_settings = {'text': 'Difference?',
-                               'position': (row, col, 1, 1)}
-            print(unique_widget_name)
-            self._create_and_place_widget(unique_widget_name, **widget_settings)
-            getattr(self, unique_widget_name).setChecked(False)
-            row += 1
-            unique_widget_name = '_{0}_{1}_load_spectra_pushbutton'.format(popup_name, col)
-            widget_settings = {'text': 'Load Spectra', 'function': self._load_spectra,
-                               'position': (row, col, 1, 1)}
-            self._create_and_place_widget(unique_widget_name, **widget_settings)
-            print(unique_widget_name)
-            unique_widget_name = '_{0}_{1}_loaded_spectra_label'.format(popup_name, col)
-            widget_settings = {'text': '',
-                               'position': (row, col + 1, 1, 1)}
-            self._create_and_place_widget(unique_widget_name, **widget_settings)
-            print(unique_widget_name)
-            self._load_spectra(simulated_frequency_band=True, set_to_widget=unique_widget_name)
+            if i == 0:
+                unique_widget_name = '_{0}_{1}_band_center_lineedit'.format(popup_name, col)
+                widget_settings = {'text': '', 'position': (row, col, 1, 1)}
+                self._create_and_place_widget(unique_widget_name, **widget_settings)
+                if selected_file in preset_parameters:
+                    if '_xy_collector_popup_sample_band_combobox' in preset_parameters[selected_file]:
+                        band = preset_parameters[selected_file]['_xy_collector_popup_sample_band_combobox']
+                        getattr(self, unique_widget_name).setText(band)
+                row += 1
+                unique_widget_name = '_{0}_{1}_band_edge_low_lineedit'.format(popup_name, col)
+                widget_settings = {'text': '', 'position': (row, col, 1, 1)}
+                self._create_and_place_widget(unique_widget_name, **widget_settings)
+                if selected_file in preset_parameters:
+                    if '_xy_collector_popup_sample_band_combobox' in preset_parameters[selected_file]:
+                        band_edge_low = int(float(band) - float(band) * 0.50)
+                        getattr(self, unique_widget_name).setText(str(band_edge_low))
+                row += 1
+                unique_widget_name = '_{0}_{1}_band_edge_high_lineedit'.format(popup_name, col)
+                widget_settings = {'text': '', 'position': (row, col, 1, 1)}
+                self._create_and_place_widget(unique_widget_name, **widget_settings)
+                if selected_file in preset_parameters:
+                    if '_xy_collector_popup_sample_band_combobox' in preset_parameters[selected_file]:
+                        band_edge_high = int(float(band) + float(band) * 0.50)
+                        getattr(self, unique_widget_name).setText(str(band_edge_high))
+                row += 1
+                unique_widget_name = '_{0}_{1}_difference_checkbox'.format(popup_name, col)
+                widget_settings = {'text': 'Difference?',
+                                   'position': (row, col, 1, 1)}
+                print(unique_widget_name)
+                self._create_and_place_widget(unique_widget_name, **widget_settings)
+                getattr(self, unique_widget_name).setChecked(False)
+                row += 1
+                unique_widget_name = '_{0}_{1}_load_spectra_pushbutton'.format(popup_name, col)
+                widget_settings = {'text': 'Load Spectra', 'function': self._load_spectra,
+                                   'position': (row, col, 1, 1)}
+                self._create_and_place_widget(unique_widget_name, **widget_settings)
+                print(unique_widget_name)
+                unique_widget_name = '_{0}_{1}_loaded_spectra_label'.format(popup_name, col)
+                widget_settings = {'text': '',
+                                   'position': (row, col + 1, 1, 1)}
+                self._create_and_place_widget(unique_widget_name, **widget_settings)
+                print(unique_widget_name)
+                self._load_spectra(simulated_frequency_band=True, set_to_widget=unique_widget_name)
             row = 3
         if not hasattr(self, popup_name):
             self._create_popup_window(popup_name)
@@ -3455,10 +3460,10 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
 
     def _build_iv_input_dicts(self):
         list_of_input_dicts = []
-        iv_settings = ['voltage_conversion', 'label', 'squid_conversion', 'color', 'fracrn', 'band',
-                       'v_fit_lo', 'v_fit_hi', 'v_plot_lo', 'v_plot_hi', 'v_plot_lo', 'v_plot_hi',
-                       'calibration_resistance', 'calibrate', 'difference', 'loaded_spectra',
-                       'optical_load']
+        iv_settings = ['voltage_conversion', 'label', 'squid_conversion', 'color', 'fracrn', 'band_center',
+                       'band_edge_low', 'band_edge_high', 'v_fit_lo', 'v_fit_hi', 'v_plot_lo', 'v_plot_hi',
+                       'v_plot_lo', 'v_plot_hi', 'calibration_resistance', 'calibrate', 'difference',
+                       'loaded_spectra', 'optical_load']
         for selected_file, col in self.selected_files_col_dict.items():
             input_dict = {'data_path': selected_file}
             for setting in iv_settings:
