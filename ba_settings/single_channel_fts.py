@@ -89,10 +89,12 @@ single_channel_fts_settings.single_channel_fts_build_dict = {
 # CONTROL BUTTONS 
                                                              '_single_channel_fts_popup_control_buttons_label': {'text': 'CONTROLS', 'font': 'huge', 'color': 'blue', 'alignment': 'Center', 'position': (16, 0, 1, 6)},
 
-                                                             '_single_channel_fts_popup_start_pushbutton': {'text': 'Start', 'function': '_run_fts', 'position': (17, 0, 1, 3)},
-                                                             '_single_channel_fts_popup_abort_pushbutton': {'text': 'Abort', 'function': '_stop_fts', 'position': (17, 3, 1, 3)},
-                                                             '_single_channel_fts_popup_close_pushbutton': {'text': 'Close', 'function': '_close_single_channel_fts', 'position': (18, 0, 1, 3)},
-                                                             '_single_channel_fts_popup_save_pushbutton': {'text': 'Save', 'function': '_save_plots_and_data', 'position': (18, 3, 1, 3)},
+                                                             '_single_channel_fts_popup_update_meta_data_pushbutton': {'text': 'Update Meta Data', 'function': '_update_meta_data',
+                                                                                                                       'position': (17, 0, 1, 6)},
+                                                             '_single_channel_fts_popup_start_pushbutton': {'text': 'Start', 'function': '_run_fts', 'position': (18, 0, 1, 3)},
+                                                             '_single_channel_fts_popup_abort_pushbutton': {'text': 'Abort', 'function': '_stop_fts', 'position': (18, 3, 1, 3)},
+                                                             '_single_channel_fts_popup_close_pushbutton': {'text': 'Close', 'function': '_close_single_channel_fts', 'position': (19, 0, 1, 3)},
+                                                             '_single_channel_fts_popup_save_pushbutton': {'text': 'Save', 'function': '_save_plots_and_data', 'position': (19, 3, 1, 3)},
 
 # VISUAL DATA MONITORING
                                                              '_single_channel_fts_popup_data_monitor_label': {'text': 'VISUAL DATA MONITOR', 'font': 'huge', 'color': 'blue',

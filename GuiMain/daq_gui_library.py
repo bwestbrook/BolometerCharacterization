@@ -106,6 +106,9 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
         if hasattr(self, 'raw_data_path') and self.raw_data_path is not None:
             temp_log_file_name = 'temp_log.txt'
             notes = self._quick_info_gather()
+            response = self._quick_message('Use Data in Analysis?', add_yes=True, add_no=True)
+            if response == QtWidgets.QMessageBox.Yes:
+                self._copy_file_to_analysis_folder()
             with open(temp_log_file_name, 'w') as temp_log_handle:
                 with open(self.data_log_path, 'r') as log_handle:
                     for line in log_handle.readlines():
@@ -113,6 +116,13 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
                     new_line = '{0}\t{1}\n'.format(self.raw_data_path[0], notes)
                     temp_log_handle.write(new_line)
             shutil.copy(temp_log_file_name, self.data_log_path)
+
+    def _copy_file_to_analysis_folder(self):
+        for_analysis_folder = os.path.join(self.data_folder, 'For_Analysis')
+        if not os.path.exists(for_analysis_folder):
+            os.makedirs(for_analysis_folder)
+        shutil.copy(self.raw_data_path[0], for_analysis_folder)
+        #import ipdb;ipdb.set_trace()
 
     #################################################
     # Stepper Motor and Com ports
@@ -273,6 +283,8 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
             return None
         with open(sample_dict_path, 'r') as sample_dict_file_handle:
             self.sample_dict = json.load(sample_dict_file_handle)
+            other_day_str = sample_dict_path.split('/')[-1].replace('.json','')
+            self.data_folder = './Data/{0}'.format(other_day_str)
         getattr(self, '_daq_main_panel_set_sample_dict_path_label').setText(sample_dict_path)
         getattr(self, '_daq_main_panel_set_sample_dict_path_label').setText('Set Path @ {0}'.format(sample_dict_path))
         for i in range(1, 7):
@@ -303,6 +315,15 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
         else:
             suggested_file_name = '{0}{1}.dat'.format(suggested_file_name, new_index)
         return suggested_file_name
+
+    def _update_meta_data(self, meta_data=None):
+        if 'xy_collector' in self.sender().whatsThis():
+            meta_data = self._get_all_meta_data(popup='xy_collector')
+        elif 'single_channel_fts' in self.sender().whatsThis():
+            meta_data = self._get_all_meta_data(popup='single_channel_fts')
+        if self.raw_data_path is not None and meta_data is not None:
+            with open(self.raw_data_path[0].replace('.dat', '.json'), 'w') as meta_data_handle:
+                json.dump(meta_data, meta_data_handle)
 
     def _get_raw_data_save_path(self):
         sender = str(self.sender().whatsThis())
@@ -1674,7 +1695,8 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
                     last_time = data_time
                     root.update()
         self._update_log()
-        self._update_fit_data(voltage_factor)
+        if self.raw_data_path is not None:
+            self._update_fit_data(voltage_factor)
 
     def _update_fit_data(self, voltage_factor):
         '''
@@ -2680,9 +2702,14 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
         preset_parameters = {}
         for file_path in self.selected_files:
             appendix = file_path.split('.')[-1]
-            json_file_path = file_path.replace(appendix, 'json')
-            if os.path.exists(json_file_path):
-                with open(json_file_path, 'r') as preset_file_handle:
+            json_file_path_1 = file_path.replace(appendix, 'json')
+            json_file_path_2 = json_file_path_1.replace('For_Analysis/', '')
+            if os.path.exists(json_file_path_1):
+                with open(json_file_path_1, 'r') as preset_file_handle:
+                    preset_dict = json.load(preset_file_handle)
+                    preset_parameters[file_path] = preset_dict
+            if os.path.exists(json_file_path_2):
+                with open(json_file_path_2, 'r') as preset_file_handle:
                     preset_dict = json.load(preset_file_handle)
                     preset_parameters[file_path] = preset_dict
         return preset_parameters
@@ -2730,9 +2757,11 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
                     getattr(self, unique_widget_name).setCheckState(True)
                 if voltage_conversion is not None and voltage_conversion in item_:
                     getattr(self, unique_widget_name).setCheckState(True)
+                    print(unique_widget_name)
             else:
                 col -= 1
         return 1
+
     #################################################
     # FTS/IF Curves 
     #################################################
@@ -3288,6 +3317,7 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
             self._build_panel(settings.ivcurve_popup_build_dict)
         row = 3
         self.selected_files_col_dict = {}
+        plot_label = ''
         optical_load, squid, voltage_conversion = None, None, None
         for i, selected_file in enumerate(self.selected_files):
             col = 2 + i * 6
@@ -3317,6 +3347,13 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
                 optical_load = preset_parameters[selected_file]['_xy_collector_popup_optical_load_combobox']
                 plot_label += ' {0}'.format(optical_load)
             widget_settings = {'text': plot_label, 'width': 200,
+                               'position': (row, col, 1, 1)}
+            self._create_and_place_widget(unique_widget_name, **widget_settings)
+            row += 1
+            unique_widget_name = '_{0}_{1}_optical_load_lineedit'.format(popup_name, col)
+            if selected_file in preset_parameters:
+                optical_load = preset_parameters[selected_file]['_xy_collector_popup_optical_load_combobox']
+            widget_settings = {'text': optical_load, 'width': 200,
                                'position': (row, col, 1, 1)}
             self._create_and_place_widget(unique_widget_name, **widget_settings)
             row += 1
@@ -3378,9 +3415,9 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
                                'position': (row, col, 1, 1)}
             print(unique_widget_name)
             self._create_and_place_widget(unique_widget_name, **widget_settings)
-            if optical_load == '77K':
+            if optical_load == '77':
                 getattr(self, unique_widget_name).setText('b')
-            elif optical_load == '300K':
+            elif 280 < int(optical_load) < 310:
                 getattr(self, unique_widget_name).setText('r')
             else:
                 getattr(self, unique_widget_name).setText('k')
@@ -3420,7 +3457,8 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
         list_of_input_dicts = []
         iv_settings = ['voltage_conversion', 'label', 'squid_conversion', 'color', 'fracrn', 'band',
                        'v_fit_lo', 'v_fit_hi', 'v_plot_lo', 'v_plot_hi', 'v_plot_lo', 'v_plot_hi',
-                       'calibration_resistance', 'calibrate', 'difference', 'loaded_spectra']
+                       'calibration_resistance', 'calibrate', 'difference', 'loaded_spectra',
+                       'optical_load']
         for selected_file, col in self.selected_files_col_dict.items():
             input_dict = {'data_path': selected_file}
             for setting in iv_settings:

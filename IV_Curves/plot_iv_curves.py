@@ -137,7 +137,8 @@ class IVCurve():
 
 ## Plotting
 
-    def plot_differenced_ivs(self, v_biases, i_bolos, fracrns, colors, labels, spectra_paths, plot_clips, band):
+    def plot_differenced_ivs(self, v_biases, i_bolos, fracrns, colors, labels, spectra_paths, band,
+                             fit_clips, plot_clips, t_source_low=77, t_source_high=300):
         '''
         This code takes to sets of IV curves and takes a differenc in power at the same fracrn
         '''
@@ -155,21 +156,25 @@ class IVCurve():
             fracrn = fracrns[i]
             i_bolo = i_bolos[i]
             #import ipdb;ipdb.set_trace()
-            selector = np.logical_and(plot_clip[0] < v_bias, plot_clip[1] > v_bias)
-            r_bolo = v_bias[selector] / i_bolo[selector]
-            r_bolo_norm = r_bolo / np.max(r_bolo)
-            p_bolo = v_bias[selector] * i_bolo[selector]
+            plot_selector = np.logical_and(plot_clip[0] < v_bias, plot_clip[1] > v_bias)
+            fit_selector = np.logical_and(fit_clips[0] < v_bias, fit_clips[1] > v_bias)
+            r_bolo = v_bias[plot_selector] / i_bolo[plot_selector]
+            r_bolo_norm = v_bias[fit_selector] / i_bolo[fit_selector]
+            p_bolo = v_bias[plot_selector] * i_bolo[plot_selector]
             #ax.plot(r_bolo, p_bolo, color=colors[i], label=labels[i])
             ax1.plot(r_bolo_norm, p_bolo, color=colors[i], label=labels[i])
             #r_n = r_bolo[10] # some value near the start
-            r_n = r_bolo_norm[10] # some value near the start
+            r_n = np.mean(r_bolo_norm) # average of all the normal points
             nearest_r_bolo, nearest_r_bolo_index = self.find_nearest_r_bolo(r_bolo_norm, r_n, fracrn)
             p_at_same_rfrac = p_bolo[nearest_r_bolo_index]
             p_at_same_rfracs.append(p_at_same_rfrac)
             #ax.axvline(r_bolo[nearest_r_bolo_index], color=colors[i], label=labels[i])
             ax1.axvline(r_bolo_norm[nearest_r_bolo_index], color=colors[i])
             spectra_path = spectra_paths[i]
-        p_window, integrated_bandwidth, fft_data = self.compute_delta_power_at_window(spectra_path, band=band)
+        p_window, integrated_bandwidth, fft_data = self.compute_delta_power_at_window(spectra_path,
+                                                                                      t_source_low=t_source_low,
+                                                                                      t_source_high=t_source_high,
+                                                                                      band=band)
         selector = np.logical_and(np.where(fft_data[0] > 50, True, False), np.where(fft_data[0] < 350, True, False))
         ax2.plot(fft_data[0][selector], fft_data[1][selector], label='spectra')
         p_sensed = np.abs(p_at_same_rfracs[1] - p_at_same_rfracs[0])
@@ -312,7 +317,7 @@ class IVCurve():
         normalized_transmission_vector = transmission_vector / max(transmission_vector)
         return frequency_vector, transmission_vector, normalized_transmission_vector
 
-    def compute_delta_power_at_window(self, spectra_path, t_source_low=77, t_source_high=300, band=None, show_spectra=False):
+    def compute_delta_power_at_window(self, spectra_path, t_source_low, t_source_high, band=None, show_spectra=False):
         boltzmann_constant = 1.38e-23
         fft_data = self.load_FFT_data(spectra_path, simulated_band=band)
         frequency_vector = fft_data[0]
@@ -335,11 +340,15 @@ class IVCurve():
             difference = input_dict['difference']
             if difference:
                 break
-        v_biases, i_bolos, colors, label_strs, fracrns, spectra_paths, plot_clips = [], [], [], [], [], [], []
+        v_biases, i_bolos, colors, label_strs, fracrns, spectra_paths, plot_clips, fit_clips = [], [], [], [], [], [], [], []
+        t_source_low = 77
         for input_dict in self.list_of_input_dicts:
             data_path = input_dict['data_path']
             label = input_dict['label']
             band = input_dict['band']
+            optical_load = input_dict['optical_load']
+            if int(optical_load) > 80:
+                t_source_high = int(optical_load)
             if band != 'None':
                 band = str(int(input_dict['band']))
             color = input_dict['color']
@@ -358,6 +367,7 @@ class IVCurve():
                                                                                  clip=fit_clip, label=label)
             v_biases.append(v_bias_real)
             plot_clips.append(plot_clip)
+            fit_clips.append(fit_clips)
             i_bolos.append(i_bolo_real)
             label_strs.append(label)
             colors.append(color)
@@ -369,7 +379,8 @@ class IVCurve():
                                       show_plot=True)
 
         if difference:
-            self.plot_differenced_ivs(v_biases, i_bolos, fracrns, colors, label_strs, spectra_paths, plot_clips, band)
+            self.plot_differenced_ivs(v_biases, i_bolos, fracrns, colors, label_strs, spectra_paths, band, fit_clips, plot_clips,
+                                      t_source_low=t_source_low, t_source_high=t_source_high)
 
     def _is_float(self, value):
         try:

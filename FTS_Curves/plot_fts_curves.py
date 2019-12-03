@@ -105,7 +105,6 @@ class FTSCurve():
             elif band == '270':
                 color = 'r'
             ax.plot(frequency, transmission, color=color, linestyle=':', lw=3, alpha=0.5, label='{0} GHz Sim'.format(band))
-            print(frequency, transmission)
         bandwidth = np.trapz(np.asarray(transmission)[np.where(np.asarray(frequency) > 0)])
         print(bandwidth, np.sum(np.asarray(transmission)))
         return ax, bandwidth

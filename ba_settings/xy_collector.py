@@ -49,7 +49,7 @@ xy_collector_settings.xy_collector_build_dict = {
                                                              '_xy_collector_popup_sample_name_header_label': {'text': 'Sample Name:', 'position': (7, 0, 1, 1)},
                                                              '_xy_collector_popup_sample_name_lineedit': {'text': '', 'position': (7, 1, 1, 1)},
 
-                                                             '_xy_collector_popup_optical_load_header_label': {'text': 'Optical Load:', 'position': (7, 2, 1, 1)},
+                                                             '_xy_collector_popup_optical_load_header_label': {'text': 'Optical Load (K):', 'position': (7, 2, 1, 1)},
                                                              '_xy_collector_popup_optical_load_combobox': {'position': (7, 3, 1, 1)},
 
                                                              '_xy_collector_popup_sample_drift_direction_label': {'text': 'Stage Drift :', 'position': (8, 0, 1, 1)},
@@ -90,7 +90,10 @@ xy_collector_settings.xy_collector_build_dict = {
 
                                                              '_xy_collector_popup_save_pushbutton': {'text': 'Make and Save Plots and Data', 'function': '_save_plots_and_data', 'position': (15, 0, 1, 4)},
 
-                                                             '_xy_collector_popup_close_pushbutton': {'text': 'Close', 'function': '_close_xy_collector', 'position': (16, 0, 1, 4)},
+
+                                                             '_xy_collector_popup_update_meta_data_pushbutton': {'text': 'Update Meta Data', 'function': '_update_meta_data',
+                                                                                                                 'position': (16, 0, 1, 4)},
+                                                             '_xy_collector_popup_close_pushbutton': {'text': 'Close', 'function': '_close_xy_collector', 'position': (17, 0, 1, 4)},
 
 # VISUAL DATA MONITORING
                                                              '_xy_collector_popup_data_monitor_label': {'text': 'VISUAL DATA MONITOR', 'font': 'large', 'color': 'blue',
@@ -139,7 +142,8 @@ xy_collector_settings.xy_collector_combobox_entry_dict = {
                                                                                                        '350mK', '325mK', '300mK', '290mK', '280mK',
                                                                                                        '275mK', '270mK', '260mK', '250mK'],
                                                           '_xy_collector_popup_sample_drift_direction_combobox': ['Hi2Lo', 'Lo2Hi'],
-                                                          '_xy_collector_popup_optical_load_combobox': ['Dark', '77K', '300K', 'FTS'],
+                                                          '_xy_collector_popup_optical_load_combobox': ['Dark', '77', '300', '299', '298', '297', '296',
+                                                                                                        '295', '294', '293', '292', '291', '290', 'FTS'],
                                                           '_xy_collector_popup_sample_band_combobox': ['', '30', '40', '90', '150', '220', '270'],
 
                                                          }
@@ -150,6 +154,6 @@ xy_collector_settings.xy_collector_plot_params = ['mode_combobox', 'squid_select
                                                   'data_clip_lo_lineedit', 'data_clip_hi_lineedit',
                                                   'e_bars_checkbox', 'optical_load_combobox']
 
-xy_collector_settings.fit_clip_offset = 1.8 #uV
+xy_collector_settings.fit_clip_offset = 3.5 #uV
 xy_collector_settings.data_clip_offset = 0.2 #uV
 
