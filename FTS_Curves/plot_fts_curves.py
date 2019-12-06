@@ -109,7 +109,7 @@ class FTSCurve():
         print(bandwidth, np.sum(np.asarray(transmission)))
         return ax, bandwidth
 
-    def load_FFT_data(self, data_path, smoothing_factor=0.01, xlim_clip=(10, 600)):
+    def load_FFT_data(self, data_path, smoothing_factor=0.01, data_clip=(10, 600)):
         '''
         Inputs:
             data_path:  the path to the .fft data file (string)
@@ -130,7 +130,7 @@ class FTSCurve():
                 else:
                     frequency = line.split('\t')[0]
                     transmission = line.split('\t')[1]
-                if float(xlim_clip[0]) < float(frequency) < float(xlim_clip[1]):
+                if float(data_clip[0]) < float(frequency) < float(data_clip[1]):
                     np.put(frequency_vector, i, frequency)
                     np.put(transmission_vector, i, transmission)
         transmission_vector = transmission_vector[frequency_vector > 0.0]
@@ -156,6 +156,10 @@ class FTSCurve():
         Returns a frequency and transmission vector from the data file
         produced by Toki's LabView software
         '''
+        print(data_path)
+        if 'For_Analysis' in data_path:
+            data_path = data_path.replace('For_Analysis', '')
+        print(data_path)
         with open(data_path, 'r') as file_handle:
             lines = file_handle.readlines()
             signal_vector = np.zeros(len(lines))
@@ -186,7 +190,7 @@ class FTSCurve():
         return fig
 
     def plot_FFT_data(self, frequency_vector, transmission_vector, fig,
-                      color='b', title='', label='', xlim=(100,400), min_frequency=50.0,
+                      color='b', title='', label='', plot_clip=(100,400), min_frequency=50.0,
                       add_atmosphere=False, save_data=True, add_90_sim=False, add_150_sim=False,
                       add_220_sim=False, add_270_sim=False, add_co_lines=False, custom_order=[]):
         '''
@@ -210,7 +214,7 @@ class FTSCurve():
         ax.tick_params(labelsize=14)
         ax.set_xlabel('Frequency (GHz)', fontsize=14)
         ax.set_ylabel('Normalized Transmission', fontsize=14)
-        ax.set_xlim(xlim)
+        ax.set_xlim(plot_clip)
         ax.set_title(title)
         ax.set_ylim((-0.05, 1.05))
         # Add Legend
@@ -382,8 +386,10 @@ class FTSCurve():
             label = dict_['measurements']['plot_label']
             title = dict_['measurements']['plot_title']
             color = dict_['measurements']['color']
-            xlim_plot = dict_['measurements']['xlim_plot']
-            xlim_clip = dict_['measurements']['xlim_clip']
+            plot_clip_low = float(dict_['measurements']['plot_clip_low'])
+            plot_clip_high = float(dict_['measurements']['plot_clip_high'])
+            data_clip_low = float(dict_['measurements']['data_clip_low'])
+            data_clip_high = float(dict_['measurements']['data_clip_high'])
             divide_bs_5 = dict_['measurements']['divide_bs_5']
             divide_bs_10 = dict_['measurements']['divide_bs_10']
             add_atmosphere = dict_['measurements']['add_atm_model']
@@ -396,6 +402,7 @@ class FTSCurve():
             interferogram_data_select = dict_['measurements']['interferogram_data_select']
             plot_interferogram = float(dict_['measurements']['plot_interferogram'])
             add_local_fft = float(dict_['measurements']['add_local_fft'])
+            apodization = dict_['measurements']['apodization']
             if fig is None:
                 if plot_interferogram:
                     fig = self.create_plot_for_if_and_fft(col_count=len(list_of_input_dicts))
@@ -405,7 +412,8 @@ class FTSCurve():
                 if_data_path = data_path.replace('.fft', '.if')
                 position_vector, efficiency_vector = self.load_IF_data(if_data_path)
                 fft_freq_vector, fft_vector, phase_corrected_fft_vector, symmetric_position_vector, symmetric_efficiency_vector\
-                    = self.fourier.convert_IF_to_FFT_data(position_vector, efficiency_vector, dict_)
+                    = self.fourier.convert_IF_to_FFT_data(position_vector, efficiency_vector, dict_, data_selector=interferogram_data_select,
+                                                          apodization=apodization)
                 row_col = '{0}{1}'.format(row, col)
                 fig = self.plot_IF_data(position_vector, efficiency_vector, fig, row_col=row_col, color=color, label='Raw IF', ax=0)
                 row_col = '{0}{1}'.format(row + 1, col)
@@ -416,9 +424,9 @@ class FTSCurve():
                 fft_freq_vector, fft_vector, phase_corrected_fft_vector, position_vector, efficiency_vector\
                     = self.convert_if_to_fft(data_path, dict_)
                 normalized_phase_corrected_fft_vector = np.abs(phase_corrected_fft_vector.real / np.max(phase_corrected_fft_vector.real))
-                fig = self.plot_FFT_data(fft_freq_vector * 1e-9, normalized_phase_corrected_fft_vector, fig, color=color, label='Local {0} {1}'.format(interferogram_data_select, label))
+                fig = self.plot_FFT_data(fft_freq_vector * 1e-9, normalized_phase_corrected_fft_vector, fig, color='r', label='Local {0} {1}'.format(interferogram_data_select, label))
             frequency_vector, transmission_vector, normalized_transmission_vector = self.load_FFT_data(data_path, smoothing_factor=smoothing_factor,
-                                                                                                       xlim_clip=xlim_clip)
+                                                                                                       data_clip=(data_clip_low, data_clip_high))
             if run_open_comparison:
                 open_data_path = dict_['open_air']['data_path']
                 data_path = dict_['measurements']['data_path']
@@ -430,6 +438,7 @@ class FTSCurve():
             elif divide_bs_10:
                 divided_transmission_vector = self.divide_out_optical_element_response(frequency_vector, normalized_transmission_vector,
                                                                                        optical_element='bs', bs_thickness=10)
+                print('dividing out')
             else:
                 divided_transmission_vector = normalized_transmission_vector
             if save_fft and len(label) > 0:
@@ -439,7 +448,7 @@ class FTSCurve():
                 self.save_FFT_data(frequency_vector, transmission_vector, save_path)
             custom_order = []
             fig = self.plot_FFT_data(frequency_vector, divided_transmission_vector, fig=fig,
-                                     color=color, title=title, label=label, xlim=xlim_plot,
+                                     color=color, title=title, label=label, plot_clip=(plot_clip_low, plot_clip_high),
                                      add_atmosphere=add_atmosphere, add_90_sim=add_90_sim, add_150_sim=add_150_sim, add_220_sim=add_220_sim,
                                      add_270_sim=add_270_sim, add_co_lines=add_co_lines, custom_order=custom_order)
         if len(title) > 0:

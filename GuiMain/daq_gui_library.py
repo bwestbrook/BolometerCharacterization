@@ -54,7 +54,6 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
         self.setLayout(self.grid)
         self.__apply_settings__(settings)
         self._create_main_window('daq_main_panel_widget')
-        self.data_folder = './data'
         self.simulated_bands_folder = './FTS_Curves/Simulations'
         self.sample_dict_folder = './Sample_Dicts'
         self.selected_files = []
@@ -121,7 +120,10 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
         for_analysis_folder = os.path.join(self.data_folder, 'For_Analysis')
         if not os.path.exists(for_analysis_folder):
             os.makedirs(for_analysis_folder)
-        shutil.copy(self.raw_data_path[0], for_analysis_folder)
+        data_path = self.raw_data_path[0]
+        if '.if' in data_path:
+            data_path = data_path.replace('.if', '.fft')
+        shutil.copy(data_path, for_analysis_folder)
         #import ipdb;ipdb.set_trace()
 
     #################################################
@@ -2715,7 +2717,10 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
         return preset_parameters
 
     def _select_files(self):
-        data_paths = QtWidgets.QFileDialog.getOpenFileNames(self, 'Open file', self.data_folder)[0]
+        analysis_folder = os.path.join(self.data_folder, 'For_Analysis')
+        if not os.path.exists(analysis_folder):
+            analysis_folder = self.data_folder
+        data_paths = QtWidgets.QFileDialog.getOpenFileNames(self, 'Open file', analysis_folder)[0]
         for data_path in data_paths:
             if str(data_path) not in self.selected_files:
                 self.selected_files.append(str(data_path))
@@ -2783,7 +2788,7 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
         else:
             self._create_popup_window(popup_name)
             self._build_panel(settings.ftscurve_popup_build_dict)
-        row = 3
+        row = 2
         self.selected_files_col_dict = {}
         if '.fft' in self.selected_files[0]:
             json_path = self.selected_files[0].replace('.fft', '.json')
@@ -2791,22 +2796,26 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
             json_path = self.selected_files[0].replace('.if', '.json')
         distance_per_step = '250.39'
         step_size = '500'
-        print(json_path)
-        if os.path.exists(json_path):
-            with open(json_path, 'r') as json_handle:
-                meta_data = json.load(json_handle)
-            distance_per_step = meta_data['_single_channel_fts_popup_distance_per_step_combobox']
-            step_size = meta_data['_single_channel_fts_popup_step_size_lineedit']
+        sample_name, frequency_band = None, None
         for i, selected_file in enumerate(self.selected_files):
             # update dict with column file mapping
             col = 1 + i * 2
             basename = os.path.basename(selected_file)
             self.selected_files_col_dict[selected_file] = col
             # Add the file name for organization
-            unique_widget_name = '_{0}_{1}_lineedit'.format(popup_name, basename)
+            unique_widget_name = '_{0}_{1}_label'.format(popup_name, basename)
             widget_settings = {'text': '{0}'.format(basename),
                                'position': (row, col, 1, 2)}
             self._create_and_place_widget(unique_widget_name, **widget_settings)
+            row += 1
+            # Add a lineedit for sample name labeling
+            unique_widget_name = '_{0}_{1}_samle_name_lineedit'.format(popup_name, col)
+            widget_settings = {'text': '',
+                               'position': (row, col, 1, 2)}
+            self._create_and_place_widget(unique_widget_name, **widget_settings)
+            if selected_file in preset_parameters:
+                sample_name = preset_parameters[selected_file]['_single_channel_fts_popup_sample_name_lineedit']
+                getattr(self, unique_widget_name).setText(sample_name)
             row += 1
             # Add a lineedit for plot title
             print(col)
@@ -2814,12 +2823,22 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
             widget_settings = {'text': '',
                                'position': (row, col, 1, 2)}
             self._create_and_place_widget(unique_widget_name, **widget_settings)
+            if sample_name is not None:
+                getattr(self, unique_widget_name).setText('{0} Spectra'.format(sample_name))
             row += 1
             # Add a lineedit for plot labeling
             unique_widget_name = '_{0}_{1}_plot_label_lineedit'.format(popup_name, col)
             widget_settings = {'text': '',
                                'position': (row, col, 1, 2)}
             self._create_and_place_widget(unique_widget_name, **widget_settings)
+            if selected_file in preset_parameters:
+                frequency_band = preset_parameters[selected_file]['_single_channel_fts_popup_frequency_band_combobox']
+                crossunder_type = ''
+                if '0T' in sample_name:
+                    crossunder_type = 'T'
+                if '0B' in sample_name:
+                    crossunder_type = 'B'
+                getattr(self, unique_widget_name).setText('{0}{1}'.format(frequency_band, crossunder_type))
             row += 1
             # Add an "normalize" checkbox
             unique_widget_name = '_{0}_{1}_normalize_checkbox'.format(popup_name, col)
@@ -2829,18 +2848,29 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
             getattr(self, unique_widget_name).setChecked(True)
             row += 1
             # Add an 5mil "Divide Beam Splitter" checkbox
+            is_10_mil = True
             unique_widget_name = '_{0}_{1}_divide_bs_5mil_checkbox'.format(popup_name, col)
             widget_settings = {'text': '5 mil',
                                'function': self._select_bs_thickness,
                                'position': (row, col, 1, 1)}
             self._create_and_place_widget(unique_widget_name, **widget_settings)
+            if selected_file in preset_parameters:
+                beam_splitter = preset_parameters[selected_file]['_single_channel_fts_popup_beam_splitter_combobox']
+                if beam_splitter == '5':
+                    getattr(self, unique_widget_name).setCheckState(True)
+                else:
+                    is_10_mil = True
+                    getattr(self, unique_widget_name).setCheckState(False)
             # Add a 10mil "Divide Beam Splitter" checkbox
             unique_widget_name = '_{0}_{1}_divide_bs_10mil_checkbox'.format(popup_name, col)
             widget_settings = {'text': '10 mil',
                                'function': self._select_bs_thickness,
                                'position': (row, col + 1, 1, 1)}
             self._create_and_place_widget(unique_widget_name, **widget_settings)
-            getattr(self, unique_widget_name).setChecked(True)
+            if is_10_mil:
+                getattr(self, unique_widget_name).setChecked(True)
+            else:
+                getattr(self, unique_widget_name).setChecked(False)
             row += 1
             # Add a "Add ATM Model" checkbox
             unique_widget_name = '_{0}_{1}_divide_mmf_checkbox'.format(popup_name, col)
@@ -2879,16 +2909,27 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
                 widget_settings = {'text': band,
                                    'position': position}
                 self._create_and_place_widget(unique_widget_name, **widget_settings)
+
+                if band == frequency_band:
+                    getattr(self, unique_widget_name).setChecked(True)
+                else:
+                    getattr(self, unique_widget_name).setChecked(False)
             row += 2
             # Add a "step size" lineedit
             unique_widget_name = '_{0}_{1}_step_size_lineedit'.format(popup_name, col)
             widget_settings = {'text': distance_per_step, 'position': (row, col, 1, 2)}
             self._create_and_place_widget(unique_widget_name, **widget_settings)
+            if selected_file in preset_parameters:
+                dist_per_step = preset_parameters[selected_file]['_single_channel_fts_popup_distance_per_step_combobox']
+                getattr(self, unique_widget_name).setText(distance_per_step)
             row += 1
             # Add a "steps per point" lineedit
             unique_widget_name = '_{0}_{1}_steps_per_point_lineedit'.format(popup_name, col)
             widget_settings = {'text': step_size, 'position': (row, col, 1, 2)}
             self._create_and_place_widget(unique_widget_name, **widget_settings)
+            if selected_file in preset_parameters:
+                step_size = preset_parameters[selected_file]['_single_channel_fts_popup_step_size_lineedit']
+                getattr(self, unique_widget_name).setText(step_size)
             row += 1
             # Add an "color" lineedit
             unique_widget_name = '_{0}_{1}_color_lineedit'.format(popup_name, col)
@@ -2896,16 +2937,36 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
                                'position': (row, col, 1, 2)}
             self._create_and_place_widget(unique_widget_name, **widget_settings)
             row += 1
-            # Add an "xlim clip" lineedit
-            unique_widget_name = '_{0}_{1}_xlim_clip_lineedit'.format(popup_name, col)
-            widget_settings = {'text': '0:600',
-                               'position': (row, col, 1, 2)}
-            self._create_and_place_widget(unique_widget_name, **widget_settings)
+            # Add an "data clip" lineedits
+            for j, clip_side in enumerate(['data_clip_low', 'data_clip_high']):
+                unique_widget_name = '_{0}_{1}_{2}_lineedit'.format(popup_name, col, clip_side)
+                position = (row, col + j, 1, 1)
+                if clip_side == 'data_clip_low':
+                    text = '0'
+                elif clip_side == 'data_clip_high':
+                    if selected_file in preset_parameters:
+                        max_frequency = preset_parameters[selected_file]['_single_channel_fts_popup_max_frequency_label']
+                        text = max_frequency.replace(' GHz', '')
+                    else:
+                        text = '300'
+                widget_settings = {'text': text, 'position': position}
+                self._create_and_place_widget(unique_widget_name, **widget_settings)
             row += 1
-            # Add an "xlim plot" lineedit
-            unique_widget_name = '_{0}_{1}_xlim_plot_lineedit'.format(popup_name, col)
-            widget_settings = {'text': '0:600',
-                               'position': (row, col, 1, 2)}
+            # Add an "plot clip" lineedits
+            for j, clip_side in enumerate(['plot_clip_low', 'plot_clip_high']):
+                unique_widget_name = '_{0}_{1}_{2}_lineedit'.format(popup_name, col, clip_side)
+                position = (row, col + j, 1, 1)
+                if clip_side == 'plot_clip_low':
+                    text = '0'
+                elif clip_side == 'plot_clip_high':
+                    if selected_file in preset_parameters:
+                        max_frequency = preset_parameters[selected_file]['_single_channel_fts_popup_max_frequency_label']
+                        text = max_frequency.replace(' GHz', '')
+                    else:
+                        text = '300'
+                widget_settings = {'text': text, 'position': position}
+                self._create_and_place_widget(unique_widget_name, **widget_settings)
+            print(widget_settings)
             self._create_and_place_widget(unique_widget_name, **widget_settings)
             row += 1
             # Add an "Smoothing" lineedit
@@ -2914,11 +2975,19 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
                                'position': (row, col, 1, 2)}
             self._create_and_place_widget(unique_widget_name, **widget_settings)
             row += 1
-            # Add an "interferogram data select" lineedit
+            # Add an "interferogram data select" combobox
             unique_widget_name = '_{0}_{1}_interferogram_data_select_combobox'.format(popup_name, col)
             widget_settings = {'position': (row, col, 1, 2)}
             self._create_and_place_widget(unique_widget_name, **widget_settings)
             for entry in ['All', 'Right', 'Left']:
+                getattr(self, unique_widget_name).addItem(entry)
+            getattr(self, unique_widget_name).setCurrentIndex(0)
+            row += 1
+            # Add an "Apodization select" combobox
+            unique_widget_name = '_{0}_{1}_apodization_select_combobox'.format(popup_name, col)
+            widget_settings = {'position': (row, col, 1, 2)}
+            self._create_and_place_widget(unique_widget_name, **widget_settings)
+            for entry in ['Triangular', 'Boxcar']:
                 getattr(self, unique_widget_name).addItem(entry)
             getattr(self, unique_widget_name).setCurrentIndex(0)
             row += 1
@@ -2939,10 +3008,10 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
 
     def _build_fts_input_dicts(self):
         list_of_input_dicts = []
-        fts_settings = ['smoothing_factor', 'xlim_plot', 'xlim_clip', 'divide_mmf', 'add_atm_model',
-                        'divide_bs_5', 'divide_bs_10', 'step_size', 'steps_per_point', 'add_sim_band',
-                        'add_co_lines', 'color', 'normalize', 'plot_title', 'plot_label', 'interferogram_data_select',
-                        'plot_interferogram', 'add_local_fft', 'data_selector']
+        fts_settings = ['smoothing_factor', 'plot_clip_low', 'plot_clip_high', 'data_clip_low', 'data_clip_high',
+                        'divide_mmf', 'add_atm_model', 'divide_bs_5', 'divide_bs_10', 'step_size', 'steps_per_point',
+                        'add_sim_band', 'add_co_lines', 'color', 'normalize', 'plot_title', 'plot_label',
+                        'interferogram_data_select', 'plot_interferogram', 'add_local_fft', 'data_selector', 'apodization']
         for selected_file, col in self.selected_files_col_dict.items():
             input_dict = {'measurements': {'data_path': selected_file}}
             for setting in fts_settings:
@@ -3340,11 +3409,16 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
             if selected_file in preset_parameters:
                 voltage_conversion = preset_parameters[selected_file]['_xy_collector_popup_voltage_factor_combobox']
             row += self._add_checkboxes(popup_name, 'Voltage Conversion', self.voltage_conversion_list, row, col, voltage_conversion=voltage_conversion)
+            unique_widget_name = '_{0}_{1}_sample_name_lineedit'.format(popup_name, col)
+            if selected_file in preset_parameters:
+                sample_name = preset_parameters[selected_file]['_xy_collector_popup_sample_name_lineedit']
+            widget_settings = {'text': sample_name, 'position': (row, col, 1, 1)}
+            self._create_and_place_widget(unique_widget_name, **widget_settings)
+            row += 1
             unique_widget_name = '_{0}_{1}_label_lineedit'.format(popup_name, col)
             if selected_file in preset_parameters:
-                plot_label = preset_parameters[selected_file]['_xy_collector_popup_sample_name_lineedit']
                 optical_load = preset_parameters[selected_file]['_xy_collector_popup_optical_load_combobox']
-                plot_label += ' {0}K Load'.format(optical_load)
+                plot_label = 'PR Curve w/ {0}K Load'.format(optical_load)
             widget_settings = {'text': plot_label, 'position': (row, col, 1, 1)}
             self._create_and_place_widget(unique_widget_name, **widget_settings)
             row += 1
@@ -3392,9 +3466,11 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
             widget_settings = {'text': '', 'position': (row, col, 1, 1)}
             print(unique_widget_name)
             self._create_and_place_widget(unique_widget_name, **widget_settings)
+            if 'K' in optical_load:
+                optical_load = optical_load.replace('K', '')
             if optical_load == '77':
                 getattr(self, unique_widget_name).setText('b')
-            elif 280 < int(optical_load) < 310:
+            elif optical_load != 'Dark' and 280 < int(optical_load) < 310:
                 getattr(self, unique_widget_name).setText('r')
             else:
                 getattr(self, unique_widget_name).setText('k')
@@ -3411,7 +3487,8 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
             row += 1
             if i == 0:
                 unique_widget_name = '_{0}_{1}_band_center_lineedit'.format(popup_name, col)
-                widget_settings = {'text': '', 'position': (row, col, 1, 1)}
+                widget_settings = {'text': '', 'position': (row, col, 1, 1),
+                                   'function': self._update_band_edges}
                 self._create_and_place_widget(unique_widget_name, **widget_settings)
                 if selected_file in preset_parameters:
                     if '_xy_collector_popup_sample_band_combobox' in preset_parameters[selected_file]:
@@ -3448,10 +3525,9 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
                 print(unique_widget_name)
                 unique_widget_name = '_{0}_{1}_loaded_spectra_label'.format(popup_name, col)
                 widget_settings = {'text': '',
-                                   'position': (row, col + 1, 1, 1)}
+                                   'position': (row, col + 1, 1, 12)}
                 self._create_and_place_widget(unique_widget_name, **widget_settings)
                 print(unique_widget_name)
-                self._load_spectra(simulated_frequency_band=True, set_to_widget=unique_widget_name)
             row = 3
         if not hasattr(self, popup_name):
             self._create_popup_window(popup_name)
@@ -3463,7 +3539,7 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
         iv_settings = ['voltage_conversion', 'label', 'squid_conversion', 'color', 'fracrn', 'band_center',
                        'band_edge_low', 'band_edge_high', 'v_fit_lo', 'v_fit_hi', 'v_plot_lo', 'v_plot_hi',
                        'v_plot_lo', 'v_plot_hi', 'calibration_resistance', 'calibrate', 'difference',
-                       'loaded_spectra', 'optical_load']
+                       'loaded_spectra', 'optical_load', 'sample_name']
         for selected_file, col in self.selected_files_col_dict.items():
             input_dict = {'data_path': selected_file}
             for setting in iv_settings:
@@ -3480,7 +3556,7 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
                     elif 'checkbox' in widget and 'calibrate' in widget:
                         invert_bool = getattr(self, widget).isChecked()
                         input_dict['calibrate'] = invert_bool
-                    elif 'lineedit' in widget and ('label' in widget or 'color' in widget):
+                    elif 'lineedit' in widget and ('sample_name' in widget or 'label' in widget or 'color' in widget):
                         widget_text = str(getattr(self, widget).text())
                         input_dict[setting] = widget_text
                     elif 'lineedit' in widget:
@@ -3489,6 +3565,8 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
                             widget_text = 'None'
                             input_dict[setting] = widget_text
                         else:
+                            if 'K' in widget_text:
+                                widget_text = widget_text.replace('K', '')
                             input_dict[setting] = float(widget_text)
                     elif setting == 'loaded_spectra':
                         print(setting, 'loaded')
@@ -3501,17 +3579,30 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
             list_of_input_dicts.append(copy(input_dict))
         return list_of_input_dicts
 
+    def _update_band_edges(self):
+        current_text = self.sender().text()
+        if current_text in ('30', '40', '90', '150', '220', '270'):
+            band_edge_low_unique_name = self.sender().whatsThis().replace('center', 'edge_low')
+            band_edge_high_unique_name = self.sender().whatsThis().replace('center', 'edge_high')
+            band_edge_low = str(int(0.5 * float(current_text)))
+            band_edge_high = str(int(1.5 * float(current_text)))
+            if hasattr(self, band_edge_low_unique_name):
+                getattr(self, band_edge_low_unique_name).setText(band_edge_low)
+                getattr(self, band_edge_high_unique_name).setText(band_edge_high)
+
     def _load_spectra(self, clicked=True, simulated_frequency_band=False, set_to_widget=None):
         sender_str = str(self.sender().whatsThis())
         if simulated_frequency_band:
             data_path = os.path.join(self.simulated_bands_folder, 'PB2abcBands.csv')
         else:
-            data_path = QtWidgets.QFileDialog.getOpenFileName(self, 'Open file', self.simulated_bands_folder)[0]
+            analysis_folder = os.path.join(self.data_folder, 'For_Analysis')
+            if not os.path.exists(analysis_folder):
+                analysis_folder = self.data_folder
+            data_path = QtWidgets.QFileDialog.getOpenFileName(self, 'Open file', analysis_folder)[0]
             base = sender_str.split('_load')[0]
             set_to_widget = '{0}_loaded_spectra_label'.format(base)
-        short_data_path = data_path.split('BolometerCharacterization')[-1]
         self.loaded_spectra_data_path = data_path
-        getattr(self, set_to_widget).setText(str(short_data_path))
+        getattr(self, set_to_widget).setText(data_path)
 
     def _plot_ivcurve(self):
         selected_files = list(set(self.selected_files))

@@ -12,6 +12,8 @@ class IVCurve():
     def __init__(self, list_of_input_dicts):
         self.list_of_input_dicts = list_of_input_dicts
         self.r_n_fraction = 0.75
+        self.simulated_bands_folder = './FTS_Curves/Simulations'
+        self.dewar_transmission = 0.75
 
     def load_data(self, data_path):
         '''
@@ -138,21 +140,25 @@ class IVCurve():
 ## Plotting
 
     def plot_differenced_ivs(self, v_biases, i_bolos, fracrns, colors, labels, fit_clips, plot_clips,
-                             spectra_path, band, band_edge_low=None, band_edge_high=None,
+                             sample_name, spectra_path, band, band_edge_low=None, band_edge_high=None,
                              t_source_low=77, t_source_high=300):
         '''
         This code takes to sets of IV curves and takes a differenc in power at the same fracrn
         '''
-        fig = pl.figure(figsize=(10, 5))
-        ax1 = fig.add_subplot(121)
-        ax2 = fig.add_subplot(122)
-        fig.subplots_adjust(right=0.95, left=0.10, bottom=0.15)
-        ax1.set_xlabel('Normalized Resistance ($\Omega$)', fontsize=16)
+        fig = pl.figure(figsize=(15, 7.5))
+        ax1 = fig.add_subplot(221)
+        ax2 = fig.add_subplot(222)
+        ax3 = fig.add_subplot(223)
+        ax4 = fig.add_subplot(224)
+        ax4.set_axis_off()
+        fig.subplots_adjust(right=0.98, left=0.07, bottom=0.11, top=0.93, wspace=0.12, hspace=0.21)
+        #ax1.set_xlabel('Normalized Resistance ($\Omega$)', fontsize=16)
         ax1.set_ylabel('Power ($\mu$V)', fontsize=16)
         ax2.set_xlabel('Frequency(GHz)', fontsize=16)
         ax2.set_ylabel('Transmission', fontsize=16)
+        ax3.set_xlabel('Normalized Resistance ($\Omega$)', fontsize=16)
+        ax3.set_ylabel('Power ($\mu$V)', fontsize=16)
         p_at_same_rfracs = []
-        pprint(fit_clips)
         for i, v_bias in enumerate(v_biases):
             plot_clip = plot_clips[i]
             fit_clip = fit_clips[i]
@@ -166,10 +172,15 @@ class IVCurve():
             r_bolo_norm  = r_bolo / r_n
             p_bolo = v_bias[plot_selector] * i_bolo[plot_selector]
             ax1.plot(r_bolo_norm, p_bolo, color=colors[i], label=labels[i])
+            ax3.plot(r_bolo_norm, p_bolo, color=colors[i], label=labels[i])
             nearest_r_bolo, nearest_r_bolo_index = self.find_nearest_r_bolo(r_bolo_norm, r_n, fracrn)
             p_at_same_rfrac = p_bolo[nearest_r_bolo_index]
             p_at_same_rfracs.append(p_at_same_rfrac)
             ax1.axvline(r_bolo_norm[nearest_r_bolo_index], color=colors[i])
+            ax3.axvline(r_bolo_norm[nearest_r_bolo_index], color=colors[i])
+        ax3.set_ylim([np.min(p_at_same_rfracs) - 0.25 * np.min(p_at_same_rfracs),
+                      np.max(p_at_same_rfracs) + 0.25 * np.max(p_at_same_rfracs)])
+        simulated_spectra_path = os.path.join(self.simulated_bands_folder, 'PB2abcBands.csv')
         p_window, integrated_bandwidth, fft_data, band_edge_low, band_edge_high = self.compute_delta_power_at_window(spectra_path,
                                                                                                                      t_source_low=t_source_low,
                                                                                                                      t_source_high=t_source_high,
@@ -177,20 +188,52 @@ class IVCurve():
                                                                                                                      band_edge_low=band_edge_low,
                                                                                                                      band_edge_high=band_edge_high)
 
-        selector = np.logical_and(np.where(fft_data[0] > 50, True, False), np.where(fft_data[0] < 350, True, False))
-        ax2.plot(fft_data[0][selector], fft_data[1][selector], label='spectra')
-        ax2.axvline(band_edge_low)
+        simulated_p_window, simulated_integrated_bandwidth, simulated_fft_data, band_edge_low, band_edge_high = self.compute_delta_power_at_window(simulated_spectra_path,
+                                                                                                                                                   t_source_low=t_source_low,
+                                                                                                                                                   t_source_high=t_source_high,
+                                                                                                                                                   band=str(int(band)),
+                                                                                                                                                   band_edge_low=band_edge_low,
+                                                                                                                                                   band_edge_high=band_edge_high)
+        selector = np.logical_and(np.where(fft_data[0] > band_edge_low, True, False), np.where(fft_data[0] < band_edge_high, True, False))
+        simulated_selector = np.logical_and(np.where(simulated_fft_data[0] > band_edge_low, True, False), np.where(simulated_fft_data[0] < band_edge_high, True, False))
+        ax2.plot(fft_data[0][selector], fft_data[1][selector], label='Measured Spectra')
+        ax2.plot(simulated_fft_data[0][simulated_selector], simulated_fft_data[1][simulated_selector], label='Simulated Spectra')
+        ax2.axvline(band_edge_low, label='Int Limits: {0} GHz to {1} GHz'.format(int(band_edge_low), int(band_edge_high)))
         ax2.axvline(band_edge_high)
         p_sensed = np.abs(p_at_same_rfracs[1] - p_at_same_rfracs[0])
+        t_chop = t_source_high - t_source_low
         efficiency = 100.0 * p_sensed / p_window
+        simulated_efficiency = 100.0 * p_sensed / simulated_p_window
         pix_efficiency = efficiency / 0.75
-        pk_per_K_efficiency = p_sensed / (300.0 - 77.0)
-        title =  'Power diff {0:.2f} / {1:.2f} (sensed / window) or [{2:.3f} pW/K]'.format(p_sensed, p_window, pk_per_K_efficiency)
-        title += '\nEnd-to-Efficiency is {0:.2f}%, Pixel Efficiency >= {1:.2f}%\n'.format(efficiency, pix_efficiency)
-        title +=  'Integradted band with from 0 GHz to Max {0:.2f} GHz'.format(integrated_bandwidth * 1e-9)
-        pl.suptitle(title)
-        ax1.legend(numpoints=1)
-        ax2.legend(numpoints=1)
+        simulated_pix_efficiency = efficiency / 0.75
+        pw_per_K_efficiency = p_sensed / (300.0 - 77.0)
+        text =  'Quantity                     | Measured Spectra     | Simuated Spectra\n'
+        text += '------------------------------------------------------------------------\n'
+        text += 'Dewar Efficiency             | {0:.2f} [%]            | {0:.2f} [%]\n'.format(1e2 * self.dewar_transmission)
+        text += 'Temperature Chop             | {0:.0f} [K]              | {0:.0f} [K]\n'.format(t_chop)
+        text += 'Power at Window              | {0:.2f} [pW]           | {1:.2f} [pW]\n'.format(p_window, simulated_p_window)
+        text += 'Power Sensed                 | {0:.2f} [pW]           | {0:.2f} [pW]\n'.format(p_sensed)
+        text += 'Integrated Bandwidth         | {0:.2f} [GHz]          | {1:.2f} [GHz]\n'.format(integrated_bandwidth * 1e-9, simulated_integrated_bandwidth * 1e-9)
+        text += 'Rel. Efficiency [End-to-End] | {0:.2f} [%]            | {1:.2f} [%]\n'.format(efficiency, simulated_efficiency)
+        text += 'Rel. Efficiency [Pixel]      | {0:.2f} [%]            | *{1:.2f}* [%]\n'.format(efficiency / self.dewar_transmission, simulated_efficiency / self.dewar_transmission)
+        text += 'Absolute Efficiency          | *{0:.3f}* [pW/K]       | *{0:.3f}* [pW/K]  '.format(pw_per_K_efficiency)
+        #ax4.plot(0, 0, label='Quantity               | Measured Spectra | Simuated Spectra')
+        #ax4.plot(0, 0, label='P Sensed [pW]          | {0:.2f}          | {0:.2f}'.format(p_sensed))
+        #ax4.plot(0, 0, label='Abs Eff [pW/K]         | {0:.2f}          | {0:.2f}\n'.format(pw_per_K_efficiency))
+        #ax4.plot(0, 0, label='P Window [pW]          | {0:.2f}          | {1:.2f}\n'.format(p_window, simulated_p_window))
+        #ax4.plot(0, 0, label='Int BW [GHz]           | {0:.2f}          | {1:.2f}\n'.format(integrated_bandwidth * 1e-9, simulated_integrated_bandwidth * 1e-9))
+        #ax4.plot(0, 0, label='Rel Eff End-to-End [%] | {0:.2f}          | {1:.2f}\n'.format(efficiency, simulated_efficiency))
+        #ax4.plot(0, 0, label='Rel Eff Pixel [%]      | {0:.2f}          | {1:.2f}'.format(efficiency / self.dewar_transmission, simulated_efficiency / self.dewar_transmission))
+        pl.suptitle('Optical Efficiency Analysis: {0}'.format(sample_name), fontsize=16)
+        # Grab all the labels and combine them 
+        handles, labels = ax1.get_legend_handles_labels()
+        handles += ax2.get_legend_handles_labels()[0]
+        labels += ax2.get_legend_handles_labels()[1]
+        handles += ax4.get_legend_handles_labels()[0]
+        labels += ax4.get_legend_handles_labels()[1]
+        ax4.legend(handles, labels, fontsize=10, numpoints=1, mode="expand", bbox_to_anchor=(0.0, 0, 1, 1))
+        #ax4.legend(handles, labels, fontsize=10, numpoints=1, mode="expand", loc='best')
+        ax4.annotate(text, xy=(0.025, 0.0), fontfamily='monospace', fontsize=10)
         pl.show()
 
     def plot_all_curves(self, bolo_voltage_bias, bolo_current, stds=None, label='', fit_clip=None, plot_clip=None,
@@ -304,7 +347,6 @@ class IVCurve():
                     if simulated_band == '150':
                         frequency = line.split(',')[0]
                         transmission = line.split(',')[2]
-                    print(frequency, transmission)
                     if self._is_float(frequency) and self._is_float(transmission):
                         np.put(frequency_vector, i, frequency)
                         np.put(transmission_vector, i, transmission)
@@ -326,12 +368,10 @@ class IVCurve():
         boltzmann_constant = 1.38e-23
         fft_data = self.load_FFT_data(spectra_path, simulated_band=band)
         frequency_vector = fft_data[0]
-        print(band_edge_low, band_edge_high)
         if band_edge_low is None:
             band_edge_low = settings.band_edge_low_default
         if band_edge_high is None:
             band_edge_high = settings.band_edge_high_default
-        print(band_edge_low, band_edge_high)
         selector = np.logical_and(np.where(frequency_vector > band_edge_low, True, False), np.where(frequency_vector < band_edge_high, True, False))
         normalized_transmission_vector = fft_data[2]
         integrated_bandwidth = np.trapz(normalized_transmission_vector[selector], frequency_vector[selector]) * 1e9
@@ -364,6 +404,8 @@ class IVCurve():
                 band_edge_low = input_dict['band_edge_low']
             if 'band_edge_high' in input_dict:
                 band_edge_high = input_dict['band_edge_high']
+            if 'sample_name' in input_dict:
+                sample_name = input_dict['sample_name']
             optical_load = input_dict['optical_load']
             if int(optical_load) > 80:
                 t_source_high = int(optical_load)
@@ -396,7 +438,7 @@ class IVCurve():
 
         if difference:
             self.plot_differenced_ivs(v_biases, i_bolos, fracrns, colors, label_strs, fit_clips, plot_clips,
-                                      spectra_path, band, band_edge_low=band_edge_low, band_edge_high=band_edge_high,
+                                      sample_name, spectra_path, band, band_edge_low=band_edge_low, band_edge_high=band_edge_high,
                                       t_source_low=t_source_low, t_source_high=t_source_high)
 
     def _is_float(self, value):

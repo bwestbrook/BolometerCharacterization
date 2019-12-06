@@ -17,7 +17,8 @@ class Fourier():
         '''
         self.mesg = 'hey'
 
-    def convert_IF_to_FFT_data(self, position_vector, efficiency_vector, scan_param_dict, data_selector='Right', quick_plot=False):
+    def convert_IF_to_FFT_data(self, position_vector, efficiency_vector, scan_param_dict,
+                               data_selector='Right', apodization='Triangular', quick_plot=False):
         '''
         Returns a frequency and efficiency vector from the inteferogram data and the input
         params of the FTS setup being used
@@ -44,23 +45,25 @@ class Fourier():
         if data_selector == 'All':
             efficiency_vector = efficiency_vector
             position_vector = position_vector
-            make_symmetric = False
         elif data_selector == 'Right':
             efficiency_vector = efficiency_right_data
             position_vector = position_right_data
-            make_symmetric = True
+            #dog1, dog2 = copy(position_vector), copy(efficiency_vector)
+            #pl.plot(dog1, dog2, label='before')
+            efficiency_vector = self.make_data_symmetric(efficiency_vector, is_right=True)
+            position_vector = self.make_data_symmetric(position_vector, is_right=True, position=True)
         elif data_selector == 'Left':
             efficiency_vector = efficiency_left_data
             position_vector = position_left_data
-            make_symmetric = True
+            #dog1, dog2 = copy(position_vector), copy(efficiency_vector)
+            #pl.plot(dog1, dog2, label='before')
+            efficiency_vector = self.make_data_symmetric(efficiency_vector, is_right=False)
+            position_vector = self.make_data_symmetric(position_vector, is_right=False, position=True)
         efficiency_vector, position_vector = self.prepare_data_for_fft(efficiency_vector, position_vector,
-                                                                       remove_polynomial=5, apodization_type='triang',
-                                                                       zero_fill=True, make_symmetric=make_symmetric, quick_plot=False)
+                                                                       remove_polynomial=5, apodization_type='Triangular',
+                                                                       zero_fill=True, quick_plot=False)
         fft_freq_vector, fft_vector, fft_psd_vector = self.manual_fourier_transform(efficiency_vector, step_size, steps_per_point, quick_plot=quick_plot)
-        if data_selector in ('Right', 'Left'):
-            phase_corrected_fft_vector = self.phase_correct_data(efficiency_vector, fft_vector, quick_plot=False)
-        else:
-            phase_corrected_fft_vector = fft_vector
+        phase_corrected_fft_vector = self.phase_correct_data(efficiency_vector, fft_vector, quick_plot=False)
         quick_plot = False
         if quick_plot:
             pl.plot(fft_vector, label='unphase corrected')
@@ -76,8 +79,13 @@ class Fourier():
         position_right_data = position_vector[position_vector >= 0]
         return efficiency_left_data, efficiency_right_data, position_left_data, position_right_data
 
-    def make_data_symmetric(self, right_data, position=False):
-        left_data = right_data[::-1]
+    def make_data_symmetric(self, data, is_right=True, position=False):
+        if is_right:
+            left_data = data[::-1]
+            right_data = data
+        else:
+            right_data = data[::-1]
+            left_data = data
         if position:
             left_data = left_data * -1
         full_array = np.append(left_data, right_data)
@@ -118,6 +126,26 @@ class Fourier():
             pl.legend()
             pl.show()
         return phase_corrected_fft_vector
+
+    def zero_fill_position_vector(self, position_vector, next_power_of_two=None):
+        if next_power_of_two is None:
+            next_power_of_two = self.next_power_of_two(len(position_vector))
+        zeros_to_pad = int(next_power_of_two - len(position_vector) / 2)
+        #import ipdb;ipdb.set_trace()
+        interval = position_vector[1] - position_vector[0]
+        zero_left_positions = np.arange(position_vector[0] - (zeros_to_pad + 1) * interval, position_vector[0], interval)
+        zero_right_positions = np.arange(position_vector[-1] + interval, position_vector[-1] + zeros_to_pad * interval, interval)
+        # Add right then left
+        zero_filled_position_vector = np.insert(position_vector, len(position_vector), zero_right_positions)
+        zero_filled_position_vector = np.insert(zero_filled_position_vector, 0, zero_left_positions)
+        #print(len(apodized_efficiency_vector))
+        quick_plot = False
+        if quick_plot:
+            pl.plot(dog, color='r', label='before zero fill')
+            pl.plot(apodized_efficiency_vector, color='b', label='after zero fill')
+            pl.legend()
+            pl.show()
+        return zero_filled_position_vector
 
     def zero_fill(self, apodized_efficiency_vector, next_power_of_two=None):
         if next_power_of_two is None:
@@ -177,8 +205,8 @@ class Fourier():
         return rotated_array
 
     def prepare_data_for_fft(self, efficiency_vector, position_vector,
-                             remove_polynomial=1, apodization_type='triang',
-                             zero_fill=True, make_symmetric=True, quick_plot=False):
+                             remove_polynomial=1, apodization_type='Triangular',
+                             zero_fill=True, quick_plot=False):
         '''
         This function will apply a window function to the data
         Inputs:
@@ -189,21 +217,23 @@ class Fourier():
         # Subtract polynomial First
         if remove_polynomial is not None:
             apodized_efficiency_vector = self.remove_polynomial(efficiency_vector, n=remove_polynomial)
-        # Make data symmetric 
-        if make_symmetric:
-            apodized_efficiency_vector = self.make_data_symmetric(apodized_efficiency_vector)
-            position_vector = self.make_data_symmetric(position_vector, position=True)
         # Apply the window function
         if apodization_type is not None:
             N = apodized_efficiency_vector.size
-            window_function = getattr(scipy.signal.windows, apodization_type)(N) / np.max(apodized_efficiency_vector)
+            if apodization_type == 'Triangular':
+                apodization_function = 'triang'
+            if apodization_type == 'Boxcar':
+                apodization_function = 'boxcar'
+            window_function = getattr(scipy.signal.windows, apodization_function)(N) / np.max(apodized_efficiency_vector)
             apodized_efficiency_vector = window_function* apodized_efficiency_vector
         # Zero-fill the FFT to the nearest next largest power of 2
         if zero_fill:
             apodized_efficiency_vector = self.zero_fill(apodized_efficiency_vector)
-            position_vector = self.zero_fill(position_vector)
+            position_vector = self.zero_fill_position_vector(position_vector)
+        quick_plot= False
         if quick_plot:
-            pl.plot(position_vector, apodized_efficiency_vector)
+            pl.plot(position_vector, apodized_efficiency_vector, label='after')
+            pl.legend()
             pl.show()
         return apodized_efficiency_vector, position_vector
 
