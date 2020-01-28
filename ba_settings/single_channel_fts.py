@@ -142,7 +142,7 @@ single_channel_fts_settings.carrier_types = ['phone', 'e-mail']
 single_channel_fts_settings.fts_combobox_entry_dict = {
                                                        '_single_channel_fts_popup_signal_channel_combobox': ['', '0', '1', '2', '3'],
                                                        '_single_channel_fts_popup_squid_select_combobox': ['', '1', '2', '3', '4', '5', '6'],
-                                                       '_single_channel_fts_popup_apodization_type_combobox': ['TRIANGULAR'],
+                                                       '_single_channel_fts_popup_apodization_type_combobox': ['TRIANGULAR', 'BOXCAR'],
                                                        '_single_channel_fts_popup_distance_per_step_combobox': ["250.39", "4.168"],
                                                        '_single_channel_fts_popup_beam_splitter_combobox': ['5','10'],
                                                        '_single_channel_fts_popup_pause_time_combobox': ['500', '750','1000', '1500', '2000', '3000', '5000', '10000'],

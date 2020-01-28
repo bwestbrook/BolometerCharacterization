@@ -18,7 +18,7 @@ class Fourier():
         self.mesg = 'hey'
 
     def convert_IF_to_FFT_data(self, position_vector, efficiency_vector, scan_param_dict,
-                               data_selector='Right', apodization='Triangular', quick_plot=False):
+                               data_selector='Right', apodization_type=None, quick_plot=False):
         '''
         Returns a frequency and efficiency vector from the inteferogram data and the input
         params of the FTS setup being used
@@ -59,11 +59,27 @@ class Fourier():
             #pl.plot(dog1, dog2, label='before')
             efficiency_vector = self.make_data_symmetric(efficiency_vector, is_right=False)
             position_vector = self.make_data_symmetric(position_vector, is_right=False, position=True)
+        if apodization_type is None:
+            print(scan_param_dict['apodization_type'])
+            apodization_type = scan_param_dict['apodization_type']
+        #if (efficiency_vector == np.nan).any():
+            #print('post if symmeterizing ')
+            #import ipdb;ipdb.set_trace()
+        print(efficiency_vector)
         efficiency_vector, position_vector = self.prepare_data_for_fft(efficiency_vector, position_vector,
-                                                                       remove_polynomial=5, apodization_type='Triangular',
+                                                                       remove_polynomial=5, apodization_type=apodization_type,
                                                                        zero_fill=True, quick_plot=False)
+        print(efficiency_vector)
+        #if (efficiency_vector == np.nan).any():
+            #print('post if processing ')
+            #import ipdb;ipdb.set_trace()
         fft_freq_vector, fft_vector, fft_psd_vector = self.manual_fourier_transform(efficiency_vector, step_size, steps_per_point, quick_plot=quick_plot)
-        phase_corrected_fft_vector = self.phase_correct_data(efficiency_vector, fft_vector, quick_plot=False)
+        #if (fft_vector == np.nan).any():
+            #print('post fft ')
+            #import ipdb;ipdb.set_trace()
+        #phase_corrected_fft_vector = self.phase_correct_data(efficiency_vector, fft_vector, quick_plot=False)
+        phase_corrected_fft_vector = fft_vector
+        #self.phase_correct_data(efficiency_vector, fft_vector, quick_plot=False)
         quick_plot = False
         if quick_plot:
             pl.plot(fft_vector, label='unphase corrected')
@@ -111,12 +127,20 @@ class Fourier():
         '''
         https://github.com/larsyunker/FTIR-python-tools/blob/master/FTIR.py
         '''
-        center_burst = self.extract_center_burst(efficiency_data)
-        rotated_center_burst = self.rotate_if_data(center_burst)
-        phase_correction_fft_vector = np.fft.fft(rotated_center_burst)
-        phase_vector = np.arctan(phase_correction_fft_vector.imag/phase_correction_fft_vector.real)
-        phase_vector = np.interp(np.arange(len(fft_vector)), np.linspace(0, len(fft_vector), len(phase_vector)), phase_vector)
-        phase_corrected_fft_vector = fft_vector * np.exp(-np.complex(0,1) * phase_vector).real
+        try:
+            center_burst = self.extract_center_burst(efficiency_data)
+            rotated_center_burst = self.rotate_if_data(center_burst)
+            phase_correction_fft_vector = np.fft.fft(rotated_center_burst)
+            phase_vector = np.arctan(phase_correction_fft_vector.imag/phase_correction_fft_vector.real)
+            phase_vector = np.interp(np.arange(len(fft_vector)), np.linspace(0, len(fft_vector), len(phase_vector)), phase_vector)
+            phase_corrected_fft_vector = fft_vector * np.exp(-np.complex(0,1) * phase_vector).real
+        except IndexError:
+            phase_corrected_fft_vector = fft_vector
+        if (phase_corrected_fft_vector == np.nan).any():
+            print('post phase correct with catch')
+            import ipdb;ipdb.set_trace()
+        print('post phase correct')
+        import ipdb;ipdb.set_trace()
         if quick_plot:
             #pl.plot(phase_vector, label='phase vector')
             pl.plot(center_burst)
@@ -205,7 +229,7 @@ class Fourier():
         return rotated_array
 
     def prepare_data_for_fft(self, efficiency_vector, position_vector,
-                             remove_polynomial=1, apodization_type='Triangular',
+                             remove_polynomial=1, apodization_type='TRIANGULAR',
                              zero_fill=True, quick_plot=False):
         '''
         This function will apply a window function to the data
@@ -220,12 +244,12 @@ class Fourier():
         # Apply the window function
         if apodization_type is not None:
             N = apodized_efficiency_vector.size
-            if apodization_type == 'Triangular':
+            if apodization_type == 'TRIANGULAR':
                 apodization_function = 'triang'
-            if apodization_type == 'Boxcar':
+            if apodization_type == 'BOXCAR':
                 apodization_function = 'boxcar'
             window_function = getattr(scipy.signal.windows, apodization_function)(N) / np.max(apodized_efficiency_vector)
-            apodized_efficiency_vector = window_function* apodized_efficiency_vector
+            apodized_efficiency_vector = np.max(efficiency_vector) * window_function * apodized_efficiency_vector
         # Zero-fill the FFT to the nearest next largest power of 2
         if zero_fill:
             apodized_efficiency_vector = self.zero_fill(apodized_efficiency_vector)
