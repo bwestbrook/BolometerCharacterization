@@ -1320,7 +1320,10 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
         if len(grt_serial) > 1:
             rtc = RTCurve([])
             voltage_factor = float(self.multimeter_voltage_factor_range_dict[grt_range])
-            temp_data, is_valid = 1e3 * rtc.resistance_to_temp_grt(self.mm_data * voltage_factor, serial_number=grt_serial)
+            print(self.mm_data, type(self.mm_data))
+            print(voltage_factor, type(voltage_factor))
+            temp_data, is_valid = rtc.resistance_to_temp_grt(self.mm_data * voltage_factor, serial_number=grt_serial)
+            temp_data *= 1e3
             ax.plot(temp_data)
             temp_data_std = np.std(temp_data)
             temp_data_mean = np.mean(temp_data)
@@ -2238,6 +2241,7 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
         fft_freq_vector, fft_vector, phase_corrected_fft_vector, symmetric_position_vector, symmetric_efficiency_vector\
             = self.fourier.convert_IF_to_FFT_data(position_vector, efficiency_vector, scan_params, data_selector='All')
         normalized_phase_corrected_fft_vector = np.abs(phase_corrected_fft_vector.real / np.max(phase_corrected_fft_vector.real))
+        normalized_phase_corrected_fft_vector = np.abs(phase_corrected_fft_vector.real)
         if fig is not None and len(fft_freq_vector) > 0:
             try:
                 pos_freq_selector = np.where(fft_freq_vector > 0)
@@ -2246,21 +2250,23 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
                     band = None
                 max_idx = np.where(normalized_phase_corrected_fft_vector == np.max(normalized_phase_corrected_fft_vector))
                 max_frequency = fft_freq_vector[max_idx][0]
-                dx = fft_freq_vector[1] - fft_freq_vector[0] 
+                dx = fft_freq_vector[1] - fft_freq_vector[0]
                 integrated_bandwidth = np.trapz(normalized_phase_corrected_fft_vector[pos_freq_selector], dx=dx) * 1e-9
                 #print(integrated_bandwidth)
-                #import ipdb;ipdb.set_trace()
                 label = 'Peak Frequency {0:.1f} GHz\n'.format(max_frequency * 1e-9)
                 ax = fig.axes[-1]
                 ax, bandwidth = self.fts_curve.add_sim_data(ax, band=band)
                 label += 'Integrated BW ({0:.1f}/{1:.1f}) GHz'.format(integrated_bandwidth, bandwidth)
                 pl.grid(True)
                 ax.plot(fft_freq_vector[pos_freq_selector] * 1e-9, normalized_phase_corrected_fft_vector[pos_freq_selector], label=label)
+                #ax.plot(fft_freq_vector[pos_freq_selector] * 1e-9, phase_corrected_fft_vector.real[pos_freq_selector], label=label)
                 ax.set_xlabel('Frequency (GHz)', fontsize=10)
                 ax.set_ylabel('Phase Corrected FFT', fontsize=10)
                 ax.set_title('Spectral Response {0}'.format(scan_params['sample_name']), fontsize=12)
                 ax.legend()
             except IndexError:
+                print('FFT failed')
+                import ipdb;ipdb.set_trace()
                 pass
             #fig.savefig('temp_files/temp_fft.png')
             #fig.savefig('temp_files/IF_GIF/FFT_{0}.png'.format(str(self.if_count).zfill(3)))
