@@ -60,16 +60,17 @@ class Fourier():
             efficiency_vector = self.make_data_symmetric(efficiency_vector, is_right=False)
             position_vector = self.make_data_symmetric(position_vector, is_right=False, position=True)
         if apodization_type is None:
-            print(scan_param_dict['apodization_type'])
+            #print(scan_param_dict['apodization_type'])
             apodization_type = scan_param_dict['apodization_type']
         #if (efficiency_vector == np.nan).any():
             #print('post if symmeterizing ')
             #import ipdb;ipdb.set_trace()
-        print(efficiency_vector)
+        #print(efficiency_vector)
+        print(apodization_type)
         efficiency_vector, position_vector = self.prepare_data_for_fft(efficiency_vector, position_vector,
                                                                        remove_polynomial=5, apodization_type=apodization_type,
                                                                        zero_fill=True, quick_plot=False)
-        print(efficiency_vector)
+        #print(efficiency_vector)
         #if (efficiency_vector == np.nan).any():
             #print('post if processing ')
             #import ipdb;ipdb.set_trace()
@@ -138,9 +139,9 @@ class Fourier():
             phase_corrected_fft_vector = fft_vector
         if (phase_corrected_fft_vector == np.nan).any():
             print('post phase correct with catch')
-            import ipdb;ipdb.set_trace()
+            #import ipdb;ipdb.set_trace()
         print('post phase correct')
-        import ipdb;ipdb.set_trace()
+        #import ipdb;ipdb.set_trace()
         if quick_plot:
             #pl.plot(phase_vector, label='phase vector')
             pl.plot(center_burst)
@@ -244,9 +245,11 @@ class Fourier():
         # Apply the window function
         if apodization_type is not None:
             N = apodized_efficiency_vector.size
-            if apodization_type == 'TRIANGULAR':
+            if apodization_type in ('TRIANGULAR', 'Triangular'):
                 apodization_function = 'triang'
-            if apodization_type == 'BOXCAR':
+            elif apodization_type in ('BOXCAR', 'Boxcar'):
+                apodization_function = 'boxcar'
+            else:
                 apodization_function = 'boxcar'
             window_function = getattr(scipy.signal.windows, apodization_function)(N) / np.max(apodized_efficiency_vector)
             apodized_efficiency_vector = np.max(efficiency_vector) * window_function * apodized_efficiency_vector

@@ -144,7 +144,7 @@ xy_collector_settings.xy_collector_combobox_entry_dict = {
                                                           '_xy_collector_popup_sample_drift_direction_combobox': ['Hi2Lo', 'Lo2Hi'],
                                                           '_xy_collector_popup_optical_load_combobox': ['Dark', '77', '300', '299', '298', '297', '296',
                                                                                                         '295', '294', '293', '292', '291', '290', 'FTS'],
-                                                          '_xy_collector_popup_sample_band_combobox': ['', '30', '40', '90', '150', '220', '270'],
+                                                          '_xy_collector_popup_sample_band_combobox': ['', 'MF-Sinuous1p5', 'MF-Sinuous0p8', '30', '40', '90', '150', '220', '270'],
 
                                                          }
 

@@ -29,4 +29,5 @@ ftscurve_settings_popup_settings.ftscurve_popup_build_dict = {
                                                               '_ftscurve_settings_popup_apodization_label': {'text': 'Apodization:', 'position': (20, 0, 1, 1)},
                                                               '_ftscurve_settings_popup_plot_interferogram_label': {'text': 'Plot Interferogram?', 'position': (21, 0, 1, 1)},
                                                               '_ftscurve_settings_popup_add_loacl_fft_label': {'text': 'Plot Local FFT?', 'position': (22, 0, 1, 1)},
+                                                              '_ftscurve_settings_popup_divide_ffts_label': {'text': 'Divide FFTs?', 'position': (23, 0, 1, 1)},
                                                               }

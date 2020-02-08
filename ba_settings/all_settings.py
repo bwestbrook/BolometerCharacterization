@@ -6,6 +6,7 @@ from .FTS_popup import ftscurve_settings_popup_settings
 from .POL_popup import polcurve_settings_popup_settings
 from .TAU_popup import taucurve_settings_popup_settings
 from .BM_popup import beammap_settings_popup_settings
+from .sample_spectra_popup import sample_spectra_settings_popup_settings
 from .daq_main_panel import daq_main_panel_settings
 from .data_analysis import data_analysis_popup_settings
 from .user_move_stepper import user_move_stepper_settings
@@ -43,8 +44,8 @@ list_of_extra_settings = [data_analysis_popup_settings, rtcurve_settings_popup_s
                           beam_mapper_settings, pol_efficiency_settings, final_plot_settings,
                           taucurve_settings_popup_settings, xy_collector_settings,
                           time_constant_settings, multimeter_settings, cosmic_rays_settings,
-                          fridge_cycle_settings, lock_in_settings, power_supply_settings]
-
+                          fridge_cycle_settings, lock_in_settings, power_supply_settings,
+                          sample_spectra_settings_popup_settings]
 
 for extra_settings in list_of_extra_settings:
     for attribute in dir(extra_settings):
