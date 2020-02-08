@@ -2143,8 +2143,9 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
         for unique_combobox, entries in settings.fts_combobox_entry_dict.items():
             self.populate_combobox(unique_combobox, entries)
         getattr(self, '_single_channel_fts_popup_integration_time_combobox').setCurrentIndex(0)
-        getattr(self, '_single_channel_fts_popup_pause_time_combobox').setCurrentIndex(2)
-        getattr(self, '_single_channel_fts_popup_sample_rate_combobox').setCurrentIndex(8)
+        getattr(self, '_single_channel_fts_popup_pause_time_combobox').setCurrentIndex(5)
+        getattr(self, '_single_channel_fts_popup_sample_rate_combobox').setCurrentIndex(2)
+        getattr(self, '_single_channel_fts_popup_fft_every_n_points_combobox').setCurrentIndex(3)
         #getattr(self, '_single_channel_fts_popup_grid_sm_com_port_combobox').setCurrentIndex(0
         getattr(self, '_single_channel_fts_popup_fts_sm_com_port_combobox').setCurrentIndex(0)
         getattr(self, '_single_channel_fts_popup_verify_parameters_checkbox').setCheckState(True)
@@ -2202,7 +2203,10 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
                 max_frequency_widget = '_single_channel_fts_popup_max_frequency_label'
                 getattr(self, max_frequency_widget).setText(max_frequency)
                 if self._is_float(scan_params['step_size'], enforce_positive=True):
-                    num_steps = (int(scan_params['ending_position']) - int(scan_params['starting_position'])) / int(scan_params['step_size'])
+                    if self._is_float(scan_params['ending_position']) and self._is_float(scan_params['starting_position']):
+                        num_steps = (int(scan_params['ending_position']) - int(scan_params['starting_position'])) / int(scan_params['step_size'])
+                    else:
+                        num_steps = 'inf'
                 else:
                     num_steps = 'inf'
                 getattr(self, '_single_channel_fts_popup_number_of_steps_label').setText(str(num_steps))
@@ -2238,6 +2242,8 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
         '''
         Post data collection analysis
         '''
+        if len(position_vector) == 0 or len(efficiency_vector) == 0:
+            return None, None, None
         fft_freq_vector, fft_vector, phase_corrected_fft_vector, symmetric_position_vector, symmetric_efficiency_vector\
             = self.fourier.convert_IF_to_FFT_data(position_vector, efficiency_vector, scan_params, data_selector='All')
         normalized_phase_corrected_fft_vector = np.abs(phase_corrected_fft_vector.real / np.max(phase_corrected_fft_vector.real))
@@ -2279,7 +2285,12 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
         '''
         Plots the collected data as an XY scatter (position, amplitude) and paints it to the panel
         '''
-        if len(self.fts_positions_steps) > 5:
+        n_points_to_plot = getattr(self, '_single_channel_fts_popup_fft_every_n_points_combobox').currentText()
+        if not self._is_float(n_points_to_plot):
+            n_points_to_plot = 10
+        else:
+            n_points_to_plot = int(n_points_to_plot)
+        if len(self.fts_positions_steps) % n_points_to_plot == 0 and len(self.fts_positions_steps) > 5:
             meta_data = self._get_all_meta_data(popup='_single_channel_fts')
             scan_params = self._get_all_params(meta_data, settings.fts_scan_params, 'single_channel_fts')
             basename = os.path.basename(self.raw_data_path[0]) .replace('.if', '')
@@ -2347,7 +2358,18 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
             i = 0
             x_positions = np.arange(int(scan_params['starting_position']), int(scan_params['ending_position']) + int(scan_params['step_size']), int(scan_params['step_size']))
             getattr(self, 'sm_{0}'.format(scan_params['fts_sm_com_port'])).move_to_position(int(scan_params['starting_position']))
-            time.sleep(2)
+            #velocity = getattr(self, 'sm_{0}'.format(scan_params['fts_sm_com_port'])).get_velocity().split('VE=')[-1]
+            #try:
+                ##velocity = int(velocity) * 0.03937 # in / s
+                #velocity = int(velocity) * 1e4
+            #except ValueError:
+                #import ipdb;ipdb.set_trace()
+            #start_in_inches = abs(int(scan_params['starting_position'])) / 1e5
+            wait = abs(int(scan_params['starting_position'])) / 2e4 
+            #wait = start_in_inches / velocity
+            print(wait)
+            #import ipdb;ipdb.set_trace()
+            time.sleep(wait)
             self._get_raw_data_save_path()
         if (self.raw_data_path is not None and len(scan_params['signal_channel']) > 0) or resume_run:
             if resume_run:
@@ -2369,7 +2391,14 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
                     self.repaint()
                     getattr(self, 'sm_{0}'.format(scan_params['fts_sm_com_port'])).move_to_position(position)
                     self.lock_in._zero_lock_in_phase()
-                    time.sleep(pause)
+                    if abs(position) <= 3000:
+                        time.sleep(1.5)
+                    elif abs(position) < 8000:
+                        time.sleep(1.25)
+                    elif abs(position) < 15000:
+                        time.sleep(0.75)
+                    else:
+                        time.sleep(pause)
                     data_time_stream, mean, min_, max_, std = self.real_daq.get_data(signal_channel=scan_params['signal_channel'], integration_time=scan_params['integration_time'],
                                                                                      sample_rate=scan_params['sample_rate'], active_devices=self.active_devices)
                     # Update data point info
@@ -2382,11 +2411,12 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
                     time_per_step = duration.seconds / (i + 1)
                     steps_left = len(x_positions) - i
                     time_left = time_per_step * steps_left / 60
+                    elapsed_time = duration.seconds / 60.0
                     getattr(self, '_single_channel_fts_popup_mean_label').setText('{0:.4f}'.format(mean))
                     getattr(self, '_single_channel_fts_popup_std_label').setText('{0:.4f} {1}'.format(std, std_pct))
                     getattr(self, '_single_channel_fts_popup_current_position_label').setText('{0:.3f} [{1}/{2} complete]'.format(position, i, len(x_positions) - 1))
-                    status_str = 'Start: {0} ::::: Tot Duration: {1} (s) ::::: Time Per Step {2:.2f} (s) ::::: Estimated Time Left: {3:.2f} (m)'.format(start_time_str, duration.seconds,
-                                                                                                                                                        time_per_step, time_left)
+                    status_str = 'Start: {0} ::::: Tot Duration: {1:.2f} (s) ::::: Time Per Step {2:.2f} (s) ::::: Estimated Time Left: {3:.2f} (m)'.format(start_time_str, elapsed_time,
+                                                                                                                                                            time_per_step, time_left)
                     getattr(self, '_single_channel_fts_popup_duration_label').setText(status_str)
                     self._draw_time_stream(data_time_stream, min_, max_, '_single_channel_fts_popup_time_stream_label')
                     # Update IF plots and vectors
@@ -2415,18 +2445,25 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
             self._quick_message('Bad data path or no signal channel set!')
         getattr(self, '_single_channel_fts_popup_start_pushbutton').setText('Start')
         getattr(self, '_single_channel_fts_popup_start_pushbutton').setFlat(False)
-        self._save_if_and_fft(self.fts_positions_steps, self.fts_amplitudes, scan_params)
-        response = self._quick_message('Finished Taking Data\nMoving mirror back to 0')
-        getattr(self, 'sm_{0}'.format(scan_params['fts_sm_com_port'])).move_to_position(0)
-        getattr(self, '_single_channel_fts_popup_position_monitor_slider').setSliderPosition(0)
-        getattr(self, '_single_channel_fts_popup_current_position_label').setText('{0:.3f}'.format(0))
-        continue_run = False
-        #getattr(self, '_single_channel_fts_popup_stop_pushbutton').setText('Pause')
-        self._update_log()
+        if len(self.fts_positions_steps) == 0:
+            return None
+        else:
+            self._save_if_and_fft(self.fts_positions_steps, self.fts_amplitudes, scan_params)
+            response = self._quick_message('Finished Taking Data\nMoving mirror back to 0')
+            getattr(self, 'sm_{0}'.format(scan_params['fts_sm_com_port'])).move_to_position(0)
+            getattr(self, '_single_channel_fts_popup_position_monitor_slider').setSliderPosition(0)
+            getattr(self, '_single_channel_fts_popup_current_position_label').setText('{0:.3f}'.format(0))
+            continue_run = False
+            #getattr(self, '_single_channel_fts_popup_stop_pushbutton').setText('Pause')
+            self._update_log()
 
     def _save_if_and_fft(self, position_vector, efficiency_vector, scan_params):
         fft_freq_vector, phase_corrected_fft_vector, fig = self._compute_and_plot_fft(self.fts_positions_steps, self.fts_amplitudes, scan_params, fig=None)
+        if fft_freq_vector is None:
+            return None
         normalized_phase_corrected_fft_vector = np.abs(phase_corrected_fft_vector.real / np.max(phase_corrected_fft_vector.real))
+        if self.raw_data_path is None:
+            return None
         fft_save_path = self.raw_data_path[0].replace('.if', '.fft')
         png_save_path = self.raw_data_path[0].replace('.if', '.png')
         with open(fft_save_path, 'w') as file_handle:
@@ -2699,7 +2736,7 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
         pushbuttons = ['_data_analysis_popup_polcurve_pushbutton', '_data_analysis_popup_ivcurve_pushbutton',
                        '_data_analysis_popup_rtcurve_pushbutton', '_data_analysis_popup_ftscurve_pushbutton',
                        '_data_analysis_popup_ifcurve_pushbutton', '_data_analysis_popup_taucurve_pushbutton',
-                       '_data_analysis_popup_beammap_pushbutton']
+                       '_data_analysis_popup_beammap_pushbutton', '_data_analysis_popup_sample_spectra_pushbutton']
         for pushbutton in pushbuttons:
             if sender_name == pushbutton:
                 self.analysis_type = pushbutton.split('_')[4]
@@ -2774,6 +2811,100 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
         return 1
 
     #################################################
+    # Sample Spectra
+    #################################################
+    def _close_sample_spectra(self):
+        getattr(self, 'sample_spectra_settings_popup').close()
+
+    def _build_sample_settings_popup(self, popup_name=None, preset_parameters={}):
+        popup_name = 'sample_spectra_settings_popup'
+        if popup_name is None:
+            popup_name = '{0}_settings_popup'.format(self.analysis_type)
+        if hasattr(self, popup_name):
+            self._initialize_panel(popup_name)
+            self._build_panel(settings.sample_spectra_settings_popup_build_dict)
+        else:
+            self._create_popup_window(popup_name)
+            self._build_panel(settings.sample_spectra_settings_popup_build_dict)
+        getattr(self, '_sample_spectra_settings_popup_average_then_divide_checkbox').setChecked(True)
+        getattr(self, '_sample_spectra_settings_popup_divide_then_average_checkbox').setChecked(True)
+        getattr(self, 'sample_spectra_settings_popup').show()
+
+    def _load_sample_data(self):
+        print(self.sender().whatsThis())
+        if 'open' in self.sender().whatsThis():
+            set_to_widget = '_sample_spectra_settings_popup_loaded_open_files_label'
+            open_files = True
+            self.open_files = []
+        else:
+            set_to_widget = '_sample_spectra_settings_popup_loaded_sample_in_files_label'
+            open_files = False
+            self.sample_in_files = []
+        analysis_folder = os.path.join(self.data_folder, 'For_Analysis')
+        if not os.path.exists(analysis_folder):
+            analysis_folder = self.data_folder
+        data_paths = QtWidgets.QFileDialog.getOpenFileNames(self, 'Open file', analysis_folder)[0]
+        set_to_text = ''
+        for data_path in data_paths:
+            set_to_text += '{0}\n'.format(os.path.basename(data_path))
+            if open_files:
+                self.open_files.append(data_path)
+            else:
+                self.sample_in_files.append(data_path)
+        getattr(self, set_to_widget).setText(set_to_text)
+
+    def _create_average_spectra(self, freq_low=50, freq_high=280):
+        if getattr(self, '_sample_spectra_settings_popup_average_then_divide_checkbox').isChecked():
+            averaged_spectra = {}
+            for file_type in ('open', 'sample_in'):
+                files = getattr(self, '{0}_files'.format(file_type))
+                for i, file_ in enumerate(files):
+                    new_frequency_vector, new_fft_vector = self._load_spectra_data(file_)
+                    if i == 0:
+                        average_frequency_vector = new_frequency_vector
+                        average_fft_vector = new_fft_vector
+                    else:
+                        average_frequency_vector += new_frequency_vector
+                        average_fft_vector += new_fft_vector
+                average_frequency_vector = average_frequency_vector / (i + 1)
+                average_fft_vector = average_fft_vector / (i + 1)
+                averaged_spectra.update({file_type: average_fft_vector})
+            sample_spectra = averaged_spectra['sample_in'] / averaged_spectra['open']
+            selector = np.logical_and(average_frequency_vector > freq_low, average_frequency_vector < freq_high)
+            pl.plot(average_frequency_vector[selector], sample_spectra[selector], color='r', label='Avg then Div', lw=6)
+        if getattr(self, '_sample_spectra_settings_popup_divide_then_average_checkbox').isChecked():
+            for i, open_file in enumerate(self.open_files):
+                new_open_frequency_vector, new_open_fft_vector = self._load_spectra_data(open_file)
+                selector = np.logical_and(new_open_frequency_vector > freq_low, new_open_frequency_vector < freq_high)
+                for j, sample_in_file in enumerate(self.sample_in_files):
+                    print(i, j)
+                    new_sample_in_frequency_vector, new_sample_in_fft_vector = self._load_spectra_data(sample_in_file)
+                    new_divivided_spectra = new_sample_in_fft_vector / new_open_fft_vector
+                    if i == 0 and j == 0:
+                        average_divided_spectra = new_divivided_spectra
+                    else:
+                        average_divided_spectra += new_divivided_spectra
+                    pl.plot(new_open_frequency_vector[selector], new_divivided_spectra[selector], label='{0}{1}'.format(i, j), alpha=0.25)
+            print((j + 1) * (i + 1))
+            average_divided_spectra = average_divided_spectra / ((j + 1) * (i + 1))
+            pl.plot(new_open_frequency_vector, average_divided_spectra, color='k', label='Div then Avg', lw=3)
+            pl.xlim((freq_low, freq_high))
+            pl.ylim((0, 1.5))
+            pl.legend()
+        pl.show()
+            #import ipdb;ipdb.set_trace()
+
+    def _load_spectra_data(self, file_path, frequency_vector=None, fft_vector=None):
+        with open(file_path, 'r') as file_path_handle:
+            frequency_vector, fft_vector = np.asarray([]), np.asarray([])
+            for i, line in enumerate(file_path_handle.readlines()):
+                frequency, fft_value = line.split('\t')
+                frequency_vector = np.append(frequency_vector, float(frequency.strip()))
+                fft_vector = np.append(fft_vector, float(fft_value.strip()))
+        return frequency_vector, fft_vector
+
+
+    #################################################
     # FTS/IF Curves 
     #################################################
 
@@ -2788,6 +2919,7 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
     def _build_ftscurve_settings_popup(self, popup_name=None, preset_parameters={}):
         if popup_name is None:
             popup_name = '{0}_settings_popup'.format(self.analysis_type)
+            print(popup_name)
         if hasattr(self, popup_name):
             self._initialize_panel(popup_name)
             self._build_panel(settings.ftscurve_popup_build_dict)
@@ -2796,6 +2928,9 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
             self._build_panel(settings.ftscurve_popup_build_dict)
         row = 2
         self.selected_files_col_dict = {}
+        if len(self.selected_files) == 0:
+            self.ftscurve_settings_popup.show()
+            return None
         if '.fft' in self.selected_files[0]:
             json_path = self.selected_files[0].replace('.fft', '.json')
         elif '.if' in self.selected_files[0]:
@@ -2915,7 +3050,6 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
                 widget_settings = {'text': band,
                                    'position': position}
                 self._create_and_place_widget(unique_widget_name, **widget_settings)
-
                 if band == frequency_band:
                     getattr(self, unique_widget_name).setChecked(True)
                 else:
@@ -3009,7 +3143,13 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
             self._create_and_place_widget(unique_widget_name, **widget_settings)
             getattr(self, unique_widget_name).setCheckState(False)
             row += 1
-            row = 3
+            # Add an "Divide FFTs" checkbox
+            if i == 0:
+                unique_widget_name = '_{0}_{1}_divide_ffts_checkbox'.format(popup_name, col)
+                widget_settings = {'position': (row, col, 1, 2)}
+                self._create_and_place_widget(unique_widget_name, **widget_settings)
+                getattr(self, unique_widget_name).setCheckState(False)
+            row = 2
         getattr(self, popup_name).show()
 
     def _build_fts_input_dicts(self):
@@ -3017,7 +3157,8 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
         fts_settings = ['smoothing_factor', 'plot_clip_low', 'plot_clip_high', 'data_clip_low', 'data_clip_high',
                         'divide_mmf', 'add_atm_model', 'divide_bs_5', 'divide_bs_10', 'step_size', 'steps_per_point',
                         'add_sim_band', 'add_co_lines', 'color', 'normalize', 'plot_title', 'plot_label',
-                        'interferogram_data_select', 'plot_interferogram', 'add_local_fft', 'data_selector', 'apodization']
+                        'interferogram_data_select', 'plot_interferogram', 'add_local_fft', 'data_selector', 'apodization',
+                        'divide_ffts']
         for selected_file, col in self.selected_files_col_dict.items():
             input_dict = {'measurements': {'data_path': selected_file}}
             for setting in fts_settings:

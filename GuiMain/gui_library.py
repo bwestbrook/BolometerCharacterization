@@ -650,6 +650,25 @@ class GuiTemplate(QtWidgets.QWidget, GuiBuilder):
         pol.run(list_of_input_dicts)
 
     #################################################
+    # Sample Spectra
+    #################################################
+
+    def _build_sample_settings_popup(self):
+        if popup_name is None:
+            popup_name = '{0}_settings_popup'.format(self.analysis_type)
+        if hasattr(self, popup_name):
+            self._initialize_panel(popup_name)
+            self._build_panel(settings.sample_spectra_settings_popup_build_dict)
+        else:
+            self._create_popup_window(popup_name)
+            self._build_panel(settings.sample_spectra_settings_popup_build_dict)
+        getattr(self, '_sample_spectra_settings_popup').show()
+
+
+    def _close_sample_spectra(self):
+        getattr(self, '_sample_spectra_settings_popup').close()
+
+    #################################################
     # FTS/IF Curves 
     #################################################
 

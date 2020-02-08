@@ -70,32 +70,57 @@ class FTSCurve():
         ax.axvline(115, 0, 1, linestyle=':', color='k', alpha=0.5, label='CO 115 GHz')
         return ax
 
-    def add_sim_data(self, ax, band=None):
+    def add_sim_data(self, ax, band=None, ms_impedance=13):
         if band in ['90', '150']:
             freq_column = 0
             if band == '90':
                 data_column = 1
             elif band == '150':
                 data_column = 2
+            file_name = 'PB2abcBands.csv'
         elif band in ['220', '270']:
             freq_column = 8
             if band == '220':
                 data_column = 12
             elif band == '270':
                 data_column = 11
+            file_name = 'PB2abcBands.csv'
+        elif band in ['MF-Sinuous0p8', 'MF-Sinuous1p5']:
+            data_column_z_real = 3
+            data_column_z_im = 4
+            file_name = 'PB2ProposedPixel_Impedance'
+            freq_column = 0
+            data_column = 0
         elif band is None:
+            freq_column = None
+            data_column = None
+        else:
             freq_column = None
             data_column = None
         frequency = []
         transmission = []
         if freq_column is not None and data_column is not None:
-            with open('.\FTS_Curves\Simulations\PB2abcBands.csv', 'r') as file_handle:
+            with open('.\FTS_Curves\Simulations\{0}.csv'.format(file_name), 'r') as file_handle:
                 for line in file_handle.readlines()[1:]:
                     if len(line.split(',')[freq_column]) > 0:
-                        freq_value = float(line.split(',')[freq_column])
-                        frequency.append(freq_value)
-                        tran_value = float(line.split(',')[data_column])
-                        transmission.append(tran_value)
+                        if file_name == 'PB2ProposedPixel_Impedance':
+                            re_value = line.split(',')[data_column_z_real]
+                            if len(re_value) > 0:
+                                re_value = float(re_value)
+                                im_value = float(line.split(',')[data_column_z_im])
+                                Z_ant = complex(re_value, im_value)
+                                Z_ms = complex(ms_impedance, 0)
+                                R = abs(Z_ant - Z_ms) / abs(Z_ant + Z_ms)
+                                R = R ** 2
+                                tran_value = 1 - R
+                                freq_value = float(line.split(',')[freq_column])
+                                frequency.append(freq_value)
+                                transmission.append(tran_value)
+                        else:
+                            freq_value = float(line.split(',')[freq_column])
+                            tran_value = float(line.split(',')[data_column])
+                            frequency.append(freq_value)
+                            transmission.append(tran_value)
             if band == '150':
                 color = 'c'
             elif band == '90':
@@ -103,6 +128,8 @@ class FTSCurve():
             elif band == '220':
                 color = 'g'
             elif band == '270':
+                color = 'r'
+            elif band in ['MF-Sinuous0p8', 'MF-Sinuous1p5']:
                 color = 'r'
             ax.plot(frequency, transmission, color=color, linestyle=':', lw=3, alpha=0.5, label='{0} GHz Sim'.format(band))
         bandwidth = np.trapz(np.asarray(transmission)[np.where(np.asarray(frequency) > 0)])
@@ -192,7 +219,8 @@ class FTSCurve():
     def plot_FFT_data(self, frequency_vector, transmission_vector, fig,
                       color='b', title='', label='', plot_clip=(100,400), min_frequency=50.0,
                       add_atmosphere=False, save_data=True, add_90_sim=False, add_150_sim=False,
-                      add_220_sim=False, add_270_sim=False, add_co_lines=False, custom_order=[]):
+                      add_220_sim=False, add_270_sim=False, add_sinuous_sim=False,
+                      add_co_lines=False, y_lim=[-0.015, 1.05], custom_order=[]):
         '''
         This function will take the output of Load_FFT_Data
         '''
@@ -201,13 +229,15 @@ class FTSCurve():
             ax = self.add_atmospheric_lines(ax)
             add_atmosphere = False
         if add_90_sim:
-            ax, bandwithd = self.add_sim_data(ax, band='90')
+            ax, bandwidth = self.add_sim_data(ax, band='90')
         if add_150_sim:
-            ax, bandwithd = self.add_sim_data(ax, band='150')
+            ax, bandwidth = self.add_sim_data(ax, band='150')
         if add_220_sim:
-            ax, bandwithd = self.add_sim_data(ax, band='220')
+            ax, bandwidth = self.add_sim_data(ax, band='220')
         if add_270_sim:
-            ax, bandwithd = self.add_sim_data(ax, band='270')
+            ax, bandwidth = self.add_sim_data(ax, band='270')
+        if add_sinuous_sim:
+            ax, bandwidth = self.add_sim_data(ax, band='270')
         if add_co_lines:
             ax = self.add_co_lines(ax)
         ax.plot(frequency_vector, transmission_vector, color, label=label, lw=1, alpha=0.8)
@@ -216,7 +246,7 @@ class FTSCurve():
         ax.set_ylabel('Normalized Transmission', fontsize=14)
         ax.set_xlim(plot_clip)
         ax.set_title(title)
-        ax.set_ylim((-0.05, 1.05))
+        ax.set_ylim(y_lim)
         # Add Legend
         handles, labels = ax.get_legend_handles_labels()
         order = [labels.index(label) for label in custom_order if label in labels]
@@ -381,7 +411,7 @@ class FTSCurve():
         row = 0
         col = 0
         fig = None
-        for dict_ in list_of_input_dicts:
+        for i, dict_ in enumerate(list_of_input_dicts):
             data_path = dict_['measurements']['data_path']
             label = dict_['measurements']['plot_label']
             title = dict_['measurements']['plot_title']
@@ -392,6 +422,8 @@ class FTSCurve():
             data_clip_high = float(dict_['measurements']['data_clip_high'])
             divide_bs_5 = dict_['measurements']['divide_bs_5']
             divide_bs_10 = dict_['measurements']['divide_bs_10']
+            if 'divide_ffts' in dict_['measurements']:
+                divide_ffts = dict_['measurements']['divide_ffts']
             add_atmosphere = dict_['measurements']['add_atm_model']
             add_co_lines = dict_['measurements']['add_co_lines']
             add_90_sim = float(dict_['measurements']['add_sim_band_90'])
@@ -413,7 +445,7 @@ class FTSCurve():
                 position_vector, efficiency_vector = self.load_IF_data(if_data_path)
                 fft_freq_vector, fft_vector, phase_corrected_fft_vector, symmetric_position_vector, symmetric_efficiency_vector\
                     = self.fourier.convert_IF_to_FFT_data(position_vector, efficiency_vector, dict_, data_selector=interferogram_data_select,
-                                                          apodization=apodization)
+                                                          apodization_type=apodization)
                 row_col = '{0}{1}'.format(row, col)
                 fig = self.plot_IF_data(position_vector, efficiency_vector, fig, row_col=row_col, color=color, label='Raw IF', ax=0)
                 row_col = '{0}{1}'.format(row + 1, col)
@@ -447,10 +479,21 @@ class FTSCurve():
                     os.remove(save_path)
                 self.save_FFT_data(frequency_vector, transmission_vector, save_path)
             custom_order = []
-            fig = self.plot_FFT_data(frequency_vector, divided_transmission_vector, fig=fig,
-                                     color=color, title=title, label=label, plot_clip=(plot_clip_low, plot_clip_high),
-                                     add_atmosphere=add_atmosphere, add_90_sim=add_90_sim, add_150_sim=add_150_sim, add_220_sim=add_220_sim,
-                                     add_270_sim=add_270_sim, add_co_lines=add_co_lines, custom_order=custom_order)
+            if divide_ffts:
+                if i == 0:
+                    fft_1 = copy(divided_transmission_vector)
+                elif i == 1:
+                    #divided_transmission_vector = fft_1 / divided_transmission_vector
+                    divided_transmission_vector = divided_transmission_vector / fft_1
+                    fig = self.plot_FFT_data(frequency_vector, divided_transmission_vector, fig=fig,
+                                             color=color, title=title, label=label, plot_clip=(plot_clip_low, plot_clip_high),
+                                             add_atmosphere=add_atmosphere, add_90_sim=add_90_sim, add_150_sim=add_150_sim, add_220_sim=add_220_sim,
+                                             add_270_sim=add_270_sim, add_co_lines=add_co_lines, y_lim=(0, 1.5), custom_order=custom_order)
+            else:
+                fig = self.plot_FFT_data(frequency_vector, divided_transmission_vector, fig=fig,
+                                         color=color, title=title, label=label, plot_clip=(plot_clip_low, plot_clip_high),
+                                         add_atmosphere=add_atmosphere, add_90_sim=add_90_sim, add_150_sim=add_150_sim, add_220_sim=add_220_sim,
+                                         add_270_sim=add_270_sim, add_co_lines=add_co_lines, custom_order=custom_order)
         if len(title) > 0:
             fig.savefig('./FTS_Curves/temp/{0}.png'.format(title))
         elif len(label) > 0:
