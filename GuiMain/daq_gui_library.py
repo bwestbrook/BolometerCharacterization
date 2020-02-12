@@ -1075,9 +1075,6 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
             temperature_str = '{0:.3f} mK'.format(temperature)
         else:
             temperature_str = 'NaN'
-        pprint(fc_params)
-        print(np.mean(grt_data), voltage_factor, grt_serial, temperature, temperature_str)
-        #import ipdb;ipdb.set_trace()
         return temperature, temperature_str
 
     def _set_ps_voltage_fc(self):
@@ -1099,10 +1096,11 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
         data_path = self._get_fridge_cycle_save_path()
         self._quick_message('Saving data to {0}'.format(data_path))
         fig = None
+        if 'Cycle Aborted' in getattr(self, '_fridge_cycle_popup_status_label').text():
+            self.fc_time_stamp_vector, self.ps_voltage_vector, self.abr_resistance_vector, self.abr_temperature_vector, self.grt_temperature_vector = [], [], [], [], []
         with open(data_path, 'w') as fc_file_handle:
             # Get new data 
             data_line = self._check_cycle_stage_and_update_data(fc_params, data_path, sleep_time)
-            print(data_line)
             fc_file_handle.write(data_line)
             self._update_fridge_cycle(data_path=data_path)
             # Update status
@@ -2871,7 +2869,7 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
                 averaged_spectra.update({file_type: average_fft_vector})
             sample_spectra = averaged_spectra['sample_in'] / averaged_spectra['open']
             selector = np.logical_and(average_frequency_vector > freq_low, average_frequency_vector < freq_high)
-            pl.plot(average_frequency_vector[selector], sample_spectra[selector], color='r', label='Avg then Div', lw=6)
+            pl.plot(average_frequency_vector[selector], sample_spectra[selector], color='r', label='Avg then Div', lw=4)
         if getattr(self, '_sample_spectra_settings_popup_divide_then_average_checkbox').isChecked():
             for i, open_file in enumerate(self.open_files):
                 new_open_frequency_vector, new_open_fft_vector = self._load_spectra_data(open_file)
@@ -2884,10 +2882,10 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
                         average_divided_spectra = new_divivided_spectra
                     else:
                         average_divided_spectra += new_divivided_spectra
-                    pl.plot(new_open_frequency_vector[selector], new_divivided_spectra[selector], label='{0}{1}'.format(i, j), alpha=0.25)
+                    pl.plot(new_open_frequency_vector[selector], new_divivided_spectra[selector], label='{0}{1}'.format(i, j), lw=1, alpha=0.5)
             print((j + 1) * (i + 1))
             average_divided_spectra = average_divided_spectra / ((j + 1) * (i + 1))
-            pl.plot(new_open_frequency_vector, average_divided_spectra, color='k', label='Div then Avg', lw=3)
+            pl.plot(new_open_frequency_vector, average_divided_spectra, color='k', label='Div then Avg', lw=2)
             pl.xlim((freq_low, freq_high))
             pl.ylim((0, 1.5))
             pl.legend()
