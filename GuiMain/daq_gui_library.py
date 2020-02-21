@@ -2066,7 +2066,7 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
                     getattr(self, '_pol_efficiency_popup_mean_label').setText('{0:.4f}'.format(mean))
                     getattr(self, '_pol_efficiency_popup_std_label').setText('{0:.4f} {1}'.format(std, std_pct))
                     getattr(self, '_pol_efficiency_popup_current_position_label').setText('{0:.3f} [{1}/{2} complete]'.format(x_pos, i, len(x_positions) - 1))
-                    status_str = 'Start: {0} ::::: Tot Duration: {1} (s) ::::: Time Per Step {2:.2f} (s) ::::: Estimated Time Left: {3:.2f} (m)'.format(start_time_str, duration.seconds,
+                    status_str = 'Start: {0} ::::: Tot Duration: {1} (m) ::::: Time Per Step {2:.2f} (s) ::::: Estimated Time Left: {3:.2f} (m)'.format(start_time_str, duration.seconds,
                                                                                                                                                         time_per_step, time_left)
                     getattr(self, '_pol_efficiency_popup_duration_label').setText(status_str)
                     self._draw_time_stream(data_time_stream, min_, max_, '_pol_efficiency_popup_time_stream_label')
@@ -2195,6 +2195,10 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
         resolution_widget = '_single_channel_fts_popup_resolution_label'
         if hasattr(self, resolution_widget):
             if 'starting_position' in scan_params and 'ending_position' in scan_params:
+                if '_single_channel_fts_popup_repeat_scans_lineedit' in meta_data:
+                    n_scans = meta_data['_single_channel_fts_popup_repeat_scans_lineedit']
+                else:
+                    n_scans = 1
                 resolution, max_frequency = self._compute_resolution_and_max_frequency(scan_params)
                 resolution_widget = '_single_channel_fts_popup_resolution_label'
                 getattr(self, resolution_widget).setText(resolution)
@@ -2209,6 +2213,20 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
                     num_steps = 'inf'
                 getattr(self, '_single_channel_fts_popup_number_of_steps_label').setText(str(num_steps))
                 self._update_slider_setup(scan_params)
+                if self._is_float(scan_params['pause_time']) and self._is_float(scan_params['integration_time']):
+                    time_per_step = float(scan_params['pause_time']) / 1e3 + float(scan_params['integration_time']) / 1e3 + 0.1
+                else:
+                    time_per_step = 1.5
+                if num_steps == 'inf':
+                    time_estimate = 'inf'
+                    tot_time_estimate = 'inf'
+                else:
+                    time_estimate = (time_per_step * float(num_steps)) / 60.0
+                    tot_time_estimate = time_estimate * int(n_scans)
+                status_str = 'Estimated Time Per Step {0:.2f} (s) ::::: Estimated Time For Scan: {1:.2f} (m) '.format(time_per_step, time_estimate)
+                status_str += '::::: Estimated Time For All Scans {0:.2f} (m)'.format(tot_time_estimate)
+                if hasattr(self, '_single_channel_fts_popup_duration_label'):
+                    getattr(self, '_single_channel_fts_popup_duration_label').setText(status_str)
             fts_com_port = str(getattr(self, '_single_channel_fts_popup_fts_sm_com_port_combobox').currentText())
             grid_com_port = str(getattr(self, '_single_channel_fts_popup_grid_sm_com_port_combobox').currentText())
             if hasattr(self, 'sm_{0}'.format(fts_com_port)):
@@ -2225,16 +2243,17 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
         '''
         min_slider = '_single_channel_fts_popup_position_slider_min_label'
         max_slider = '_single_channel_fts_popup_position_slider_max_label'
-        getattr(self, min_slider).setText(str(scan_params['starting_position']))
-        getattr(self, max_slider).setText(str(scan_params['ending_position']))
-        slider = '_single_channel_fts_popup_position_monitor_slider'
-        getattr(self, slider).setMinimum(int(scan_params['starting_position']))
-        getattr(self, slider).setMaximum(int(scan_params['ending_position']))
-        com_port = self._get_com_port('_single_channel_fts_popup_fts_sm_com_port_combobox')
-        motor_position = 0
-        getattr(self, slider).setSliderPosition(motor_position)
-        getattr(self, slider).sliderPressed.connect(self._dummy)
-        self.starting_position = scan_params['starting_position']
+        if hasattr(self, min_slider) and hasattr(self, max_slider):
+            getattr(self, min_slider).setText(str(scan_params['starting_position']))
+            getattr(self, max_slider).setText(str(scan_params['ending_position']))
+            slider = '_single_channel_fts_popup_position_monitor_slider'
+            getattr(self, slider).setMinimum(int(scan_params['starting_position']))
+            getattr(self, slider).setMaximum(int(scan_params['ending_position']))
+            com_port = self._get_com_port('_single_channel_fts_popup_fts_sm_com_port_combobox')
+            motor_position = 0
+            getattr(self, slider).setSliderPosition(motor_position)
+            getattr(self, slider).sliderPressed.connect(self._dummy)
+            self.starting_position = scan_params['starting_position']
 
     def _compute_and_plot_fft(self, position_vector, efficiency_vector, scan_params, fig=None):
         '''
@@ -2244,8 +2263,8 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
             return None, None, None
         fft_freq_vector, fft_vector, phase_corrected_fft_vector, symmetric_position_vector, symmetric_efficiency_vector\
             = self.fourier.convert_IF_to_FFT_data(position_vector, efficiency_vector, scan_params, data_selector='All')
-        normalized_phase_corrected_fft_vector = np.abs(phase_corrected_fft_vector.real / np.max(phase_corrected_fft_vector.real))
         normalized_phase_corrected_fft_vector = np.abs(phase_corrected_fft_vector.real)
+        normalized_phase_corrected_fft_vector = np.abs(phase_corrected_fft_vector.real / np.max(phase_corrected_fft_vector.real))
         if fig is not None and len(fft_freq_vector) > 0:
             try:
                 pos_freq_selector = np.where(fft_freq_vector > 0)
@@ -2325,7 +2344,34 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
         angle = getattr(self,'_single_channel_fts_popup_desired_grid_angle_lineedit').text()
         getattr(self, 'sm_{0}'.format(polar_com_port)).finite_rotation(int(angle))
 
-    def _run_fts(self, resume_run=False):
+
+    def _run_fts_loop(self, resume_run=False):
+        meta_data = self._get_all_meta_data(popup='_single_channel_fts')
+        n_scans = meta_data['_single_channel_fts_popup_repeat_scans_lineedit']
+        if not self._is_float(n_scans):
+            n_scans = 1
+            getattr(self, '_single_channel_fts_popup_repeat_scans_lineedit').setText('1')
+            meta_data['_single_channel_fts_popup_repeat_scans_lineedit'] = str(n_scans)
+        resume_run = False
+        for i in range(int(n_scans)):
+            if i == 0 and int(n_scans) > 0:
+                getattr(self, '_single_channel_fts_popup_verify_parameters_checkbox').setCheckState(False)
+            if i > 0:
+                prev_scan_count = self.raw_data_path[0].replace('.if','').split('_')[-1]
+                next_scan_count = int(self.raw_data_path[0].replace('.if','').split('_')[-1]) + 1
+                if next_scan_count > 9:
+                    next_scan_count = str(next_scan_count).zfill(3)
+                else:
+                    next_scan_count = str(next_scan_count).zfill(2)
+                base_name_list = os.path.basename(self.raw_data_path[0].replace('.if', '')).split('_')
+                base_name_list[-1] = next_scan_count
+                base_name = '_'.join(base_name_list)
+                self.raw_data_path[0] = self.raw_data_path[0].replace(os.path.basename(self.raw_data_path[0]), base_name) + '.if'
+                print(prev_scan_count, next_scan_count)
+            self._run_fts(resume_run=resume_run, scan_count=i)
+        getattr(self, '_single_channel_fts_popup_verify_parameters_checkbox').setCheckState(True)
+
+    def _run_fts(self, resume_run=False, scan_count=0):
         '''
         Execute a data taking run
         '''
@@ -2356,19 +2402,10 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
             i = 0
             x_positions = np.arange(int(scan_params['starting_position']), int(scan_params['ending_position']) + int(scan_params['step_size']), int(scan_params['step_size']))
             getattr(self, 'sm_{0}'.format(scan_params['fts_sm_com_port'])).move_to_position(int(scan_params['starting_position']))
-            #velocity = getattr(self, 'sm_{0}'.format(scan_params['fts_sm_com_port'])).get_velocity().split('VE=')[-1]
-            #try:
-                ##velocity = int(velocity) * 0.03937 # in / s
-                #velocity = int(velocity) * 1e4
-            #except ValueError:
-                #import ipdb;ipdb.set_trace()
-            #start_in_inches = abs(int(scan_params['starting_position'])) / 1e5
-            wait = abs(int(scan_params['starting_position'])) / 2e4 
-            #wait = start_in_inches / velocity
-            print(wait)
-            #import ipdb;ipdb.set_trace()
+            wait = abs(int(scan_params['starting_position'])) / 2e4
             time.sleep(wait)
-            self._get_raw_data_save_path()
+            if scan_count == 0:
+                self._get_raw_data_save_path()
         if (self.raw_data_path is not None and len(scan_params['signal_channel']) > 0) or resume_run:
             if resume_run:
                 i = 0
@@ -2383,6 +2420,7 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
             with open(self.raw_data_path[0].replace('.if', '.json'), 'w') as meta_data_handle:
                 json.dump(meta_data, meta_data_handle)
             with open(self.raw_data_path[0], 'w') as if_save_handle:
+                getattr(self, '_single_channel_fts_popup_scans_monitor_label').setText('Scan {0} of {1} Complete'.format(0, n_scans))
                 while continue_run and i < len(x_positions):
                     position = x_positions[i]
                     getattr(self, '_single_channel_fts_popup_position_monitor_slider').setSliderPosition(position)
@@ -2413,7 +2451,7 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
                     getattr(self, '_single_channel_fts_popup_mean_label').setText('{0:.4f}'.format(mean))
                     getattr(self, '_single_channel_fts_popup_std_label').setText('{0:.4f} {1}'.format(std, std_pct))
                     getattr(self, '_single_channel_fts_popup_current_position_label').setText('{0:.3f} [{1}/{2} complete]'.format(position, i, len(x_positions) - 1))
-                    status_str = 'Start: {0} ::::: Tot Duration: {1:.2f} (s) ::::: Time Per Step {2:.2f} (s) ::::: Estimated Time Left: {3:.2f} (m)'.format(start_time_str, elapsed_time,
+                    status_str = 'Start: {0} ::::: Tot Duration: {1:.2f} (m) ::::: Time Per Step {2:.2f} (s) ::::: Estimated Time Left: {3:.2f} (m)'.format(start_time_str, elapsed_time,
                                                                                                                                                             time_per_step, time_left)
                     getattr(self, '_single_channel_fts_popup_duration_label').setText(status_str)
                     self._draw_time_stream(data_time_stream, min_, max_, '_single_channel_fts_popup_time_stream_label')
@@ -2446,14 +2484,19 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
         if len(self.fts_positions_steps) == 0:
             return None
         else:
+            meta_data = self._get_all_meta_data(popup='_single_channel_fts')
+            n_scans = meta_data['_single_channel_fts_popup_repeat_scans_lineedit']
             self._save_if_and_fft(self.fts_positions_steps, self.fts_amplitudes, scan_params)
-            response = self._quick_message('Finished Taking Data\nMoving mirror back to 0')
             getattr(self, 'sm_{0}'.format(scan_params['fts_sm_com_port'])).move_to_position(0)
             getattr(self, '_single_channel_fts_popup_position_monitor_slider').setSliderPosition(0)
             getattr(self, '_single_channel_fts_popup_current_position_label').setText('{0:.3f}'.format(0))
+            wait = abs(int(scan_params['ending_position'])) / 2e4
+            time.sleep(wait)
             continue_run = False
             #getattr(self, '_single_channel_fts_popup_stop_pushbutton').setText('Pause')
-            self._update_log()
+            getattr(self, '_single_channel_fts_popup_scans_monitor_label').setText('{0} of {1}'.format(scan_count + 1, n_scans))
+            if n_scans == '1' or int(n_scans) == scan_count + 1:
+                self._update_log()
 
     def _save_if_and_fft(self, position_vector, efficiency_vector, scan_params):
         fft_freq_vector, phase_corrected_fft_vector, fig = self._compute_and_plot_fft(self.fts_positions_steps, self.fts_amplitudes, scan_params, fig=None)
@@ -2472,7 +2515,7 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
                 file_handle.write(line)
         png_save_path = self.raw_data_path[0].replace('.if', '.png')
         shutil.copy('temp_files/temp_int.png', png_save_path)
-        response = self._quick_message('Data saved to {0}\n{1}\n{2}\n'.format(self.raw_data_path[0], self.raw_data_path[0].replace('.if', '.fft'), self.raw_data_path[0].replace('.if', '.png')))
+        #response = self._quick_message('Data saved to {0}\n{1}\n{2}\n'.format(self.raw_data_path[0], self.raw_data_path[0].replace('.if', '.fft'), self.raw_data_path[0].replace('.if', '.png')))
 
     def _make_if_fft_gif(self):
         gif_basename = os.path.basename(self.raw_data_path[0]).replace('.if', '_{0}.gif'.format(str(self.if_count).zfill(4)))
@@ -2857,6 +2900,7 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
             for file_type in ('open', 'sample_in'):
                 files = getattr(self, '{0}_files'.format(file_type))
                 for i, file_ in enumerate(files):
+                    print(file_)
                     new_frequency_vector, new_fft_vector = self._load_spectra_data(file_)
                     if i == 0:
                         average_frequency_vector = new_frequency_vector
@@ -2870,6 +2914,9 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
             sample_spectra = averaged_spectra['sample_in'] / averaged_spectra['open']
             selector = np.logical_and(average_frequency_vector > freq_low, average_frequency_vector < freq_high)
             pl.plot(average_frequency_vector[selector], sample_spectra[selector], color='r', label='Avg then Div', lw=4)
+            file_path = file_.replace('_Raw', '_AvgThenDiv')
+            print(file_path)
+            self._save_spectra_data(file_path, average_frequency_vector[selector], sample_spectra[selector])
         if getattr(self, '_sample_spectra_settings_popup_divide_then_average_checkbox').isChecked():
             for i, open_file in enumerate(self.open_files):
                 new_open_frequency_vector, new_open_fft_vector = self._load_spectra_data(open_file)
@@ -2884,8 +2931,11 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
                         average_divided_spectra += new_divivided_spectra
                     pl.plot(new_open_frequency_vector[selector], new_divivided_spectra[selector], label='{0}{1}'.format(i, j), lw=1, alpha=0.5)
             print((j + 1) * (i + 1))
+            file_path = file_.replace('_Raw', '_DivThenAvg')
+            print(file_path)
             average_divided_spectra = average_divided_spectra / ((j + 1) * (i + 1))
             pl.plot(new_open_frequency_vector, average_divided_spectra, color='k', label='Div then Avg', lw=2)
+            self._save_spectra_data(file_path, new_open_frequency_vector, average_divided_spectra)
             pl.xlim((freq_low, freq_high))
             pl.ylim((0, 1.5))
             pl.legend()
@@ -2900,6 +2950,13 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
                 frequency_vector = np.append(frequency_vector, float(frequency.strip()))
                 fft_vector = np.append(fft_vector, float(fft_value.strip()))
         return frequency_vector, fft_vector
+
+    def _save_spectra_data(self, file_path, frequency_vector, fft_vector):
+        with open(file_path, 'w') as file_path_handle:
+            for i, frequency in enumerate(frequency_vector):
+                fft_value = fft_vector[i] #/ np.max(fft_vector)
+                line ='{0:.3f}\t{1:.3f}\n'.format(frequency, fft_value)
+                file_path_handle.write(line)
 
 
     #################################################

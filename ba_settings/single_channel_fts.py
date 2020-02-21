@@ -34,10 +34,11 @@ single_channel_fts_settings.single_channel_fts_build_dict = {
                                                              '_single_channel_fts_popup_signal_channel_combobox': {'position': (7, 1, 1, 1)},
 
                                                              '_single_channel_fts_popup_integration_time_header_label': {'text': 'Integration Time (ms):', 'position': (8, 0, 1, 1)},
-                                                             '_single_channel_fts_popup_integration_time_combobox': {'position': (8, 1, 1, 1)},
+                                                             '_single_channel_fts_popup_integration_time_combobox': {'function': '_update_single_channel_fts', 'position': (8, 1, 1, 1)},
 
                                                              '_single_channel_fts_popup_pause_time_header_label': {'text': 'Pause (ms):', 'position': (8, 2, 1, 1)},
-                                                             '_single_channel_fts_popup_pause_time_combobox': {'position': (8, 3, 1, 1)},
+
+                                                             '_single_channel_fts_popup_pause_time_combobox': {'function': '_update_single_channel_fts', 'position': (8, 3, 1, 1)},
 
                                                              '_single_channel_fts_popup_sample_rate_header_label': {'text': 'Sample Rate (Hz):', 'position': (8, 4, 1, 1)},
                                                              '_single_channel_fts_popup_sample_rate_combobox': {'position': (8, 5, 1, 1)},
@@ -88,13 +89,18 @@ single_channel_fts_settings.single_channel_fts_build_dict = {
 
                                                              '_single_channel_fts_popup_fft_every_n_points_header_label': {'text': 'FFT Every N Points:', 'position': (14, 2, 1, 1)},
                                                              '_single_channel_fts_popup_fft_every_n_points_combobox': {'position': (14, 3, 1, 1)},
+
+                                                             '_single_channel_fts_popup_repeat_scans_header_label': {'text': 'Repeat N Times:', 'position': (15, 0, 1, 1)},
+                                                             '_single_channel_fts_popup_repeat_scans_lineedit': {'text': '1', 'function': '_update_single_channel_fts', 'position': (15, 1, 1, 1)},
+
+                                                             '_single_channel_fts_popup_scans_monitor_label': {'position': (15, 2, 1, 2)},
 #
 # CONTROL BUTTONS 
                                                              '_single_channel_fts_popup_control_buttons_label': {'text': 'CONTROLS', 'font': 'huge', 'color': 'blue', 'alignment': 'Center', 'position': (16, 0, 1, 6)},
 
                                                              '_single_channel_fts_popup_update_meta_data_pushbutton': {'text': 'Update Meta Data', 'function': '_update_meta_data',
                                                                                                                        'position': (17, 0, 1, 6)},
-                                                             '_single_channel_fts_popup_start_pushbutton': {'text': 'Start', 'function': '_run_fts', 'position': (18, 0, 1, 3)},
+                                                             '_single_channel_fts_popup_start_pushbutton': {'text': 'Start', 'function': '_run_fts_loop', 'position': (18, 0, 1, 3)},
                                                              '_single_channel_fts_popup_abort_pushbutton': {'text': 'Abort', 'function': '_stop_fts', 'position': (18, 3, 1, 3)},
                                                              '_single_channel_fts_popup_close_pushbutton': {'text': 'Close', 'function': '_close_single_channel_fts', 'position': (19, 0, 1, 3)},
                                                              '_single_channel_fts_popup_save_pushbutton': {'text': 'Save', 'function': '_save_plots_and_data', 'position': (19, 3, 1, 3)},

@@ -100,7 +100,7 @@ class FTSCurve():
         frequency = []
         transmission = []
         if freq_column is not None and data_column is not None:
-            with open('.\FTS_Curves\Simulations\{0}.csv'.format(file_name), 'r') as file_handle:
+            with open('.\FTS_Curves\Simulations\{0}'.format(file_name), 'r') as file_handle:
                 for line in file_handle.readlines()[1:]:
                     if len(line.split(',')[freq_column]) > 0:
                         if file_name == 'PB2ProposedPixel_Impedance':
@@ -160,6 +160,7 @@ class FTSCurve():
                 if float(data_clip[0]) < float(frequency) < float(data_clip[1]):
                     np.put(frequency_vector, i, frequency)
                     np.put(transmission_vector, i, transmission)
+                    print(transmission)
         transmission_vector = transmission_vector[frequency_vector > 0.0]
         frequency_vector = frequency_vector[frequency_vector > 0.0]
         if smoothing_factor > 0.0:
@@ -170,7 +171,12 @@ class FTSCurve():
                     frequency_value = frequency_vector[i]
                     line = '{0:.4f}\t{1:.4f}\n'.format(frequency_value, transmission_value)
                     smoothed_data_handle.write(line)
-        normalized_transmission_vector = transmission_vector / max(transmission_vector)
+        #if data_clip[0] > 0:
+        normalized_transmission_vector = transmission_vector
+        #print('skeip norm')
+        #else:
+            #normalized_transmission_vector = transmission_vector / max(transmission_vector)
+            #print('do norm')
         return frequency_vector, transmission_vector, normalized_transmission_vector
 
     def load_IF_data(self, data_path):
@@ -312,7 +318,7 @@ class FTSCurve():
 
     def divide_out_optical_element_response(self, frequency_vector, normalized_transmission_vector,
                                             optical_element='mmf', frequency_=350, transmission_threshold=0.15,
-                                            bs_thickness=10, quick_plot=False):
+                                            bs_thickness=10, quick_plot=False, data_clip=(0, 300)):
         '''
         This divides out the mmf filter response between 40 and 450 GHz (data our side of this is too noisy)
         Inputs:
@@ -344,10 +350,12 @@ class FTSCurve():
         transmission_vector_to_divide = np.interp(np.asarray(frequency_vector), np.asarray(element_frequency_vector),
                                                   np.asarray(element_transmission_vector))
 
-        corrected_transmission_vector = normalized_transmission_vector / transmission_vector_to_divide
-
         # Renormalize the vector after the division
-        corrected_transmission_vector = corrected_transmission_vector / np.max(corrected_transmission_vector)
+        if data_clip[0] == 0:
+            corrected_transmission_vector = normalized_transmission_vector / transmission_vector_to_divide
+            corrected_transmission_vector = corrected_transmission_vector / np.max(corrected_transmission_vector)
+        else:
+            corrected_transmission_vector = normalized_transmission_vector
         if quick_plot:
             fig = pl.figure()
             ax1 = fig.add_subplot(111)
@@ -422,6 +430,8 @@ class FTSCurve():
             data_clip_high = float(dict_['measurements']['data_clip_high'])
             divide_bs_5 = dict_['measurements']['divide_bs_5']
             divide_bs_10 = dict_['measurements']['divide_bs_10']
+            divide_bs_5 = False
+            divide_bs_10 = False
             if 'divide_ffts' in dict_['measurements']:
                 divide_ffts = dict_['measurements']['divide_ffts']
             add_atmosphere = dict_['measurements']['add_atm_model']
@@ -464,12 +474,13 @@ class FTSCurve():
                 data_path = dict_['measurements']['data_path']
                 open_frequency_vector, open_transmission_vector, open_normalized_transmission_vector = self.load_FFT_data(open_data_path)
                 divided_transmission_vector = transmission_vector / open_transmission_vector
+                print('open?')
             elif divide_bs_5:
                 divided_transmission_vector = self.divide_out_optical_element_response(frequency_vector, normalized_transmission_vector,
-                                                                                       optical_element='bs', bs_thickness=5)
+                                                                                       optical_element='bs', bs_thickness=5, data_clip=(data_clip_low, data_clip_high))
             elif divide_bs_10:
                 divided_transmission_vector = self.divide_out_optical_element_response(frequency_vector, normalized_transmission_vector,
-                                                                                       optical_element='bs', bs_thickness=10)
+                                                                                       optical_element='bs', bs_thickness=10, data_clip=(data_clip_low, data_clip_high))
                 print('dividing out')
             else:
                 divided_transmission_vector = normalized_transmission_vector
@@ -489,7 +500,10 @@ class FTSCurve():
                                              color=color, title=title, label=label, plot_clip=(plot_clip_low, plot_clip_high),
                                              add_atmosphere=add_atmosphere, add_90_sim=add_90_sim, add_150_sim=add_150_sim, add_220_sim=add_220_sim,
                                              add_270_sim=add_270_sim, add_co_lines=add_co_lines, y_lim=(0, 1.5), custom_order=custom_order)
+                    save_path = './FTS_Curves/temp/sample_transmission.fft'
+                    self.save_FFT_data(frequency_vector, divided_transmission_vector, save_path)
             else:
+                print('before plot')
                 fig = self.plot_FFT_data(frequency_vector, divided_transmission_vector, fig=fig,
                                          color=color, title=title, label=label, plot_clip=(plot_clip_low, plot_clip_high),
                                          add_atmosphere=add_atmosphere, add_90_sim=add_90_sim, add_150_sim=add_150_sim, add_220_sim=add_220_sim,
