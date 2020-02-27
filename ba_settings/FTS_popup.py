@@ -6,9 +6,9 @@ ftscurve_settings_popup_settings.simulated_bands = ['90', '150', '220', '270']
 ftscurve_settings_popup_settings.ftscurve_popup_build_dict = {
                                                               '_common_settings': {'font': 'med'},
                                                               '_ftscurve_settings_popup_close_pushbutton': {'text': 'Close', 'function': '_close_fts',
-                                                                                                           'width': 200, 'height': 150, 'position': (0, 0, 1, 2)},
+                                                                                                            'width': 200, 'height': 150, 'position': (0, 0, 1, 2)},
                                                               '_ftscurve_settings_popup_run_pushbutton': {'text': 'Run', 'function': '_run_analysis',
-                                                                                                         'width': 200, 'height': 150, 'position': (0, 3, 1, 2)},
+                                                                                                          'width': 200, 'height': 150, 'position': (0, 3, 1, 2)},
                                                               '_ftscurve_settings_popup_selected_file_label': {'text': 'Selected File', 'position': (2, 0, 1, 1)},
                                                               '_ftscurve_settings_popup_sample_name_label': {'text': 'Sample Name', 'position': (3, 0, 1, 1)},
                                                               '_ftscurve_settings_popup_plot_title_label': {'text': 'Plot Title', 'position': (4, 0, 1, 1)},
@@ -29,5 +29,6 @@ ftscurve_settings_popup_settings.ftscurve_popup_build_dict = {
                                                               '_ftscurve_settings_popup_apodization_label': {'text': 'Apodization:', 'position': (20, 0, 1, 1)},
                                                               '_ftscurve_settings_popup_plot_interferogram_label': {'text': 'Plot Interferogram?', 'position': (21, 0, 1, 1)},
                                                               '_ftscurve_settings_popup_add_loacl_fft_label': {'text': 'Plot Local FFT?', 'position': (22, 0, 1, 1)},
-                                                              '_ftscurve_settings_popup_divide_ffts_label': {'text': 'Divide FFTs?', 'position': (23, 0, 1, 1)},
+                                                              '_ftscurve_settings_popup_normalize_post_clip_label': {'text': 'Normalize Post Clip', 'position': (23, 0, 1, 1)},
+                                                              '_ftscurve_settings_popup_divide_ffts_label': {'text': 'Divide FFTs?', 'position': (24, 0, 1, 1)},
                                                               }
