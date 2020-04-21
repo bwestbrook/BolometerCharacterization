@@ -61,7 +61,11 @@ class Fourier():
             position_vector = self.make_data_symmetric(position_vector, is_right=False, position=True)
         if apodization_type is None:
             #print(scan_param_dict['apodization_type'])
-            apodization_type = scan_param_dict['apodization_type']
+            #import ipdb;ipdb.set_trace()
+            if 'measurements' in scan_param_dict:
+                apodization_type = scan_param_dict['measurements']['apodization']
+            else:
+                apodization_type = scan_param_dict['apodization_type']
         #if (efficiency_vector == np.nan).any():
             #print('post if symmeterizing ')
             #import ipdb;ipdb.set_trace()

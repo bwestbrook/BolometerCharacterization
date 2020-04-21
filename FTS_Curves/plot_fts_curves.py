@@ -100,7 +100,11 @@ class FTSCurve():
         frequency = []
         transmission = []
         if freq_column is not None and data_column is not None:
-            with open('.\FTS_Curves\Simulations\{0}'.format(file_name), 'r') as file_handle:
+            if '.csv' in file_name:
+                file_name = '.\FTS_Curves\Simulations\{0}'.format(file_name)
+            else:
+                file_name = '.\FTS_Curves\Simulations\{0}.csv'.format(file_name)
+            with open(file_name, 'r') as file_handle:
                 for line in file_handle.readlines()[1:]:
                     if len(line.split(',')[freq_column]) > 0:
                         if file_name == 'PB2ProposedPixel_Impedance':
@@ -136,7 +140,7 @@ class FTSCurve():
         print(bandwidth, np.sum(np.asarray(transmission)))
         return ax, bandwidth
 
-    def load_FFT_data(self, data_path, smoothing_factor=0.01, data_clip=(10, 600)):
+    def load_FFT_data(self, data_path, smoothing_factor=0.01, data_clip=(10, 600), normalize_post_clip=False):
         '''
         Inputs:
             data_path:  the path to the .fft data file (string)
@@ -174,6 +178,8 @@ class FTSCurve():
         #if data_clip[0] > 0:
         normalized_transmission_vector = transmission_vector
         #print('skeip norm')
+        if normalize_post_clip:
+            normalized_transmission_vector = normalized_transmission_vector / np.max(normalized_transmission_vector)
         #else:
             #normalized_transmission_vector = transmission_vector / max(transmission_vector)
             #print('do norm')
@@ -445,6 +451,7 @@ class FTSCurve():
             plot_interferogram = float(dict_['measurements']['plot_interferogram'])
             add_local_fft = float(dict_['measurements']['add_local_fft'])
             apodization = dict_['measurements']['apodization']
+            normalize_post_clip = dict_['measurements']['normalize_post_clip']
             if fig is None:
                 if plot_interferogram:
                     fig = self.create_plot_for_if_and_fft(col_count=len(list_of_input_dicts))
@@ -468,7 +475,7 @@ class FTSCurve():
                 normalized_phase_corrected_fft_vector = np.abs(phase_corrected_fft_vector.real / np.max(phase_corrected_fft_vector.real))
                 fig = self.plot_FFT_data(fft_freq_vector * 1e-9, normalized_phase_corrected_fft_vector, fig, color='r', label='Local {0} {1}'.format(interferogram_data_select, label))
             frequency_vector, transmission_vector, normalized_transmission_vector = self.load_FFT_data(data_path, smoothing_factor=smoothing_factor,
-                                                                                                       data_clip=(data_clip_low, data_clip_high))
+                                                                                                       data_clip=(data_clip_low, data_clip_high), normalize_post_clip=normalize_post_clip)
             if run_open_comparison:
                 open_data_path = dict_['open_air']['data_path']
                 data_path = dict_['measurements']['data_path']

@@ -2355,21 +2355,25 @@ class DaqGuiTemplate(QtWidgets.QWidget, GuiBuilder):
             meta_data['_single_channel_fts_popup_repeat_scans_lineedit'] = str(n_scans)
         resume_run = False
         for i in range(int(n_scans)):
+            do_run = True
             if i == 0 and int(n_scans) > 0:
                 getattr(self, '_single_channel_fts_popup_verify_parameters_checkbox').setCheckState(False)
             if i > 0:
-                prev_scan_count = self.raw_data_path[0].replace('.if','').split('_')[-1]
-                next_scan_count = int(self.raw_data_path[0].replace('.if','').split('_')[-1]) + 1
-                if next_scan_count > 9:
-                    next_scan_count = str(next_scan_count).zfill(3)
+                if self.raw_data_path is None:
+                    do_run = False
                 else:
-                    next_scan_count = str(next_scan_count).zfill(2)
-                base_name_list = os.path.basename(self.raw_data_path[0].replace('.if', '')).split('_')
-                base_name_list[-1] = next_scan_count
-                base_name = '_'.join(base_name_list)
-                self.raw_data_path[0] = self.raw_data_path[0].replace(os.path.basename(self.raw_data_path[0]), base_name) + '.if'
-                print(prev_scan_count, next_scan_count)
-            self._run_fts(resume_run=resume_run, scan_count=i)
+                    prev_scan_count = self.raw_data_path[0].replace('.if','').split('_')[-1]
+                    next_scan_count = int(self.raw_data_path[0].replace('.if','').split('_')[-1]) + 1
+                    if next_scan_count > 9:
+                        next_scan_count = str(next_scan_count).zfill(3)
+                    else:
+                        next_scan_count = str(next_scan_count).zfill(2)
+                    base_name_list = os.path.basename(self.raw_data_path[0].replace('.if', '')).split('_')
+                    base_name_list[-1] = next_scan_count
+                    base_name = '_'.join(base_name_list)
+                    self.raw_data_path[0] = self.raw_data_path[0].replace(os.path.basename(self.raw_data_path[0]), base_name) + '.if'
+            if do_run:
+                self._run_fts(resume_run=resume_run, scan_count=i)
         getattr(self, '_single_channel_fts_popup_verify_parameters_checkbox').setCheckState(True)
 
     def _run_fts(self, resume_run=False, scan_count=0):
@@ -2421,7 +2425,8 @@ class DaqGuiTemplate(QtWidgets.QWidget, GuiBuilder):
             with open(self.raw_data_path[0].replace('.if', '.json'), 'w') as meta_data_handle:
                 json.dump(meta_data, meta_data_handle)
             with open(self.raw_data_path[0], 'w') as if_save_handle:
-                getattr(self, '_single_channel_fts_popup_scans_monitor_label').setText('Scan {0} of {1} Complete'.format(0, n_scans))
+                n_scans = meta_data['_single_channel_fts_popup_repeat_scans_lineedit']
+                getattr(self, '_single_channel_fts_popup_scans_monitor_label').setText('Scan {0} of {1} Complete'.format(scan_count, n_scans))
                 while continue_run and i < len(x_positions):
                     position = x_positions[i]
                     getattr(self, '_single_channel_fts_popup_position_monitor_slider').setSliderPosition(position)
@@ -3199,7 +3204,13 @@ class DaqGuiTemplate(QtWidgets.QWidget, GuiBuilder):
             self._create_and_place_widget(unique_widget_name, **widget_settings)
             getattr(self, unique_widget_name).setCheckState(False)
             row += 1
-            # Add an "Divide FFTs" checkbox
+            # Add an "normalize post clip" checkbox
+            unique_widget_name = '_{0}_{1}_normalize_post_clip_checkbox'.format(popup_name, col)
+            widget_settings = {'position': (row, col, 1, 2)}
+            self._create_and_place_widget(unique_widget_name, **widget_settings)
+            getattr(self, unique_widget_name).setCheckState(False)
+            row += 1
+            # Add an "Divide FFTs" checkbox and normalize after 
             if i == 0:
                 unique_widget_name = '_{0}_{1}_divide_ffts_checkbox'.format(popup_name, col)
                 widget_settings = {'position': (row, col, 1, 2)}
@@ -3214,7 +3225,7 @@ class DaqGuiTemplate(QtWidgets.QWidget, GuiBuilder):
                         'divide_mmf', 'add_atm_model', 'divide_bs_5', 'divide_bs_10', 'step_size', 'steps_per_point',
                         'add_sim_band', 'add_co_lines', 'color', 'normalize', 'plot_title', 'plot_label',
                         'interferogram_data_select', 'plot_interferogram', 'add_local_fft', 'data_selector', 'apodization',
-                        'divide_ffts']
+                        'divide_ffts', 'normalize_post_clip']
         for selected_file, col in self.selected_files_col_dict.items():
             input_dict = {'measurements': {'data_path': selected_file}}
             for setting in fts_settings:
