@@ -1,1 +1,1 @@
-python3 GuiMain\BoloDAQ.py
+python3 GuiMain\daq_gui_library.py

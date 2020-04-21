@@ -44,11 +44,11 @@ pause_run = False
 do_cycle_fridge = False
 root = Tk()
 
-class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
+class DaqGuiTemplate(QtWidgets.QWidget, GuiBuilder):
 
 
     def __init__(self, screen_resolution):
-        super(DAQGuiTemplate, self).__init__()
+        super(DaqGuiTemplate, self).__init__()
         self.grid = QtWidgets.QGridLayout()
         self.grid.setVerticalSpacing(0)
         self.setLayout(self.grid)
@@ -78,6 +78,7 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
         self.fourier = Fourier()
         self.loaded_spectra_data_path = None
         self._create_log()
+        
 
     def __apply_settings__(self, settings):
         for setting in dir(settings):
@@ -3907,4 +3908,11 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
         pprint(list_of_input_dicts)
         pol = POLCurve()
         pol.run(list_of_input_dicts)
+
+if __name__ == '__main__':
+    qt_app = QtWidgets.QApplication(sys.argv)
+    screen_resolution = qt_app.desktop().screenGeometry()
+    gui = DaqGuiTemplate(screen_resolution)
+    gui.show()
+    exit(qt_app.exec_())
 
