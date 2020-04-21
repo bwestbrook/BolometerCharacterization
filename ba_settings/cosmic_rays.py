@@ -99,11 +99,11 @@ cosmic_rays_settings.cosmic_rays_build_dict = {
 cosmic_rays_settings.cosmic_rays_combobox_entry_dict = {
                                                           '_cosmic_rays_popup_daq_channel_1_combobox': ['0', '1', '2', '3'],
                                                           '_cosmic_rays_popup_daq_1_sample_rate_combobox': ['1000', '3000', '6000'],
-                                                          '_cosmic_rays_popup_daq_1_integration_time_combobox': ['1000', '10000', '20000', '30000', '600000'],
+                                                          '_cosmic_rays_popup_daq_1_integration_time_combobox': ['1000', '10000', '20000', '30000', '300000', '600000'],
                                                           '_cosmic_rays_popup_squid_1_select_combobox': ['', '1', '2', '3', '4', '5', '6'],
                                                           '_cosmic_rays_popup_daq_channel_2_combobox': ['0', '1', '2', '3'],
                                                           '_cosmic_rays_popup_daq_2_sample_rate_combobox': ['1000', '3000', '6000'],
-                                                          '_cosmic_rays_popup_daq_2_integration_time_combobox': ['1000', '10000', '20000', '30000', '600000'],
+                                                          '_cosmic_rays_popup_daq_2_integration_time_combobox': ['1000', '10000', '20000', '30000', '300000', '600000'],
                                                           '_cosmic_rays_popup_squid_2_select_combobox': ['', '1', '2', '3', '4', '5', '6'],
                                                           #'_cosmic_rays_popup_daq_channel_3_combobox': ['0', '1', '2', '3'],
                                                           #'_cosmic_rays_popup_grt_range_combobox': ['2', '20', '200', '2K', '20K', '200K', '2M'],

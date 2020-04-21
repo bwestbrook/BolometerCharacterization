@@ -2222,9 +2222,14 @@ class DAQGuiTemplate(QtWidgets.QWidget, GuiBuilder):
                     tot_time_estimate = 'inf'
                 else:
                     time_estimate = (time_per_step * float(num_steps)) / 60.0
+                    if not self._is_float(n_scans):
+                        n_scans = 1
                     tot_time_estimate = time_estimate * int(n_scans)
-                status_str = 'Estimated Time Per Step {0:.2f} (s) ::::: Estimated Time For Scan: {1:.2f} (m) '.format(time_per_step, time_estimate)
-                status_str += '::::: Estimated Time For All Scans {0:.2f} (m)'.format(tot_time_estimate)
+                if self._is_float(time_per_step) and self._is_float(time_estimate):
+                    status_str = 'Error'
+                else:
+                    status_str = 'Estimated Time Per Step {0:.2f} (s) ::::: Estimated Time For Scan: {1:.2f} (m) '.format(time_per_step, time_estimate)
+                    status_str += '::::: Estimated Time For All Scans {0:.2f} (m)'.format(tot_time_estimate)
                 if hasattr(self, '_single_channel_fts_popup_duration_label'):
                     getattr(self, '_single_channel_fts_popup_duration_label').setText(status_str)
             fts_com_port = str(getattr(self, '_single_channel_fts_popup_fts_sm_com_port_combobox').currentText())
