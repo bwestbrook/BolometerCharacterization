@@ -20,7 +20,7 @@ from datetime import datetime
 from copy import copy
 from PyQt5 import QtCore, QtGui, QtWidgets
 from libraries.gen_class import Class
-from ba_settings.all_settings import settings
+from gui_settings.all_settings import settings
 from RT_Curves.plot_rt_curves import RTCurve
 from IV_Curves.plot_iv_curves import IVCurve
 from FTS_Curves.plot_fts_curves import FTSCurve
