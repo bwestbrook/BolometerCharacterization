@@ -72,9 +72,6 @@ class DaqGuiTemplate(QtWidgets.QMainWindow, GuiBuilder):
         self.selected_files = []
         self.current_stepper_position = 100
         self.user_desktop_path = os.path.expanduser('~')
-        self.fts_analyzer = FTSanalyzer()
-        self.real_daq = DAQ()
-        self.active_devices = self.real_daq.get_active_devices()
         self.screen_resolution = screen_resolution
         self.monitor_dpi = 120.0
         self.today = datetime.now()
@@ -87,9 +84,12 @@ class DaqGuiTemplate(QtWidgets.QMainWindow, GuiBuilder):
         self.daq_main_panel_widget.showMaximized()
         self.active_ports = self.get_active_serial_ports()
         self.raw_data_path = None
+        self.fts_analyzer = FTSanalyzer()
         self.fts = FTSCurve()
         self.fourier = Fourier()
         self.loaded_spectra_data_path = None
+        self.real_daq = DAQ()
+        self.active_devices = self.real_daq.get_active_devices()
 
     def __apply_settings__(self, settings):
         for setting in dir(settings):
