@@ -44,18 +44,25 @@ pause_run = False
 do_cycle_fridge = False
 root = Tk()
 
-class DaqGuiTemplate(QtWidgets.QWidget, GuiBuilder):
+class DaqGuiTemplate(QtWidgets.QMainWindow, GuiBuilder):
 
 
-    def __init__(self, screen_resolution):
+    def __init__(self, screen_resolution, qt_app):
         super(DaqGuiTemplate, self).__init__()
-        self.grid = QtWidgets.QGridLayout()
-        self.grid.setVerticalSpacing(0)
-        self.setLayout(self.grid)
+        self.qt_app = qt_app
         self.__apply_settings__(settings)
-        self._create_main_window('daq_main_panel_widget')
+        #self._create_main_window('daq_main_panel_widget')
         self.simulated_bands_folder = './FTS_Curves/Simulations'
         self.sample_dict_folder = './Sample_Dicts'
+        grid = QtWidgets.QGridLayout()
+        self.central_widget = QtWidgets.QWidget()
+        self.central_widget.setWhatsThis('cw_panel')
+        self.central_widget.setLayout(grid)
+        self.setCentralWidget(self.central_widget)
+        self.tool_and_menu_bar_json_path = os.path.join('gui_settings', 'tool_and_menu_bars.json')
+        self.bcg_setup_status_bar()
+        self.bcg_setup_template()
+        self.gb_setup_menu_and_tool_bars(self.tool_and_menu_bar_json_path)
         self.selected_files = []
         self.current_stepper_position = 100
         self.user_desktop_path = os.path.expanduser('~')
@@ -78,7 +85,6 @@ class DaqGuiTemplate(QtWidgets.QWidget, GuiBuilder):
         self.fourier = Fourier()
         self.loaded_spectra_data_path = None
         self._create_log()
-        
 
     def __apply_settings__(self, settings):
         for setting in dir(settings):
@@ -3912,7 +3918,7 @@ class DaqGuiTemplate(QtWidgets.QWidget, GuiBuilder):
 if __name__ == '__main__':
     qt_app = QtWidgets.QApplication(sys.argv)
     screen_resolution = qt_app.desktop().screenGeometry()
-    gui = DaqGuiTemplate(screen_resolution)
+    gui = DaqGuiTemplate(screen_resolution, qt_app)
     gui.show()
     exit(qt_app.exec_())
 
