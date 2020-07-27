@@ -1,1 +1,1 @@
-python GuiMain\daq_gui_library.py
+python bd_source\bolo_daq.py
