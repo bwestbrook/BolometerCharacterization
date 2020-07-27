@@ -1,0 +1,74 @@
+{
+    "Bottom": {},
+    "Left": {},
+    "Right": {},
+    "Top": {
+        "01_File": {
+            "01_Quit": {
+                "Shortcut": "Ctrl+Q",
+                "StatusTip": "Quit",
+                "ToolTip": "Quit ",
+                "function": "bd_close_main",
+                "icon": "close.png"
+            },
+            "02_Configure DAQ": {
+                "StatusTip": "Configure DAQ",
+                "ToolTip": "Configure DAQ",
+                "function": "bd_configure_daq",
+                "icon": "daq.png"
+            },
+            "03_Configure Steppers": {
+                "StatusTip": "Configure Stepper",
+                "ToolTip": "Configure Stepper",
+                "function": "bd_configure_com_ports",
+                "icon": "steppermotor.png"
+            },
+            "04_Multimeter": {
+                "StatusTip": "MultiMeter",
+                "ToolTip": "MultiMeter",
+                "function": "bd_multimeter",
+                "icon": "multimeter.png"
+            },
+            "05_Run": {
+                "Shortcut": "Ctrl+R",
+                "StatusTip": "Run",
+                "ToolTip": "Run ",
+                "icon": "run.png"
+            }
+        },
+        "02_DAQ_Mode": {
+            "01_XY Collector": {
+                "Shortcut": "1",
+                "StatusTip": "XY Collector",
+                "ToolTip": "XY Collector",
+                "function": "bd_xy_collector",
+                "icon": "scatter.png"
+            },
+            "02_FTS": {
+                "Shortcut": "2",
+                "StatusTip": "Fourier Transform Spectrometer",
+                "ToolTip": "FTS",
+                "function": "bd_single_channel_fts",
+                "icon": "fourier.png"
+            },
+            "03_Beam Map": {
+                "Shortcut": "3",
+                "StatusTip": "Beam Map",
+                "ToolTip": "Beam Map",
+                "icon": "beammap.png"
+            },
+            "04_Cosmic Rays": {
+                "Shortcut": "5",
+                "StatusTip": "Cosmic Rays",
+                "ToolTip": "Cosmic Rays",
+                "icon": "cosmicrays.png"
+            },
+            "04_Pol Efficieny": {
+                "Shortcut": "4",
+                "StatusTip": "Polarization Efficiency",
+                "ToolTip": "Pol Eff",
+                "icon": "poleff.png"
+            }
+        }
+    }
+}
