@@ -1,6 +1,6 @@
-from libraries.gen_class import Class
+from GuiBuilder.gui_builder import GenericClass
 
-rtcurve_settings_popup_settings = Class()
+rtcurve_settings_popup_settings = GenericClass()
 
 rtcurve_settings_popup_settings.rtcurve_popup_build_dict = {
                                                             '_common_settings': {'font': 'med'},

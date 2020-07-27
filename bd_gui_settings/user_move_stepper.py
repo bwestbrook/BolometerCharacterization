@@ -1,6 +1,6 @@
-from libraries.gen_class import Class
+from GuiBuilder.gui_builder import GenericClass
 
-user_move_stepper_settings = Class()
+user_move_stepper_settings = GenericClass()
 
 user_move_stepper_settings.user_move_stepper_build_dict = {
                                                            '_common_settings': {'font': 'large'},

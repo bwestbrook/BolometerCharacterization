@@ -1,6 +1,6 @@
-from libraries.gen_class import Class
+from GuiBuilder.gui_builder import GenericClass
 
-data_analysis_popup_settings = Class()
+data_analysis_popup_settings = GenericClass()
 
 data_analysis_popup_settings.data_analysis_popup_build_dict = {
         '_common_settings': {'font': 'large'},

@@ -1,6 +1,6 @@
-from libraries.gen_class import Class
+from GuiBuilder.gui_builder import GenericClass
 
-ivcurve_settings_popup_settings = Class()
+ivcurve_settings_popup_settings = GenericClass()
 
 ivcurve_settings_popup_settings.ivcurve_popup_build_dict = {
                                                             '_common_settings': {'font': 'med'},

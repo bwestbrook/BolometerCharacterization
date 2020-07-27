@@ -1,7 +1,7 @@
 import numpy as np
-from libraries.gen_class import Class
+from GuiBuilder.gui_builder import GenericClass
 
-beam_mapper_settings = Class()
+beam_mapper_settings = GenericClass()
 
 beam_mapper_settings.beam_mapper_build_dict = {
                                                '_common_settings': {'font': 'large'},

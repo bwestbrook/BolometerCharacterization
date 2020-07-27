@@ -1,6 +1,6 @@
-from libraries.gen_class import Class
+from GuiBuilder.gui_builder import GenericClass
 
-fridge_cycle_settings = Class()
+fridge_cycle_settings = GenericClass()
 
 fridge_cycle_settings.fridge_cycle_popup_build_dict = {
                                                        '_common_settings': {'font': 'large'},

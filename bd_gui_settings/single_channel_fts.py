@@ -1,6 +1,6 @@
-from libraries.gen_class import Class
+from GuiBuilder.gui_builder import GenericClass
 
-single_channel_fts_settings = Class()
+single_channel_fts_settings = GenericClass()
 
 single_channel_fts_settings.single_channel_fts_build_dict = {
                                                              '_common_settings': {'font': 'large'},

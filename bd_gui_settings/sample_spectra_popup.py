@@ -1,6 +1,6 @@
-from libraries.gen_class import Class
+from GuiBuilder.gui_builder import GenericClass
 
-sample_spectra_settings_popup_settings = Class()
+sample_spectra_settings_popup_settings = GenericClass()
 sample_spectra_settings_popup_settings.simulated_bands = ['90', '150', '220', '270']
 
 sample_spectra_settings_popup_settings.sample_spectra_settings_popup_build_dict = {

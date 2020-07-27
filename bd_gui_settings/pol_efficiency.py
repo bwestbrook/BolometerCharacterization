@@ -1,6 +1,6 @@
-from libraries.gen_class import Class
+from GuiBuilder.gui_builder import GenericClass
 
-pol_efficiency_settings = Class()
+pol_efficiency_settings = GenericClass()
 
 pol_efficiency_settings.pol_efficiency_build_dict = {
                                                      '_common_settings': {'font': 'large'},

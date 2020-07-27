@@ -1,6 +1,6 @@
-from libraries.gen_class import Class
+from GuiBuilder.gui_builder import GenericClass
 
-multimeter_settings = Class()
+multimeter_settings = GenericClass()
 
 multimeter_settings.multimeter_popup_build_dict = {
     '_common_settings': {

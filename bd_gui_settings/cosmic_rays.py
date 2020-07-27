@@ -1,6 +1,6 @@
-from libraries.gen_class import Class
+from GuiBuilder.gui_builder import GenericClass
 
-cosmic_rays_settings = Class()
+cosmic_rays_settings = GenericClass()
 
 cosmic_rays_settings.cosmic_rays_build_dict = {
                                                              '_common_settings': {'font': 'large'},

@@ -1,6 +1,6 @@
-from libraries.gen_class import Class
+from GuiBuilder.gui_builder import GenericClass
 
-taucurve_settings_popup_settings = Class()
+taucurve_settings_popup_settings = GenericClass()
 
 taucurve_settings_popup_settings.taucurve_popup_build_dict = {
                                                               '_common_settings': {'font': 'med'},

@@ -1,6 +1,6 @@
-from libraries.gen_class import Class
+from GuiBuilder.gui_builder import GenericClass
 
-power_supply_settings = Class()
+power_supply_settings = GenericClass()
 
 power_supply_settings.power_supply_popup_build_dict = {
                                                        '_common_settings': {'font': 'large'},

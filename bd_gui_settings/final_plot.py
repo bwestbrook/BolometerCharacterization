@@ -1,6 +1,6 @@
-from libraries.gen_class import Class
+from GuiBuilder.gui_builder import GenericClass
 
-final_plot_settings = Class()
+final_plot_settings = GenericClass()
 
 final_plot_settings.final_plot_build_dict = {                '_common_settings': {'font': 'large'},
 

@@ -1,6 +1,6 @@
-from libraries.gen_class import Class
+from GuiBuilder.gui_builder import GenericClass
 
-polcurve_settings_popup_settings = Class()
+polcurve_settings_popup_settings = GenericClass()
 
 polcurve_settings_popup_settings.polcurve_popup_build_dict = {
                                                               '_common_settings': {'font': 'med'},

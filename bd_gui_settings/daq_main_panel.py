@@ -1,6 +1,6 @@
-from libraries.gen_class import Class
+from GuiBuilder.gui_builder import GenericClass
 
-daq_main_panel_settings = Class()
+daq_main_panel_settings = GenericClass()
 
 daq_main_panel_settings.daq_main_panel_build_dict = {
                                                      '_common_settings': {'font': 'huge'},

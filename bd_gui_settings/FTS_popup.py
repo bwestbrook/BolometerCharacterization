@@ -1,6 +1,6 @@
-from libraries.gen_class import Class
+from GuiBuilder.gui_builder import GenericClass
 
-ftscurve_settings_popup_settings = Class()
+ftscurve_settings_popup_settings = GenericClass()
 ftscurve_settings_popup_settings.simulated_bands = ['90', '150', '220', '270']
 
 ftscurve_settings_popup_settings.ftscurve_popup_build_dict = {

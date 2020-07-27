@@ -1,6 +1,6 @@
-from libraries.gen_class import Class
+from GuiBuilder.gui_builder import GenericClass
 
-time_constant_settings = Class()
+time_constant_settings = GenericClass()
 
 time_constant_settings.time_constant_popup_build_dict = {
                                                          '_common_settings': {'font': 'huge'},

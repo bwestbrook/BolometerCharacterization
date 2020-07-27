@@ -1,6 +1,6 @@
-from libraries.gen_class import Class
+from GuiBuilder.gui_builder import GenericClass
 
-lock_in_settings = Class()
+lock_in_settings = GenericClass()
 
 lock_in_settings.lock_in_popup_build_dict = {
                                              '_common_settings': {'font': 'large'},

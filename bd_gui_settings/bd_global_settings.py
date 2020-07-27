@@ -1,5 +1,5 @@
 from PyQt5 import QtCore, QtGui
-from libraries.gen_class import Class
+from GuiBuilder.gui_builder import GenericClass
 from .RT_popup import rtcurve_settings_popup_settings
 from .IV_popup import ivcurve_settings_popup_settings
 from .FTS_popup import ftscurve_settings_popup_settings
@@ -23,7 +23,7 @@ from .lock_in import lock_in_settings
 from .power_supply import power_supply_settings
 
 
-settings = Class()
+settings = GenericClass()
 
 # Individual files for various panels
 

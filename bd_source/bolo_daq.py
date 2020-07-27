@@ -19,8 +19,8 @@ from pprint import pprint, pformat
 from datetime import datetime
 from copy import copy
 from PyQt5 import QtCore, QtGui, QtWidgets
-from libraries.gen_class import Class
-from bd_gui_settings.global_settings import settings
+#from libraries.gen_class import Class
+from bd_gui_settings.bd_global_settings import settings
 #from RT_Curves.plot_rt_curves import RTCurve
 #from IV_Curves.plot_iv_curves import IVCurve
 #from FTS_Curves.plot_fts_curves import FTSCurve
@@ -34,7 +34,8 @@ from bd_gui_settings.global_settings import settings
 #from PowerSupply.power_supply import PowerSupply
 #from FridgeCycle.fridge_cycle import FridgeCycle
 from GuiBuilder.gui_builder import GuiBuilder
-from Motor_Driver.stepper_motor import stepper_motor
+#from GuiBuilder.gui_builder import GenericClass
+#from Motor_Driver.stepper_motor import stepper_motor
 from bd_lib.daq import DAQ
 from bd_lib.lab_serial import lab_serial
 

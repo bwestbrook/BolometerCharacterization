@@ -1,6 +1,6 @@
-from libraries.gen_class import Class
+from GuiBuilder.gui_builder import GenericClass
 
-xy_collector_settings = Class()
+xy_collector_settings = GenericClass()
 
 xy_collector_settings.xy_collector_build_dict = {
     '_common_settings': {
