@@ -124,12 +124,14 @@ class DaqGuiTemplate(QtWidgets.QMainWindow, GuiBuilder):
                 data_log_handle.write(header)
 
     def bd_update_log(self):
+        if not hasattr(self, 'data_log_path'):
+            self.bd_create_log()
         if hasattr(self, 'raw_data_path') and self.raw_data_path is not None:
             temp_log_file_name = 'temp_log.txt'
-            notes = self.quick_info_gather()
+            notes = self.gb_quick_info_gather()
             response = self.gb_quick_message('Use Data in Analysis?', add_yes=True, add_no=True)
             if response == QtWidgets.QMessageBox.Yes:
-                self.copy_file_to_analysis_folder()
+                self.bd_copy_file_to_analysis_folder()
             with open(temp_log_file_name, 'w') as temp_log_handle:
                 with open(self.data_log_path, 'r') as log_handle:
                     for line in log_handle.readlines():
@@ -252,11 +254,11 @@ class DaqGuiTemplate(QtWidgets.QMainWindow, GuiBuilder):
     def bd_verify_params(self):
         sender = str(self.sender().whatsThis())
         if '_single_channel_fts' in sender:
-            meta_data = self.get_all_meta_data(popup='_single_channel_fts')
+            meta_data = self.bd_get_all_meta_data(popup='_single_channel_fts')
             scan_params = self.get_all_params(meta_data, settings.fts_scan_params, 'single_channel_fts')
             params_str = pformat(scan_params, indent=2)
         if '_pol_efficiency' in sender:
-            meta_data = self.get_all_meta_data(popup='_pol_efficiency')
+            meta_data = self.bd_get_all_meta_data(popup='_pol_efficiency')
             scan_params = self.get_all_params(meta_data, settings.pol_efficiency_scan_params, 'pol_efficiency')
             params_str = pformat(scan_params, indent=2)
         response = self.gb_quick_message(params_str, add_cancel=True, add_apply=True)
@@ -289,7 +291,7 @@ class DaqGuiTemplate(QtWidgets.QMainWindow, GuiBuilder):
         if total_len_of_names == 0 and os.path.exists(sample_dict_path):
             warning_msg = 'Warning! {0} exists and you are '.format(sample_dict_path)
             warning_msg += 'going to overwrite with blank names for all channels'
-            response = self.quick_info_gather(warning_msg)
+            response = self.gb_quick_info_gather(warning_msg)
             #response = self.gb_quick_message(warning_msg, add_save=True, add_cancel=True)
 
             if response == QtWidgets.QMessageBox.Save:
@@ -342,9 +344,9 @@ class DaqGuiTemplate(QtWidgets.QMainWindow, GuiBuilder):
 
     def bd_update_meta_data(self, meta_data=None):
         if 'xy_collector' in self.sender().whatsThis():
-            meta_data = self.get_all_meta_data(popup='xy_collector')
+            meta_data = self.bd_get_all_meta_data(popup='xy_collector')
         elif 'single_channel_fts' in self.sender().whatsThis():
-            meta_data = self.get_all_meta_data(popup='single_channel_fts')
+            meta_data = self.bd_get_all_meta_data(popup='single_channel_fts')
         if self.raw_data_path is not None and meta_data is not None:
             with open(self.raw_data_path[0].replace('.dat', '.json'), 'w') as meta_data_handle:
                 json.dump(meta_data, meta_data_handle)
@@ -616,7 +618,7 @@ class DaqGuiTemplate(QtWidgets.QMainWindow, GuiBuilder):
         self.raw_data_path = [QtWidgets.QFileDialog.getOpenFileName(self, directory=data_folder)[0]]
         self.parsed_data_path = [self.raw_data_path[0].replace('.dat', '_calibrated.dat')]
         self.plotted_data_path = [self.raw_data_path[0].replace('.dat', '_plotted.png')]
-        meta_data = self.get_all_meta_data(popup='xy_collector')
+        meta_data = self.bd_get_all_meta_data(popup='xy_collector')
         plot_params = self.get_all_params(meta_data, settings.xy_collector_plot_params, 'xy_collector')
         self.xdata, self.ydata, self.ystd = [], [], []
         with open(self.raw_data_path[0], 'r') as data_file_handle:
@@ -677,7 +679,7 @@ class DaqGuiTemplate(QtWidgets.QMainWindow, GuiBuilder):
         if sender is not None:
             sender = str(self.sender().whatsThis())
         if sender == '_xy_collector_popup_save_pushbutton':
-            meta_data = self.get_all_meta_data(popup='xy_collector')
+            meta_data = self.bd_get_all_meta_data(popup='xy_collector')
             plot_params = self.get_all_params(meta_data, settings.xy_collector_plot_params, 'xy_collector')
             with open(self.raw_data_path[0].replace('.dat', '.json'), 'w') as meta_data_handle:
                 json.dump(meta_data, meta_data_handle)
@@ -740,7 +742,7 @@ class DaqGuiTemplate(QtWidgets.QMainWindow, GuiBuilder):
             self.adjust_final_plot_popup('new')
 
     def bd_final_rt_plot(self):
-        meta_data = self.get_all_meta_data(popup='xy_collector')
+        meta_data = self.bd_get_all_meta_data(popup='xy_collector')
         plot_params = self.get_all_params(meta_data, settings.xy_collector_plot_params, 'xy_collector')
         rtc = RTCurve([])
         invert = getattr(self, '_xy_collector_popup_invert_output_checkbox').isChecked()
@@ -767,7 +769,7 @@ class DaqGuiTemplate(QtWidgets.QMainWindow, GuiBuilder):
 
 
     def bd_final_iv_plot(self):
-        meta_data = self.get_all_meta_data(popup='xy_collector')
+        meta_data = self.bd_get_all_meta_data(popup='xy_collector')
         plot_params = self.get_all_params(meta_data, settings.xy_collector_plot_params, 'xy_collector')
         pprint(plot_params)
         label = plot_params['sample_name']
@@ -1421,7 +1423,7 @@ class DaqGuiTemplate(QtWidgets.QMainWindow, GuiBuilder):
         self.get_raw_data_save_path()
         if self.raw_data_path is not None:
             while continue_run:
-                meta_data = self.get_all_meta_data(popup='cosmic_rays')
+                meta_data = self.bd_get_all_meta_data(popup='cosmic_rays')
                 params = self.get_all_params(meta_data, settings.cosmic_rays_run_params, 'cosmic_rays')
                 for i in range(len(self.raw_data_path)):
                     if not os.path.exists(self.raw_data_path[i]):
@@ -1699,13 +1701,13 @@ class DaqGuiTemplate(QtWidgets.QMainWindow, GuiBuilder):
                     getattr(self, '_xy_collector_popup_ydata_std_label').setText('{0:.4f}'.format(y_std))
                     data_line = '{0}\t{1}\t{2}\n'.format(x_mean, y_mean, y_std)
                     data_handle.write(data_line)
-                    self.update_in_xy_mode(voltage_factor=voltage_factor)
+                    self.bd_update_in_xy_mode(voltage_factor=voltage_factor)
                     first_x_point = x_mean
                     last_time = data_time
                     root.update()
-        self.update_log()
+        self.bd_update_log()
         if self.raw_data_path is not None:
-            self.update_fit_data(voltage_factor)
+            self.bd_update_fit_data(voltage_factor)
 
     def bd_update_fit_data(self, voltage_factor):
         '''
@@ -1989,7 +1991,7 @@ class DaqGuiTemplate(QtWidgets.QMainWindow, GuiBuilder):
         self.pol_efficiency_popup.setWindowTitle('Polarization Efficiency')
 
     def bd_update_pol_efficiency(self):
-        meta_data = self.get_all_meta_data(popup='_pol_efficiency')
+        meta_data = self.bd_get_all_meta_data(popup='_pol_efficiency')
         scan_params = self.get_all_params(meta_data, settings.pol_efficiency_scan_params, 'pol_efficiency')
         if type(scan_params) is not dict:
             return None
@@ -2031,7 +2033,7 @@ class DaqGuiTemplate(QtWidgets.QMainWindow, GuiBuilder):
         '''
         global continue_run
         continue_run = True
-        meta_data = self.get_all_meta_data(popup='pol_efficiency')
+        meta_data = self.bd_get_all_meta_data(popup='pol_efficiency')
         scan_params = self.get_all_params(meta_data, settings.pol_efficiency_scan_params, 'pol_efficiency')
         # Verify params via popu first
         if getattr(self, '_pol_efficiency_popup_verify_parameters_checkbox').isChecked():
@@ -2193,7 +2195,7 @@ class DaqGuiTemplate(QtWidgets.QMainWindow, GuiBuilder):
         '''
         Update the resultant quantities on the panel
         '''
-        meta_data = self.get_all_meta_data(popup='_single_channel_fts')
+        meta_data = self.bd_get_all_meta_data(popup='_single_channel_fts')
         scan_params = self.get_all_params(meta_data, settings.fts_scan_params, 'single_channel_fts')
         if type(scan_params) is not dict:
             return None
@@ -2319,7 +2321,7 @@ class DaqGuiTemplate(QtWidgets.QMainWindow, GuiBuilder):
         else:
             n_points_to_plot = int(n_points_to_plot)
         if len(self.fts_positions_steps) % n_points_to_plot == 0 and len(self.fts_positions_steps) > 5:
-            meta_data = self.get_all_meta_data(popup='_single_channel_fts')
+            meta_data = self.bd_get_all_meta_data(popup='_single_channel_fts')
             scan_params = self.get_all_params(meta_data, settings.fts_scan_params, 'single_channel_fts')
             basename = os.path.basename(self.raw_data_path[0]) .replace('.if', '')
             fig, ax = self.bd_create_blank_fig(frac_screen_width=0.45, frac_screen_height=0.5, multiple_axes=True)
@@ -2357,7 +2359,7 @@ class DaqGuiTemplate(QtWidgets.QMainWindow, GuiBuilder):
 
 
     def bd_run_fts_loop(self, resume_run=False):
-        meta_data = self.get_all_meta_data(popup='_single_channel_fts')
+        meta_data = self.bd_get_all_meta_data(popup='_single_channel_fts')
         n_scans = meta_data['_single_channel_fts_popup_repeat_scans_lineedit']
         if not self.is_float(n_scans):
             n_scans = 1
@@ -2398,7 +2400,7 @@ class DaqGuiTemplate(QtWidgets.QMainWindow, GuiBuilder):
             if cancel_run:
                 continue_run = False
                 return None
-        meta_data = self.get_all_meta_data(popup='_single_channel_fts')
+        meta_data = self.bd_get_all_meta_data(popup='_single_channel_fts')
         scan_params = self.get_all_params(meta_data, settings.fts_scan_params, 'single_channel_fts')
         pause = float(scan_params['pause_time']) / 1e3
         if not resume_run:
@@ -2500,7 +2502,7 @@ class DaqGuiTemplate(QtWidgets.QMainWindow, GuiBuilder):
         if len(self.fts_positions_steps) == 0:
             return None
         else:
-            meta_data = self.get_all_meta_data(popup='_single_channel_fts')
+            meta_data = self.bd_get_all_meta_data(popup='_single_channel_fts')
             n_scans = meta_data['_single_channel_fts_popup_repeat_scans_lineedit']
             self.save_if_and_fft(self.fts_positions_steps, self.fts_amplitudes, scan_params)
             getattr(self, 'sm_{0}'.format(scan_params['fts_sm_com_port'])).move_to_position(0)
@@ -2579,7 +2581,7 @@ class DaqGuiTemplate(QtWidgets.QMainWindow, GuiBuilder):
         self.draw_time_stream([0] * 5, -1, -1, '_beam_mapper_popup_time_stream_label')
         self.beam_mapper_popup.showMaximized()
         self.initialize_beam_mapper()
-        meta_data = self.get_all_meta_data(popup='beam_mapper')
+        meta_data = self.bd_get_all_meta_data(popup='beam_mapper')
         scan_params = self.get_all_params(meta_data, settings.beam_mapper_params, 'beam_mapper')
         scan_params = self.get_grid(scan_params)
         x_com_port = scan_params['x_current_com_port']
@@ -2606,7 +2608,7 @@ class DaqGuiTemplate(QtWidgets.QMainWindow, GuiBuilder):
         if len(str(self.sender().whatsThis())) == 0:
             return None
         else:
-            meta_data = self.get_all_meta_data(popup='beam_mapper')
+            meta_data = self.bd_get_all_meta_data(popup='beam_mapper')
             scan_params = self.get_all_params(meta_data, settings.beam_mapper_params, 'beam_mapper')
             scan_params = self.get_grid(scan_params)
             if scan_params is not None and len(scan_params) > 0:
@@ -2680,7 +2682,7 @@ class DaqGuiTemplate(QtWidgets.QMainWindow, GuiBuilder):
         global pause_run
         continue_run = True
         pause_run = False
-        meta_data = self.get_all_meta_data()
+        meta_data = self.bd_get_all_meta_data()
         scan_params = self.get_all_params(meta_data, settings.beam_mapper_params, 'beam_mapper')
         x_start = int(scan_params['start_x_position'])
         x_end =  int(scan_params['end_x_position'])
