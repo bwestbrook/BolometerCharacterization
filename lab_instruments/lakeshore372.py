@@ -1,3 +1,17 @@
+# To run the simulator: python3 ls372_simulator.py -p 7777
+# (Since it automatically tries nearby ports, sometimes it will connect to 7778 when restarted,
+# so you may need to temporarily change the port in Lakeshore372.py or just try running it again)
+#
+# To interact with the simulator:
+# Connect 372 agent: python3 -i Lakeshore372.py 'localhost'
+
+# There are two ways to communicate -- either by using specific functions from the agent, such as
+# ls.get_autoscan(), ls.channels[1].get_input_setup(), ls.sample_heater.get_output_mode()
+
+# or by using the ls.msg() function and the interface command formatting from the 372 manual, such as
+# ls.msg('SCAN?'), ls.msg('INTYPE? 1'), ls.msg('OUTMODE? 0')
+
+
 import socket
 import argparse
 import numpy as np
@@ -42,8 +56,7 @@ current_excitation_key = {1: 1.0e-12,
                           21: 10.0-3,
                           22: 31.6-3}
 
-class Lakeshore372_Simulator:
-
+class Lakeshore372:
     def __init__(self, port, num_channels=16, sn="LSSIM"):
         self.log = logging.getLogger()
 
@@ -544,3 +557,297 @@ class Lakeshore372_Simulator:
             self.curves[curve_index].data[i][0] = 0
             self.curves[curve_index].data[i][1] = 0
             self.curves[curve_index].data[i][2] = 0
+
+
+class ChannelSim:
+    def __init__(self, channel_num, name):
+        self.log = logging.getLogger()
+
+        self.channel_num = channel_num
+        self.name = name
+        self.temp_limit = 0
+
+        self.enabled = 1
+        self.dwell = 10
+        self.pause = 3
+        self.curve_number = 0
+        self.tempco = 1
+
+        if channel_num == 'A':
+            self.mode = 1
+        else:
+            self.mode = 0
+        self.excitation = 1
+        self.autorange = 0
+        self.rng = 1
+        self.cs_shunt = 0
+        self.units = 1
+        self.value = 100
+
+    def get_intype(self):
+        return ','.join([
+            str(self.mode),
+            str(self.excitation),
+            str(self.autorange),
+            str(self.rng),
+            str(self.cs_shunt),
+            str(self.units)
+        ])
+
+    def set_intype(self, mode, excitation, autorange, rng, cs_shunt, units):
+        if mode in [0,1]:
+            self.log.debug(f"Setting mode to {mode}")
+            self.mode = mode
+
+        if excitation in range(1,13) and self.mode == 0:
+            self.excitation = excitation
+
+        if excitation in range(1,23) and self.mode == 1:
+            self.excitation = excitation
+
+        if autorange in [0,1,2]:
+            self.autorange = autorange
+
+        if rng in range(1,23):
+            self.rng = rng
+
+        if cs_shunt in [0,1]:
+            self.cs_shunt = cs_shunt
+
+        if units in [1,2]:
+            self.units = units
+
+    def set_value(self, value):
+        self.log.debug(f"Setting value to {value}")
+        self.value = float(value)
+
+    def get_reading(self, unit='S'):
+        if self.enabled == 0:
+            rv = 0
+        else:
+            rv = np.random.normal(self.value)
+
+        return str(rv)
+
+    def get_inset(self):
+        return ','.join([
+            str(self.enabled),
+            str(self.dwell),
+            str(self.pause),
+            str(self.curve_number),
+            str(self.tempco)
+        ])
+
+    def set_inset(self, enabled, dwell, pause, curve_number, tempco):
+        if enabled in [0, 1]:
+            self.log.debug(f"Setting mode to {enabled}")
+            self.enabled = enabled
+
+        if dwell in range(1, 201) and self.channel_num != 'A':
+            self.dwell = dwell
+
+        if pause in range(3, 201):
+            self.pause = pause
+
+        if curve_number in range(59):
+            self.curve_number = curve_number
+
+        if tempco in [1, 2]:
+            self.tempco = tempco
+
+    def get_excitation_power(self):
+        if self.mode == 0:
+            pwr = (voltage_excitation_key[int(self.excitation)]**2) / (float(self.get_reading()))
+        if self.mode == 1:
+            pwr = (current_excitation_key[int(self.excitation)]**2) * (float(self.get_reading()))
+
+        return str(pwr)
+
+class Heater:
+    def __init__(self, output):
+        self.output = output
+        self.mode = 0
+        self.input = 1
+        self.powerup = 0
+        self.polarity = 0
+        self.filter = 0
+        self.delay = 5
+
+        self.rng = 0
+
+        self.resistance = 1
+        self.max_current = 0
+        self.max_user_current = 0
+        self.display = 1
+
+        self.output_value = 0
+
+        self.ramp = 0
+        self.rate = 0
+        self.status = 0
+
+        self.setpoint = 0
+
+        self.P = 0
+        self.I = 0
+        self.D = 0
+
+    def get_output_mode(self):
+        return ','.join([
+            str(self.mode),
+            str(self.input),
+            str(self.powerup),
+            str(self.polarity),
+            str(self.filter),
+            str(self.delay)
+        ])
+
+    def set_output_mode(self, output, mode, input, powerup, polarity, filter, delay):
+        if int(output) in [0,1,2]:
+            self.log.debug(f"Setting output to {output}")
+            self.output = int(output)
+
+        if (int(output) == 0 and int(mode) in [0,2,3,5]) or (int(output) == 1 and int(mode) in [0,2,3,5,6]) or (int(output) == 2 and int(mode) in [0,1,2,4]):
+            self.mode = int(mode)
+
+        if input == 'A':
+            self.input = input
+        elif int(input) in range(1,17):
+            self.input = int(input)
+
+        if int(powerup) in [0, 1]:
+            self.powerup = int(powerup)
+
+        if int(polarity) in [0, 1] and int(output) != 1:
+            self.polarity = int(polarity)
+
+        if int(filter) in [0,1]:
+            self.filter = int(filter)
+
+        if int(delay) in range(1,256):
+            self.delay = int(delay)
+
+    def get_heater_setup(self):
+        return ','.join([
+            str(self.resistance),
+            str(self.max_current),
+            str(self.max_user_current),
+            str(self.display)
+        ])
+
+    def set_heater_setup(self, output, resistance, max_current, max_user_current, display):
+        if output in [0,1]:
+            self.output = output
+
+        if (output == 0 and resistance in range(1,2001)) or (output == 1 and resistance in [1,2]):
+            self.resistance = resistance
+
+        if max_current in [0,1,2]:
+            self.max_current = max_current
+
+        # if max_user_current in []
+        # not sure what condition to use
+        self.max_user_current = max_user_current
+
+        if display in [1,2]:
+            self.display = display
+
+
+class Curve:
+    def __init__(self, num):
+        self.curve_num = num
+        self.name = "User Curve"
+        self.serial_number = None
+        self.format = 4
+        self.limit = 40.0
+        self.coefficient = 1
+
+        self.get_header()
+
+        self.units = np.random.random([201])
+        self.temp = np.random.random([201])
+        self.curvature = 0
+        self.data = {i: [self.units[i], self.temp[i], self.curvature] for i in range(1,201)}
+
+
+    def get_header(self):
+        return ','.join([
+            str(self.name),
+            str(self.serial_number),
+            str(self.format),
+            str(self.limit),
+            str(self.coefficient)
+        ])
+
+    def set_header(self, name, serial_number, format, limit, coefficient):
+        self.name = name
+
+        if len(str(serial_number)) <= 10:
+            self.serial_number = serial_number
+
+        if int(format) in [3,4,7]:
+            self.format = format
+
+        if float(limit) in range(1000):
+            self.limit = float(limit)
+
+        if int(coefficient) in [1,2]:
+            self.coefficient = int(coefficient)
+
+
+def make_parser(parser=None):
+    if parser is None:
+        parser = argparse.ArgumentParser()
+
+    parser.add_argument('-p', '--port', type=int, default=50000,
+                        help="Port which simulator will wait for a connection."
+                             "If taken, it will test several consecutive ports"
+                             "until it finds one that is free.")
+    parser.add_argument('--num-channels', type=int, default=16,
+                        help="Number of channels which the simulator will have.")
+    parser.add_argument('--sn', type=str, default='LS_SIM',
+                        help="Serial number for the device")
+    parser.add_argument('--log-file', type=str, default=None,
+                        help="File where logs are written")
+    parser.add_argument('--log-level',
+                        choices=['debug', 'info', 'warning', 'error'],
+                        default='info',
+                        help="Minimum log level to be displayed")
+    parser.add_argument('-o', '--log-stdout', action="store_true",
+                        help="Log to stdout")
+    return parser
+
+
+if __name__ == '__main__':
+
+    parser = make_parser()
+    args = parser.parse_args()
+
+    log_level = {
+        'debug': logging.DEBUG,
+        'info': logging.INFO,
+        'warning': logging.WARNING,
+        'error': logging.ERROR
+    }[args.log_level]
+
+    format_string = '%(asctime)-15s [%(levelname)s]:  %(message)s'
+    # logging.basicConfig(level=log_level, format=format_string)
+    formatter = logging.Formatter(format_string)
+    log = logging.getLogger()
+    log.setLevel(log_level)
+
+    if args.log_file is None or args.log_stdout:
+        consoleHandler = logging.StreamHandler()
+        consoleHandler.setFormatter(formatter)
+        log.addHandler(consoleHandler)
+
+    if args.log_file is not None:
+        fileHandler = logging.FileHandler(args.log_file)
+        fileHandler.setFormatter(formatter)
+        log.addHandler(fileHandler)
+
+    ls = Lakeshore372(args.port,
+                      num_channels=args.num_channels,
+                      sn=args.sn)
+    start_time = time.time()  # begins timer as soon as simulator is created
+    ls.run()

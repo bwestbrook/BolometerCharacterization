@@ -21,7 +21,7 @@ from copy import copy
 from PyQt5 import QtCore, QtGui, QtWidgets
 #from libraries.gen_class import Class
 from bd_gui_settings.bd_global_settings import settings
-#from RT_Curves.plot_rt_curves import RTCurve
+from RT_Curves.plot_rt_curves import RTCurve
 #from IV_Curves.plot_iv_curves import IVCurve
 #from FTS_Curves.plot_fts_curves import FTSCurve
 #from FTS_Curves.numerical_processing import Fourier
@@ -1618,11 +1618,11 @@ class DaqGuiTemplate(QtWidgets.QMainWindow, GuiBuilder):
                 getattr(self, '_xy_collector_popup_voltage_factor_combobox').setCurrentIndex(1)
                 getattr(self, '_xy_collector_popup_data_clip_lo_lineedit').setText(str(250))
                 getattr(self, '_xy_collector_popup_data_clip_hi_lineedit').setText(str(600))
-            self.draw_x(title='X data', xlabel='Sample', ylabel='GRT Temp (mK)')
-            self.draw_y(title='Y data', xlabel='Sample', ylabel='SQUID Output Voltage (V)')
-            self.draw_xy_collector(title='RT Curve', xlabel='GRT Temp (mK)', ylabel='SQUID Output Voltage (V)')
+            self.bd_draw_x(title='X data', xlabel='Sample', ylabel='GRT Temp (mK)')
+            self.bd_draw_y(title='Y data', xlabel='Sample', ylabel='SQUID Output Voltage (V)')
+            self.bd_draw_xy_collector(title='RT Curve', xlabel='GRT Temp (mK)', ylabel='SQUID Output Voltage (V)')
         else:
-            self.draw_xy_collector()
+            self.bd_draw_xy_collector()
 
     def bd_run_xy_collector(self):
         '''
