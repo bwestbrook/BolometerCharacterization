@@ -21,6 +21,7 @@ from .multimeter import multimeter_settings
 from .fridge_cycle import fridge_cycle_settings
 from .lock_in import lock_in_settings
 from .power_supply import power_supply_settings
+from .lakeshore372 import lakeshore372_settings
 
 
 settings = GenericClass()
@@ -30,7 +31,7 @@ settings = GenericClass()
 list_of_extra_settings = [data_analysis_popup_settings, rtcurve_settings_popup_settings,
                           ivcurve_settings_popup_settings, ftscurve_settings_popup_settings,
                           polcurve_settings_popup_settings, daq_main_panel_settings,
-                          beammap_settings_popup_settings,
+                          beammap_settings_popup_settings, lakeshore372_settings,
                           user_move_stepper_settings, single_channel_fts_settings,
                           beam_mapper_settings, pol_efficiency_settings, final_plot_settings,
                           taucurve_settings_popup_settings, xy_collector_settings,

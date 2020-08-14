@@ -23,17 +23,17 @@
                 "function": "bd_configure_com_ports",
                 "icon": "steppermotor.png"
             },
-            "04_Multimeter": {
-                "StatusTip": "MultiMeter",
-                "ToolTip": "MultiMeter",
-                "function": "bd_multimeter",
+            "04_Multidaq": {
+                "StatusTip": "MultiDAQ",
+                "ToolTip": "MultiDAW",
+                "function": "bd_multidaq",
                 "icon": "multimeter.png"
             },
-            "05_Run": {
-                "Shortcut": "Ctrl+R",
-                "StatusTip": "Run",
-                "ToolTip": "Run ",
-                "icon": "run.png"
+            "05_Lakeshore372": {
+                "StatusTip": "Lakeshore 372",
+                "ToolTip": "Lakeshore 372 Configuration ",
+                "function": "bd_lakeshore372",
+                "icon": "oscilliscope.png"
             }
         },
         "02_DAQ_Mode": {

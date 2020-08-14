@@ -35,6 +35,8 @@ def resistance_to_temp(resistance, serial_number):
             temperature = 0.
             for i, coefficient in enumerate(a_coefficients):
                 temperature += coefficient * np.cos(i * pl.arccos(x))
+        elif serial_number == 'Lakeshore':
+            temperature = z * 0.1 #convert to mK assuming 0V = 0mK and 10V = 1K for output of lakeshore
         else:
             temperature = np.nan
         temperature_array[j] = copy(temperature)
@@ -75,7 +77,9 @@ def _return_chebychev_coefficients_and_impedance_limits(z, serial_number):
     and impedance limits for calculating the temperature from GRT resistance
     '''
     z_lower, z_upper, a_coefficients = None, None, None
-    if serial_number == 25312: #Spare, 576, 575, Dunk P         
+    if serial_number == 'Lakeshore': # Units already in mK
+        return None, None, None
+    elif serial_number == 25312: #Spare, 576, 575, Dunk P         
         indexLowZ = z < 1.847
         indexHighZ = z >= 1.847
         if indexLowZ:

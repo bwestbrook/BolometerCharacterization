@@ -206,15 +206,20 @@ xy_collector_settings.xy_collector_build_dict = {
         'function': 'bd_save_plots_and_data',
         'position': (15, 0, 1, 4)
         },
+    '_xy_collector_popup_pyplot_pushbutton': {
+        'text': 'Open in pylab',
+        'function': 'bd_open_pylab',
+        'position': (16, 0, 1, 4)
+        },
     '_xy_collector_popup_update_meta_data_pushbutton': {
         'text': 'Update Meta Data',
         'function': 'bd_update_meta_data',
-        'position': (16, 0, 1, 4)
+        'position': (17, 0, 1, 4)
         },
     '_xy_collector_popup_close_pushbutton': {
         'text': 'Close',
         'function': 'bd_close_xy_collector',
-        'position': (17, 0, 1, 4)
+        'position': (18, 0, 1, 4)
     },
     # VISUAL DATA MONITORING
     '_xy_collector_popup_data_monitor_label': {
@@ -297,7 +302,7 @@ xy_collector_settings.xy_collector_combobox_entry_dict = {
         'IV', 'RT', 'Discrete'
         ],
     '_xy_collector_popup_grt_serial_combobox': [
-        '', '29268', 'X36942'
+        '', '29268', 'X36942', 'Lakeshore',
         ],
     '_xy_collector_popup_daq_channel_x_combobox': [
         '0', '1', '2', '3'

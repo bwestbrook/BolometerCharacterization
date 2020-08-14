@@ -7,7 +7,7 @@ import time
 
 class lab_serial(object):
 
-    def __init__(self, port, parity=None, verbose=True):
+    def __init__(self, port, parity=None, verbose=True, baudrate=9600, device=None):
         '''
         #self.ser = serial.Serial(
         port=self.port,
@@ -22,15 +22,23 @@ class lab_serial(object):
         '''
         self.port = port
         self.verbose = verbose#
-        if parity is None:
+        if device is 'Lakeshore':
+            print('Configuring for Lakeshore using {0}'.format(self.port))
+            self.ser = serial.Serial(port=self.port,
+                                     baudrate = 57600,
+                                     parity = serial.PARITY_ODD,
+                                     stopbits = serial.STOPBITS_ONE,
+                                     bytesize = serial.SEVENBITS,
+                                     timeout = 3)
+        elif parity is None:
             print('This port {0} has no parity parameter'.format(port))
             self.ser = serial.Serial(port=self.port,
-                                     baudrate = 9600,
+                                     baudrate = baudrate,
                                      timeout = 3)
         else:
             print('This port {0} has parity {1}'.format(port, parity))
             self.ser = serial.Serial(port=self.port,
-                                     baudrate = 9600,
+                                     baudrate = baudrate,
                                      parity = parity,
                                      timeout = 3)
         if not self.ser.isOpen():
@@ -52,9 +60,10 @@ class lab_serial(object):
         #self.ser.write(string.encode('utf-8')) # unicode not supported for serial module in python 3
         self.ser.write(string.encode('ASCII')) # unicode not supported for serial module in python 3
 
-    def read(self, decode='utf-8'):
+    def read(self, decode='latin-1'):
         "Returns a properly decoded string of the bytes read from the port"
-        response = self.ser.readline().decode(decode).strip('\r\n')
+        response = self.ser.readline()
+        response = response.decode(decode).strip('\r\n')
         return response
 
     def read2(self):

@@ -8,16 +8,16 @@ import numpy as np
 from nidaqmx.constants import AcquisitionType, Edge, WAIT_INFINITELY
 
 class DAQ():
+    
+    def __init__(self):
+        self.active_daqs = self.get_active_daqs()
 
-    def get_data(self, signal_channel=3, integration_time=50, sample_rate=500, central_value=1.0, active_devices=[]):
+
+    def get_data(self, signal_channel=3, integration_time=50, sample_rate=500, daq=None):
         with nidaqmx.Task() as task:
-            if len(active_devices) == 1:
-                device = active_devices[0]
-            else:
-                device = active_devices[-1]
-                #print('Found multiple devices when trying to get data')
-                #print('Chose {0}'.format(device))
-            voltage_chan_str = '{0}/ai{1}'.format(device, signal_channel)
+            if daq is None:
+                daq = self.active_daqs[0]
+            voltage_chan_str = '{0}/ai{1}'.format(daq, signal_channel)
             task.ai_channels.add_ai_voltage_chan(voltage_chan_str)
             integration_time = int(integration_time)
             sample_rate = int(sample_rate)
@@ -31,18 +31,18 @@ class DAQ():
         std_ = np.std(data_time_stream)
         return data_time_stream, mean, min_, max_, std_
 
-    def get_active_devices(self):
-        active_devices = []
+    def get_active_daqs(self):
+        active_daqs = []
         with nidaqmx.Task() as task:
             for i in range(16):
                 device = 'Dev{0}'.format(i)
                 try:
                     task.ai_channels.add_ai_voltage_chan("{0}/ai0".format(device))
-                    active_devices.append(device)
+                    active_daqs.append(device)
                     print('Found an active DAQ at {0}'.format(device))
                 except nidaqmx.DaqError:
                     pass
-        return active_devices
+        return active_daqs
 
 if __name__ == '__main__':
     daq = DAQ()

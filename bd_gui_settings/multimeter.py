@@ -149,8 +149,8 @@ multimeter_settings.multimeter_combobox_entry_dict = {
     '_BD_multimeter_popup_daq_sample_rate_2_combobox': ['50', '500', '1000', '5000'],
     '_BD_multimeter_popup_daq_integration_time_1_combobox': ['50', '500', '1000', '10000', '100000'],
     '_BD_multimeter_popup_daq_integration_time_2_combobox': ['50', '500', '1000', '10000', '100000'],
-    '_BD_multimeter_popup_grt_serial_1_combobox': ['', '29268', 'X36942'],
-    '_BD_multimeter_popup_grt_serial_2_combobox': ['', '29268', 'X36942'],
+    '_BD_multimeter_popup_grt_serial_1_combobox': ['', 'Lakeshore', '29268', 'X36942'],
+    '_BD_multimeter_popup_grt_serial_2_combobox': ['', 'Lakeshore', '29268', 'X36942'],
     '_BD_multimeter_popup_grt_range_1_combobox': ['2', '20', '200', '2K', '20K', '200K', '2M'],
     '_BD_multimeter_popup_grt_range_2_combobox': ['2', '20', '200', '2K', '20K', '200K', '2M'],
 }
