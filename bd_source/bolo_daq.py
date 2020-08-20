@@ -44,7 +44,7 @@ from GuiBuilder.gui_builder import GuiBuilder
 #from GuiBuilder.gui_builder import GenericClass
 #from Motor_Driver.stepper_motor import stepper_motor
 from bd_lib.daq import DAQ
-from bd_lib.lab_serial import lab_serial
+from bd_lib.bolo_serial import BoloSerial
 
 
 #Global variables
@@ -99,6 +99,7 @@ class DaqGuiTemplate(QtWidgets.QMainWindow, GuiBuilder):
         self.bd_setup_status_bar()
         self.loaded_spectra_data_path = None
         self.ls372_widget = None
+        self.bd_get_active_serial_ports()
         self.bd_configure_daq()
         self.splash_screen.close()
         self.move(100, 100)
@@ -155,12 +156,6 @@ class DaqGuiTemplate(QtWidgets.QMainWindow, GuiBuilder):
         else:
             self.active_daqs = self.daq.get_active_daqs()
 
-    def bd_configure_com_ports(self):
-        '''
-        '''
-        self.active_ports = self.get_active_serial_ports()
-        for port in self.active_ports[1:]:
-            com_port = lab_serial(port)
 
     def bd_setup_status_bar(self):
         '''
@@ -238,19 +233,45 @@ class DaqGuiTemplate(QtWidgets.QMainWindow, GuiBuilder):
             ports = glob.glob('/dev/tty.*')
         else:
             raise EnvironmentError('Unsupported platform')
-        active_ports = ['']
+        self.active_ports = []
         for port in ports:
+            self.splash_screen.showMessage('Checking COM Port {0}'.format(port))
             try:
                 s = serial.Serial(port)
                 s.close()
-                active_ports.append(port)
+                self.active_ports.append(port)
             except (OSError, serial.SerialException):
                 pass
-        return active_ports
+        self.active_ports
+        self.bd_get_com_device_types()
 
-    def bd_get_com_port(self, combobox):
-        com_port = str(getattr(self, combobox).currentText())
-        return com_port
+    def bd_get_com_device_types(self):
+        '''
+        '''
+        self.lab_devices = [
+            'Model372',
+            'E3634A',
+            ]
+        self.com_port_dict = {}
+        for active_port in self.active_ports:
+            for device in self.lab_devices:
+                print()
+                print(self.active_ports)
+                print(device, active_port)
+                serial_com = BoloSerial(port=active_port, device=device, splash_screen=self.splash_screen)
+                id_string = serial_com.write_read('*IDN? ')
+                self.splash_screen.showMessage("Checking to see what's connected to COM{0} ::: ID = {1}".format(device, id_string))
+                print(id_string, type(id_string))
+                if device in str(id_string):
+                    self.com_port_dict['device'] = comport
+                    break
+        pprint(self.com_port_dict)
+
+
+    def bd_configure_com_ports(self):
+        '''
+        '''
+        self.active_ports
 
     def bd_connect_to_com_port(self, com_port=None):
         sender_whats_this_str = str(self.sender().whatsThis())
@@ -1153,7 +1174,6 @@ class DaqGuiTemplate(QtWidgets.QMainWindow, GuiBuilder):
         self.gb_initialize_panel('central_widget')
         dialog = 'Select the comport for the Lakeshore'
         if not hasattr(self, 'lakeshore_serial_com'):
-            self.active_ports = self.bd_get_active_serial_ports()
             if self.ls372_widget is None:
                 com_port, okPressed = self.gb_quick_static_info_gather(title='', dialog=dialog, items=self.active_ports)
                 if okPressed:

@@ -1,7 +1,7 @@
 import os
 from copy import copy
 from pprint import pprint
-from bd_lib.lab_serial import lab_serial
+from bd_lib.bolo_serial import BoloSerial
 from PyQt5 import QtCore, QtGui, QtWidgets
 from GuiBuilder.gui_builder import GuiBuilder, GenericClass
 
@@ -12,7 +12,7 @@ class LakeShore372(QtWidgets.QWidget, GuiBuilder):
         self.status_bar = status_bar
         grid = QtWidgets.QGridLayout()
         self.setLayout(grid)
-        self.serial_com = lab_serial(com_port, device='Lakeshore')
+        self.serial_com = BoloSerial(port=com_port, device='Lakeshore')
         self.com_port = com_port
         self.channel_indicies = [str(x) for x in range(1, 17)]
         self.analog_output_indicies = [str(x) for x in range(1, 4)]

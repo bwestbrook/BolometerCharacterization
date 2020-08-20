@@ -11,11 +11,10 @@
                 "function": "bd_close_main",
                 "icon": "close.png"
             },
-            "02_Configure Steppers": {
-                "StatusTip": "Configure Stepper",
-                "ToolTip": "Configure Stepper",
+            "02_Configure COM Ports": {
+                "ToolTip": "Configure Communication Ports",
                 "function": "bd_configure_com_ports",
-                "icon": "steppermotor.png"
+                "icon": "comport.png"
             },
             "03_Configure DAQ": {
                 "StatusTip": "Configure DAQ",
