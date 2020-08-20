@@ -7,8 +7,9 @@ from GuiBuilder.gui_builder import GuiBuilder, GenericClass
 
 class LakeShore372(QtWidgets.QWidget, GuiBuilder):
 
-    def __init__(self, com_port):
+    def __init__(self, com_port, status_bar):
         super(LakeShore372, self).__init__()
+        self.status_bar = status_bar
         grid = QtWidgets.QGridLayout()
         self.setLayout(grid)
         self.serial_com = lab_serial(com_port, device='Lakeshore')
@@ -118,8 +119,8 @@ class LakeShore372(QtWidgets.QWidget, GuiBuilder):
                 20.001: 9,
                 10: 63.2,
                 63.2: 10,
-                11: 200,
-                200: 11,
+                11: 200.001,
+                200.001: 11,
                 12: 632,
                 632: 12,
                 13: 2.00e3,
@@ -239,7 +240,7 @@ class LakeShore372(QtWidgets.QWidget, GuiBuilder):
     def ls372_display_basic_info(self):
         '''
         '''
-        info_str = 'Com Port: {0} Serial Number: {1}'.format(self.com_port, self.serial_number)
+        info_str = 'Com Port: {0}\nSerial Number: {1}'.format(self.com_port, self.serial_number)
         info_header_label = QtWidgets.QLabel(info_str, self)
 
         self.layout().addWidget(info_header_label, 0, 0, 1, 17)
@@ -296,12 +297,10 @@ class LakeShore372(QtWidgets.QWidget, GuiBuilder):
         '''
         index = self.sender().text().split(' ')[-1]
         self.set_to_channel = index
-        print(index)
         if self.com_port == 'COM4':
             channel_readout_info = self.channels.ls372_get_channel_value(index, reading='kelvin')
         else:
             channel_readout_info = self.channels.ls372_get_channel_value(index, reading='resistance')
-        print(channel_readout_info)
 
     def ls372_scan_channel(self):
         '''
@@ -309,11 +308,11 @@ class LakeShore372(QtWidgets.QWidget, GuiBuilder):
         index = self.sender().text().split(' ')[-1]
         self.set_to_channel = index
         self.channels.ls372_scan_channel(index, autoscan=0)
+        self.status_bar.showMessage('Scanning channel {0}'.format(index))
 
     def ls372_edit_channel(self, clicked, index=None):
         '''
         '''
-        print(index)
         if index is None:
             index = self.sender().text().split(' ')[-1]
         self.set_to_channel = index
@@ -368,6 +367,7 @@ class LakeShore372(QtWidgets.QWidget, GuiBuilder):
         '''
         editing_popup.close()
         headers = []
+
         values = []
         for index in range(ep_central_widget.layout().count()):
             widget = ep_central_widget.layout().itemAt(index).widget()
@@ -399,10 +399,13 @@ class LakeShore372(QtWidgets.QWidget, GuiBuilder):
                         new_value = self.lakeshore372_command_dict[header][value]
                 new_settings[header] = new_value
         channel_object = getattr(self.channels, 'channel_{0}'.format(self.set_to_channel))
+        self.status_bar.showMessage('Writing new settings to channel {0}'.format(self.set_to_channel))
+        QtWidgets.QApplication.processEvents()
         self.channels.ls372_write_new_channel_settings(self.set_to_channel, new_settings, channel_object)
         self.channels.ls372_update_channels()
         self.ls372_populate_gui()
         self.ls372_edit_channel(clicked=False, index=self.set_to_channel)
+        self.status_bar.showMessage('Wrote new settings to channel {0}'.format(self.set_to_channel))
 
     def ls372_analog_output_panel(self):
         '''
@@ -415,7 +418,6 @@ class LakeShore372(QtWidgets.QWidget, GuiBuilder):
             header_label = QtWidgets.QLabel('{0}: '.format(header.title()), self)
             self.layout().addWidget(header_label, 19 + i, 0, 1, 1)
         for index, analog_output in enumerate(self.analog_output_indicies):
-            print(index, analog_output)
             analog_output_object = getattr(self.analog_outputs, 'analog_output_{0}'.format(analog_output))
             for i, header in enumerate(self.analog_headers):
                 value = getattr(analog_output_object, header)
@@ -460,14 +462,17 @@ class LakeShore372(QtWidgets.QWidget, GuiBuilder):
                 for j, valid_set_to_value in enumerate(valid_set_to_values):
                     value_widget.addItem(str(valid_set_to_value))
                     print()
-                    print('value', value)
-                    print('check_value', valid_set_to_value)
+                    print('value', value, type(value))
+                    print('check_value', valid_set_to_value, type(valid_set_to_value))
+                    print('analog output', analog_output)
                     print('--------')
-                    if valid_set_to_value == value:
+                    if header == 'input_channel' and int(valid_set_to_value) == int(value):
                         set_to_index = j
-                    if valid_set_to_value == analog_output:
+                    elif valid_set_to_value == value:
                         set_to_index = j
-                print(set_to_index)
+                    elif valid_set_to_value == analog_output:
+                        set_to_index = j
+                print(header, set_to_index)
                 value_widget.setCurrentIndex(set_to_index)
             ep_central_widget.layout().addWidget(value_widget, i, 1, 1, 1)
         save_pushbutton = QtWidgets.QPushButton('SET', editing_popup)
@@ -502,11 +507,14 @@ class LakeShore372(QtWidgets.QWidget, GuiBuilder):
                 new_value = self.lakeshore372_command_dict[header][value]
                 new_settings[header] = new_value
         analog_output_object = getattr(self.analog_outputs, 'analog_output_{0}'.format(self.set_to_analog_output))
+        self.status_bar.showMessage('Writing new settings to analog output {0}'.format(self.set_to_analog_output))
+        QtWidgets.QApplication.processEvents()
         self.analog_outputs.ls372_write_analog_output_settings(self.set_to_analog_output, new_settings, analog_output_object)
         self.channels.ls372_scan_channel(new_settings['input_channel'], autoscan=0)
         self.analog_outputs.ls372_update_analog_outputs()
         self.ls372_populate_gui()
         self.ls372_edit_analog_output(clicked=False, analog_output=self.set_to_analog_output)
+        self.status_bar.showMessage('Wrote new settings to analog output {0}'.format(self.set_to_analog_output))
 
 class LS372Channels():
 

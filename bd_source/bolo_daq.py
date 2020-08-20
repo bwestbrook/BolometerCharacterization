@@ -1,9 +1,10 @@
 import sys
+import nidaqmx
 import chardet
 import imageio
 import smtplib
 import serial
-import json
+import simplejson
 import os
 import subprocess
 import shutil
@@ -14,7 +15,6 @@ import pylab as pl
 import matplotlib.pyplot as plt
 import time
 import threading
-from tkinter import *
 from PyPDF2 import PdfFileMerger
 from pprint import pprint, pformat
 from datetime import datetime
@@ -23,8 +23,11 @@ from PyQt5 import QtCore, QtGui, QtWidgets
 #from libraries.gen_class import Class
 from bd_gui_settings.bd_global_settings import settings
 #from bd_tools.bd_lakeshore372 import Lakeshore372
-from bd_tools.multidaq import Multidaq
+from bd_tools.configure_daq import ConfigureDAQ
 from bd_tools.lakeshore372 import LakeShore372
+from bd_tools.xy_collector import XYCollector
+from bd_tools.fridge_cycle import FridgeCycle
+from bd_tools.data_plotter import DataPlotter
 from RT_Curves.plot_rt_curves import RTCurve
 #from IV_Curves.plot_iv_curves import IVCurve
 #from FTS_Curves.plot_fts_curves import FTSCurve
@@ -48,7 +51,6 @@ from bd_lib.lab_serial import lab_serial
 continue_run = False
 pause_run = False
 do_cycle_fridge = False
-root = Tk()
 
 class DaqGuiTemplate(QtWidgets.QMainWindow, GuiBuilder):
 
@@ -59,6 +61,11 @@ class DaqGuiTemplate(QtWidgets.QMainWindow, GuiBuilder):
         self.__apply_settings__(settings)
         self.__apply_settings__(settings)
         grid = QtWidgets.QGridLayout()
+        self.splash_screen = QtWidgets.QSplashScreen()
+        self.splash_screen_image = os.path.join('bd_settings', 'BoloPic.JPG')
+        q_splash_image = QtGui.QPixmap(self.splash_screen_image)
+        self.splash_screen.setPixmap(q_splash_image)
+        self.splash_screen.show()
         self.central_widget = QtWidgets.QWidget()
         self.central_widget.setWhatsThis('cw_panel')
         self.central_widget.setLayout(grid)
@@ -72,7 +79,6 @@ class DaqGuiTemplate(QtWidgets.QMainWindow, GuiBuilder):
         self.central_widget.setLayout(grid)
         self.setCentralWidget(self.central_widget)
         self.tool_and_menu_bar_json_path = os.path.join('bd_gui_settings', 'tool_and_menu_bars.json')
-        #self.bcg_setup_status_bar()
         self.gb_setup_menu_and_tool_bars(self.tool_and_menu_bar_json_path)
         self.selected_files = []
         self.current_stepper_position = 100
@@ -86,33 +92,91 @@ class DaqGuiTemplate(QtWidgets.QMainWindow, GuiBuilder):
         self.voltage_conversion_list = settings.xy_collector_combobox_entry_dict['_xy_collector_popup_voltage_factor_combobox']
         if not os.path.exists(self.data_folder):
             os.makedirs(self.data_folder)
-        self.move(100, 100)
-        self.show()
         self.raw_data_path = None
         #self.fts_analyzer = FTSanalyzer()
         #self.fts = FTSCurve()
         #self.fourier = Fourier()
+        self.bd_setup_status_bar()
         self.loaded_spectra_data_path = None
+        self.ls372_widget = None
         self.bd_configure_daq()
+        self.splash_screen.close()
+        self.move(100, 100)
+        self.show()
 
-
-    def bd_configure_daq(self):
-        self.real_daq = DAQ()
-        self.active_daqs = self.real_daq.get_active_daqs()
-
-    def bd_configure_com_ports(self):
-        self.active_ports = self.get_active_serial_ports()
-        for port in self.active_ports[1:]:
-            com_port = lab_serial(port)
+    ##################################################################################
+    #### Start up Tasks ##############################################################
+    ##################################################################################
 
     def __apply_settings__(self, settings):
         for setting in dir(settings):
             if '__' not in setting:
                 setattr(self, setting, getattr(settings, setting))
 
+    def bd_get_available_daqs(self):
+        '''
+        '''
+        if hasattr(self, 'available_daqs'):
+            return None
+        self.daq = DAQ()
+        if not hasattr(self, 'active_daqs'):
+            self.bd_get_active_daqs()
+        self.available_daqs = {}
+        self.splash_screen.showMessage('Configure NIDAQ: Deterimining all available daqs')
+        QtWidgets.QApplication.processEvents()
+        for device, configuration_dict in self.active_daqs.items():
+            available = True
+            for i in range(2):
+                for j in range(8):
+                    self.splash_screen.showMessage("Configuring NIDAQ: Checking if {0}:::ch{1} is available ({2}/2) times".format(device, j, i + 1))
+                    QtWidgets.QApplication.processEvents()
+                    try:
+                        vol_ts, vol_mean, vol_min, vol_max, vol_std = self.daq.get_data(signal_channel=j,
+                                                                                        int_time=100,
+                                                                                        sample_rate=1000,
+                                                                                        device=device)
+                    except nidaqmx.errors.DaqError:
+                        self.splash_screen.showMessage("Configuring NIDAQ {0}:::ch{1} is not available".format(device, j))
+                        QtWidgets.QApplication.processEvents()
+                        available = False
+                        break
+            if available:
+                self.available_daqs[device] = configuration_dict
+        n_devices = len(self.available_daqs)
+        devices = list(self.available_daqs.keys())
+        self.status_bar.showMessage('Found {0} available devices: {1}'.format(n_devices, devices))
+
+    def bd_get_active_daqs(self):
+        '''
+        '''
+        if os.path.exists(os.path.join('bd_settings', 'daq_settings.json')):
+            with open(os.path.join('bd_settings', 'daq_settings.json'), 'r') as json_handle:
+                self.active_daqs = simplejson.load(json_handle)
+        else:
+            self.active_daqs = self.daq.get_active_daqs()
+
+    def bd_configure_com_ports(self):
+        '''
+        '''
+        self.active_ports = self.get_active_serial_ports()
+        for port in self.active_ports[1:]:
+            com_port = lab_serial(port)
+
+    def bd_setup_status_bar(self):
+        '''
+        '''
+        custom_widgets = []
+        #custom_widgets.append(custom_widget)
+        permanant_messages = ['Bolo DAQ B.W. 2020']
+        self.gb_add_status_bar(permanant_messages=permanant_messages , add_saved=True, custom_widgets=custom_widgets)
+
     def bd_dummy(self):
         print(self.sender().whatsThis())
         print('Dummy Function')
+
+    #################################################
+    # Logging and File Management
+    #################################################
 
     def bd_final_plot(self):
         print('Dummy Function')
@@ -299,11 +363,11 @@ class DaqGuiTemplate(QtWidgets.QMainWindow, GuiBuilder):
 
             if response == QtWidgets.QMessageBox.Save:
                 with open(sample_dict_path, 'w') as sample_dict_file_handle:
-                    json.dump(self.sample_dict, sample_dict_file_handle)
+                    simplejson.dump(self.sample_dict, sample_dict_file_handle)
                 getattr(self, '_daq_main_panel_set_sample_dict_path_label').setText('Set Path @ {0}'.format(sample_dict_path))
         else:
             with open(sample_dict_path, 'w') as sample_dict_file_handle:
-                json.dump(self.sample_dict, sample_dict_file_handle)
+                simplejson.dump(self.sample_dict, sample_dict_file_handle)
             getattr(self, '_daq_main_panel_set_sample_dict_path_label').setText('Set Path @ {0}'.format(sample_dict_path))
 
     def bd_set_sample_dict_path(self):
@@ -311,7 +375,7 @@ class DaqGuiTemplate(QtWidgets.QMainWindow, GuiBuilder):
         if len(sample_dict_path) == 0:
             return None
         with open(sample_dict_path, 'r') as sample_dict_file_handle:
-            self.sample_dict = json.load(sample_dict_file_handle)
+            self.sample_dict = simplejson.load(sample_dict_file_handle)
             other_day_str = sample_dict_path.split('/')[-1].replace('.json','')
             self.data_folder = './Data/{0}'.format(other_day_str)
         getattr(self, '_daq_main_panel_set_sample_dict_path_label').setText(sample_dict_path)
@@ -352,7 +416,7 @@ class DaqGuiTemplate(QtWidgets.QMainWindow, GuiBuilder):
             meta_data = self.bd_get_all_meta_data(popup='single_channel_fts')
         if self.raw_data_path is not None and meta_data is not None:
             with open(self.raw_data_path[0].replace('.dat', '.json'), 'w') as meta_data_handle:
-                json.dump(meta_data, meta_data_handle)
+                simplejson.dump(meta_data, meta_data_handle)
 
     def bd_get_raw_data_save_path(self):
         sender = str(self.sender().whatsThis())
@@ -685,7 +749,7 @@ class DaqGuiTemplate(QtWidgets.QMainWindow, GuiBuilder):
             meta_data = self.bd_get_all_meta_data(popup='xy_collector')
             plot_params = self.bd_get_all_params(meta_data, settings.xy_collector_plot_params, 'xy_collector')
             with open(self.raw_data_path[0].replace('.dat', '.json'), 'w') as meta_data_handle:
-                json.dump(meta_data, meta_data_handle)
+                simplejson.dump(meta_data, meta_data_handle)
             if plot_params['mode'] == 'IV':
                 self.bd_final_iv_plot()
             elif plot_params['mode'] == 'RT':
@@ -910,35 +974,17 @@ class DaqGuiTemplate(QtWidgets.QMainWindow, GuiBuilder):
                     for j, y in enumerate(self.y_grid):
                         f.write('{0},{1},{2},{3}\n'.format(x, y, zdata[j,i], stds[j,i]))
 
+    def bd_close_main(self):
+        '''
+        '''
+        self.close()
+
     #################################################
     #################################################
     # DAQ TYPE SPECFIC CODES
     #################################################
     #################################################
 
-    #################################################
-    # Main Window 
-    #################################################
-
-    def bd_create_main_window(self, name):
-        self.gb_create_popup_window(name)
-        self.gb_build_panel(settings.daq_main_panel_build_dict)
-
-    def bd_close_main(self):
-        self.close()
-        sys.exit()
-
-    #################################################
-    # Data Analyzer in 
-    #################################################
-
-    def bd_data_analyzer(self):
-        if not hasattr(self, 'data_analysis_popup'):
-            self.gb_create_popup_window('data_analysis_popup')
-        else:
-            self.gb_initialize_panel('data_analysis_popup')
-        self.gb_build_panel(settings.data_analysis_popup_build_dict)
-        self.data_analysis_popup.showMaximized()
 
     #################################################
     # Lock in SRS SR830 DSP
@@ -1034,262 +1080,70 @@ class DaqGuiTemplate(QtWidgets.QMainWindow, GuiBuilder):
     # Fridge Cycle
     #################################################
 
-    def bd_close_fridge_cycle(self):
-        self.fridge_cycle_popup.close()
-
     def bd_fridge_cycle(self):
-        if not hasattr(self, 'fc'):
-            self.fc = FridgeCycle()
-        if not hasattr(self, 'fridge_cycle_popup'):
-            self.gb_create_popup_window('fridge_cycle_popup')
+        '''
+        '''
+        self.gb_initialize_panel('central_widget')
+        self.fridge_cycle_widget = FridgeCycle(self.status_bar)
+        self.central_widget.layout().addWidget(self.fridge_cycle_widget, 0, 0, 1, 1)
+
+
+    #################################################
+    # MULTIDAQ
+    #################################################
+
+    def bd_configure_daq(self):
+        '''
+        '''
+        self.bd_get_available_daqs()
+        self.gb_initialize_panel('central_widget')
+        self.configure_daq_widget = ConfigureDAQ(self.available_daqs, self.status_bar)
+        self.central_widget.layout().addWidget(self.configure_daq_widget, 0, 0, 1, 1)
+
+    #################################################
+    # Data Plotter 
+    #################################################
+
+    def bd_data_plotter(self):
+        self.gb_initialize_panel('central_widget')
+        self.data_plotter_widget = DataPlotter(self.status_bar, self.screen_resolution, self.monitor_dpi, self.data_folder)
+        self.central_widget.layout().addWidget(self.data_plotter_widget, 0, 0, 1, 1)
+
+    #################################################
+    # XY COLLECTOR
+    #################################################
+
+    def bd_xy_collector(self):
+        '''
+        Opens the panel and sets som defaults
+        '''
+        self.gb_initialize_panel('central_widget')
+        self.xyc_widget = XYCollector(self.available_daqs, self.status_bar, self.screen_resolution, self.monitor_dpi)
+        self.central_widget.layout().addWidget(self.xyc_widget, 0, 0, 1, 1)
+
+    def bd_close_xy_collector(self):
+        '''
+        Closes the panel with a warning if data is being collected
+        '''
+        global continue_run
+        if continue_run:
+            self.gb_quick_message('Taking data!!!\nPlease stop taking data before closing XY Collector!')
         else:
-            self.gb_initialize_panel('fridge_cycle_popup')
-        self.gb_build_panel(settings.fridge_cycle_popup_build_dict)
-        for combobox_widget, entry_list in self.fridge_cycle_combobox_entry_dict.items():
-            self.gb_populate_combobox(combobox_widget, entry_list)
-        getattr(self, '_fridge_cycle_popup_grt_daq_channel_combobox').setCurrentIndex(0)
-        getattr(self, '_fridge_cycle_popup_grt_serial_combobox').setCurrentIndex(2)
-        getattr(self, '_fridge_cycle_popup_grt_range_combobox').setCurrentIndex(3)
-        getattr(self, '_fridge_cycle_popup_cycle_voltage_combobox').setCurrentIndex(1)
-        getattr(self, '_fridge_cycle_popup_cycle_end_temperature_combobox').setCurrentIndex(2)
-        self.fc_time_stamp_vector, self.ps_voltage_vector, self.abr_resistance_vector, self.abr_temperature_vector, self.grt_temperature_vector = [], [], [], [], []
-        self.fridge_cycle_popup.showMaximized()
-        fc_params = self.get_params_from_fride_cycle()
-        # Update with measured values
-        grt_temperature, grt_temperature_str = self.get_grt_temp(fc_params)
-        getattr(self, '_fridge_cycle_popup_grt_temperature_value_label').setText(grt_temperature_str)
-        abr_resistance, abr_resistance_str = self.fc.get_resistance()
-        getattr(self, '_fridge_cycle_popup_abr_resistance_value_label').setText(abr_resistance_str)
-        abr_temperature, abr_temperature_str = self.fc.abr_resistance_to_kelvin(abr_resistance)
-        getattr(self, '_fridge_cycle_popup_abr_temperature_value_label').setText(abr_temperature_str)
-        applied_voltage, applied_voltage_str = self.fc.get_voltage()
-        getattr(self, '_fridge_cycle_popup_ps_voltage_value_label').setText(applied_voltage_str)
-        self.update_fridge_cycle()
-        self.repaint()
+            self.xy_collector_popup.close()
+            continue_run = False
 
-    def bd_get_fridge_cycle_save_path(self):
-        date = datetime.now()
-        date_str = datetime.strftime(date, '%Y_%m_%d_%H_%M')
-        for i in range(1, 10):
-            data_path = './FridgeCycles/fc_{0}_{1}.dat'.format(date_str, str(i).zfill(2))
-            if not os.path.exists(data_path):
-                break
-        return data_path
-
-    def bd_get_grt_temp(self, fc_params):
-        grt_data, grt_data_mean, grt_data_min, grt_data_max, grt_data_std = self.real_daq.get_data(signal_channel=fc_params['grt_daq_channel'],
-                                                                                                   integration_time=100,
-                                                                                                   sample_rate=1000,
-                                                                                                   active_devices=[self.active_daqs[0]])
-        rtc = RTCurve([])
-        voltage_factor = float(self.multimeter_voltage_factor_range_dict[fc_params['grt_range']])
-        grt_serial = fc_params['grt_serial']
-        print(grt_serial)
-        print(grt_serial)
-        print(grt_serial)
-        temperature_array, is_valid = rtc.resistance_to_temp_grt(grt_data * voltage_factor, serial_number=grt_serial)
-        if is_valid:
-            temperature = np.mean(1e3 * temperature_array)
-        else:
-            self.gb_quick_message('GRT config is not correct assuming 1000 Ohms')
-        if self.is_float(temperature, enforce_positive=True):
-            temperature_str = '{0:.3f} mK'.format(temperature)
-        else:
-            temperature_str = 'NaN'
-        return temperature, temperature_str
-
-    def bd_set_ps_voltage_fc(self):
-        voltage = float(str(getattr(self, '_fridge_cycle_popup_man_set_voltage_lineedit').text()))
-        applied_voltage = self.fc.apply_voltage(voltage)
-        return applied_voltage
-
-    def bd_start_fridge_cycle(self, sleep_time=1.0):
-        # Config globals
-        global do_cycle_fridge
-        self.aborted_cycle = False
-        do_cycle_fridge = True
-        # Get essential FC params
-        fc_params = self.get_params_from_fride_cycle()
-        charcoal_start_resistance = float(fc_params['charcoal_start_resistance'])
-        charcoal_end_resistance = float(fc_params['charcoal_end_resistance'])
-        cycle_end_temperature = float(fc_params['cycle_end_temperature'])
-        # Set Data Path
-        data_path = self.get_fridge_cycle_save_path()
-        self.gb_quick_message('Saving data to {0}'.format(data_path))
-        fig = None
-        if 'Cycle Aborted' in getattr(self, '_fridge_cycle_popup_status_label').text():
-            self.fc_time_stamp_vector, self.ps_voltage_vector, self.abr_resistance_vector, self.abr_temperature_vector, self.grt_temperature_vector = [], [], [], [], []
-        with open(data_path, 'w') as fc_file_handle:
-            # Get new data 
-            data_line = self.check_cycle_stage_and_update_data(fc_params, data_path, sleep_time)
-            fc_file_handle.write(data_line)
-            self.update_fridge_cycle(data_path=data_path)
-            # Update status
-            status = 'Cooling ABR before heating'
-            getattr(self, '_fridge_cycle_popup_status_label').setText(status)
-            # Check ABR Res to Start While Loop
-            abr_resistance, abr_resistance_str = self.fc.get_resistance()
-            while abr_resistance < charcoal_start_resistance and do_cycle_fridge:
-                # Get new data 
-                data_line = self.check_cycle_stage_and_update_data(fc_params, data_path, sleep_time)
-                fc_file_handle.write(data_line)
-                # Check ABR Res
-                abr_resistance, abr_resistance_str = self.fc.get_resistance()
-            if do_cycle_fridge:
-                # Update Status
-                status = 'Charcoal has reached {0} turning on voltage'.format(charcoal_start_resistance)
-                getattr(self, '_fridge_cycle_popup_status_label').setText(status)
-                # Turn on voltage in steps of 1 volt over with a sleep between
-                for i in range(0, int(fc_params['cycle_voltage']) + 1, 5):
-                    # Apply voltage and update gui
-                    applied_voltage = self.fc.apply_voltage(i)
-                    getattr(self, '_fridge_cycle_popup_ps_voltage_value_label').setText(str(applied_voltage))
-                    # Get new data 
-                    data_line = self.check_cycle_stage_and_update_data(fc_params, data_path, sleep_time)
-                    fc_file_handle.write(data_line)
-                # Update Status
-                status = 'Charcoal being heated: Voltage to heater set to {0} V'.format(i)
-                getattr(self, '_fridge_cycle_popup_status_label').setText(status)
-            # Check ABR Res to Start While Loop
-            abr_resistance, abr_resistance_str = self.fc.get_resistance()
-            while abr_resistance > charcoal_end_resistance and do_cycle_fridge:
-                # Get new data 
-                data_line = self.check_cycle_stage_and_update_data(fc_params, data_path, sleep_time)
-                fc_file_handle.write(data_line)
-                # Check ABR Res
-                abr_resistance, abr_resistance_str = self.fc.get_resistance()
-            status = 'Charcoal reached {0} turning off voltage and cooling stage'.format(abr_resistance)
-            getattr(self, '_fridge_cycle_popup_status_label').setText(status)
-            self.fc.apply_voltage(0)
-            getattr(self, '_fridge_cycle_popup_ps_voltage_value_label').setText('0')
-            # Record the data until grt reaches base temp 
-            grt_temperature, grt_temperature_str = self.get_grt_temp(fc_params)
-            while grt_temperature > cycle_end_temperature and do_cycle_fridge:
-                # Get new data 
-                data_line = self.check_cycle_stage_and_update_data(fc_params, data_path, sleep_time)
-                fc_file_handle.write(data_line)
-                # Check GRT Temp 
-                grt_temperature, grt_temperature_str = self.get_grt_temp(fc_params)
-            if self.aborted_cycle:
-                status = 'Previous Cycle Aborted, Idle'
-                getattr(self, '_fridge_cycle_popup_status_label').setText(status)
-            else:
-                status = 'Stage has reached {0}, cycle finished'.format(grt_temperature_str)
-                getattr(self, '_fridge_cycle_popup_status_label').setText(status)
-            do_cycle_fridge = False
-            root.update()
-
-    def bd_check_cycle_stage_and_update_data(self, fc_params, data_path, sleep_time):
-        # Update ABR resistance
-        abr_resistance, abr_resistance_str = self.fc.get_resistance()
-        getattr(self, '_fridge_cycle_popup_abr_resistance_value_label').setText(abr_resistance_str)
-        abr_temperature, abr_temperature_str = self.fc.abr_resistance_to_kelvin(abr_resistance)
-        getattr(self, '_fridge_cycle_popup_abr_temperature_value_label').setText(abr_temperature_str)
-        # Update ABR temperature
-        abr_resistance, abr_resistance_str = self.fc.get_resistance()
-        getattr(self, '_fridge_cycle_popup_abr_resistance_value_label').setText(abr_resistance_str)
-        # Update temp
-        grt_temperature, grt_temperature_str = self.get_grt_temp(fc_params)
-        getattr(self, '_fridge_cycle_popup_grt_temperature_value_label').setText(grt_temperature_str)
-        # Update voltage
-        applied_voltage, applied_voltage_str = self.fc.get_voltage()
-        getattr(self, '_fridge_cycle_popup_ps_voltage_value_label').setText(applied_voltage_str)
-        # Update time stamp
-        time_stamp = datetime.now()
-        time_stamp = datetime.strftime(time_stamp, '%Y_%m_%d_%H_%M_%S')
-        # Add and plot data
-        self.fc_time_stamp_vector.append(time_stamp)
-        self.ps_voltage_vector.append(applied_voltage)
-        self.abr_resistance_vector.append(abr_resistance)
-        self.abr_temperature_vector.append(abr_temperature)
-        self.grt_temperature_vector.append(grt_temperature)
-        self.update_fridge_cycle(data_path=data_path)
-        # Write Data 
-        data_line = '{0}\t{1}\t{2}\t{3}\t{4}\n'.format(time_stamp, abr_resistance, abr_temperature, applied_voltage, grt_temperature)
-        # Update Gui and Sleep
-        root.update()
-        self.repaint()
-        time.sleep(sleep_time)
-        return data_line
-
-    def bd_stop_fridge_cycle(self):
-        if hasattr(self, 'fc'):
-            self.fc.apply_voltage(0)
-        global do_cycle_fridge
-        do_cycle_fridge = False
-        self.aborted_cycle = True
-        self.fc_time_stamp_vector, self.ps_voltage_vector, self.abr_resistance_vector, self.grt_temperature_vector = [], [], [], []
-        root.update()
-
-    def bd_get_params_from_fride_cycle(self):
-        params = {}
-        grt_daq_channel = str(getattr(self, '_fridge_cycle_popup_grt_daq_channel_combobox').currentText())
-        grt_serial = str(getattr(self, '_fridge_cycle_popup_grt_serial_combobox').currentText())
-        grt_range = str(getattr(self, '_fridge_cycle_popup_grt_range_combobox').currentText())
-        ps_voltage = str(getattr(self, '_fridge_cycle_popup_ps_voltage_value_label').text())
-        abr_resistance = str(getattr(self, '_fridge_cycle_popup_abr_resistance_value_label').text())
-        grt_temperature = str(getattr(self, '_fridge_cycle_popup_grt_temperature_value_label').text())
-        charcoal_start_resistance = str(getattr(self, '_fridge_cycle_popup_start_resistance_lineedit').text())
-        charcoal_end_resistance = str(getattr(self, '_fridge_cycle_popup_end_resistance_lineedit').text())
-        cycle_voltage = str(getattr(self, '_fridge_cycle_popup_cycle_voltage_combobox').currentText())
-        cycle_end_temperature = str(getattr(self, '_fridge_cycle_popup_cycle_end_temperature_combobox').currentText())
-        params.update({'grt_daq_channel': grt_daq_channel})
-        params.update({'grt_serial': grt_serial})
-        params.update({'grt_range': grt_range})
-        params.update({'ps_voltage': ps_voltage})
-        params.update({'abr_resistance': abr_resistance})
-        params.update({'grt_temperature': grt_temperature})
-        params.update({'charcoal_start_resistance': charcoal_start_resistance})
-        params.update({'charcoal_end_resistance': charcoal_end_resistance})
-        params.update({'cycle_voltage': cycle_voltage})
-        params.update({'cycle_end_temperature': cycle_end_temperature})
-        return params
-
-    def bd_update_fridge_cycle(self, data_path=None):
-        fc_params = self.get_params_from_fride_cycle()
-        fig, ax = self.bd_create_blank_fig(frac_screen_width=0.75, frac_screen_height=0.7,
-                                         left=0.08, right=0.98, top=0.9, bottom=0.1,
-                                         multiple_axes=True)
-        ax1 = fig.add_subplot(411)
-        ax2 = fig.add_subplot(412)
-        ax3 = fig.add_subplot(413)
-        ax4 = fig.add_subplot(414)
-        time_stamp_vector = [datetime.strptime(x, '%Y_%m_%d_%H_%M_%S') for x in self.fc_time_stamp_vector]
-        ax1.plot(time_stamp_vector, self.ps_voltage_vector, color='r', label='PS Voltage (V)')
-        date = datetime.strftime(datetime.now(), '%Y_%m_%d')
-        ax1.set_title('576 Fridge Cycle {0}'.format(date))
-        ax1.set_ylabel('PS Voltage (V)')
-        ax1.set_ylim([0, 26])
-        ax2.plot(time_stamp_vector, self.abr_temperature_vector, color='g', label='ABR Temp (K)')
-        ax2.set_ylabel('ABR Temp (K)')
-        ax2.axhline(float(self.fc.abr_resistance_to_kelvin(float(fc_params['charcoal_end_resistance']))[0]), color='b', label='ABR End')
-        ax2.axhline(float(self.fc.abr_resistance_to_kelvin(float(fc_params['charcoal_start_resistance']))[0]), color='m', label='ABR Start')
-        ax3.plot(time_stamp_vector, np.asarray(self.abr_resistance_vector) * 1e-3, color='k', label='GRT Temp (mK)')
-        ax3.axhline(float(fc_params['charcoal_end_resistance']) * 1e-3, color='b', label='ABR End')
-        ax3.axhline(float(fc_params['charcoal_start_resistance']) * 1e-3, color='m', label='ABR Start')
-        ax3.set_ylabel('ABR Res (kOhms)')
-        ax4.plot(time_stamp_vector, self.grt_temperature_vector, color='c', label='GRT Temp (mK)')
-        ax4.axhline(float(fc_params['cycle_end_temperature']), color='b', label='Approx GRT Base')
-        ax4.set_ylabel('GRT Temp (mK)')
-        ax4.set_xlabel('Time Stamps')
-        # Add legends
-        handles, labels = ax1.get_legend_handles_labels()
-        ax1.legend(handles, labels, numpoints=1)
-        handles, labels = ax2.get_legend_handles_labels()
-        ax2.legend(handles, labels, numpoints=1)
-        handles, labels = ax3.get_legend_handles_labels()
-        ax3.legend(handles, labels, numpoints=1)
-        if data_path is not None:
-            save_path = data_path.replace('.dat', '.png')
-        else:
-            save_path = 'temp_files/temp_fc.png'
-        pl.legend()
-        fig.savefig(save_path)
-        pl.cla()
-        pl.close('all')
-        image_to_display = QtGui.QPixmap(save_path)
-        getattr(self, '_fridge_cycle_popup_fridge_cycle_plot_label').setPixmap(image_to_display)
-        self.repaint()
+    def bd_update_fit_data(self, voltage_factor):
+        '''
+        Updates fit limits based on IV data
+        '''
+        fit_clip_hi = self.xdata[0] * float(voltage_factor) * 1e6 # uV
+        data_clip_lo = self.xdata[-1] * float(voltage_factor) * 1e6 + self.data_clip_offset # uV
+        data_clip_hi = fit_clip_hi # uV
+        fit_clip_lo = data_clip_lo + self.fit_clip_offset # uV
+        getattr(self, '_xy_collector_popup_data_clip_hi_lineedit').setText('{0:.3f}'.format(data_clip_hi))
+        getattr(self, '_xy_collector_popup_data_clip_lo_lineedit').setText('{0:.3f}'.format(data_clip_lo))
+        getattr(self, '_xy_collector_popup_fit_clip_lo_lineedit').setText('{0:.3f}'.format(fit_clip_lo))
+        getattr(self, '_xy_collector_popup_fit_clip_hi_lineedit').setText('{0:.3f}'.format(fit_clip_hi))
 
     #################################################
     # Lakeshore
@@ -1300,23 +1154,13 @@ class DaqGuiTemplate(QtWidgets.QMainWindow, GuiBuilder):
         dialog = 'Select the comport for the Lakeshore'
         if not hasattr(self, 'lakeshore_serial_com'):
             self.active_ports = self.bd_get_active_serial_ports()
-            if not hasattr(self, 'ls372_widget'):
+            if self.ls372_widget is None:
                 com_port, okPressed = self.gb_quick_static_info_gather(title='', dialog=dialog, items=self.active_ports)
                 if okPressed:
                     self.lakeshore_com_port = com_port
-                    self.ls372_widget = LakeShore372(com_port)
+                    self.ls372_widget = LakeShore372(com_port, self.status_bar)
+        if self.ls372_widget is not None:
             self.central_widget.layout().addWidget(self.ls372_widget, 0, 0, 1, 1)
-
-    #################################################
-    # MULTIDAQ
-    #################################################
-
-    def bd_multidaq(self):
-        '''
-        '''
-        multidaq_widget = Multidaq(self.active_daqs)
-        self.gb_initialize_panel('central_widget')
-        self.central_widget.layout().addWidget(multidaq_widget, 0, 0, 1, 1)
 
     #################################################
     # COSMIC RAYS
@@ -1379,11 +1223,11 @@ class DaqGuiTemplate(QtWidgets.QMainWindow, GuiBuilder):
                     daq_channel_2 = params['daq_channel_2']
                     integration_time_2 = params['daq_2_integration_time']
                     sample_rate_2 = params['daq_2_sample_rate']
-                    data_1, mean_1, min_1, max_1, std_1 = self.real_daq.get_data(signal_channel=daq_channel_1,
+                    data_1, mean_1, min_1, max_1, std_1 = self.daq.get_data(signal_channel=daq_channel_1,
                                                                                  integration_time=integration_time_1,
                                                                                  sample_rate=sample_rate_1,
                                                                                  active_daqs=self.active_daqs)
-                    data_2, mean_2, min_2, max_2, std_2 = self.real_daq.get_data(signal_channel=daq_channel_2,
+                    data_2, mean_2, min_2, max_2, std_2 = self.daq.get_data(signal_channel=daq_channel_2,
                                                                                  integration_time=integration_time_2,
                                                                                  sample_rate=sample_rate_2,
                                                                                  active_daqs=self.active_daqs)
@@ -1406,268 +1250,6 @@ class DaqGuiTemplate(QtWidgets.QMainWindow, GuiBuilder):
         delattr(self, 'raw_data_path')
         self.update_log()
 
-    #################################################
-    # XY COLLECTOR
-    #################################################
-
-    def bd_close_xy_collector(self):
-        '''
-        Closes the panel with a warning if data is being collected
-        '''
-        global continue_run
-        if continue_run:
-            self.gb_quick_message('Taking data!!!\nPlease stop taking data before closing XY Collector!')
-        else:
-            self.xy_collector_popup.close()
-            continue_run = False
-
-    def bd_xy_collector(self):
-        '''
-        Opens the panel and sets som defaults
-        '''
-        if not hasattr(self, 'xy_collector_popup'):
-            self.gb_create_popup_window('xy_collector_popup')
-        else:
-            self.gb_initialize_panel('xy_collector_popup')
-        self.gb_build_panel(settings.xy_collector_build_dict)
-        self.gb_populate_combobox(self.xy_collector_combobox_entry_dict)
-        self.xy_collector_popup.showMaximized()
-        self.xy_collector_popup.setWindowTitle('XY COLLECTOR')
-        getattr(self, '_xy_collector_popup_daq_channel_x_combobox').setCurrentIndex(2)
-        getattr(self, '_xy_collector_popup_daq_channel_y_combobox').setCurrentIndex(3)
-        self.xdata = np.asarray([])
-        self.ydata = np.asarray([])
-        self.xstd = np.asarray([])
-        self.ystd = np.asarray([])
-        self.bd_update_in_xy_mode()
-        self.bd_update_squid_calibration()
-        getattr(self, '_xy_collector_popup_fit_clip_lo_lineedit').setText(str(self.ivcurve_plot_settings_dict['fit_clip_lo']))
-        getattr(self, '_xy_collector_popup_fit_clip_hi_lineedit').setText(str(self.ivcurve_plot_settings_dict['fit_clip_hi']))
-        getattr(self, '_xy_collector_popup_data_clip_lo_lineedit').setText(str(self.ivcurve_plot_settings_dict['data_clip_lo']))
-        getattr(self, '_xy_collector_popup_data_clip_hi_lineedit').setText(str(self.ivcurve_plot_settings_dict['data_clip_hi']))
-        getattr(self, '_xy_collector_popup_daq_sample_rate_combobox').setCurrentIndex(4)
-        getattr(self, '_xy_collector_popup_sample_temp_combobox').setCurrentIndex(3)
-        getattr(self, '_xy_collector_popup_grt_range_combobox').setCurrentIndex(3)
-        getattr(self, '_xy_collector_popup_include_errorbars_checkbox').setChecked(True)
-
-
-    def bd_draw_x(self, title='', xlabel='', ylabel=''):
-        '''
-        Draws the x timestream and paints it to the panel
-        '''
-        fig, ax = self.bd_create_blank_fig()
-        ax.plot(self.xdata)
-        ax.set_title(title, fontsize=10)
-        ax.set_xlabel(xlabel, fontsize=10)
-        ax.set_ylabel(ylabel, fontsize=10)
-        save_path = 'temp_files/temp_xv.png'
-        fig.savefig(save_path)
-        pl.close('all')
-        image_to_display = QtGui.QPixmap(save_path)
-        getattr(self, '_xy_collector_popup_xdata_label').setPixmap(image_to_display)
-
-    def bd_draw_y(self, title='', xlabel='', ylabel=''):
-        '''
-        Draws the Y timestream and paints it to the panel
-        '''
-        e_bars = getattr(self, '_xy_collector_popup_include_errorbars_checkbox').isChecked()
-        fig, ax = self.bd_create_blank_fig()
-        ax.plot(self.ydata)
-        if e_bars:
-            ax.errorbar(range(len(self.ydata)), self.ydata, self.ystd, marker='.', linestyle='None')
-        ax.set_title(title, fontsize=10)
-        ax.set_xlabel(xlabel, fontsize=10)
-        ax.set_ylabel(ylabel, fontsize=10)
-        save_path = 'temp_files/temp_yv.png'
-        fig.savefig(save_path)
-        pl.close('all')
-        image_to_display = QtGui.QPixmap(save_path)
-        getattr(self, '_xy_collector_popup_ydata_label').setPixmap(image_to_display)
-
-    def bd_draw_xy_collector(self, title='', xlabel='', ylabel='', x_voltage_uV_plotting_factor=10):
-        '''
-        Draws the X-Y scatter plott and paints it to the panel
-        '''
-        pl.close('all')
-        e_bars = getattr(self, '_xy_collector_popup_include_errorbars_checkbox').isChecked()
-        fig, ax = self.bd_create_blank_fig()
-        ax.plot(self.xdata * x_voltage_uV_plotting_factor, self.ydata)
-        if e_bars:
-            ax.errorbar(self.xdata * x_voltage_uV_plotting_factor, self.ydata, self.ystd, marker='.', linestyle='None')
-        ax.set_title(title, fontsize=10)
-        ax.set_xlabel(xlabel, fontsize=10)
-        ax.set_ylabel(ylabel, fontsize=10)
-        save_path = 'temp_files/temp_iv.png'
-        fig.savefig(save_path)
-        self.active_fig = copy(fig)
-        image_to_display = QtGui.QPixmap(save_path)
-        getattr(self, '_xy_collector_popup_xydata_label').setPixmap(image_to_display)
-        self.repaint()
-
-    def bd_get_params_from_xy_collector(self, meta_data):
-        '''
-        Collects the parameters from the panel
-        '''
-        mode = str(getattr(self, '_xy_collector_popup_mode_combobox').currentText())
-        voltage_factor = float(str(getattr(self, '_xy_collector_popup_voltage_factor_combobox').currentText()))
-        squid = str(getattr(self, '_xy_collector_popup_squid_select_combobox').currentText())
-        squid_conversion = str(getattr(self, '_xy_collector_popup_squid_conversion_label').text())
-        if len(squid_conversion) > 0:
-            squid_conversion = float(squid_conversion.split(' ')[0])
-        else:
-            squid_conversion = 1.0
-        label = str(getattr(self, '_xy_collector_popup_sample_name_lineedit').text())
-        fit_clip_lo = float(str(getattr(self, '_xy_collector_popup_fit_clip_lo_lineedit').text()))
-        fit_clip_hi = float(str(getattr(self, '_xy_collector_popup_fit_clip_hi_lineedit').text()))
-        data_clip_lo = float(str(getattr(self, '_xy_collector_popup_data_clip_lo_lineedit').text()))
-        data_clip_hi = float(str(getattr(self, '_xy_collector_popup_data_clip_hi_lineedit').text()))
-        e_bars = getattr(self, '_xy_collector_popup_include_errorbars_checkbox').isChecked()
-        temp = str(getattr(self, '_xy_collector_popup_sample_temp_combobox').currentText())
-        drift = str(getattr(self, '_xy_collector_popup_sample_drift_direction_combobox').currentText())
-        optical_load = str(getattr(self, '_xy_collector_popup_optical_load_combobox').currentText())
-        grt_serial = str(getattr(self, '_xy_collector_popup_grt_serial_combobox').currentText())
-        fit_clip = (fit_clip_lo, fit_clip_hi)
-        data_clip = (data_clip_lo, data_clip_hi)
-        return {'mode': mode, 'squid': squid, 'squid_conversion': squid_conversion, 'grt_serial': grt_serial,
-                'voltage_factor': voltage_factor, 'label': label, 'temp': temp, 'drift': drift,
-                'fit_clip': fit_clip, 'data_clip': data_clip, 'e_bars': e_bars,
-                'optical_load': optical_load}
-
-    def bd_update_in_xy_mode(self, dummy=None, voltage_factor='1e-5'):
-        '''
-        Updats the panel with new defaults
-        '''
-        run_mode = str(getattr(self, '_xy_collector_popup_mode_combobox').currentText())
-        if run_mode == 'IV':
-            if voltage_factor == '1e-5':
-                x_voltage_uV_plotting_factor = 10
-            elif voltage_factor == '1e-4':
-                x_voltage_uV_plotting_factor = 100
-            else:
-                import ipdb;ipdb.set_trace()
-            if hasattr(self, 'xdata'):
-                self.bd_draw_x(title='X data', xlabel='Sample', ylabel='Bias Voltage @ Box (V)')
-                self.bd_draw_y(title='Y data', xlabel='Sample', ylabel='SQUID Output Voltage (V)')
-                self.bd_draw_xy_collector(title='IV Curve', xlabel='Bias Voltage @ TES ($\mu$V)', ylabel='SQUID Output Voltage (V)',
-                                          x_voltage_uV_plotting_factor=x_voltage_uV_plotting_factor)
-                if len(self.xdata) == 0:
-                    getattr(self, '_xy_collector_popup_voltage_factor_combobox').setCurrentIndex(0)
-        elif run_mode == 'RT':
-            if voltage_factor == 'Lakeshore':
-                x_voltage_uV_plotting_factor = 1
-            else:
-                x_voltage_uV_plotting_factor = 10
-            if len(self.xdata) == 0:
-                getattr(self, '_xy_collector_popup_voltage_factor_combobox').setCurrentIndex(3)
-                getattr(self, '_xy_collector_popup_invert_output_checkbox').setChecked(True)
-                getattr(self, '_xy_collector_popup_sample_res_lineedit').setText('1.0')
-                getattr(self, '_xy_collector_popup_daq_channel_x_combobox').setCurrentIndex(5)
-                getattr(self, '_xy_collector_popup_daq_channel_y_combobox').setCurrentIndex(3)
-                getattr(self, '_xy_collector_popup_voltage_factor_combobox').setCurrentIndex(1)
-                getattr(self, '_xy_collector_popup_data_clip_lo_lineedit').setText(str(250))
-                getattr(self, '_xy_collector_popup_data_clip_hi_lineedit').setText(str(600))
-            self.bd_draw_x(title='X data', xlabel='Sample', ylabel='GRT Temp (mK)')
-            self.bd_draw_y(title='Y data', xlabel='Sample', ylabel='SQUID Output Voltage (V)')
-            self.bd_draw_xy_collector(title='RT Curve', xlabel='GRT Temp (mK)', ylabel='SQUID Output Voltage (V)', x_voltage_uV_plotting_factor=x_voltage_uV_plotting_factor)
-        else:
-            self.bd_draw_xy_collector()
-
-    def bd_run_xy_collector(self):
-        '''
-        Starts the data collection
-        '''
-        global continue_run
-        continue_run = True
-        self.bd_get_raw_data_save_path()
-        meta_data = self.bd_get_all_meta_data(popup='xy_collector')
-        if self.raw_data_path is not None:
-            start_time = datetime.now()
-            sender_text = str(self.sender().text())
-            self.sender().setFlat(True)
-            getattr(self, '_xy_collector_popup_save_pushbutton').setFlat(True)
-            self.sender().setText('Taking Data')
-            daq_channel_x = getattr(self,'_xy_collector_popup_daq_channel_x_combobox').currentText()
-            daq_channel_y = getattr(self, '_xy_collector_popup_daq_channel_y_combobox').currentText()
-            integration_time = int(float(str(getattr(self, '_xy_collector_popup_daq_integration_time_combobox').currentText())))
-            sample_rate = int(float(str(getattr(self, '_xy_collector_popup_daq_sample_rate_combobox').currentText())))
-            voltage_factor = str(getattr(self, '_xy_collector_popup_voltage_factor_combobox').currentText())
-            self.xdata, self.ydata, self.xstd, self.ystd = np.asarray([]), np.asarray([]), np.asarray([]), np.asarray([])
-            run_mode = str(getattr(self, '_xy_collector_popup_mode_combobox').currentText())
-            first_x_point = 1.0
-            last_time = start_time
-            if run_mode == 'RT':
-                rtc = RTCurve([])
-                grt_range = str(getattr(self, '_xy_collector_popup_grt_range_combobox').currentText())
-                grt_serial = str(getattr(self, '_xy_collector_popup_grt_serial_combobox').currentText())
-                voltage_factor = float(self.multimeter_voltage_factor_range_dict[grt_range])
-                first_x_point = 600
-            with open(self.raw_data_path[0].replace('.dat', '.json'), 'w') as meta_data_handle:
-                json.dump(meta_data, meta_data_handle)
-            with open(self.raw_data_path[0], 'w') as data_handle:
-                while continue_run:
-                    data_time = datetime.now()
-                    tot_elapsed_time = data_time - start_time
-                    data_point_elapsed_time = last_time - data_time
-                    tot_time_str = str(tot_elapsed_time.seconds)
-                    data_point_time_str = str(data_point_elapsed_time.microseconds * 1e-6) # s
-                    x_data, x_mean, x_min, x_max, x_std = self.real_daq.get_data(signal_channel=daq_channel_x,
-                                                                                 integration_time=integration_time,
-                                                                                 sample_rate=sample_rate,
-                                                                                 daq=self.active_daqs[1])
-                    y_data, y_mean, y_min, y_max, y_std = self.real_daq.get_data(signal_channel=daq_channel_y,
-                                                                                 integration_time=integration_time,
-                                                                                 sample_rate=sample_rate,
-                                                                                 daq=self.active_daqs[1])
-                    if run_mode == 'IV' and x_mean < 0.0:
-                        x_mean *= -1
-                        x_data = x_data -2 * x_data
-                    if run_mode == 'RT':
-                        #if 3.0 < x_mean * voltage_factor < 600:
-                            #if grt_serial != '':
-                                #x_data, is_valid = 1e3 * rtc.resistance_to_temp_grt(x_data * voltage_factor, serial_number=grt_serial)
-                        #else:
-                            #x_data = [np.nan]
-                        x_mean = np.mean(x_data)
-                        x_min = np.min(x_data)
-                        x_max = np.max(x_data)
-                        x_std = np.std(x_data)
-                    delta_x = x_mean - first_x_point
-                    slew_rate = '{0:.2f} mK/s'.format(delta_x / float(data_point_time_str))
-                    if run_mode == 'IV':
-                        slew_rate = slew_rate.replace('mK', 'uV')
-                    getattr(self, '_xy_collector_popup_data_time_label').setText(tot_time_str)
-                    getattr(self, '_xy_collector_popup_data_rate_label').setText(slew_rate)
-                    self.xdata = np.append(self.xdata, x_mean)
-                    self.ydata = np.append(self.ydata, y_mean)
-                    self.xstd = np.append(self.xstd, x_std)
-                    self.ystd = np.append(self.ystd, y_std)
-                    getattr(self, '_xy_collector_popup_xdata_mean_label').setText('{0:.4f}'.format(x_mean))
-                    getattr(self, '_xy_collector_popup_xdata_std_label').setText('{0:.4f}'.format(x_std))
-                    getattr(self, '_xy_collector_popup_ydata_mean_label').setText('{0:.4f}'.format(y_mean))
-                    getattr(self, '_xy_collector_popup_ydata_std_label').setText('{0:.4f}'.format(y_std))
-                    data_line = '{0}\t{1}\t{2}\n'.format(x_mean, y_mean, y_std)
-                    data_handle.write(data_line)
-                    grt_serial = str(getattr(self, '_xy_collector_popup_grt_serial_combobox').currentText())
-                    self.bd_update_in_xy_mode(voltage_factor=grt_serial)
-                    first_x_point = x_mean
-                    last_time = data_time
-                    root.update()
-        self.bd_update_log()
-        if self.raw_data_path is not None:
-            self.bd_update_fit_data(voltage_factor)
-
-    def bd_update_fit_data(self, voltage_factor):
-        '''
-        Updates fit limits based on IV data
-        '''
-        fit_clip_hi = self.xdata[0] * float(voltage_factor) * 1e6 # uV
-        data_clip_lo = self.xdata[-1] * float(voltage_factor) * 1e6 + self.data_clip_offset # uV
-        data_clip_hi = fit_clip_hi # uV
-        fit_clip_lo = data_clip_lo + self.fit_clip_offset # uV
-        getattr(self, '_xy_collector_popup_data_clip_hi_lineedit').setText('{0:.3f}'.format(data_clip_hi))
-        getattr(self, '_xy_collector_popup_data_clip_lo_lineedit').setText('{0:.3f}'.format(data_clip_lo))
-        getattr(self, '_xy_collector_popup_fit_clip_lo_lineedit').setText('{0:.3f}'.format(fit_clip_lo))
-        getattr(self, '_xy_collector_popup_fit_clip_hi_lineedit').setText('{0:.3f}'.format(fit_clip_hi))
 
     #################################################
     # TIME CONSTANT 
@@ -1789,7 +1371,7 @@ class DaqGuiTemplate(QtWidgets.QMainWindow, GuiBuilder):
             daq_channel = getattr(self,'_time_constant_popup_daq_select_combobox').currentText()
             integration_time = int(float(str(getattr(self, '_time_constant_popup_daq_integration_time_combobox').currentText())))
             sample_rate = int(float(str(getattr(self, '_time_constant_popup_daq_sample_rate_combobox').currentText())))
-            y_data, y_mean, y_min, y_max, y_std = self.real_daq.get_data(signal_channel=daq_channel,
+            y_data, y_mean, y_min, y_max, y_std = self.daq.get_data(signal_channel=daq_channel,
                                                                          integration_time=integration_time,
                                                                          sample_rate=sample_rate,
                                                                          active_daqs=self.active_daqs)
@@ -1996,7 +1578,7 @@ class DaqGuiTemplate(QtWidgets.QMainWindow, GuiBuilder):
             start_time_str = datetime.strftime(start_time, '%H:%M')
             x_positions = np.arange(int(scan_params['starting_position']), int(scan_params['ending_position']) + int(scan_params['step_size']), int(scan_params['step_size']))
             with open(self.raw_data_path[0].replace('.dat', '.json'), 'w') as meta_data_handle:
-                json.dump(meta_data, meta_data_handle)
+                simplejson.dump(meta_data, meta_data_handle)
             with open(self.raw_data_path[0], 'w') as pc_save_handle:
                 i = 0
                 while continue_run and i < len(x_positions):
@@ -2006,7 +1588,7 @@ class DaqGuiTemplate(QtWidgets.QMainWindow, GuiBuilder):
                     getattr(self, 'sm_{0}'.format(scan_params['sm_com_port'])).move_to_position(x_pos)
                     self.lock_in._zero_lock_in_phase()
                     time.sleep(pause)
-                    data_time_stream, mean, min_, max_, std = self.real_daq.get_data(signal_channel=scan_params['signal_channel'], integration_time=scan_params['integration_time'],
+                    data_time_stream, mean, min_, max_, std = self.daq.get_data(signal_channel=scan_params['signal_channel'], integration_time=scan_params['integration_time'],
                                                                                      sample_rate=scan_params['sample_rate'], active_daqs=self.active_daqs)
                     # Update data point info
                     std_pct = 100 * (std / mean)
@@ -2400,7 +1982,7 @@ class DaqGuiTemplate(QtWidgets.QMainWindow, GuiBuilder):
                         time.sleep(0.75)
                     else:
                         time.sleep(pause)
-                    data_time_stream, mean, min_, max_, std = self.real_daq.get_data(signal_channel=scan_params['signal_channel'], integration_time=scan_params['integration_time'],
+                    data_time_stream, mean, min_, max_, std = self.daq.get_data(signal_channel=scan_params['signal_channel'], integration_time=scan_params['integration_time'],
                                                                                      sample_rate=scan_params['sample_rate'], active_daqs=self.active_daqs)
                     # Update data point info
                     std_pct = 100 * (std / mean)
@@ -2659,7 +2241,7 @@ class DaqGuiTemplate(QtWidgets.QMainWindow, GuiBuilder):
             with open(self.raw_data_path[0], 'w') as data_handle:
                 count = 1
                 with open(self.raw_data_path[0].replace('.dat', '.json'), 'w') as meta_data_handle:
-                    json.dump(meta_data, meta_data_handle)
+                    simplejson.dump(meta_data, meta_data_handle)
                 i = 0
                 while i < len(x_grid) and continue_run:
                     x_pos = x_grid[i]
@@ -2683,7 +2265,7 @@ class DaqGuiTemplate(QtWidgets.QMainWindow, GuiBuilder):
                             time.sleep((int(scan_params['pause_time']) / 2) * 1e-3)
                         self.lock_in._zero_lock_in_phase()
                         time.sleep((int(scan_params['pause_time']) / 2) * 1e-3)
-                        data_time_stream, mean, min_, max_, std = self.real_daq.get_data(signal_channel=scan_params['signal_channel'], integration_time=scan_params['integration_time'],
+                        data_time_stream, mean, min_, max_, std = self.daq.get_data(signal_channel=scan_params['signal_channel'], integration_time=scan_params['integration_time'],
                                                                                          sample_rate=scan_params['sample_rate'], active_daqs=self.active_daqs)
                         self.draw_time_stream(data_time_stream, min_, max_,'_beam_mapper_popup_time_stream_label')
                         Z_datum = mean
@@ -2757,11 +2339,11 @@ class DaqGuiTemplate(QtWidgets.QMainWindow, GuiBuilder):
             json_file_path_2 = json_file_path_1.replace('For_Analysis/', '')
             if os.path.exists(json_file_path_1):
                 with open(json_file_path_1, 'r') as preset_file_handle:
-                    preset_dict = json.load(preset_file_handle)
+                    preset_dict = simplejson.load(preset_file_handle)
                     preset_parameters[file_path] = preset_dict
             if os.path.exists(json_file_path_2):
                 with open(json_file_path_2, 'r') as preset_file_handle:
-                    preset_dict = json.load(preset_file_handle)
+                    preset_dict = simplejson.load(preset_file_handle)
                     preset_parameters[file_path] = preset_dict
         return preset_parameters
 
@@ -3865,6 +3447,7 @@ class DaqGuiTemplate(QtWidgets.QMainWindow, GuiBuilder):
 
 if __name__ == '__main__':
     qt_app = QtWidgets.QApplication(sys.argv)
+    qt_app.setFont(QtGui.QFont('SansSerif', 10))
     screen_resolution = qt_app.desktop().screenGeometry()
     gui = DaqGuiTemplate(screen_resolution, qt_app)
     gui.show()

@@ -11,25 +11,25 @@
                 "function": "bd_close_main",
                 "icon": "close.png"
             },
-            "02_Configure DAQ": {
-                "StatusTip": "Configure DAQ",
-                "ToolTip": "Configure DAQ",
-                "function": "bd_configure_daq",
-                "icon": "daq.png"
-            },
-            "03_Configure Steppers": {
+            "02_Configure Steppers": {
                 "StatusTip": "Configure Stepper",
                 "ToolTip": "Configure Stepper",
                 "function": "bd_configure_com_ports",
                 "icon": "steppermotor.png"
             },
-            "04_Multidaq": {
-                "StatusTip": "MultiDAQ",
-                "ToolTip": "MultiDAW",
-                "function": "bd_multidaq",
+            "03_Configure DAQ": {
+                "StatusTip": "Configure DAQ",
+                "ToolTip": "Configure DAQ",
+                "function": "bd_configure_daq",
                 "icon": "multimeter.png"
             },
-            "05_Lakeshore372": {
+            "04_Fridge Cycle 576": {
+                "StatusTip": "Fridge Cycle 576",
+                "ToolTip": "Fridge Cycle 576",
+                "function": "bd_fridge_cycle",
+                "icon": "snowflake.png"
+            },
+            "04_Lakeshore372": {
                 "StatusTip": "Lakeshore 372",
                 "ToolTip": "Lakeshore 372 Configuration ",
                 "function": "bd_lakeshore372",
@@ -58,16 +58,23 @@
                 "icon": "beammap.png"
             },
             "04_Cosmic Rays": {
-                "Shortcut": "5",
+                "Shortcut": "4",
                 "StatusTip": "Cosmic Rays",
                 "ToolTip": "Cosmic Rays",
                 "icon": "cosmicrays.png"
             },
             "04_Pol Efficieny": {
-                "Shortcut": "4",
+                "Shortcut": "5",
                 "StatusTip": "Polarization Efficiency",
                 "ToolTip": "Pol Eff",
                 "icon": "poleff.png"
+            },
+            "05_Data Plotter": {
+                "Shortcut": "6",
+                "StatusTip": "Data Plotter",
+                "ToolTip": "Data Plotter",
+                "function": "bd_data_plotter",
+                "icon": "data.png"
             }
         }
     }
