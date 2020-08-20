@@ -27,11 +27,10 @@ class BoloSerial(object):
                 'stopbits': serial.STOPBITS_ONE,
                 'bytesize': serial.SEVENBITS,
                 'timeout': 2
-                }
-
-            'E3634A' :{
-                'baudrate': 57600,
-
+                },
+            'E3634A': {
+                'baudrate': 9600,
+                'timeout': 2
                 }
             }
         self.port = port

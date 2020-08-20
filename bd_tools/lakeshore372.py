@@ -12,7 +12,7 @@ class LakeShore372(QtWidgets.QWidget, GuiBuilder):
         self.status_bar = status_bar
         grid = QtWidgets.QGridLayout()
         self.setLayout(grid)
-        self.serial_com = BoloSerial(port=com_port, device='Lakeshore')
+        self.serial_com = BoloSerial(com_port, device='Model372', splash_screen=status_bar)
         self.com_port = com_port
         self.channel_indicies = [str(x) for x in range(1, 17)]
         self.analog_output_indicies = [str(x) for x in range(1, 4)]

@@ -129,7 +129,7 @@ class DaqGuiTemplate(QtWidgets.QMainWindow, GuiBuilder):
             available = True
             for i in range(2):
                 for j in range(8):
-                    self.splash_screen.showMessage("Configuring NIDAQ: Checking if {0}:::ch{1} is available ({2}/2) times".format(device, j, i + 1))
+                    self.splash_screen.showMessage("Configuring NIDAQ: Checking if {0}:::ch{1} is available ({2}/2)".format(device, j, i + 1))
                     QtWidgets.QApplication.processEvents()
                     try:
                         vol_ts, vol_mean, vol_min, vol_max, vol_std = self.daq.get_data(signal_channel=j,
@@ -165,9 +165,74 @@ class DaqGuiTemplate(QtWidgets.QMainWindow, GuiBuilder):
         permanant_messages = ['Bolo DAQ B.W. 2020']
         self.gb_add_status_bar(permanant_messages=permanant_messages , add_saved=True, custom_widgets=custom_widgets)
 
-    def bd_dummy(self):
-        print(self.sender().whatsThis())
-        print('Dummy Function')
+    #################################################
+    # Com ports
+    #################################################
+
+    def bd_get_active_serial_ports(self):
+        """ Lists serial port names
+
+            :raises EnvironmentError:
+                On unsupported or unknown platforms
+            :returns:
+                A list of the serial ports available on the system
+        """
+        if sys.platform.startswith('win'):
+            ports = ['COM%s' % (i + 1) for i in range(256)]
+        elif sys.platform.startswith('linux') or sys.platform.startswith('cygwin'):
+            # this excludes your current terminal "/dev/tty"
+            ports = glob.glob('/dev/tty[A-Za-z]*')
+        elif sys.platform.startswith('darwin'):
+            ports = glob.glob('/dev/tty.*')
+        else:
+            raise EnvironmentError('Unsupported platform')
+        self.active_ports = []
+        for port in ports:
+            self.splash_screen.showMessage('Checking COM Port {0}'.format(port))
+            try:
+                s = serial.Serial(port)
+                s.close()
+                self.active_ports.append(port)
+            except (OSError, serial.SerialException):
+                pass
+        self.active_ports
+        #self.bd_get_com_device_types()
+
+    def bd_get_com_device_types(self):
+        '''
+        '''
+        self.lab_devices = [
+            'Model372',
+            'E3634A',
+            ]
+        self.com_port_dict = {}
+        active_ports = copy(self.active_ports)
+        for device in self.lab_devices:
+            for active_port in active_ports:
+                print()
+                print(self.active_ports)
+                print(device, active_port)
+                serial_com = BoloSerial(port=active_port, device=device, splash_screen=self.splash_screen)
+                id_string = serial_com.write_read('*IDN? ')
+                self.splash_screen.showMessage("Checking to see what's connected to COM{0} ::: ID = {1}".format(device, id_string))
+                print(device in str(id_string))
+                print(device)
+                print(id_string, type(id_string))
+                if device in str(id_string):
+                    if not device in self.com_port_dict:
+                        self.com_port_dict[device] = comport
+                        active_ports.pop(active_port)
+                        break
+                    else:
+                        import ipdb;ipdb.set_trace()
+                serial_com.close()
+        pprint(self.com_port_dict)
+
+
+    def bd_configure_com_ports(self):
+        '''
+        '''
+        self.active_ports
 
     #################################################
     # Logging and File Management
@@ -212,66 +277,6 @@ class DaqGuiTemplate(QtWidgets.QMainWindow, GuiBuilder):
         shutil.copy(data_path, for_analysis_folder)
         #import ipdb;ipdb.set_trace()
 
-    #################################################
-    # Stepper Motor and Com ports
-    #################################################
-
-    def bd_get_active_serial_ports(self):
-        """ Lists serial port names
-
-            :raises EnvironmentError:
-                On unsupported or unknown platforms
-            :returns:
-                A list of the serial ports available on the system
-        """
-        if sys.platform.startswith('win'):
-            ports = ['COM%s' % (i + 1) for i in range(256)]
-        elif sys.platform.startswith('linux') or sys.platform.startswith('cygwin'):
-            # this excludes your current terminal "/dev/tty"
-            ports = glob.glob('/dev/tty[A-Za-z]*')
-        elif sys.platform.startswith('darwin'):
-            ports = glob.glob('/dev/tty.*')
-        else:
-            raise EnvironmentError('Unsupported platform')
-        self.active_ports = []
-        for port in ports:
-            self.splash_screen.showMessage('Checking COM Port {0}'.format(port))
-            try:
-                s = serial.Serial(port)
-                s.close()
-                self.active_ports.append(port)
-            except (OSError, serial.SerialException):
-                pass
-        self.active_ports
-        self.bd_get_com_device_types()
-
-    def bd_get_com_device_types(self):
-        '''
-        '''
-        self.lab_devices = [
-            'Model372',
-            'E3634A',
-            ]
-        self.com_port_dict = {}
-        for active_port in self.active_ports:
-            for device in self.lab_devices:
-                print()
-                print(self.active_ports)
-                print(device, active_port)
-                serial_com = BoloSerial(port=active_port, device=device, splash_screen=self.splash_screen)
-                id_string = serial_com.write_read('*IDN? ')
-                self.splash_screen.showMessage("Checking to see what's connected to COM{0} ::: ID = {1}".format(device, id_string))
-                print(id_string, type(id_string))
-                if device in str(id_string):
-                    self.com_port_dict['device'] = comport
-                    break
-        pprint(self.com_port_dict)
-
-
-    def bd_configure_com_ports(self):
-        '''
-        '''
-        self.active_ports
 
     def bd_connect_to_com_port(self, com_port=None):
         sender_whats_this_str = str(self.sender().whatsThis())
