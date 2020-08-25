@@ -1,3 +1,4 @@
+import time
 import os
 from copy import copy
 from pprint import pprint
@@ -12,6 +13,8 @@ class LakeShore372(QtWidgets.QWidget, GuiBuilder):
         self.status_bar = status_bar
         grid = QtWidgets.QGridLayout()
         self.setLayout(grid)
+        self.auto_scan = False
+        self.scan_channel = False
         self.serial_com = BoloSerial(com_port, device='Model372', splash_screen=status_bar)
         self.com_port = com_port
         self.channel_indicies = [str(x) for x in range(1, 17)]
@@ -21,201 +24,201 @@ class LakeShore372(QtWidgets.QWidget, GuiBuilder):
         self.analog_outputs = LS372AnalogOutputs(self.serial_com, status_bar)
         self.lakeshore372_command_dict = {
             'autorange': {
-                'False': 0,
-                0: 'False',
-                'True': 1,
-                1: 'True'
+                'False': '0',
+                '0': 'False',
+                'True': '1',
+                '1': 'True'
                 },
             'filter_on': {
-                'False': 0,
-                0: 'False',
-                'True': 1,
-                1: 'True'
+                'False': '0',
+                '0': 'False',
+                'True': '1',
+                '1': 'True'
                 },
             'powerup_enable': {
-                'False': 0,
-                0: 'False',
-                'True': 1,
-                1: 'True'
+                'False': '0',
+                '0': 'False',
+                'True': '1',
+                '1': 'True'
                 },
             'enabled': {
-                'False': 0,
-                0: 'False',
-                'True': 1,
-                1: 'True'
+                'False': '0',
+                '0': 'False',
+                'True': '1',
+                '1': 'True'
                 },
             'analog_channel': {
-                'warm_up': 0,
-                0: 'warm_up',
-                'sample': 1,
-                1: 'sample',
-                'aux': 2,
-                2: 'aux'
+                'warm_up': '0',
+                '0': 'warm_up',
+                'sample': '1',
+                '1': 'sample',
+                'aux': '2',
+                '2': 'aux'
                 },
             'exc_mode': {
-                'voltage': 0,
-                0: 'voltage',
-                'current': 1,
-                1: 'current'
+                'voltage': '0',
+                '0': 'voltage',
+                'current': '1',
+                '1': 'current'
                 },
             'analog_mode': {
-                'output_off': 0,
-                0: 'output_off',
-                'monitor': 1,
-                1: 'monitor',
-                'open_loop': 2,
-                2: 'open_loop',
-                'zone': 3,
-                3: 'zone',
-                'still': 4,
-                4: 'still',
-                'closed_loop': 5,
-                5: 'closed_loop',
-                'warm_up': 6,
-                6: 'warm_up',
+                'output_off': '0',
+                '0': 'output_off',
+                'monitor': '1',
+                '1': 'monitor',
+                'open_loop': '2',
+                '2': 'open_loop',
+                'zone': '3',
+                '3': 'zone',
+                'still': '4',
+                '4': 'still',
+                'closed_loop': '5',
+                '5': 'closed_loop',
+                'warm_up': '6',
+                '6': 'warm_up',
                 },
             'polarity': {
-                'unipolar': 0,
-                0: 'unipolar',
-                'bipolar': 1,
-                1: 'bipolar'
+                'unipolar': '0',
+                '0': 'unipolar',
+                'bipolar': '1',
+                '1': 'bipolar'
                 },
             'filter': {
-                'unfiltered': 0,
-                0: 'unfiltered',
-                'filtered': 1,
-                1: 'filtered'
+                'unfiltered': '0',
+                '0': 'unfiltered',
+                'filtered': '1',
+                '1': 'filtered'
                 },
             'source': {
-                'kelvin': 1,
-                1: 'kelvin',
-                'ohms': 2,
-                2: 'ohms',
+                'kelvin': '1',
+                '1': 'kelvin',
+                'ohms': '2',
+                '2': 'ohms',
                 },
             'units': {
-                'kelvin': 1,
-                1: 'kelvin',
-                'ohms': 2,
-                2: 'ohms',
+                'kelvin': '1',
+                '1': 'kelvin',
+                'ohms': '2',
+                '2': 'ohms',
                 },
             'resistance_range': {
-                1: 2.0e-3,
-                2.0e-3: 1,
-                2: 6.32e-3,
-                6.32e-3: 2,
-                3: 20.0e-3,
-                20.0e-3: 3,
-                4: 63.2e-3,
-                63.2e-3: 4,
-                5: 200e-3,
-                200e-3: 5,
-                6: 632e-3,
-                632e-3: 6,
-                7: 2.00,
-                2.00: 7,
-                8: 6.32,
-                6.32: 8,
-                9: 20.001,
-                20.001: 9,
-                10: 63.2,
-                63.2: 10,
-                11: 200.001,
-                200.001: 11,
-                12: 632,
-                632: 12,
-                13: 2.00e3,
-                2.00e3: 13,
-                14: 6.32e3,
-                6.32e3: 14,
-                15: 20.0e3,
-                20.0e3: 15,
-                16: 63.2e3,
-                63.2e3: 16,
-                17: 200e3,
-                200e3: 17,
-                18: 632e3,
-                632e3: 18,
-                19: 2.00e6,
-                2.00e6: 19,
-                20: 6.32e6,
-                6.32e6: 20,
-                21: 20.0e6,
-                20.0e6: 21,
-                22: 63.2e6,
-                63.2e6: 22
+                '01': 2.0e-3,
+                2.0e-3: '01',
+                '02': 6.32e-3,
+                6.32e-3: '02',
+                '03': 20.0e-3,
+                20.0e-3: '03',
+                '04': 63.2e-3,
+                63.2e-3: '04',
+                '05': 200e-3,
+                200e-3: '05',
+                '06': 632e-3,
+                632e-3: '06',
+                '07': 2.00,
+                2.00: '07',
+                '08': 6.32,
+                6.32: '08',
+                '09': 20.0,
+                20.0: '09',
+                '10': 63.2,
+                63.2: '10',
+                '11': 200,
+                200: '11',
+                '12': 632,
+                632: '12',
+                '13': 2.00e3,
+                2.00e3: '13',
+                '14': 6.32e3,
+                6.32e3: '14',
+                '15': 20.0e3,
+                20.0e3: '15',
+                '16': 63.2e3,
+                63.2e3: '16',
+                '17': 200e3,
+                200e3: '17',
+                '18': 632e3,
+                632e3: '18',
+                '19': 2.00e6,
+                2.00e6: '19',
+                '20': 6.32e6,
+                6.32e6: '20',
+                '21': 20.0e6,
+                20.0e6: '21',
+                '22': 63.2e6,
+                63.2e6: '22'
                 },
             'excitation': {
                 'voltage': {
-                    1: 2.0e-6,
-                    2.0e-6: 1,
-                    2: 6.32e-6,
-                    6.32e-6: 2,
-                    3: 20.0e-6,
-                    20.0e-6: 3,
-                    4: 63.2e-6,
-                    63.2e-6: 4,
-                    5: 200.0e-6,
-                    200.0e-6: 5,
-                    6: 632.0e-6,
-                    632.0e-6: 6,
-                    7: 2.0e-3,
-                    2.0e-3: 7,
-                    8: 6.32e-3,
-                    6.32e-3: 8,
-                    9: 20.0e-3,
-                    20.0e-3: 9,
-                    10: 63.2e-3,
-                    63.2e-3: 10,
-                    11: 200.0e-3,
-                    200.0e-3: 11,
-                    12: 632.0e-3,
-                    632.0e-3: 12,
+                    '01': 2.0e-6,
+                    2.0e-6: '01',
+                    '02': 6.32e-6,
+                    6.32e-6: '02',
+                    '03': 20.0e-6,
+                    20.0e-6: '03',
+                    '04': 63.2e-6,
+                    63.2e-6: '04',
+                    '05': 200.0e-6,
+                    200.0e-6: '05',
+                    '06': 632.0e-6,
+                    632.0e-6: '06',
+                    '07': 2.0e-3,
+                    2.0e-3: '07',
+                    '08': 6.32e-3,
+                    6.32e-3: '08',
+                    '09': 20.0e-3,
+                    20.0e-3: '09',
+                    '10': 63.2e-3,
+                    63.2e-3: '10',
+                    '11': 200.0e-3,
+                    200.0e-3: '11',
+                    '12': 632.0e-3,
+                    632.0e-3: '12',
                     },
                 'current': {
-                    1: 1.0e-12,
-                    1.0e-12: 1,
-                    2: 3.16e-12,
-                    3.16e-12: 2,
-                    3: 10.0e-12,
-                    10.0e-12: 3,
-                    4: 31.6e-12,
-                    31.6e-12: 4,
-                    5: 100.0e-12,
-                    100.0e-12: 5,
-                    6: 316.0e-12,
-                    316.0e-12: 6,
-                    7: 1.0e-9,
-                    1.0e-9: 7,
-                    8: 3.16e-9,
-                    3.16e-9: 8,
-                    9: 10.0e-9,
-                    10.0e-9: 9,
-                    10: 31.6e-9,
-                    31.6e-9: 10,
-                    11: 100.0e-9,
-                    100.0e-9: 11,
-                    12: 316.0e-9,
-                    316.0e-9: 12,
-                    13: 1.0e-6,
-                    1.0e-6: 13,
-                    14: 3.16e-6,
-                    3.16e-6: 14,
-                    15: 10.0e-6,
-                    10.0e-6: 15,
-                    16: 31.6e-6,
-                    31.6e-6: 16,
-                    17: 100.0e-6,
-                    100.0e-6: 17,
-                    18: 316.0e-6,
-                    316.0e-6: 18,
-                    19: 1.0e-3,
-                    1.0e-3: 19,
-                    20: 3.16e-3,
-                    3.16e-3: 20,
-                    21: 10.0e-3,
-                    10.0e-3: 21,
-                    22: 31.6e-3,
-                    31.6e-3: 22
+                    '01': 1.0e-12,
+                    1.0e-12: '01',
+                    '02': 3.16e-12,
+                    3.16e-12: '02',
+                    '03': 10.0e-12,
+                    10.0e-12: '03',
+                    '04': 31.6e-12,
+                    31.6e-12: '04',
+                    '05': 100.0e-12,
+                    100.0e-12: '05',
+                    '06': 316.0e-12,
+                    316.0e-12: '06',
+                    '07': 1.0e-9,
+                    1.0e-9: '07',
+                    '08': 3.16e-9,
+                    3.16e-9: '08',
+                    '09': 10.0e-9,
+                    10.0e-9: '09',
+                    '10': 31.6e-9,
+                    31.6e-9: '10',
+                    '11': 100.0e-9,
+                    100.0e-9: '11',
+                    '12': 316.0e-9,
+                    316.0e-9: '12',
+                    '13': 1.0e-6,
+                    1.0e-6: '13',
+                    '14': 3.16e-6,
+                    3.16e-6: '14',
+                    '15': 10.0e-6,
+                    10.0e-6: '15',
+                    '16': 31.6e-6,
+                    31.6e-6: '16',
+                    '17': 100.0e-6,
+                    100.0e-6: '17',
+                    '18': 316.0e-6,
+                    316.0e-6: '18',
+                    '19': 1.0e-3,
+                    1.0e-3: '19',
+                    '20': 3.16e-3,
+                    3.16e-3: '20',
+                    '21': 10.0e-3,
+                    10.0e-3: '21',
+                    '22': 31.6e-3,
+                    31.6e-3: '22'
                     }
                 }
             }
@@ -242,8 +245,15 @@ class LakeShore372(QtWidgets.QWidget, GuiBuilder):
         '''
         info_str = 'Com Port: {0}\nSerial Number: {1}'.format(self.com_port, self.serial_number)
         info_header_label = QtWidgets.QLabel(info_str, self)
-
-        self.layout().addWidget(info_header_label, 0, 0, 1, 17)
+        self.layout().addWidget(info_header_label, 0, 0, 1, 3)
+        auto_scan_pushbutton = QtWidgets.QPushButton('Auto Scan', self)
+        self.layout().addWidget(auto_scan_pushbutton, 0, 3, 1, 2)
+        auto_scan_pushbutton.clicked.connect(self.ls372_start_stop_autoscan)
+        auto_scan_time_header_label = QtWidgets.QLabel('Auto Scan Time (s)', self)
+        self.layout().addWidget(auto_scan_time_header_label, 0, 6, 1, 1)
+        auto_scan_time_lineedit = QtWidgets.QLineEdit('1.0', self)
+        self.auto_scan_time_lineedit = auto_scan_time_lineedit
+        self.layout().addWidget(auto_scan_time_lineedit, 0, 7, 1, 4)
         channels_header_label = QtWidgets.QLabel('Input Channels', self)
         channels_header_label.setAlignment(QtCore.Qt.AlignCenter)
         self.layout().addWidget(channels_header_label, 1, 0, 1, 17)
@@ -251,10 +261,30 @@ class LakeShore372(QtWidgets.QWidget, GuiBuilder):
         analog_outputs_header_label.setAlignment(QtCore.Qt.AlignCenter)
         self.layout().addWidget(analog_outputs_header_label, 18, 0, 1, 17)
 
-    def ls372_autoscan(self):
+    def ls372_start_stop_autoscan(self):
         '''
         '''
+        self.auto_scan_time = float(self.auto_scan_time_lineedit.text())
+        if 'Auto Scan' == self.sender().text():
+            self.sender().setText('Stop Auto Scan')
+            self.auto_scan = True
+            self.ls732_auto_scan()
+        else:
+            self.auto_scan = False
+            self.sender().setText('Auto Scan')
 
+    def ls732_auto_scan(self):
+        '''
+        '''
+        while self.auto_scan:
+            for i in range(16):
+                channel_object = getattr(self.channels, 'channel_{0}'.format(i + 1))
+                self.channel_being_scanned = i + 1
+                if channel_object.enabled == '1':
+                    self.ls372_scan_channel(index=self.channel_being_scanned)
+                    time.sleep(self.auto_scan_time)
+                    if not self.auto_scan:
+                        break
 
     def ls372_channels_panel(self):
         '''
@@ -282,11 +312,14 @@ class LakeShore372(QtWidgets.QWidget, GuiBuilder):
                         exc_mode = value
                 value_label = QtWidgets.QLabel(str(value), self)
                 self.layout().addWidget(value_label, 2 + i, int(index), 1, 1)
+                if header == 'channel':
+                    setattr(self, 'channel_index_label_{0}'.format(index), value_label)
             current_value = self.channels.ls372_get_channel_value(index)
             if self.gb_is_float(current_value):
                 current_value = '{0:.3f}'.format(float(current_value))
             current_value_label = QtWidgets.QLabel(str(current_value), self)
             self.layout().addWidget(current_value_label, 3 + i, int(index), 1, 1)
+            setattr(self, 'current_value_label_channel_{0}'.format(int(index) + 1), current_value_label)
             edit_channel_pushbutton = QtWidgets.QPushButton('Edit Ch {0}'.format(index), self)
             edit_channel_pushbutton.clicked.connect(self.ls372_edit_channel)
             self.layout().addWidget(edit_channel_pushbutton, 4 + i, int(index), 1, 1)
@@ -297,23 +330,59 @@ class LakeShore372(QtWidgets.QWidget, GuiBuilder):
             update_channel_pushbutton.clicked.connect(self.ls372_update_channel_value)
             self.layout().addWidget(update_channel_pushbutton, 6 + i, int(index), 1, 1)
 
-    def ls372_update_channel_value(self):
+    def ls372_update_channel_value(self, clicked=False, index=None):
         '''
         '''
-        index = self.sender().text().split(' ')[-1]
+        if index is None:
+            index = self.sender().text().split(' ')[-1]
         self.set_to_channel = index
         if self.com_port == 'COM4':
             channel_readout_info = self.channels.ls372_get_channel_value(index, reading='kelvin')
         else:
             channel_readout_info = self.channels.ls372_get_channel_value(index, reading='resistance')
+        getattr(self, 'current_value_label_channel_{0}'.format(int(index) + 1)).setText(str(channel_readout_info))
+        return channel_readout_info
 
-    def ls372_scan_channel(self):
+    def ls372_scan_channel(self, clicked=False, index=None):
         '''
         '''
-        index = self.sender().text().split(' ')[-1]
-        self.set_to_channel = index
-        self.channels.ls372_scan_channel(index, autoscan=0)
-        self.status_bar.showMessage('Scanning channel {0}'.format(index))
+        if 'Stop' in self.sender().text() and 'Auto' not in self.sender().text():
+            pass
+        elif index is None:
+            index = self.sender().text().split(' ')[-1]
+            self.set_to_channel = index
+        else:
+            self.set_to_channel = index
+        if 'Auto' not in self.sender().text():
+            if 'Scan' in self.sender().text():
+                self.scan_channel = True
+                self.sender().setText('Stop')
+            else:
+                self.scan_channel = False
+                self.sender().setText('Scan Ch {0}'.format(self.set_to_channel))
+        if index is not None:
+            self.ls372_highlight_channel(index)
+        if self.auto_scan:
+            self.channels.ls372_scan_channel(index, autoscan=0)
+            channel_data = self.ls372_update_channel_value(index=index)
+            self.status_bar.showMessage('Scanning channel {0} ::: Value: {1}'.format(index, channel_data))
+            QtWidgets.QApplication.processEvents()
+        else:
+            while self.scan_channel:
+                self.channels.ls372_scan_channel(index, autoscan=0)
+                channel_data = self.ls372_update_channel_value(index=index)
+                self.status_bar.showMessage('Scanning channel {0} ::: Value: {1}'.format(index, channel_data))
+                QtWidgets.QApplication.processEvents()
+
+    def ls372_highlight_channel(self, index):
+        '''
+        '''
+        for i in range(1, 17):
+            if i == int(index):
+                getattr(self, 'channel_index_label_{0}'.format(i)).setText("Scanning")
+            else:
+                getattr(self, 'channel_index_label_{0}'.format(i)).setText(str(i))
+        QtWidgets.QApplication.processEvents()
 
     def ls372_edit_channel(self, clicked, index=None):
         '''
@@ -347,13 +416,13 @@ class LakeShore372(QtWidgets.QWidget, GuiBuilder):
                 if header in self.lakeshore372_command_dict:
                     if header == 'excitation':
                         valid_set_to_values = self.lakeshore372_command_dict[header][exc_mode].values()
-                        valid_set_to_values = [x for x in valid_set_to_values if type(x) is not int]
+                        valid_set_to_values = [x for x in valid_set_to_values if type(x) is not str]
                     elif header == 'resistance_range':
                         valid_set_to_values = self.lakeshore372_command_dict[header].values()
-                        valid_set_to_values = [x for x in valid_set_to_values if type(x) is not int]
+                        valid_set_to_values = [x for x in valid_set_to_values if type(x) is not str]
                     else:
                         valid_set_to_values = self.lakeshore372_command_dict[header].keys()
-                        valid_set_to_values = [x for x in valid_set_to_values if type(x) is not int]
+                        valid_set_to_values = [x for x in valid_set_to_values if not x.isnumeric()]
                 value_widget = QtWidgets.QComboBox(editing_popup)
                 for j, valid_set_to_value in enumerate(valid_set_to_values):
                     value_widget.addItem(str(valid_set_to_value))
@@ -364,7 +433,7 @@ class LakeShore372(QtWidgets.QWidget, GuiBuilder):
         save_pushbutton = QtWidgets.QPushButton('SET', editing_popup)
         save_pushbutton.clicked.connect(lambda: self.ls372_update_channel(ep_central_widget, editing_popup))
         ep_central_widget.layout().addWidget(save_pushbutton, i + 1, int(index), 1, 1)
-        editing_popup.move(250, 250)
+        editing_popup.move(50, 50)
         editing_popup.show()
 
     def ls372_update_channel(self, ep_central_widget, editing_popup):
@@ -403,7 +472,6 @@ class LakeShore372(QtWidgets.QWidget, GuiBuilder):
                     else:
                         new_value = self.lakeshore372_command_dict[header][value]
                 new_settings[header] = new_value
-        pprint(new_settings)
         channel_object = getattr(self.channels, 'channel_{0}'.format(self.set_to_channel))
         self.status_bar.showMessage('Writing new settings to channel "{0}"'.format(self.set_to_channel))
         QtWidgets.QApplication.processEvents()
@@ -467,18 +535,12 @@ class LakeShore372(QtWidgets.QWidget, GuiBuilder):
                 value_widget = QtWidgets.QComboBox(editing_popup)
                 for j, valid_set_to_value in enumerate(valid_set_to_values):
                     value_widget.addItem(str(valid_set_to_value))
-                    print()
-                    print('value', value, type(value))
-                    print('check_value', valid_set_to_value, type(valid_set_to_value))
-                    print('analog output', analog_output)
-                    print('--------')
                     if header == 'input_channel' and int(valid_set_to_value) == int(value):
                         set_to_index = j
                     elif valid_set_to_value == value:
                         set_to_index = j
                     elif valid_set_to_value == analog_output:
                         set_to_index = j
-                print(header, set_to_index)
                 value_widget.setCurrentIndex(set_to_index)
             ep_central_widget.layout().addWidget(value_widget, i, 1, 1, 1)
         save_pushbutton = QtWidgets.QPushButton('SET', editing_popup)
@@ -546,22 +608,22 @@ class LS372Channels():
         self.serial_com.write("inset? {0}".format(index))
         input_setup_config = self.serial_com.read()
         setattr(channel_object, 'channel', index)
-        setattr(channel_object, 'enabled', int(input_setup_config.split(',')[0]))
+        setattr(channel_object, 'enabled', str(input_setup_config.split(',')[0]))
         setattr(channel_object, 'dwell', float(input_setup_config.split(',')[1]))
         setattr(channel_object, 'pause', float(input_setup_config.split(',')[2]))
         setattr(channel_object, 'curve_number', int(input_setup_config.split(',')[3]))
         setattr(channel_object, 'curve_tempco', int(input_setup_config.split(',')[4]))
         self.serial_com.write("intype? {0}".format(index))
         input_config = self.serial_com.read()
-        setattr(channel_object, 'exc_mode', int(input_config.split(',')[0]))
-        setattr(channel_object, 'excitation', int(input_config.split(',')[1]))
-        setattr(channel_object, 'autorange', int(input_config.split(',')[2]))
-        setattr(channel_object, 'resistance_range', int(input_config.split(',')[3]))
+        setattr(channel_object, 'exc_mode', str(input_config.split(',')[0]))
+        setattr(channel_object, 'excitation', str(input_config.split(',')[1]))
+        setattr(channel_object, 'autorange', str(input_config.split(',')[2]))
+        setattr(channel_object, 'resistance_range', str(input_config.split(',')[3]))
         setattr(channel_object, 'cs_shunt', int(input_config.split(',')[4]))
-        setattr(channel_object, 'units', int(input_config.split(',')[5]))
+        setattr(channel_object, 'units', str(input_config.split(',')[5]))
         self.serial_com.write("filter? {0}".format(index))
         filter_setup_config = self.serial_com.read()
-        setattr(channel_object, 'filter_on', int(filter_setup_config.split(',')[0]))
+        setattr(channel_object, 'filter_on', str(filter_setup_config.split(',')[0]))
         setattr(channel_object, 'filter_settle_time', float(filter_setup_config.split(',')[1]))
         setattr(channel_object, 'filter_window', float(filter_setup_config.split(',')[2]))
         return channel_object
@@ -605,6 +667,7 @@ class LS372Channels():
                                                                   new_settings['units'],
                                                                   )
         self.status_bar.showMessage('Sending Serial Command "{0}"'.format(intype_cmd))
+        QtWidgets.QApplication.processEvents()
         self.serial_com.write(intype_cmd)
         result = self.serial_com.read()
         inset_cmd = 'inset {0},{1},{2},{3},{4},{5} '.format(set_to_channel,
@@ -615,6 +678,7 @@ class LS372Channels():
                                                             channel_object.curve_tempco
                                                             )
         self.status_bar.showMessage('Sending Serial Command "{0}"'.format(inset_cmd))
+        QtWidgets.QApplication.processEvents()
         self.serial_com.write(inset_cmd)
         result = self.serial_com.read()
         filter_cmd = 'filter {0},{1},{2},{3} '.format(set_to_channel,
@@ -623,6 +687,7 @@ class LS372Channels():
                                                       new_settings['filter_window']
                                                       )
         self.status_bar.showMessage('Sending Serial Command "{0}"'.format(filter_cmd))
+        QtWidgets.QApplication.processEvents()
         self.serial_com.write(filter_cmd)
         result = self.serial_com.read()
 
@@ -651,17 +716,17 @@ class LS372AnalogOutputs():
         self.serial_com.write( "analog? {0}".format(index))
         analog_output_config = self.serial_com.read()
         setattr(analog_output_object, 'analog_output', analog_output)
-        setattr(analog_output_object, 'polarity', int(analog_output_config.split(',')[0]))
-        setattr(analog_output_object, 'analog_mode', int(analog_output_config.split(',')[1]))
-        setattr(analog_output_object, 'input_channel', int(analog_output_config.split(',')[2]))
-        setattr(analog_output_object, 'source', int(analog_output_config.split(',')[3]))
+        setattr(analog_output_object, 'polarity', str(analog_output_config.split(',')[0]))
+        setattr(analog_output_object, 'analog_mode', str(analog_output_config.split(',')[1]))
+        setattr(analog_output_object, 'input_channel', str(analog_output_config.split(',')[2]))
+        setattr(analog_output_object, 'source', str(analog_output_config.split(',')[3]))
         setattr(analog_output_object, 'high_value', float(analog_output_config.split(',')[4]))
         setattr(analog_output_object, 'low_value', float(analog_output_config.split(',')[5]))
         setattr(analog_output_object, 'manual_value', float(analog_output_config.split(',')[6]))
         self.serial_com.write( "outmode? {0}".format(index))
         outmode_config = self.serial_com.read()
-        setattr(analog_output_object, 'powerup_enable', int(outmode_config.split(',')[2]))
-        setattr(analog_output_object, 'filter_on', int(outmode_config.split(',')[4]))
+        setattr(analog_output_object, 'powerup_enable', str(outmode_config.split(',')[2]))
+        setattr(analog_output_object, 'filter_on', str(outmode_config.split(',')[4]))
         setattr(analog_output_object, 'delay', int(outmode_config.split(',')[5]))
         return analog_output_object
 

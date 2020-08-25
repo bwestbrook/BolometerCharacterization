@@ -104,7 +104,7 @@ class DaqGuiTemplate(QtWidgets.QMainWindow, GuiBuilder):
         self.bd_get_active_serial_ports()
         self.bd_configure_daq()
         self.splash_screen.close()
-        self.move(100, 100)
+        self.move(50, 50)
         self.show()
 
     ##################################################################################
