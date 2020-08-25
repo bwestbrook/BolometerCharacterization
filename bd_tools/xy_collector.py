@@ -307,7 +307,6 @@ class XYCollector(QtWidgets.QWidget, GuiBuilder):
         mode = self.xyc_mode_tab_bar.tabText(self.xyc_mode_tab_bar.currentIndex())
         save_path = QtWidgets.QFileDialog.getSaveFileName(self, 'Data Save Location', self.data_folder, '.txt')[0]
         if len(save_path) > 0:
-            return None
             with open(save_path, 'w') as save_handle:
                 for i, x_data in enumerate(self.x_data):
                     line = '{0:.5f}, {1:.5f}, {2:.5f}, {3:.5f}\n'.format(self.x_data[i], self.x_stds[i], self.y_data[i], self.y_stds[i])

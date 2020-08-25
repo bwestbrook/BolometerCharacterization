@@ -59,11 +59,14 @@ class DaqGuiTemplate(QtWidgets.QMainWindow, GuiBuilder):
         super(DaqGuiTemplate, self).__init__()
         self.qt_app = qt_app
         self.__apply_settings__(settings)
-        self.__apply_settings__(settings)
+        self.screen_resolution = screen_resolution
         grid = QtWidgets.QGridLayout()
         self.splash_screen = QtWidgets.QSplashScreen()
-        self.splash_screen_image = os.path.join('bd_settings', 'BoloPic.JPG')
-        q_splash_image = QtGui.QPixmap(self.splash_screen_image)
+        self.splash_screen_image_path = os.path.join('bd_settings', 'BoloPic.JPG')
+        q_splash_image = QtGui.QPixmap(self.splash_screen_image_path)
+        x_scale = self.screen_resolution.width() * 0.4
+        y_scale = self.screen_resolution.height() * 0.5
+        q_splash_image = q_splash_image.scaled(x_scale, y_scale, QtCore.Qt.KeepAspectRatio)
         self.splash_screen.setPixmap(q_splash_image)
         self.splash_screen.show()
         self.central_widget = QtWidgets.QWidget()
@@ -83,7 +86,6 @@ class DaqGuiTemplate(QtWidgets.QMainWindow, GuiBuilder):
         self.selected_files = []
         self.current_stepper_position = 100
         self.user_desktop_path = os.path.expanduser('~')
-        self.screen_resolution = screen_resolution
         self.monitor_dpi = 120.0
         self.today = datetime.now()
         self.today_str = datetime.strftime(self.today, '%Y_%m_%d')
@@ -1180,7 +1182,9 @@ class DaqGuiTemplate(QtWidgets.QMainWindow, GuiBuilder):
         dialog = 'Select the comport for the Lakeshore'
         if not hasattr(self, 'lakeshore_serial_com'):
             if self.ls372_widget is None:
-                com_port, okPressed = self.gb_quick_static_info_gather(title='', dialog=dialog, items=self.active_ports)
+                #com_port, okPressed = self.gb_quick_static_info_gather(title='', dialog=dialog, items=self.active_ports)
+                com_port = 'COM6'
+                okPressed = True
                 if okPressed:
                     self.lakeshore_com_port = com_port
                     self.ls372_widget = LakeShore372(com_port, self.status_bar)

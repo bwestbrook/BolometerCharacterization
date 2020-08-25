@@ -17,8 +17,8 @@ class LakeShore372(QtWidgets.QWidget, GuiBuilder):
         self.channel_indicies = [str(x) for x in range(1, 17)]
         self.analog_output_indicies = [str(x) for x in range(1, 4)]
         self.analog_output_indicies = ['sample', 'warmup', 'aux']
-        self.channels = LS372Channels(self.serial_com)
-        self.analog_outputs = LS372AnalogOutputs(self.serial_com)
+        self.channels = LS372Channels(self.serial_com, status_bar)
+        self.analog_outputs = LS372AnalogOutputs(self.serial_com, status_bar)
         self.lakeshore372_command_dict = {
             'autorange': {
                 'False': 0,
@@ -251,6 +251,11 @@ class LakeShore372(QtWidgets.QWidget, GuiBuilder):
         analog_outputs_header_label.setAlignment(QtCore.Qt.AlignCenter)
         self.layout().addWidget(analog_outputs_header_label, 18, 0, 1, 17)
 
+    def ls372_autoscan(self):
+        '''
+        '''
+
+
     def ls372_channels_panel(self):
         '''
         '''
@@ -398,14 +403,15 @@ class LakeShore372(QtWidgets.QWidget, GuiBuilder):
                     else:
                         new_value = self.lakeshore372_command_dict[header][value]
                 new_settings[header] = new_value
+        pprint(new_settings)
         channel_object = getattr(self.channels, 'channel_{0}'.format(self.set_to_channel))
-        self.status_bar.showMessage('Writing new settings to channel {0}'.format(self.set_to_channel))
+        self.status_bar.showMessage('Writing new settings to channel "{0}"'.format(self.set_to_channel))
         QtWidgets.QApplication.processEvents()
         self.channels.ls372_write_new_channel_settings(self.set_to_channel, new_settings, channel_object)
         self.channels.ls372_update_channels()
         self.ls372_populate_gui()
         self.ls372_edit_channel(clicked=False, index=self.set_to_channel)
-        self.status_bar.showMessage('Wrote new settings to channel {0}'.format(self.set_to_channel))
+        self.status_bar.showMessage('Wrote new settings to channel "{0}"'.format(self.set_to_channel))
 
     def ls372_analog_output_panel(self):
         '''
@@ -507,22 +513,23 @@ class LakeShore372(QtWidgets.QWidget, GuiBuilder):
                 new_value = self.lakeshore372_command_dict[header][value]
                 new_settings[header] = new_value
         analog_output_object = getattr(self.analog_outputs, 'analog_output_{0}'.format(self.set_to_analog_output))
-        self.status_bar.showMessage('Writing new settings to analog output {0}'.format(self.set_to_analog_output))
+        self.status_bar.showMessage('Writing new settings to analog output "{0}"'.format(self.set_to_analog_output))
         QtWidgets.QApplication.processEvents()
         self.analog_outputs.ls372_write_analog_output_settings(self.set_to_analog_output, new_settings, analog_output_object)
         self.channels.ls372_scan_channel(new_settings['input_channel'], autoscan=0)
         self.analog_outputs.ls372_update_analog_outputs()
         self.ls372_populate_gui()
         self.ls372_edit_analog_output(clicked=False, analog_output=self.set_to_analog_output)
-        self.status_bar.showMessage('Wrote new settings to analog output {0}'.format(self.set_to_analog_output))
+        self.status_bar.showMessage('Wrote new settings to analog output "{0}"'.format(self.set_to_analog_output))
 
 class LS372Channels():
 
-    def __init__(self, serial_com):
+    def __init__(self, serial_com, status_bar):
         '''
         '''
         self.channel_indicies = [str(x) for x in range(1, 17)]
         self.serial_com = serial_com
+        self.status_bar = status_bar
         self.ls372_update_channels()
 
     def ls372_update_channels(self):
@@ -597,6 +604,7 @@ class LS372Channels():
                                                                   channel_object.cs_shunt,
                                                                   new_settings['units'],
                                                                   )
+        self.status_bar.showMessage('Sending Serial Command "{0}"'.format(intype_cmd))
         self.serial_com.write(intype_cmd)
         result = self.serial_com.read()
         inset_cmd = 'inset {0},{1},{2},{3},{4},{5} '.format(set_to_channel,
@@ -606,17 +614,27 @@ class LS372Channels():
                                                             channel_object.curve_number,
                                                             channel_object.curve_tempco
                                                             )
+        self.status_bar.showMessage('Sending Serial Command "{0}"'.format(inset_cmd))
         self.serial_com.write(inset_cmd)
+        result = self.serial_com.read()
+        filter_cmd = 'filter {0},{1},{2},{3} '.format(set_to_channel,
+                                                      new_settings['filter_on'],
+                                                      new_settings['filter_settle_time'],
+                                                      new_settings['filter_window']
+                                                      )
+        self.status_bar.showMessage('Sending Serial Command "{0}"'.format(filter_cmd))
+        self.serial_com.write(filter_cmd)
         result = self.serial_com.read()
 
 class LS372AnalogOutputs():
 
-    def __init__(self, serial_com):
+    def __init__(self, serial_com, status_bar):
         '''
         '''
         self.analog_output_indicies = [str(x) for x in range(1, 4)]
         self.analog_output_indicies = ['sample', 'warmup', 'aux']
         self.serial_com = serial_com
+        self.status_bar = status_bar
         self.ls372_update_analog_outputs()
 
     def ls372_update_analog_outputs(self):
@@ -665,7 +683,8 @@ class LS372AnalogOutputs():
                                                                       new_settings['low_value'],
                                                                       new_settings['manual_value'],
                                                                       )
-        print(analog_cmd)
+        self.status_bar.showMessage('Sending Serial Command "{0}"'.format(analog_cmd))
+        QtWidgets.QApplication.processEvents()
         self.serial_com.write(analog_cmd)
         result = self.serial_com.read()
         outmode_cmd = 'outmode {0},{1},{2},{3},{4},{5},{6} '.format(set_to_channel,
@@ -676,8 +695,9 @@ class LS372AnalogOutputs():
                                                                     new_settings['filter_on'],
                                                                     new_settings['delay'],
                                                                     )
-        print(outmode_cmd)
+        self.status_bar.showMessage('Sending Serial Command "{0}"'.format(outmode_cmd))
         self.serial_com.write(outmode_cmd)
+        QtWidgets.QApplication.processEvents()
         result = self.serial_com.read()
 
 
