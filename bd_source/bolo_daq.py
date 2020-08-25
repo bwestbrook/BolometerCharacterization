@@ -64,8 +64,8 @@ class DaqGuiTemplate(QtWidgets.QMainWindow, GuiBuilder):
         self.splash_screen = QtWidgets.QSplashScreen()
         self.splash_screen_image_path = os.path.join('bd_settings', 'BoloPic.JPG')
         q_splash_image = QtGui.QPixmap(self.splash_screen_image_path)
-        x_scale = self.screen_resolution.width() * 0.4
-        y_scale = self.screen_resolution.height() * 0.5
+        x_scale = int(self.screen_resolution.width() * 0.4)
+        y_scale = int(self.screen_resolution.height() * 0.5)
         q_splash_image = q_splash_image.scaled(x_scale, y_scale, QtCore.Qt.KeepAspectRatio)
         self.splash_screen.setPixmap(q_splash_image)
         self.splash_screen.show()
