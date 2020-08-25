@@ -145,6 +145,7 @@ class DaqGuiTemplate(QtWidgets.QMainWindow, GuiBuilder):
                         break
             if available:
                 self.available_daqs[device] = configuration_dict
+        pprint(self.available_daqs)
         n_devices = len(self.available_daqs)
         devices = list(self.available_daqs.keys())
         self.status_bar.showMessage('Found {0} available devices: {1}'.format(n_devices, devices))
