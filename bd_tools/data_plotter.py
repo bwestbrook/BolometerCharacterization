@@ -167,8 +167,8 @@ class DataPlotter(QtWidgets.QWidget, GuiBuilder):
                     pass
                 else:
                     setattr(self, 'load_panel_widget_{0}'.format(i), load_panel_widget)
+                    print(self, 'load_panel_widget_{0}'.format(i))
                     break
-                setattr(self, 'load_panel_widget_{0}'.format(i), load_panel_widget)
             self.layout().addWidget(load_panel_widget, i + 7, 0, 1, 8)
             try:
                 data = np.loadtxt(file_path, dtype=np.float, delimiter=',')
@@ -213,6 +213,19 @@ class DataPlotter(QtWidgets.QWidget, GuiBuilder):
         setattr(self, 'load_data_label_{0}'.format(i), load_panel_widget)
         load_panel_widget.layout().addWidget(loaded_data_label, 5, 0, 1, 8)
         loaded_data_label.setText(file_path)
+        close_file_pushbutton = QtWidgets.QPushButton('Close File {0}'.format(i), self)
+        close_file_pushbutton.clicked.connect(self.dp_close_open_file)
+        load_panel_widget.layout().addWidget(close_file_pushbutton, 3, 0, 1, 8)
+
+
+    def dp_close_open_file(self):
+        '''
+        '''
+        data_row = self.sender().text().split(' ')[-1]
+        print(data_row)
+        print(self, 'load_panel_widget_{0}'.format(data_row))
+        getattr(self, 'load_panel_widget_{0}'.format(data_row)).setParent(None)
+        getattr(self, 'load_panel_widget_{0}'.format(data_row))
 
     def dp_get_and_check_data(self):
         '''
@@ -231,7 +244,14 @@ class DataPlotter(QtWidgets.QWidget, GuiBuilder):
                         data_dict[data_row].update({data_type: data.T[column]})
                         label = getattr(self, 'column_plot_label_{0}'.format(data_row)).text()
                         data_dict[data_row].update({'label': label})
-            if len(data_dict) == len(self.data_types):
+            if ('x_data' in data_dict[data_row] and 'y_data' in data_dict[data_row]) and not ('xerr' in data_dict[data_row] and 'yerr' in data_dict[data_row]):
+                data_dict[data_row]['xerr'] = None
+                data_dict[data_row]['yerr'] = None
+            elif ('x_data' in data_dict[data_row] and 'y_data' in data_dict[data_row]) and 'xerr' not in data_dict[data_row]:
+                data_dict[data_row]['xerr'] = None
+            elif ('x_data' in data_dict[data_row] and 'y_data' in data_dict[data_row]) and 'yerr' not in data_dict[data_row]:
+                data_dict[data_row]['yerr'] = None
+            elif len(data_dict) == len(self.data_types):
                 self.gb_quick_message('Please check your data input!', msg_type='Warning')
                 return {}
         return data_dict
