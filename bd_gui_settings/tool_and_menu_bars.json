@@ -53,7 +53,7 @@
                 "Shortcut": "2",
                 "StatusTip": "Fourier Transform Spectrometer",
                 "ToolTip": "FTS",
-                "function": "bd_single_channel_fts",
+                "function": "bd_fts",
                 "icon": "fourier.png"
             },
             "03_Beam Map": {

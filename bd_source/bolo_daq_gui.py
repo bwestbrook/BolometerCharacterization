@@ -28,6 +28,7 @@ from bd_tools.lakeshore372 import LakeShore372
 from bd_tools.xy_collector import XYCollector
 from bd_tools.fridge_cycle import FridgeCycle
 from bd_tools.data_plotter import DataPlotter
+from bd_tools.fts import FTS
 from bd_tools.configure_stepper_motor import ConfigureStepperMotor
 from RT_Curves.plot_rt_curves import RTCurve
 #from IV_Curves.plot_iv_curves import IVCurve
@@ -1213,6 +1214,15 @@ class BoloDAQGui(QtWidgets.QMainWindow, GuiBuilder):
             self.central_widget.layout().addWidget(self.ls372_widget, 0, 0, 1, 1)
 
     #################################################
+    # SINGLE CHANNEL FTS BILLS
+    #################################################
+
+    def bd_fts(self):
+        self.gb_initialize_panel('central_widget')
+        self.fts_widget = FTS(self.available_daqs, self.status_bar, self.screen_resolution, self.monitor_dpi)
+        self.central_widget.layout().addWidget(self.fts_widget, 0, 0, 1, 1)
+
+    #################################################
     # COSMIC RAYS
     #################################################
 
@@ -1451,91 +1461,6 @@ class BoloDAQGui(QtWidgets.QMainWindow, GuiBuilder):
         self.plot_tau_data_point([])
         self.plot_time_constant(real_data=False)
         self.time_constant_popup.showMaximized()
-
-    #################################################
-    # USER MOVE STEPPER
-    #################################################
-
-    def bd_close_user_move_stepper(self):
-        '''
-        Closes the panel
-        '''
-        self.user_move_stepper_popup.close()
-
-    def bd_user_move_stepper(self):
-        if not hasattr(self, 'user_move_stepper_popup'):
-            self.gb_create_popup_window('user_move_stepper_popup')
-        else:
-            self.gb_initialize_panel('user_move_stepper_popup')
-        self.gb_build_panel(settings.user_move_stepper_build_dict)
-        for unique_combobox, entries in settings.user_move_stepper_combobox_entry_dict.items():
-            self.gb_populate_combobox(unique_combobox, entries)
-        getattr(self, '_user_move_stepper_popup_com_ports_combobox').setCurrentIndex(0)
-        self.user_move_stepper_popup.setWindowTitle('User Move Stepper')
-        self.user_move_stepper_popup.showMaximized()
-
-    def bd_add_comports_to_user_move_stepper(self):
-        for i, com_port in enumerate(settings.com_ports):
-            com_port_entry = QtCore.QString(com_port)
-            getattr(self, '_user_move_stepper_popup_com_ports_combobox').addItem(com_port_entry)
-
-    def bd_set_acceleration(self):
-        com_port = self.get_com_port('_user_move_stepper_popup_com_ports_combobox')
-        acceleration =  str(getattr(self, '_user_move_stepper_popup_set_acceleration_to_lineedit').text())
-        getattr(self, 'sm_{0}'.format(com_port)).set_acceleration(float(acceleration))
-        actual = getattr(self, 'sm_{0}'.format(com_port)).get_acceleration().strip('AC=')
-        getattr(self,'_user_move_stepper_popup_actual_acceleration_label').setText('{0} (mm/s/s)'.format(str(actual)))
-        self.last_acceleration_string = actual
-
-    def bd_set_velocity(self):
-        com_port = self.get_com_port('_user_move_stepper_popup_com_ports_combobox')
-        velocity =  str(getattr(self, '_user_move_stepper_popup_set_velocity_to_lineedit').text())
-        getattr(self, 'sm_{0}'.format(com_port)).set_velocity(float(velocity))
-        actual = getattr(self, 'sm_{0}'.format(com_port)).get_velocity().strip('VE=')
-        getattr(self,'_user_move_stepper_popup_actual_velocity_label').setText('{0} (mm/s/s)'.format(str(actual)))
-        self.last_velocity_string = actual
-
-    def bd_set_current(self):
-        com_port = self.get_com_port('_user_move_stepper_popup_com_ports_combobox')
-        current =  getattr(self, '_user_move_stepper_popup_set_current_to_lineedit').text()
-        getattr(self, 'sm_{0}'.format(com_port)).set_current(float(current))
-        actual =  getattr(self, 'sm_{0}'.format(com_port)).get_motor_current().strip('CC=')
-        getattr(self,'_user_move_stepper_popup_actual_current_label').setText('{0} (mm/s/s)'.format(str(actual)))
-        self.last_current_string = actual
-
-    def bd_limit_current(self):
-        value = str(self.sender().text())
-        if self.gb_is_float(value, enforce_positive=True):
-            value = float(str(self.sender().text()))
-            if value > 4.0:
-                value = 4.0
-                self.sender().setText(str(value))
-
-    def bd_move_stepper(self):
-        move_to_pos = int(str(getattr(self, '_user_move_stepper_popup_move_to_position_lineedit').text()))
-        current_pos = str(getattr(self, '_user_move_stepper_popup_current_position_label').text())
-        current_pos = int(current_pos.replace(' (steps)', ''))
-        move_delta = move_to_pos - current_pos
-        com_port = self.get_com_port('_user_move_stepper_popup_com_ports_combobox')
-        getattr(self, 'sm_{0}'.format(com_port)).move_to_position(move_to_pos)
-        self.update_stepper_position(move_to_pos)
-
-    def bd_reset_stepper_zero(self):
-        com_port = self.get_com_port('_user_move_stepper_popup_com_ports_combobox')
-        getattr(self, 'sm_{0}'.format(com_port)).reset_zero()
-        stepper_position = getattr(self, 'sm_{0}'.format(com_port)).get_position().replace('SP=', '')
-        self.update_stepper_position()
-        getattr(self, '_user_move_stepper_popup_move_to_position_lineedit').setText('0')
-
-    def bd_update_stepper_position(self, move_to_pos=None):
-        com_port = self.get_com_port('_user_move_stepper_popup_com_ports_combobox')
-        stepper_position = getattr(self, 'sm_{0}'.format(com_port)).get_position().strip('SP=')
-        if not self.gb_is_float(stepper_position):
-            stepper_position = move_to_pos
-        header_str = '{0} (steps)'.format(stepper_position)
-        getattr(self, '_user_move_stepper_popup_stepper_slider').setSliderPosition(int(stepper_position))
-        getattr(self, '_user_move_stepper_popup_current_position_label').setText(header_str)
-        self.last_position_string = stepper_position
 
     #################################################
     # POL EFFICIENCY
