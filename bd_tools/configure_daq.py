@@ -1,7 +1,7 @@
 import os
 import time
 import simplejson
-from bd_lib.daq import DAQ
+from bd_lib.bolo_daq import BoloDAQ
 from pprint import pprint
 from PyQt5 import QtCore, QtGui, QtWidgets
 from GuiBuilder.gui_builder import GuiBuilder
@@ -21,7 +21,7 @@ class ConfigureDAQ(QtWidgets.QWidget, GuiBuilder):
         self.cd_add_daq_tabs()
         self.cd_add_channels()
         self.cd_add_controls()
-        self.daq = DAQ()
+        self.daq = BoloDAQ()
 
     def cd_add_controls(self, sample_rate=1000, int_time=500):
         '''
@@ -84,7 +84,7 @@ class ConfigureDAQ(QtWidgets.QWidget, GuiBuilder):
         self.layout().addWidget(channel_sample_rate_combobox, 4, index * 2 + 1, 1, 1)
         for i, sample_rate in enumerate([100, 500, 1000, 2000, 5000]):
             channel_sample_rate_combobox.addItem(str(sample_rate))
-            saved_value = self.available_daqs[device][index]['sample_rate']
+            saved_value = self.available_daqs[device][str(index)]['sample_rate']
             if str(saved_value) == str(sample_rate):
                 saved_index = i
         channel_sample_rate_combobox.setCurrentIndex(saved_index)
@@ -95,7 +95,7 @@ class ConfigureDAQ(QtWidgets.QWidget, GuiBuilder):
         setattr(self, 'channel_{0}_int_time_combobox'.format(index), channel_int_time_combobox)
         for i, int_time in enumerate([100, 500, 1000]):
             channel_int_time_combobox.addItem(str(int_time))
-            saved_value = self.available_daqs[device][index]['int_time']
+            saved_value = self.available_daqs[device][str(index)]['int_time']
             if str(saved_value) == str(int_time):
                 saved_index = i
         channel_int_time_combobox.setCurrentIndex(saved_index)

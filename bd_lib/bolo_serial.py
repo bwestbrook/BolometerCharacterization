@@ -31,6 +31,10 @@ class BoloSerial(object):
             'E3634A': {
                 'baudrate': 9600,
                 'timeout': 2
+                },
+            'Stepper': {
+                'baudrate': 9600,
+                'timeout': 2
                 }
             }
         self.port = port

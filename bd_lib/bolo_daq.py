@@ -7,7 +7,7 @@ import time
 import numpy as np
 from nidaqmx.constants import AcquisitionType, Edge, WAIT_INFINITELY
 
-class DAQ():
+class BoloDAQ():
 
     def __init__(self):
         self.active_daqs = self.get_active_daqs()
@@ -39,7 +39,7 @@ class DAQ():
                     task.ai_channels.add_ai_voltage_chan("{0}/ai0".format(device))
                     active_daqs[device] = {}
                     for j in range(16):
-                        active_daqs[device].update({j: {'sample_rate': 500, 'int_time': 500}})
+                        active_daqs[device].update({str(j): {'sample_rate': 500, 'int_time': 500}})
                 except nidaqmx.DaqError:
                     pass
         return active_daqs

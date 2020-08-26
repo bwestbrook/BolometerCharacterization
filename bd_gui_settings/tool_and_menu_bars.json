@@ -22,13 +22,19 @@
                 "function": "bd_configure_daq",
                 "icon": "multimeter.png"
             },
-            "04_Fridge Cycle 576": {
+            "04_Configure Stepper": {
+                "StatusTip": "Configure Steppers",
+                "ToolTip": "Configure Steppers",
+                "function": "bd_configure_stepper_motor",
+                "icon": "steppermotor.png"
+            },
+            "05_Fridge Cycle 576": {
                 "StatusTip": "Fridge Cycle 576",
                 "ToolTip": "Fridge Cycle 576",
                 "function": "bd_fridge_cycle",
                 "icon": "snowflake.png"
             },
-            "04_Lakeshore372": {
+            "06_Lakeshore372": {
                 "StatusTip": "Lakeshore 372",
                 "ToolTip": "Lakeshore 372 Configuration ",
                 "function": "bd_lakeshore372",

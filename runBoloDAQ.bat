@@ -1,1 +1,1 @@
-python bd_source\bolo_daq.py
+python bd_source\bolo_daq_gui.py

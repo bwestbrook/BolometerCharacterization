@@ -28,6 +28,7 @@ from bd_tools.lakeshore372 import LakeShore372
 from bd_tools.xy_collector import XYCollector
 from bd_tools.fridge_cycle import FridgeCycle
 from bd_tools.data_plotter import DataPlotter
+from bd_tools.configure_stepper_motor import ConfigureStepperMotor
 from RT_Curves.plot_rt_curves import RTCurve
 #from IV_Curves.plot_iv_curves import IVCurve
 #from FTS_Curves.plot_fts_curves import FTSCurve
@@ -43,7 +44,7 @@ from RT_Curves.plot_rt_curves import RTCurve
 from GuiBuilder.gui_builder import GuiBuilder
 #from GuiBuilder.gui_builder import GenericClass
 #from Motor_Driver.stepper_motor import stepper_motor
-from bd_lib.daq import DAQ
+from bd_lib.bolo_daq import BoloDAQ
 from bd_lib.bolo_serial import BoloSerial
 
 
@@ -52,11 +53,11 @@ continue_run = False
 pause_run = False
 do_cycle_fridge = False
 
-class DaqGuiTemplate(QtWidgets.QMainWindow, GuiBuilder):
+class BoloDAQGui(QtWidgets.QMainWindow, GuiBuilder):
 
 
     def __init__(self, screen_resolution, qt_app):
-        super(DaqGuiTemplate, self).__init__()
+        super(BoloDAQGui, self).__init__()
         self.qt_app = qt_app
         self.__apply_settings__(settings)
         self.screen_resolution = screen_resolution
@@ -121,7 +122,7 @@ class DaqGuiTemplate(QtWidgets.QMainWindow, GuiBuilder):
         '''
         if hasattr(self, 'available_daqs'):
             return None
-        self.daq = DAQ()
+        self.daq = BoloDAQ()
         if not hasattr(self, 'active_daqs'):
             self.bd_get_active_daqs()
         self.available_daqs = {}
@@ -1175,6 +1176,24 @@ class DaqGuiTemplate(QtWidgets.QMainWindow, GuiBuilder):
         getattr(self, '_xy_collector_popup_fit_clip_hi_lineedit').setText('{0:.3f}'.format(fit_clip_hi))
 
     #################################################
+    # Configure Stepper Motors
+    #################################################
+
+    def bd_configure_stepper_motor(self):
+        self.gb_initialize_panel('central_widget')
+        dialog = 'Select the comport for the stepper motor you wish to configure'
+        if not hasattr(self, 'lakeshore_serial_com'):
+            if self.ls372_widget is None:
+                stepper_motor_ports = ['COM12', 'COM13', 'COM14']
+                com_port, okPressed = self.gb_quick_static_info_gather(title='', dialog=dialog, items=stepper_motor_ports)
+                #com_port = 'COM6'
+                #okPressed = True
+                if okPressed:
+                    csm_widget = ConfigureStepperMotor(com_port, self.status_bar)
+                    setattr(self, 'sm_{0}'.format(com_port), csm_widget)
+                    self.central_widget.layout().addWidget(csm_widget, 0, 0, 1, 1)
+
+    #################################################
     # Lakeshore
     #################################################
 
@@ -1183,6 +1202,7 @@ class DaqGuiTemplate(QtWidgets.QMainWindow, GuiBuilder):
         dialog = 'Select the comport for the Lakeshore'
         if not hasattr(self, 'lakeshore_serial_com'):
             if self.ls372_widget is None:
+                items
                 #com_port, okPressed = self.gb_quick_static_info_gather(title='', dialog=dialog, items=self.active_ports)
                 com_port = 'COM6'
                 okPressed = True
@@ -3479,7 +3499,7 @@ if __name__ == '__main__':
     qt_app = QtWidgets.QApplication(sys.argv)
     qt_app.setFont(QtGui.QFont('SansSerif', 10))
     screen_resolution = qt_app.desktop().screenGeometry()
-    gui = DaqGuiTemplate(screen_resolution, qt_app)
+    gui = BoloDAQGui(screen_resolution, qt_app)
     gui.show()
     exit(qt_app.exec_())
 
