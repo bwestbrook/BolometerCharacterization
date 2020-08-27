@@ -1203,7 +1203,6 @@ class BoloDAQGui(QtWidgets.QMainWindow, GuiBuilder):
         dialog = 'Select the comport for the Lakeshore'
         if not hasattr(self, 'lakeshore_serial_com'):
             if self.ls372_widget is None:
-                items
                 #com_port, okPressed = self.gb_quick_static_info_gather(title='', dialog=dialog, items=self.active_ports)
                 com_port = 'COM6'
                 okPressed = True
