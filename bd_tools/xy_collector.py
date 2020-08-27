@@ -19,6 +19,18 @@ class XYCollector(QtWidgets.QWidget, GuiBuilder):
         self.screen_resolution = screen_resolution
         self.monitor_dpi = monitor_dpi
         self.daq = BoloDAQ()
+        self.squid_calibration_dict  = {
+            '1': 30.0,
+            '2': 26.8,
+            '3': 24.67,
+            '4': 30.1,
+            '5': 25.9,
+            '6': 25.0
+            }
+        self.voltage_reduction_factor_dict  = {
+            '1': 1e-4,
+            '2': 1e-5
+            }
         grid_1 = QtWidgets.QGridLayout()
         self.setLayout(grid_1)
         self.xyc_make_tab_bar()
@@ -36,8 +48,6 @@ class XYCollector(QtWidgets.QWidget, GuiBuilder):
         self.today = datetime.now()
         self.today_str = datetime.strftime(self.today, '%Y_%m_%d')
         self.data_folder = './Data/{0}'.format(self.today_str)
-        self.squid_calibration_dict  = {'1': 30.0, '2': 26.8, '3': 24.67,
-                                        '4': 30.1, '5': 25.9, '6': 25.0}
 
     ###########
     # GUI and Input Handling
@@ -55,19 +65,24 @@ class XYCollector(QtWidgets.QWidget, GuiBuilder):
         elif tab_index == 1: # RT
             self.xyc_rt_config()
         self.xyc_make_plot_panel()
-        self.xyc_add_buttons()
-        self.xyc_daq_tab_bar.currentChanged.connect(self.xyc_display_daq_settings)
+        self.xyc_add_common_widgets()
         self.xyc_mode_tab_bar.currentChanged.connect(self.xyc_populate)
 
-    def xyc_add_buttons(self):
+    def xyc_add_common_widgets(self):
         '''
         '''
+        # Sample Name
+        sample_name_header_label = QtWidgets.QLabel('Sample Name:', self)
+        self.xyc_input_panel.layout().addWidget(sample_name_header_label, 8, 0, 1, 1)
+        self.sample_name_lineedit = QtWidgets.QLineEdit('', self)
+        self.xyc_input_panel.layout().addWidget(self.sample_name_lineedit, 8, 1, 1, 3)
+        # Buttons
         start_pushbutton = QtWidgets.QPushButton('Start', self)
         start_pushbutton.clicked.connect(self.xyc_start_stop)
-        self.xyc_input_panel.layout().addWidget(start_pushbutton, 12, 0, 1, 10)
+        self.xyc_input_panel.layout().addWidget(start_pushbutton, 12, 0, 1, 4)
         save_pushbutton = QtWidgets.QPushButton('Save', self)
         save_pushbutton.clicked.connect(self.xyc_save)
-        self.xyc_input_panel.layout().addWidget(save_pushbutton, 13, 0, 1, 10)
+        self.xyc_input_panel.layout().addWidget(save_pushbutton, 13, 0, 1, 4)
 
     def xyc_make_tab_bar(self):
         '''
@@ -76,15 +91,18 @@ class XYCollector(QtWidgets.QWidget, GuiBuilder):
         for tab in ['IV', 'RT']:
             self.xyc_mode_tab_bar.addTab(tab)
         self.layout().addWidget(self.xyc_mode_tab_bar, 0, 0, 1, 10)
-        self.xyc_daq_tab_bar = QtWidgets.QTabBar(self)
-        for tab in self.available_daqs:
-            self.xyc_daq_tab_bar.addTab(tab)
-        self.layout().addWidget(self.xyc_daq_tab_bar, 1, 0, 1, 10)
 
     def xyc_daq_panel(self):
         '''
         '''
         self.xyc_initialize_input()
+        xyc_daq_header_label = QtWidgets.QLabel('DAQ Device:', self)
+        self.xyc_input_panel.layout().addWidget(xyc_daq_header_label, 0, 0, 1, 1)
+        self.xyc_daq_combobox = QtWidgets.QComboBox(self)
+        for daq in self.available_daqs:
+            self.xyc_daq_combobox.addItem(daq)
+        self.xyc_input_panel.layout().addWidget(self.xyc_daq_combobox, 0, 1, 1, 1)
+        self.xyc_daq_combobox.currentIndexChanged.connect(self.xyc_display_daq_settings)
         daq_x_header_label = QtWidgets.QLabel('DAQ Ch X Data:', self)
         self.xyc_input_panel.layout().addWidget(daq_x_header_label, 1, 0, 1, 1)
         self.daq_x_combobox = QtWidgets.QComboBox(self)
@@ -104,7 +122,7 @@ class XYCollector(QtWidgets.QWidget, GuiBuilder):
         '''
         '''
         self.xyc_initialize_input()
-        daq = self.xyc_daq_tab_bar.tabText(self.xyc_daq_tab_bar.currentIndex())
+        daq = self.xyc_daq_combobox.currentText()
         self.x_channel = self.daq_x_combobox.currentIndex()
         self.y_channel = self.daq_y_combobox.currentIndex()
         # X
@@ -133,12 +151,20 @@ class XYCollector(QtWidgets.QWidget, GuiBuilder):
     def xyc_iv_config(self):
         '''
         '''
-        dc_squid_header_label = QtWidgets.QLabel('DC SQUID:', self)
-        self.xyc_input_panel.layout().addWidget(dc_squid_header_label, 7, 0, 1, 1)
-        dc_squid_combobox = QtWidgets.QComboBox(self)
-        for squid in range(1, 7):
-            dc_squid_combobox.addItem(str(squid))
-        self.xyc_input_panel.layout().addWidget(dc_squid_combobox, 7, 1, 1, 1)
+        # SQUID
+        squid_header_label = QtWidgets.QLabel('SQUID (uA/V):', self)
+        self.xyc_input_panel.layout().addWidget(squid_header_label, 7, 0, 1, 1)
+        self.squid_combobox = QtWidgets.QComboBox(self)
+        for squid, calibration in self.squid_calibration_dict.items():
+            self.squid_combobox.addItem('{0} ({1:.1f})'.format(squid, calibration))
+        self.xyc_input_panel.layout().addWidget(self.squid_combobox, 7, 1, 1, 1)
+        # Voltage Factor
+        voltage_factor_header_label = QtWidgets.QLabel('Voltage Factor:', self)
+        self.xyc_input_panel.layout().addWidget(voltage_factor_header_label, 7, 2, 1, 1)
+        self.voltage_factor_combobox = QtWidgets.QComboBox(self)
+        for index, voltage_reduction_factor in self.voltage_reduction_factor_dict.items():
+            self.voltage_factor_combobox.addItem('{0}'.format(voltage_reduction_factor))
+        self.xyc_input_panel.layout().addWidget(self.voltage_factor_combobox, 7, 3, 1, 1)
 
     def xyc_rt_config(self):
         '''
@@ -158,7 +184,6 @@ class XYCollector(QtWidgets.QWidget, GuiBuilder):
             for y in range(0, 4):
                 if self.xyc_input_panel.layout().itemAtPosition(x, y) is not None:
                     self.xyc_input_panel.layout().itemAtPosition(x, y).widget().setParent(None)
-
 
     ###########
     # Plotting
@@ -277,7 +302,7 @@ class XYCollector(QtWidgets.QWidget, GuiBuilder):
     def xyc_collecter(self):
         '''
         '''
-        device = self.xyc_daq_tab_bar.tabText(self.xyc_daq_tab_bar.currentIndex())
+        device = self.xyc_daq_combobox.currentText()
         self.x_data, self.x_stds = [], []
         self.y_data, self.y_stds = [], []
         while self.started:
@@ -301,11 +326,22 @@ class XYCollector(QtWidgets.QWidget, GuiBuilder):
             QtWidgets.QApplication.processEvents()
             self.repaint()
 
+    def xyc_index_file_name(self):
+        '''
+        '''
+        for i in range(1, 1000):
+            file_name = '{0}_{1}.txt'.format(self.sample_name_lineedit.text(), str(i).zfill(3))
+            save_path = os.path.join(self.data_folder, file_name)
+            if not os.path.exists(save_path):
+                break
+        return save_path
+
     def xyc_save(self):
         '''
         '''
         mode = self.xyc_mode_tab_bar.tabText(self.xyc_mode_tab_bar.currentIndex())
-        save_path = QtWidgets.QFileDialog.getSaveFileName(self, 'Data Save Location', self.data_folder, '.txt')[0]
+        save_path = self.xyc_index_file_name()
+        save_path = QtWidgets.QFileDialog.getSaveFileName(self, 'Data Save Location', save_path, filter=',*.txt,*.dat')[0]
         if len(save_path) > 0:
             with open(save_path, 'w') as save_handle:
                 for i, x_data in enumerate(self.x_data):
@@ -313,8 +349,13 @@ class XYCollector(QtWidgets.QWidget, GuiBuilder):
                     save_handle.write(line)
         else:
             self.gb_quick_message('Warning Data Not Written to File!', msg_type='Warning')
+        self.xyc_plot(mode)
+
+    def xyc_plot(self, mode):
+        '''
+        '''
         fig, ax = self.xyc_create_blank_fig(frac_screen_width=0.5, frac_screen_height=0.5,
-                                            left=0.08, right=0.98, top=0.9, bottom=0.13, multiple_axes=False,
+                                            left=0.12, right=0.98, top=0.9, bottom=0.13, multiple_axes=False,
                                             aspect=None)
         title, okPressed = self.gb_quick_info_gather(title='Plot Title', dialog='What is the title of this plot?')
         if mode == 'IV':
@@ -336,12 +377,13 @@ class XYCollector(QtWidgets.QWidget, GuiBuilder):
         ax.errorbar(self.x_data, self.y_data, self.y_stds, marker='.', linestyle='-')
         pl.show()
 
-    def xyc_adjust_x_data(self, bias_voltage_reduction_factor=1e-5):
+    def xyc_adjust_x_data(self):
         '''
         '''
         mode = self.xyc_mode_tab_bar.tabText(self.xyc_mode_tab_bar.currentIndex())
         if mode == 'IV':
-            self.x_data = np.asarray(self.x_data) * bias_voltage_reduction_factor
+            voltage_reduction_factor = float(self.voltage_factor_combobox.currentText())
+            self.x_data = np.asarray(self.x_data) * voltage_reduction_factor
         elif mode == 'RT':
             grt_serial = self.grt_serial_combobox.currentText()
             if grt_serial == 'Lakeshore':
@@ -352,7 +394,7 @@ class XYCollector(QtWidgets.QWidget, GuiBuilder):
         '''
         mode = self.xyc_mode_tab_bar.tabText(self.xyc_mode_tab_bar.currentIndex())
         if mode == 'IV':
-            squid = self.squid_combobox.currentText()
+            squid = str(self.squid_combobox.currentIndex() + 1)
             calibration_factor = self.squid_calibration_dict[squid]
             self.y_data = np.asarray(self.y_data) * calibration_factor
             self.y_stds = np.asarray(self.y_stds) * calibration_factor

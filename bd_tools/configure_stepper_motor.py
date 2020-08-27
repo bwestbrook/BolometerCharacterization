@@ -18,8 +18,8 @@ class ConfigureStepperMotor(QtWidgets.QWidget, GuiBuilder):
         if not is_stepper:
             return None
         self.csm_setup()
-        self.csm_get_motor_state()
         self.csm_input_panel()
+        self.csm_get_motor_state()
 
     ###########################################
     # GUI 
@@ -38,17 +38,17 @@ class ConfigureStepperMotor(QtWidgets.QWidget, GuiBuilder):
     def csm_get_motor_state(self):
         '''
         '''
-        stepper_settings_dict = {
+        self.stepper_settings_dict = {
             'position': '',
             'velocity': '',
             'acceleration': '',
             'current': '',
             }
-        self.status_bar.showMessage('Setting up stepper motor on {0}'.format(self.com_port))
+        self.status_bar.showMessage('Found a stepper motor on {0}'.format(self.com_port))
         QtWidgets.QApplication.processEvents()
-        for i, item in enumerate(stepper_settings_dict):
+        for i, item in enumerate(self.stepper_settings_dict):
             value = getattr(self, 'csm_get_{0}'.format(item))()
-            stepper_settings_dict[item] = value
+            self.stepper_settings_dict[item] = value
             self.status_bar.showMessage('Getting {0} data for stepper motor on {1}'.format(item, self.com_port))
             QtWidgets.QApplication.processEvents()
             current_value_label = QtWidgets.QLabel('{0}:'.format(item), self)
@@ -63,7 +63,7 @@ class ConfigureStepperMotor(QtWidgets.QWidget, GuiBuilder):
             set_item_pushbutton = QtWidgets.QPushButton('Set {0}'.format(item), self)
             set_item_pushbutton.clicked.connect(getattr(self, 'csm_set_{0}'.format(item)))
             self.layout().addWidget(set_item_pushbutton, i + 1, 2, 1, 1)
-        pprint(stepper_settings_dict)
+        pprint(self.stepper_settings_dict)
 
 
     def csm_setup(self):
@@ -127,20 +127,22 @@ class ConfigureStepperMotor(QtWidgets.QWidget, GuiBuilder):
         acceleration = acceleration.split('=')[-1]
         return acceleration
 
-    def csm_set_position(self, x):
+    def csm_set_position(self, clicked=False, position=None, verbose=True):
         '''
         '''
         # check that this is a valid position
         # convert physical units to stepper motor units
         # tell the motor what to do
-        position = int(self.position_lineedit.text())
+        if position is None:
+            position = int(self.position_lineedit.text())
         self.csm_send_command("DI{:d}".format(position))
         self.csm_send_command("DI")
         self.csm_send_command('FP')
         # check that the motor did what you wanted
         # IP, EP, commands to see
-        self.status_bar.showMessage('Set position to {0} on stepper motor {1}'.format(position, self.com_port))
-        QtWidgets.QApplication.processEvents()
+        if verbose:
+            self.status_bar.showMessage('Set position to {0} on stepper motor {1}'.format(position, self.com_port))
+            QtWidgets.QApplication.processEvents()
 
     def csm_set_current(self):
         '''

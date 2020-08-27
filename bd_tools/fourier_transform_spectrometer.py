@@ -1,0 +1,373 @@
+import time
+import os
+import pylab as pl
+import numpy as np
+from datetime import datetime
+from pprint import pprint
+from bd_lib.bolo_daq import BoloDAQ
+from bd_lib.fourier import Fourier
+from PyQt5 import QtCore, QtGui, QtWidgets
+from GuiBuilder.gui_builder import GuiBuilder, GenericClass
+from bd_tools.configure_stepper_motor import ConfigureStepperMotor
+
+class FourierTransformSpectrometer(QtWidgets.QWidget, GuiBuilder):
+
+    def __init__(self, available_daqs, status_bar, screen_resolution, monitor_dpi):
+        '''
+        '''
+        super(FourierTransformSpectrometer, self).__init__()
+        self.status_bar = status_bar
+        self.available_daqs = available_daqs
+        self.screen_resolution = screen_resolution
+        self.monitor_dpi = monitor_dpi
+        self.daq = BoloDAQ()
+        grid = QtWidgets.QGridLayout()
+        self.setLayout(grid)
+        grid_2 = QtWidgets.QGridLayout()
+        self.fts_plot_panel = QtWidgets.QWidget(self)
+        self.layout().addWidget(self.fts_plot_panel, 0, 2, 14, 1)
+        self.fts_plot_panel.setLayout(grid_2)
+        self.fts_configure_input_panel()
+        self.fts_configure_plot_panel()
+        self.today = datetime.now()
+        self.today_str = datetime.strftime(self.today, '%Y_%m_%d')
+        self.data_folder = './Data/{0}'.format(self.today_str)
+        self.fourier = Fourier()
+
+    #################################################
+    # Gui Config
+    #################################################
+
+    def fts_configure_input_panel(self):
+        '''
+        '''
+        welcome_header_label = QtWidgets.QLabel('Welcome to FTS', self)
+        self.layout().addWidget(welcome_header_label, 0, 0, 1, 1)
+        # DAQ (Device + Channel) Selection
+        device_header_label = QtWidgets.QLabel('Device:', self)
+        self.layout().addWidget(device_header_label, 1, 0, 1, 1)
+        self.device_combobox = QtWidgets.QComboBox(self)
+        self.layout().addWidget(self.device_combobox, 1, 1, 1, 1)
+        for device in self.available_daqs:
+            self.device_combobox.addItem(device)
+        daq_header_label = QtWidgets.QLabel('DAQ:', self)
+        self.layout().addWidget(daq_header_label, 2, 0, 1, 1)
+        self.daq_combobox = QtWidgets.QComboBox(self)
+        self.layout().addWidget(self.daq_combobox, 2, 1, 1, 1)
+        for channel in sorted(self.available_daqs[device]):
+            self.daq_combobox.addItem(str(channel))
+        self.daq_settings_label = QtWidgets.QLabel('DAQ Settings', self)
+        self.layout().addWidget(self.daq_settings_label, 3, 1, 1, 1)
+        # Stepper Motor Selection
+        stepper_motor_header_label = QtWidgets.QLabel('Stepper Motor:', self)
+        self.layout().addWidget(stepper_motor_header_label, 4, 0, 1, 1)
+        self.stepper_motor_combobox = QtWidgets.QComboBox(self)
+        for com_port in ['COM12']:
+            self.stepper_motor_combobox.addItem(com_port)
+        self.layout().addWidget(self.stepper_motor_combobox, 4, 1, 1, 1)
+        self.stepper_settings_label = QtWidgets.QLabel('Stepper Settings', self)
+        self.layout().addWidget(self.stepper_settings_label, 5, 1, 1, 1)
+        ######
+        # Scan Params
+        ######
+        #Pause Time 
+        pause_time_header_label = QtWidgets.QLabel('Pause Time (ms):', self)
+        self.layout().addWidget(pause_time_header_label, 6, 0, 1, 1)
+        self.pause_time_lineedit = QtWidgets.QLineEdit('100', self)
+        self.pause_time_lineedit.setValidator(QtGui.QIntValidator(0, 25000, self.pause_time_lineedit))
+        self.layout().addWidget(self.pause_time_lineedit, 6, 1, 1, 1)
+        #Start Scan
+        start_position_header_label = QtWidgets.QLabel('Start Position:', self)
+        self.layout().addWidget(start_position_header_label, 7, 0, 1, 1)
+        self.start_position_lineedit = QtWidgets.QLineEdit('-30000', self)
+        self.start_position_lineedit.setValidator(QtGui.QIntValidator(-500000, 0, self.start_position_lineedit))
+        self.start_position_lineedit.textChanged.connect(self.fts_update_scan_params)
+        self.layout().addWidget(self.start_position_lineedit, 7, 1, 1, 1)
+        #End Scan
+        end_position_header_label = QtWidgets.QLabel('End Position:', self)
+        self.layout().addWidget(end_position_header_label, 8, 0, 1, 1)
+        self.end_position_lineedit = QtWidgets.QLineEdit('30000', self)
+        self.end_position_lineedit.setValidator(QtGui.QIntValidator(0, 300000, self.end_position_lineedit))
+        self.end_position_lineedit.textChanged.connect(self.fts_update_scan_params)
+        self.layout().addWidget(self.end_position_lineedit, 8, 1, 1, 1)
+        #Step size
+        step_size_header_label = QtWidgets.QLabel('Step Size:', self)
+        self.layout().addWidget(step_size_header_label, 9, 0, 1, 1)
+        self.step_size_lineedit = QtWidgets.QLineEdit('3000', self)
+        self.step_size_lineedit.setValidator(QtGui.QIntValidator(1, 200000, self.step_size_lineedit))
+        self.step_size_lineedit.textChanged.connect(self.fts_update_scan_params)
+        self.layout().addWidget(self.step_size_lineedit, 9, 1, 1, 1)
+        #Scan Info size
+        self.scan_info_label = QtWidgets.QLabel('Scan Info', self)
+        self.layout().addWidget(self.scan_info_label, 10, 1, 1, 1)
+        self.fts_update_scan_params()
+        sample_name_header_label = QtWidgets.QLabel('Sample Name:', self)
+        self.layout().addWidget(sample_name_header_label, 11, 0, 1, 1)
+        self.sample_name_lineedit = QtWidgets.QLineEdit('', self)
+        self.layout().addWidget(self.sample_name_lineedit, 11, 1, 1, 1)
+        ######
+        # Control Buttons 
+        ######
+        self.start_pushbutton = QtWidgets.QPushButton('Start', self)
+        self.layout().addWidget(self.start_pushbutton, 12, 0, 1, 2)
+        self.start_pushbutton.clicked.connect(self.fts_start_stop_scan)
+        save_pushbutton = QtWidgets.QPushButton('Save', self)
+        self.layout().addWidget(save_pushbutton, 13, 0, 1, 2)
+        save_pushbutton.clicked.connect(self.fts_save)
+
+    def fts_configure_plot_panel(self):
+        '''
+        '''
+        self.inteferogram_plot_label = QtWidgets.QLabel('', self.fts_plot_panel)
+        self.fts_plot_panel.layout().addWidget(self.inteferogram_plot_label, 0, 0, 1, 4)
+        int_data_mean_header_label = QtWidgets.QLabel('Data Mean (V):', self.fts_plot_panel)
+        self.fts_plot_panel.layout().addWidget(int_data_mean_header_label, 1, 0, 1, 1)
+        self.int_data_mean_label = QtWidgets.QLabel('', self.fts_plot_panel)
+        self.fts_plot_panel.layout().addWidget(self.int_data_mean_label, 1, 1, 1, 1)
+        int_data_std_header_label = QtWidgets.QLabel('Data STD (V):', self.fts_plot_panel)
+        self.fts_plot_panel.layout().addWidget(int_data_std_header_label, 1, 2, 1, 1)
+        self.int_data_std_label = QtWidgets.QLabel('', self.fts_plot_panel)
+        self.fts_plot_panel.layout().addWidget(self.int_data_std_label, 1, 3, 1, 1)
+        # X
+        self.spectrum_plot_label = QtWidgets.QLabel('', self.fts_plot_panel)
+        self.fts_plot_panel.layout().addWidget(self.spectrum_plot_label, 2, 0, 1, 4)
+
+    #################################################
+    # Scanning
+    #################################################
+
+    def fts_update_scan_params(self):
+        '''
+        '''
+        end = int(self.end_position_lineedit.text())
+        start = int(self.start_position_lineedit.text())
+        step_size = int(self.step_size_lineedit.text())
+        pause_time = float(self.pause_time_lineedit.text())
+        if step_size > 0:
+            self.n_data_points = int((end - start) / step_size)
+        else:
+            self.n_data_points = np.nan
+        self.scan_settings_dict = {
+             'end': end,
+             'start': start,
+             'step_size': step_size,
+             'pause_time': pause_time,
+             'n_data_points': self.n_data_points
+            }
+        self.scan_info_label.setText('N Data Points: {0}'.format(self.n_data_points))
+        device = self.device_combobox.currentText()
+        daq = self.daq_combobox.currentText()
+        self.scan_settings_dict.update({'device': device, 'daq': daq})
+        daq_settings = str(self.available_daqs[device][daq])
+        daq_settings_str = ''
+        self.scan_settings_dict.update(self.available_daqs[device][daq])
+        for setting, value in self.available_daqs[device][daq].items():
+            daq_settings_str += ' '.join([x.title() for x in setting.split('_')])
+            if setting == 'int_time':
+                daq_settings_str += ' (ms): '
+            if setting == 'sample_rate':
+                daq_settings_str += ' (Hz): '
+            daq_settings_str += '{0} ::: '.format(value)
+        self.daq_settings_label.setText(daq_settings_str)
+        self.fts_setup_stepper()
+
+    def fts_setup_stepper(self):
+        '''
+        '''
+        sm_com_port = self.stepper_motor_combobox.currentText()
+        self.scan_settings_dict.update({'sm_com_port': sm_com_port})
+        if not hasattr(self , 'sm_{0}'.format(sm_com_port)):
+            self.status_bar.showMessage('Setting up serial connection to stepper motor on {0}'.format(sm_com_port))
+            QtWidgets.QApplication.processEvents()
+            sm_widget = ConfigureStepperMotor(sm_com_port, self.status_bar)
+            setattr(self, 'sm_{0}'.format(sm_com_port), sm_widget)
+            sm_settings_str = ''
+            self.scan_settings_dict.update(sm_widget.stepper_settings_dict)
+            for setting, value in sm_widget.stepper_settings_dict.items():
+                sm_settings_str += ' '.join([x.title() for x in setting.split('_')])
+                sm_settings_str += ' {0} ::: '.format(value)
+            self.stepper_settings_label.setText(sm_settings_str)
+
+    def fts_start_stop_scan(self):
+        '''
+        '''
+        if self.sender().text() == 'Start':
+            self.fts_update_scan_params()
+            self.sender().setText('Stop')
+            self.started = True
+            self.fts_scan()
+        else:
+            self.sender().setText('Start')
+            self.started = False
+
+    def fts_scan(self):
+        '''
+        '''
+        pprint(self.scan_settings_dict)
+        start = self.scan_settings_dict['start']
+        end = self.scan_settings_dict['end']
+        step_size = self.scan_settings_dict['step_size']
+        pause_time = self.scan_settings_dict['pause_time']
+        n_data_points = self.scan_settings_dict['n_data_points']
+        device = self.scan_settings_dict['device']
+        int_time = self.scan_settings_dict['int_time']
+        sample_rate = self.scan_settings_dict['sample_rate']
+        signal_channel = self.scan_settings_dict['daq']
+        sm_com_port = self.scan_settings_dict['sm_com_port']
+        scan_positions = range(start, end + step_size, step_size)
+        sm_widget = getattr(self, 'sm_{0}'.format(sm_com_port))
+        while self.started:
+            t_start = datetime.now()
+            self.x_data, self.x_stds = [], []
+            self.y_data, self.y_stds = [], []
+            for i, scan_position in enumerate(scan_positions):
+                time.sleep(pause_time / 1e3)
+                sm_widget.csm_set_position(position=scan_position, verbose=False)
+                if i == 0:
+                    time.sleep(10) # wait for motor to reach starting point
+                # Gather Data and Append to Vector then plot
+                self.x_data.append(scan_position)
+                self.x_stds.append(3) # guesstimated < 3 step error in position
+                out_ts, out_mean, out_min, out_max, out_std = self.daq.get_data(signal_channel=signal_channel,
+                                                                                int_time=int_time,
+                                                                                sample_rate=sample_rate,
+                                                                                device=device)
+                self.y_data.append(out_mean)
+                self.y_stds.append(out_std)
+                self.fts_plot_running_data()
+                self.int_data_mean_label.setText('{0:.6f}'.format(out_mean))
+                self.int_data_std_label.setText('{0:.6f}'.format(out_std))
+                # Compute and report time diagnostics
+                t_now = datetime.now()
+                t_elapsed = t_now - t_start
+                t_elapsed = t_elapsed.seconds + t_elapsed.microseconds * 1e-6
+                t_average = t_elapsed / float(i + 1)
+                steps_remain = n_data_points - i
+                t_remain = t_average * steps_remain
+                status_message = 'Elapsed Time(s): {0:.1f} Remaining Time (s): {1:.1f} ::: Current Position (step) {2} ::: (Step {3} of {4})'.format(t_elapsed, t_remain, scan_position, i, n_data_points)
+                self.status_bar.showMessage(status_message)
+                QtWidgets.QApplication.processEvents()
+                if not self.started:
+                    break
+                elif i + 1 == self.n_data_points:
+                    self.started = False
+                    self.start_pushbutton.setText('Start')
+
+    #################################################
+    # File handling and plotting
+    #################################################
+
+    def fts_index_file_name(self):
+        '''
+        '''
+        for i in range(1, 1000):
+            file_name = '{0}_{1}.if'.format(self.sample_name_lineedit.text(), str(i).zfill(3))
+            save_path = os.path.join(self.data_folder, file_name)
+            if not os.path.exists(save_path):
+                break
+        return save_path
+
+    def fts_save(self):
+        '''
+        '''
+        save_path = self.fts_index_file_name()
+        save_path = QtWidgets.QFileDialog.getSaveFileName(self, 'Data Save Location', save_path, filter=',*.txt,*.dat')[0]
+        if len(save_path) > 0:
+            with open(save_path, 'w') as save_handle:
+                for i, x_data in enumerate(self.x_data):
+                    line = '{0:.5f}, {1:.5f}, {2:.5f}, {3:.5f}\n'.format(self.x_data[i], self.x_stds[i], self.y_data[i], self.y_stds[i])
+                    save_handle.write(line)
+        else:
+            self.gb_quick_message('Warning Data Not Written to File!', msg_type='Warning')
+        self.fts_plot()
+
+    def fts_plot_running_data(self):
+        '''
+        '''
+        pl.close('all')
+        step_size = self.scan_settings_dict['step_size']
+        fig, ax1, ax2 = self.fts_create_blank_fig()
+        ax1.set_xlabel('Mirror Position (Steps)', fontsize=12)
+        ax1.set_ylabel('Bolometer Response (V)', fontsize=12)
+        ax2.set_xlabel('Frequency (GHz)', fontsize=12)
+        ax2.set_ylabel('Bolometer Response (Au)', fontsize=12)
+        title = 'Inteferogram and Spectra for {0}'.format(self.sample_name_lineedit.text())
+        ax1.set_title(title, fontsize=14)
+        if len(self.x_data) > 10:
+            fft_freq_vector, fft_vector, phase_corrected_fft_vector, position_vector, efficiency_vector = self.fourier.convert_IF_to_FFT_data(self.x_data, self.y_data, step_size, data_selector='All')
+            ax1.errorbar(self.x_data, self.y_data, yerr=self.y_stds, marker='.', linestyle='-')
+            selector = np.where(fft_freq_vector > 0)
+            normalized_phase_corrected_fft_vector = np.abs(phase_corrected_fft_vector.real)
+            normalized_phase_corrected_fft_vector = np.abs(phase_corrected_fft_vector.real / np.max(phase_corrected_fft_vector.real))
+            ax2.errorbar(fft_freq_vector[selector] * 1e-9, normalized_phase_corrected_fft_vector[selector], marker='.', linestyle='-')
+        else:
+            ax1.errorbar(self.x_data, self.y_data, yerr=self.y_stds, marker='.', linestyle='-')
+        temp_png_path = os.path.join('temp_files', 'temp_int.png')
+        fig.savefig(temp_png_path)
+        image_to_display = QtGui.QPixmap(temp_png_path)
+        self.inteferogram_plot_label.setPixmap(image_to_display)
+        os.remove(temp_png_path)
+
+    def fts_plot_spectra(self):
+        '''
+        '''
+        pl.close('all')
+        step_size = self.scan_settings_dict['step_size']
+        fig, ax = self.fts_create_blank_fig(n_axes=1)
+        ax.set_xlabel('Frequency (GHz)', fontsize=12)
+        ax.set_ylabel('Bolometer Response (Au)', fontsize=12)
+        title = 'Spectra for {0}'.format(self.sample_name_lineedit.text())
+        ax.set_title(title, fontsize=14)
+        fft_freq_vector, fft_vector, phase_corrected_fft_vector, position_vector, efficiency_vector = self.fourier.convert_IF_to_FFT_data(self.x_data, self.y_data, step_size)
+        ax.errorbar(fft_freq_vector, fft_vector, self.y_stds, marker='.', linestyle='-')
+        temp_png_path = os.path.join('temp_files', 'temp_int.png')
+        fig.savefig(temp_png_path)
+        image_to_display = QtGui.QPixmap(temp_png_path)
+        self.inteferogram_plot_label.setPixmap(image_to_display)
+        os.remove(temp_png_path)
+
+    def fts_plot_int(self):
+        '''
+        '''
+        pl.close('all')
+        fig, ax = self.fts_create_blank_fig(n_axes=1)
+        ax.set_xlabel('Mirror Position (steps)', fontsize=12)
+        ax.set_ylabel('Bolometer Response (V)', fontsize=12)
+        title = 'Interferogram for {0}'.format(self.sample_name_lineedit.text())
+        ax.set_title(title, fontsize=14)
+        ax.errorbar(self.x_data, self.y_data, self.y_stds, marker='.', linestyle='-')
+        temp_png_path = os.path.join('temp_files', 'temp_int.png')
+        fig.savefig(temp_png_path)
+        image_to_display = QtGui.QPixmap(temp_png_path)
+        self.inteferogram_plot_label.setPixmap(image_to_display)
+        os.remove(temp_png_path)
+
+    def fts_plot(self):
+        '''
+        '''
+        pl.close('all')
+        fig, ax = self.fts_create_blank_fig()
+        ax.set_xlabel('Mirror Position (steps)', fontsize=12)
+        ax.set_ylabel('Bolometer Response (V)', fontsize=12)
+        title = 'Interferogram for {0}'.format(self.sample_name_lineedit.text())
+        ax.set_title(title, fontsize=16)
+        ax.errorbar(self.x_data, self.y_data, self.y_stds, marker='.', linestyle='-')
+        pl.show()
+
+    def fts_create_blank_fig(self, frac_screen_width=0.5, frac_screen_height=0.75,
+                             left=0.12, right=0.98, top=0.9, bottom=0.23, n_axes=2,
+                             aspect=None):
+        if frac_screen_width is None and frac_screen_height is None:
+            fig = pl.figure()
+        else:
+            width = (frac_screen_width * self.screen_resolution.width()) / self.monitor_dpi
+            height = (frac_screen_height * self.screen_resolution.height()) / self.monitor_dpi
+            fig = pl.figure(figsize=(width, height))
+        fig.subplots_adjust(left=left, right=right, top=top, bottom=bottom)
+        if n_axes == 2:
+            ax1 = fig.add_subplot(211, label='int')
+            ax2 = fig.add_subplot(212, label='spec')
+            return fig, ax1, ax2
+        else:
+            ax = fig.add_subplot(111)
+            return fig, ax

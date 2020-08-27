@@ -28,12 +28,12 @@ from bd_tools.lakeshore372 import LakeShore372
 from bd_tools.xy_collector import XYCollector
 from bd_tools.fridge_cycle import FridgeCycle
 from bd_tools.data_plotter import DataPlotter
-from bd_tools.fts import FTS
+from bd_tools.fourier_transform_spectrometer import FourierTransformSpectrometer
+from bd_lib.fourier import Fourier
 from bd_tools.configure_stepper_motor import ConfigureStepperMotor
 from RT_Curves.plot_rt_curves import RTCurve
 #from IV_Curves.plot_iv_curves import IVCurve
 #from FTS_Curves.plot_fts_curves import FTSCurve
-#from FTS_Curves.numerical_processing import Fourier
 #from Beam_Maps.beam_mapper_tools import BeamMapperTools
 #from POL_Curves.plot_pol_curves import PolCurve
 #from TAU_Curves.plot_tau_curves import TAUCurve
@@ -1219,7 +1219,8 @@ class BoloDAQGui(QtWidgets.QMainWindow, GuiBuilder):
 
     def bd_fts(self):
         self.gb_initialize_panel('central_widget')
-        self.fts_widget = FTS(self.available_daqs, self.status_bar, self.screen_resolution, self.monitor_dpi)
+        if not hasattr(self, 'fts_widget'):
+            self.fts_widget = FourierTransformSpectrometer(self.available_daqs, self.status_bar, self.screen_resolution, self.monitor_dpi)
         self.central_widget.layout().addWidget(self.fts_widget, 0, 0, 1, 1)
 
     #################################################
