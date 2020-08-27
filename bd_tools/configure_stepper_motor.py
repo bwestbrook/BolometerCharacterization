@@ -76,13 +76,13 @@ class ConfigureStepperMotor(QtWidgets.QWidget, GuiBuilder):
     def csm_send_command(self, msg):
         '''
         '''
-        self.serial_com.write(msg)
+        self.serial_com.bs_write(msg)
 
     def csm_query_motor(self, query, timeout=0.5):
         '''
         '''
         self.csm_send_command(query)
-        response = self.serial_com.read()
+        response = self.serial_com.bs_read()
         return response
 
 

@@ -4,7 +4,6 @@ Class for communicating with RS232 lab devices w/ a USB-to-RS232 converter
 import serial
 import time
 
-
 class BoloSerial(object):
 
     def __init__(self, port, device=None, splash_screen=None):
@@ -58,7 +57,7 @@ class BoloSerial(object):
         self.ser.flushInput()
         self.ser.flushOutput()
 
-    def write(self, string, encode=None):
+    def bs_write(self, string, encode=None):
         """
         Properly terminates and encodes a message, then writes it to the port
         """
@@ -67,33 +66,42 @@ class BoloSerial(object):
         #self.ser.write(string.encode('utf-8')) # unicode not supported for serial module in python 3
         self.ser.write(string.encode('ASCII')) # unicode not supported for serial module in python 3
 
-    def read(self, decode='latin-1'):
+    def bs_read(self, decode='latin-1'):
         "Returns a properly decoded string of the bytes read from the port"
         response = self.ser.readline()
         response = response.decode(decode).strip('\r\n')
         return response
 
-    def read2(self):
-        "Returns a properly decoded string of the bytes read from the port"
-        return self.ser.readline().decode('utf-8').strip('\r\n')
-
-    def write_read(self, string, wait_time=0.1):
-        self.write(string)
+    def bs_write_read(self, string, wait_time=0.1):
+        self.bs_write(string)
         time.sleep(wait_time)
-        return self.read()
+        return self.bs_read()
 
-    def is_open(self):
+    def bs_is_open(self):
         return self.ser.isOpen()
 
-    def close(self):
+    def bs_close(self):
         self.ser.close()
 
-    def reopen(self):
+    def bs_reopen(self):
         if self.is_open():
             print('Warning! Attempt made to re-open serial connection that is already open.  Doing nothing...')
         else:
             self.__init__(port=self.port) # careful in case I start adding extra functionality to the constructor
 
+    def bs_is_stepper(self):
+        '''
+        '''
+        try:
+            float(self.csm_get_current())
+            is_stepper = True
+        except ValueError:
+            is_stepper = False
+        if is_stepper:
+            self.status_bar.showMessage('Found a stepper motor on {0}'.format(self.com_port))
+        else:
+            self.status_bar.showMessage('{0} is not a stepper motor'.format(self.com_port))
+        return is_stepper
 
 if __name__ == '__main__':
     LS = lab_serial()

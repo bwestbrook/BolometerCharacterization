@@ -147,7 +147,6 @@ class BoloDAQGui(QtWidgets.QMainWindow, GuiBuilder):
                         break
             if available:
                 self.available_daqs[device] = configuration_dict
-        pprint(self.available_daqs)
         n_devices = len(self.available_daqs)
         devices = list(self.available_daqs.keys())
         self.status_bar.showMessage('Found {0} available devices: {1}'.format(n_devices, devices))
@@ -1208,7 +1207,11 @@ class BoloDAQGui(QtWidgets.QMainWindow, GuiBuilder):
                 okPressed = True
                 if okPressed:
                     self.lakeshore_com_port = com_port
-                    self.ls372_widget = LakeShore372(com_port, self.status_bar)
+                    try:
+                        self.ls372_widget = LakeShore372(com_port, self.status_bar)
+                    except:
+                        self.gb_quick_message('Error finding Lakeshore on {0}. Please check'.format(com_port), msg_type='Warning')
+                        return None
         if self.ls372_widget is not None:
             self.central_widget.layout().addWidget(self.ls372_widget, 0, 0, 1, 1)
 

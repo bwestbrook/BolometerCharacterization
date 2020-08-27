@@ -92,29 +92,37 @@ class FourierTransformSpectrometer(QtWidgets.QWidget, GuiBuilder):
         self.end_position_lineedit.setValidator(QtGui.QIntValidator(0, 300000, self.end_position_lineedit))
         self.end_position_lineedit.textChanged.connect(self.fts_update_scan_params)
         self.layout().addWidget(self.end_position_lineedit, 8, 1, 1, 1)
-        #Step size
-        step_size_header_label = QtWidgets.QLabel('Step Size:', self)
-        self.layout().addWidget(step_size_header_label, 9, 0, 1, 1)
-        self.step_size_lineedit = QtWidgets.QLineEdit('3000', self)
-        self.step_size_lineedit.setValidator(QtGui.QIntValidator(1, 200000, self.step_size_lineedit))
-        self.step_size_lineedit.textChanged.connect(self.fts_update_scan_params)
-        self.layout().addWidget(self.step_size_lineedit, 9, 1, 1, 1)
+        #Mirror Interval 
+        mirror_interval_header_label = QtWidgets.QLabel('Mirror Interval (steps):', self)
+        self.layout().addWidget(mirror_interval_header_label, 9, 0, 1, 1)
+        self.mirror_interval_lineedit = QtWidgets.QLineEdit('3000', self)
+        self.mirror_interval_lineedit.textChanged.connect(self.fts_update_scan_params)
+        self.mirror_interval_lineedit.setValidator(QtGui.QIntValidator(1, 200000, self.mirror_interval_lineedit))
+        self.layout().addWidget(self.mirror_interval_lineedit, 9, 1, 1, 1)
+        #Step size (Fixed for Bill's FTS right now)
+        distance_per_step_header_label = QtWidgets.QLabel('Distance Per Step (nm):', self)
+        self.layout().addWidget(distance_per_step_header_label, 10, 0, 1, 1)
+        self.distance_per_step_combobox = QtWidgets.QComboBox(self)
+        for distance_per_step in ['250.39']:
+            self.distance_per_step_combobox.addItem(distance_per_step)
+        self.distance_per_step_combobox.activated.connect(self.fts_update_scan_params)
+        self.layout().addWidget(self.distance_per_step_combobox, 10, 1, 1, 1)
         #Scan Info size
         self.scan_info_label = QtWidgets.QLabel('Scan Info', self)
-        self.layout().addWidget(self.scan_info_label, 10, 1, 1, 1)
+        self.layout().addWidget(self.scan_info_label, 11, 1, 1, 1)
         self.fts_update_scan_params()
         sample_name_header_label = QtWidgets.QLabel('Sample Name:', self)
-        self.layout().addWidget(sample_name_header_label, 11, 0, 1, 1)
+        self.layout().addWidget(sample_name_header_label, 12, 0, 1, 1)
         self.sample_name_lineedit = QtWidgets.QLineEdit('', self)
-        self.layout().addWidget(self.sample_name_lineedit, 11, 1, 1, 1)
+        self.layout().addWidget(self.sample_name_lineedit, 12, 1, 1, 1)
         ######
         # Control Buttons 
         ######
         self.start_pushbutton = QtWidgets.QPushButton('Start', self)
-        self.layout().addWidget(self.start_pushbutton, 12, 0, 1, 2)
+        self.layout().addWidget(self.start_pushbutton, 13, 0, 1, 2)
         self.start_pushbutton.clicked.connect(self.fts_start_stop_scan)
         save_pushbutton = QtWidgets.QPushButton('Save', self)
-        self.layout().addWidget(save_pushbutton, 13, 0, 1, 2)
+        self.layout().addWidget(save_pushbutton, 14, 0, 1, 2)
         save_pushbutton.clicked.connect(self.fts_save)
 
     def fts_configure_plot_panel(self):
@@ -143,20 +151,34 @@ class FourierTransformSpectrometer(QtWidgets.QWidget, GuiBuilder):
         '''
         end = int(self.end_position_lineedit.text())
         start = int(self.start_position_lineedit.text())
-        step_size = int(self.step_size_lineedit.text())
+        mirror_interval = int(self.mirror_interval_lineedit.text())
+        distance_per_step = float(self.distance_per_step_combobox.currentText())
         pause_time = float(self.pause_time_lineedit.text())
-        if step_size > 0:
-            self.n_data_points = int((end - start) / step_size)
+        if mirror_interval > 0:
+            self.n_data_points = int((end - start) / mirror_interval)
         else:
             self.n_data_points = np.nan
+        total_distance = self.n_data_points * distance_per_step * mirror_interval
+        min_distance = distance_per_step * mirror_interval
+        if min_distance > 0 and total_distance > 0:
+            min_distance *= 1e-9 # from nm to m
+            total_distance *= 1e-9 # from nm to m
+            nyquist_distance = 4 * min_distance
+            max_frequency = ((2.99792458 * 10 ** 8) / nyquist_distance) / (10 ** 9) # GHz
+            resolution = ((2.99792458 * 10 ** 8) / total_distance) / (10 ** 9) # GHz
+            resolution = '{0:.2f} GHz'.format(resolution)
+            max_frequency = '{0:.2f} GHz'.format(max_frequency)
         self.scan_settings_dict = {
              'end': end,
              'start': start,
-             'step_size': step_size,
+             'mirror_interval': mirror_interval,
+             'distance_per_step': distance_per_step,
              'pause_time': pause_time,
              'n_data_points': self.n_data_points
             }
-        self.scan_info_label.setText('N Data Points: {0}'.format(self.n_data_points))
+        info_string = 'N Data Points: {0} ::: '.format(self.n_data_points)
+        info_string += 'Resolution: {0} ::: Max Frequency (GHz): {1}'.format(resolution, max_frequency)
+        self.scan_info_label.setText(info_string)
         device = self.device_combobox.currentText()
         daq = self.daq_combobox.currentText()
         self.scan_settings_dict.update({'device': device, 'daq': daq})
@@ -181,7 +203,11 @@ class FourierTransformSpectrometer(QtWidgets.QWidget, GuiBuilder):
         if not hasattr(self , 'sm_{0}'.format(sm_com_port)):
             self.status_bar.showMessage('Setting up serial connection to stepper motor on {0}'.format(sm_com_port))
             QtWidgets.QApplication.processEvents()
+            #try:
             sm_widget = ConfigureStepperMotor(sm_com_port, self.status_bar)
+            #except:
+                ##self.gb_quick_message('Error with {0} (probably just in use right now), please check'.format(sm_com_port), msg_type='Warning')
+                #return None
             setattr(self, 'sm_{0}'.format(sm_com_port), sm_widget)
             sm_settings_str = ''
             self.scan_settings_dict.update(sm_widget.stepper_settings_dict)
@@ -208,7 +234,7 @@ class FourierTransformSpectrometer(QtWidgets.QWidget, GuiBuilder):
         pprint(self.scan_settings_dict)
         start = self.scan_settings_dict['start']
         end = self.scan_settings_dict['end']
-        step_size = self.scan_settings_dict['step_size']
+        mirror_interval = self.scan_settings_dict['mirror_interval']
         pause_time = self.scan_settings_dict['pause_time']
         n_data_points = self.scan_settings_dict['n_data_points']
         device = self.scan_settings_dict['device']
@@ -216,7 +242,9 @@ class FourierTransformSpectrometer(QtWidgets.QWidget, GuiBuilder):
         sample_rate = self.scan_settings_dict['sample_rate']
         signal_channel = self.scan_settings_dict['daq']
         sm_com_port = self.scan_settings_dict['sm_com_port']
-        scan_positions = range(start, end + step_size, step_size)
+        scan_positions = range(start, end + mirror_interval, mirror_interval)
+        if not hasattr(self, 'sm_{0}'.format(sm_com_port)):
+            return None
         sm_widget = getattr(self, 'sm_{0}'.format(sm_com_port))
         while self.started:
             t_start = datetime.now()
@@ -278,12 +306,12 @@ class FourierTransformSpectrometer(QtWidgets.QWidget, GuiBuilder):
         if_save_path = QtWidgets.QFileDialog.getSaveFileName(self, 'Data Save Location', if_save_path, filter=',*.txt,*.dat')[0]
         fft_save_path = if_save_path.replace('if', 'fft')
         if len(if_save_path) > 0:
-            step_size = self.scan_settings_dict['step_size']
+            mirror_interval = self.scan_settings_dict['mirror_interval']
             with open(if_save_path, 'w') as save_handle:
                 for i, x_data in enumerate(self.x_data):
                     line = '{0:.5f}, {1:.5f}, {2:.5f}, {3:.5f}\n'.format(self.x_data[i], self.x_stds[i], self.y_data[i], self.y_stds[i])
                     save_handle.write(line)
-            fft_freq_vector, fft_vector, phase_corrected_fft_vector, position_vector, efficiency_vector = self.fourier.convert_IF_to_FFT_data(self.x_data, self.y_data, step_size, data_selector='All')
+            fft_freq_vector, fft_vector, phase_corrected_fft_vector, position_vector, efficiency_vector = self.fourier.convert_IF_to_FFT_data(self.x_data, self.y_data, mirror_interval, data_selector='All')
             normalized_phase_corrected_fft_vector = np.abs(phase_corrected_fft_vector.real)
             normalized_phase_corrected_fft_vector = np.abs(phase_corrected_fft_vector.real / np.max(phase_corrected_fft_vector.real))
             with open(fft_save_path, 'w') as save_handle:
@@ -301,7 +329,7 @@ class FourierTransformSpectrometer(QtWidgets.QWidget, GuiBuilder):
         '''
         '''
         pl.close('all')
-        step_size = self.scan_settings_dict['step_size']
+        mirror_interval = self.scan_settings_dict['mirror_interval']
         fig, ax1, ax2 = self.fts_create_blank_fig()
         ax1.set_xlabel('Mirror Position (Steps)', fontsize=14)
         ax1.set_ylabel('Bolometer Response (V)', fontsize=14)
@@ -310,7 +338,7 @@ class FourierTransformSpectrometer(QtWidgets.QWidget, GuiBuilder):
         title = 'Inteferogram and Spectra for {0}'.format(self.sample_name_lineedit.text())
         ax1.set_title(title, fontsize=14)
         if len(self.x_data) > 10:
-            fft_freq_vector, fft_vector, phase_corrected_fft_vector, position_vector, efficiency_vector = self.fourier.convert_IF_to_FFT_data(self.x_data, self.y_data, step_size, data_selector='All')
+            fft_freq_vector, fft_vector, phase_corrected_fft_vector, position_vector, efficiency_vector = self.fourier.convert_IF_to_FFT_data(self.x_data, self.y_data, mirror_interval, data_selector='All')
             ax1.errorbar(self.x_data, self.y_data, yerr=self.y_stds, marker='.', linestyle='-')
             selector = np.where(fft_freq_vector > 0)
             normalized_phase_corrected_fft_vector = np.abs(phase_corrected_fft_vector.real)
@@ -331,13 +359,13 @@ class FourierTransformSpectrometer(QtWidgets.QWidget, GuiBuilder):
         '''
         '''
         pl.close('all')
-        step_size = self.scan_settings_dict['step_size']
+        mirror_interval = self.scan_settings_dict['mirror_interval']
         fig, ax = self.fts_create_blank_fig(n_axes=1)
         ax.set_xlabel('Frequency (GHz)', fontsize=14)
         ax.set_ylabel('Bolometer Response (Au)', fontsize=14)
         title = 'Spectra for {0}'.format(self.sample_name_lineedit.text())
         ax.set_title(title, fontsize=14)
-        fft_freq_vector, fft_vector, phase_corrected_fft_vector, position_vector, efficiency_vector = self.fourier.convert_IF_to_FFT_data(self.x_data, self.y_data, step_size)
+        fft_freq_vector, fft_vector, phase_corrected_fft_vector, position_vector, efficiency_vector = self.fourier.convert_IF_to_FFT_data(self.x_data, self.y_data, mirror_interval)
         selector = np.where(fft_freq_vector > 0)
         normalized_phase_corrected_fft_vector = np.abs(phase_corrected_fft_vector.real)
         normalized_phase_corrected_fft_vector = np.abs(phase_corrected_fft_vector.real / np.max(phase_corrected_fft_vector.real))
@@ -357,7 +385,7 @@ class FourierTransformSpectrometer(QtWidgets.QWidget, GuiBuilder):
         pl.show()
 
     def fts_create_blank_fig(self, frac_screen_width=0.5, frac_screen_height=0.8,
-                             left=0.10, right=0.98, top=0.95, bottom=0.08, n_axes=2,
+                             left=0.13, right=0.98, top=0.95, bottom=0.08, n_axes=2,
                              aspect=None):
         if frac_screen_width is None and frac_screen_height is None:
             fig = pl.figure()

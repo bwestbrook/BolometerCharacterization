@@ -16,7 +16,7 @@ class Fourier():
         '''
         self.mesg = 'hey'
 
-    def convert_IF_to_FFT_data(self, position_vector, efficiency_vector, steps_per_point,
+    def convert_IF_to_FFT_data(self, position_vector, efficiency_vector, mirror_interval,
                                distance_per_step=250.39e9, data_selector='Right',
                                apodization_type='BOXCAR', quick_plot=False):
         '''
@@ -52,7 +52,7 @@ class Fourier():
         efficiency_vector, position_vector = self.prepare_data_for_fft(efficiency_vector, position_vector,
                                                                        remove_polynomial=5, apodization_type=apodization_type,
                                                                        zero_fill=True, quick_plot=False)
-        fft_freq_vector, fft_vector, fft_psd_vector = self.manual_fourier_transform(efficiency_vector, steps_per_point, quick_plot=quick_plot)
+        fft_freq_vector, fft_vector, fft_psd_vector = self.manual_fourier_transform(efficiency_vector, mirror_interval, quick_plot=quick_plot)
         phase_corrected_fft_vector = fft_vector
         #self.phase_correct_data(efficiency_vector, fft_vector, quick_plot=False)
         quick_plot = False
@@ -241,27 +241,27 @@ class Fourier():
     def next_power_of_two(self, length):
         return 1 if length == 0 else 2**(length - 1).bit_length()
 
-    def compute_fourier_transform_new(self, position_vector, efficiency_data, distance_per_step, steps_per_point, quick_plot=False):
+    def compute_fourier_transform_new(self, position_vector, efficiency_data, distance_per_step, mirror_interval, quick_plot=False):
         print()
         print()
         print('position_vector')
         print(position_vector)
         print('efficiency_data')
         print(efficiency_data)
-        print('steps_per_point')
-        print(steps_per_point)
+        print('mirror_interval')
+        print(mirror_interval)
         print('distance_per_step')
         print(distance_per_step)
         print()
         print()
         return position_vector, efficiency_data
 
-    def manual_fourier_transform(self, efficiency_vector, steps_per_point,
+    def manual_fourier_transform(self, efficiency_vector, mirror_interval,
                                  distance_per_point=250.39, speed_of_light=2.998e8, quick_plot=False):
         fft_vector = np.fft.fft(efficiency_vector)
         fft_psd_vector = np.abs(fft_vector) ** 2
         # convert to m then divide by speed of light to get lambda, 2 is nyquist sampling
-        resolution = 2 * steps_per_point * distance_per_point * 1e-9 / speed_of_light
+        resolution = 2 * mirror_interval * distance_per_point * 1e-9 / speed_of_light
         fft_freq_vector = np.fft.fftfreq(fft_psd_vector.size, resolution)
         if quick_plot:
             pos_freq_selector = fft_freq_vector > 0
@@ -271,12 +271,12 @@ class Fourier():
             pl.show()
         return fft_freq_vector, fft_vector, fft_psd_vector
 
-    def compute_fourier_transform(self, position_vector, efficiency_vector, distance_per_step, steps_per_point, quick_plot=False):
+    def compute_fourier_transform(self, position_vector, efficiency_vector, distance_per_step, mirror_interval, quick_plot=False):
         N = efficiency_vector.size
         total_steps = int(np.max(position_vector) - np.min(position_vector))
         total_distance = total_steps * distance_per_step
         resolution = ((3 * 10 ** 8) / total_distance) # Hz
-        resolution = steps_per_point * distance_per_step / (10 ** 12)
+        resolution = mirror_interval * distance_per_step / (10 ** 12)
         print(resolution)
         print(resolution)
         print(resolution)
@@ -330,7 +330,7 @@ class Fourier():
                 if_vector.append(val)
         return if_vector
 
-    def run_test(self, data_points=700, steps_per_point=500, spacing=10.39):
+    def run_test(self, data_points=700, mirror_interval=500, spacing=10.39):
         '''
         Special Notes: For real number inputs is n the complex conjugate of N - n.
         '''
