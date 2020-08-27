@@ -194,6 +194,10 @@ class DataPlotter(QtWidgets.QWidget, GuiBuilder):
                 if j < 4:
                     getattr(self, 'data_{0}_column_{1}_data_type'.format(i, column)).setCurrentIndex(j + 1)
                 j += 1
+                data_multiply_lineedit = QtWidgets.QLineEdit('1.0', self)
+                data_multiply_lineedit.setValidator(QtGui.QDoubleValidator(-1e24, 1e24, 8, data_multiply_lineedit))
+                setattr(self, 'data_{0}_multiply_column_{1}'.format(i, column), data_multiply_lineedit)
+                load_panel_widget.layout().addWidget(data_multiply_lineedit, 1, column, 1, 1)
             for column in range(data.shape[1]):
                 data_preview = ''.join(['{0:.6f}\n'.format(x) for x in data.T[column]])
                 column_textedit = QtWidgets.QTextEdit('', self)
@@ -201,12 +205,12 @@ class DataPlotter(QtWidgets.QWidget, GuiBuilder):
                 if load_panel_widget.layout().itemAtPosition(6, column) is not None:
                     load_panel_widget.layout().itemAtPosition(6, column).widget().setParent(None)
                 column_textedit.setText(data_preview)
-                load_panel_widget.layout().addWidget(column_textedit, 1, column, 1, 1)
+                load_panel_widget.layout().addWidget(column_textedit, 2, column, 1, 1)
         column_label_header_label = QtWidgets.QLabel('Data Label:', self)
-        load_panel_widget.layout().addWidget(column_label_header_label, 2, 0, 1, 7)
+        load_panel_widget.layout().addWidget(column_label_header_label, 3, 0, 1, 7)
         column_label_lineedit = QtWidgets.QLineEdit('', self)
         column_label_lineedit.setText(basename)
-        load_panel_widget.layout().addWidget(column_label_lineedit, 2, 1, 1, 7)
+        load_panel_widget.layout().addWidget(column_label_lineedit, 3, 1, 1, 7)
         setattr(self, 'column_plot_label_{0}'.format(i), column_label_lineedit)
         self.dp_update_input()
         loaded_data_label = QtWidgets.QLabel('No Data Loaded', self)
@@ -215,8 +219,7 @@ class DataPlotter(QtWidgets.QWidget, GuiBuilder):
         loaded_data_label.setText(file_path)
         close_file_pushbutton = QtWidgets.QPushButton('Close File {0}'.format(i), self)
         close_file_pushbutton.clicked.connect(self.dp_close_open_file)
-        load_panel_widget.layout().addWidget(close_file_pushbutton, 3, 0, 1, 8)
-
+        load_panel_widget.layout().addWidget(close_file_pushbutton, 4, 0, 1, 8)
 
     def dp_close_open_file(self):
         '''
@@ -238,10 +241,11 @@ class DataPlotter(QtWidgets.QWidget, GuiBuilder):
             for data_type in self.data_types:
                 for column in range(data.shape[1]):
                     column_data_type = getattr(self, 'data_{0}_column_{1}_data_type'.format(data_row, column)).currentText()
+                    data_multiply_value = float(getattr(self, 'data_{0}_multiply_column_{1}'.format(i, column)).text())
                     if column_data_type == data_type:
                         row_data_type = '{0}_{1}'.format(data_type, data_row)
-                        setattr(self, row_data_type, data.T[column])
-                        data_dict[data_row].update({data_type: data.T[column]})
+                        setattr(self, row_data_type, data.T[column] * data_multiply_value)
+                        data_dict[data_row].update({data_type: data.T[column] * data_multiply_value})
                         label = getattr(self, 'column_plot_label_{0}'.format(data_row)).text()
                         data_dict[data_row].update({'label': label})
             if ('x_data' in data_dict[data_row] and 'y_data' in data_dict[data_row]) and not ('xerr' in data_dict[data_row] and 'yerr' in data_dict[data_row]):
