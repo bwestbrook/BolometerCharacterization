@@ -33,6 +33,8 @@ class FourierTransformSpectrometer(QtWidgets.QWidget, GuiBuilder):
         self.today_str = datetime.strftime(self.today, '%Y_%m_%d')
         self.data_folder = './Data/{0}'.format(self.today_str)
         self.fourier = Fourier()
+        self.start_pause = 5.0
+        self.status_bar.showMessage('Ready')
 
     #################################################
     # Gui Config
@@ -54,7 +56,7 @@ class FourierTransformSpectrometer(QtWidgets.QWidget, GuiBuilder):
         self.layout().addWidget(daq_header_label, 2, 0, 1, 1)
         self.daq_combobox = QtWidgets.QComboBox(self)
         self.layout().addWidget(self.daq_combobox, 2, 1, 1, 1)
-        for channel in sorted(self.available_daqs[device]):
+        for channel in sorted([int(x) for x in self.available_daqs[device]]):
             self.daq_combobox.addItem(str(channel))
         self.daq_settings_label = QtWidgets.QLabel('DAQ Settings', self)
         self.layout().addWidget(self.daq_settings_label, 3, 1, 1, 1)
@@ -224,7 +226,9 @@ class FourierTransformSpectrometer(QtWidgets.QWidget, GuiBuilder):
                 time.sleep(pause_time / 1e3)
                 sm_widget.csm_set_position(position=scan_position, verbose=False)
                 if i == 0:
-                    time.sleep(10) # wait for motor to reach starting point
+                    self.status_bar.showMessage('Waiting {0}s for mirror to move to start position'.format(self.start_pause))
+                    QtWidgets.QApplication.processEvents()
+                    time.sleep(self.start_pause) # wait for motor to reach starting point
                 # Gather Data and Append to Vector then plot
                 self.x_data.append(scan_position)
                 self.x_stds.append(3) # guesstimated < 3 step error in position
@@ -234,7 +238,7 @@ class FourierTransformSpectrometer(QtWidgets.QWidget, GuiBuilder):
                                                                                 device=device)
                 self.y_data.append(out_mean)
                 self.y_stds.append(out_std)
-                self.fts_plot_running_data()
+                self.fts_plot(running=True)
                 self.int_data_mean_label.setText('{0:.6f}'.format(out_mean))
                 self.int_data_std_label.setText('{0:.6f}'.format(out_std))
                 # Compute and report time diagnostics
@@ -257,11 +261,11 @@ class FourierTransformSpectrometer(QtWidgets.QWidget, GuiBuilder):
     # File handling and plotting
     #################################################
 
-    def fts_index_file_name(self):
+    def fts_index_file_name(self, suffix='if'):
         '''
         '''
         for i in range(1, 1000):
-            file_name = '{0}_{1}.if'.format(self.sample_name_lineedit.text(), str(i).zfill(3))
+            file_name = '{0}_{1}.{2}'.format(self.sample_name_lineedit.text(), str(i).zfill(3), suffix)
             save_path = os.path.join(self.data_folder, file_name)
             if not os.path.exists(save_path):
                 break
@@ -270,27 +274,39 @@ class FourierTransformSpectrometer(QtWidgets.QWidget, GuiBuilder):
     def fts_save(self):
         '''
         '''
-        save_path = self.fts_index_file_name()
-        save_path = QtWidgets.QFileDialog.getSaveFileName(self, 'Data Save Location', save_path, filter=',*.txt,*.dat')[0]
-        if len(save_path) > 0:
-            with open(save_path, 'w') as save_handle:
+        if_save_path = self.fts_index_file_name()
+        if_save_path = QtWidgets.QFileDialog.getSaveFileName(self, 'Data Save Location', if_save_path, filter=',*.txt,*.dat')[0]
+        fft_save_path = if_save_path.replace('if', 'fft')
+        if len(if_save_path) > 0:
+            step_size = self.scan_settings_dict['step_size']
+            with open(if_save_path, 'w') as save_handle:
                 for i, x_data in enumerate(self.x_data):
                     line = '{0:.5f}, {1:.5f}, {2:.5f}, {3:.5f}\n'.format(self.x_data[i], self.x_stds[i], self.y_data[i], self.y_stds[i])
                     save_handle.write(line)
+            fft_freq_vector, fft_vector, phase_corrected_fft_vector, position_vector, efficiency_vector = self.fourier.convert_IF_to_FFT_data(self.x_data, self.y_data, step_size, data_selector='All')
+            normalized_phase_corrected_fft_vector = np.abs(phase_corrected_fft_vector.real)
+            normalized_phase_corrected_fft_vector = np.abs(phase_corrected_fft_vector.real / np.max(phase_corrected_fft_vector.real))
+            with open(fft_save_path, 'w') as save_handle:
+                for i, fft_freq in enumerate(fft_freq_vector):
+                    if fft_freq >= 0:
+                        line = '{0:.5f}, {1:.5f}, {2:.5f}, {3:.5f}\n'.format(fft_freq_vector[i], normalized_phase_corrected_fft_vector[i], fft_vector[i], phase_corrected_fft_vector[i])
+                        save_handle.write(line)
         else:
-            self.gb_quick_message('Warning Data Not Written to File!', msg_type='Warning')
+            self.gb_quick_message('Warning {0} Data Not Written to File!'.format(suffix), msg_type='Warning')
         self.fts_plot()
+        self.fts_plot_int()
+        self.fts_plot_spectra()
 
-    def fts_plot_running_data(self):
+    def fts_plot(self, running=False):
         '''
         '''
         pl.close('all')
         step_size = self.scan_settings_dict['step_size']
         fig, ax1, ax2 = self.fts_create_blank_fig()
-        ax1.set_xlabel('Mirror Position (Steps)', fontsize=12)
-        ax1.set_ylabel('Bolometer Response (V)', fontsize=12)
-        ax2.set_xlabel('Frequency (GHz)', fontsize=12)
-        ax2.set_ylabel('Bolometer Response (Au)', fontsize=12)
+        ax1.set_xlabel('Mirror Position (Steps)', fontsize=14)
+        ax1.set_ylabel('Bolometer Response (V)', fontsize=14)
+        ax2.set_xlabel('Frequency (GHz)', fontsize=14)
+        ax2.set_ylabel('Bolometer Response (Au)', fontsize=14)
         title = 'Inteferogram and Spectra for {0}'.format(self.sample_name_lineedit.text())
         ax1.set_title(title, fontsize=14)
         if len(self.x_data) > 10:
@@ -302,11 +318,14 @@ class FourierTransformSpectrometer(QtWidgets.QWidget, GuiBuilder):
             ax2.errorbar(fft_freq_vector[selector] * 1e-9, normalized_phase_corrected_fft_vector[selector], marker='.', linestyle='-')
         else:
             ax1.errorbar(self.x_data, self.y_data, yerr=self.y_stds, marker='.', linestyle='-')
-        temp_png_path = os.path.join('temp_files', 'temp_int.png')
-        fig.savefig(temp_png_path)
-        image_to_display = QtGui.QPixmap(temp_png_path)
-        self.inteferogram_plot_label.setPixmap(image_to_display)
-        os.remove(temp_png_path)
+        if running:
+            temp_png_path = os.path.join('temp_files', 'temp_int.png')
+            fig.savefig(temp_png_path)
+            image_to_display = QtGui.QPixmap(temp_png_path)
+            self.inteferogram_plot_label.setPixmap(image_to_display)
+            os.remove(temp_png_path)
+        else:
+            pl.show()
 
     def fts_plot_spectra(self):
         '''
@@ -314,48 +333,31 @@ class FourierTransformSpectrometer(QtWidgets.QWidget, GuiBuilder):
         pl.close('all')
         step_size = self.scan_settings_dict['step_size']
         fig, ax = self.fts_create_blank_fig(n_axes=1)
-        ax.set_xlabel('Frequency (GHz)', fontsize=12)
-        ax.set_ylabel('Bolometer Response (Au)', fontsize=12)
+        ax.set_xlabel('Frequency (GHz)', fontsize=14)
+        ax.set_ylabel('Bolometer Response (Au)', fontsize=14)
         title = 'Spectra for {0}'.format(self.sample_name_lineedit.text())
         ax.set_title(title, fontsize=14)
         fft_freq_vector, fft_vector, phase_corrected_fft_vector, position_vector, efficiency_vector = self.fourier.convert_IF_to_FFT_data(self.x_data, self.y_data, step_size)
-        ax.errorbar(fft_freq_vector, fft_vector, self.y_stds, marker='.', linestyle='-')
-        temp_png_path = os.path.join('temp_files', 'temp_int.png')
-        fig.savefig(temp_png_path)
-        image_to_display = QtGui.QPixmap(temp_png_path)
-        self.inteferogram_plot_label.setPixmap(image_to_display)
-        os.remove(temp_png_path)
+        selector = np.where(fft_freq_vector > 0)
+        normalized_phase_corrected_fft_vector = np.abs(phase_corrected_fft_vector.real)
+        normalized_phase_corrected_fft_vector = np.abs(phase_corrected_fft_vector.real / np.max(phase_corrected_fft_vector.real))
+        ax.errorbar(fft_freq_vector[selector] * 1e-9, normalized_phase_corrected_fft_vector[selector], marker='.', linestyle='-')
+        pl.show()
 
     def fts_plot_int(self):
         '''
         '''
         pl.close('all')
         fig, ax = self.fts_create_blank_fig(n_axes=1)
-        ax.set_xlabel('Mirror Position (steps)', fontsize=12)
-        ax.set_ylabel('Bolometer Response (V)', fontsize=12)
+        ax.set_xlabel('Mirror Position (steps)', fontsize=14)
+        ax.set_ylabel('Bolometer Response (V)', fontsize=14)
         title = 'Interferogram for {0}'.format(self.sample_name_lineedit.text())
         ax.set_title(title, fontsize=14)
         ax.errorbar(self.x_data, self.y_data, self.y_stds, marker='.', linestyle='-')
-        temp_png_path = os.path.join('temp_files', 'temp_int.png')
-        fig.savefig(temp_png_path)
-        image_to_display = QtGui.QPixmap(temp_png_path)
-        self.inteferogram_plot_label.setPixmap(image_to_display)
-        os.remove(temp_png_path)
-
-    def fts_plot(self):
-        '''
-        '''
-        pl.close('all')
-        fig, ax = self.fts_create_blank_fig()
-        ax.set_xlabel('Mirror Position (steps)', fontsize=12)
-        ax.set_ylabel('Bolometer Response (V)', fontsize=12)
-        title = 'Interferogram for {0}'.format(self.sample_name_lineedit.text())
-        ax.set_title(title, fontsize=16)
-        ax.errorbar(self.x_data, self.y_data, self.y_stds, marker='.', linestyle='-')
         pl.show()
 
-    def fts_create_blank_fig(self, frac_screen_width=0.5, frac_screen_height=0.75,
-                             left=0.12, right=0.98, top=0.9, bottom=0.23, n_axes=2,
+    def fts_create_blank_fig(self, frac_screen_width=0.5, frac_screen_height=0.8,
+                             left=0.10, right=0.98, top=0.95, bottom=0.08, n_axes=2,
                              aspect=None):
         if frac_screen_width is None and frac_screen_height is None:
             fig = pl.figure()
