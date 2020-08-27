@@ -20,18 +20,24 @@ from pprint import pprint, pformat
 from datetime import datetime
 from copy import copy
 from PyQt5 import QtCore, QtGui, QtWidgets
-#from libraries.gen_class import Class
-from bd_gui_settings.bd_global_settings import settings
-#from bd_tools.bd_lakeshore372 import Lakeshore372
+
+# Settings and Widgets
+from bd_settings.bd_global_settings import settings
 from bd_tools.configure_daq import ConfigureDAQ
 from bd_tools.lakeshore372 import LakeShore372
 from bd_tools.xy_collector import XYCollector
 from bd_tools.fridge_cycle import FridgeCycle
 from bd_tools.data_plotter import DataPlotter
 from bd_tools.fourier_transform_spectrometer import FourierTransformSpectrometer
-from bd_lib.fourier import Fourier
 from bd_tools.configure_stepper_motor import ConfigureStepperMotor
-from RT_Curves.plot_rt_curves import RTCurve
+
+# Libraries
+from bd_lib.fourier import Fourier
+from bd_lib.bolo_daq import BoloDAQ
+from bd_lib.bolo_serial import BoloSerial
+from GuiBuilder.gui_builder import GuiBuilder
+
+#from RT_Curves.plot_rt_curves import RTCurve
 #from IV_Curves.plot_iv_curves import IVCurve
 #from FTS_Curves.plot_fts_curves import FTSCurve
 #from Beam_Maps.beam_mapper_tools import BeamMapperTools
@@ -42,22 +48,13 @@ from RT_Curves.plot_rt_curves import RTCurve
 #from LockIn.lock_in import LockIn
 #from PowerSupply.power_supply import PowerSupply
 #from FridgeCycle.fridge_cycle import FridgeCycle
-from GuiBuilder.gui_builder import GuiBuilder
-#from GuiBuilder.gui_builder import GenericClass
-#from Motor_Driver.stepper_motor import stepper_motor
-from bd_lib.bolo_daq import BoloDAQ
-from bd_lib.bolo_serial import BoloSerial
 
-
-#Global variables
-continue_run = False
-pause_run = False
-do_cycle_fridge = False
 
 class BoloDAQGui(QtWidgets.QMainWindow, GuiBuilder):
 
-
     def __init__(self, screen_resolution, qt_app):
+        '''
+        '''
         super(BoloDAQGui, self).__init__()
         self.qt_app = qt_app
         self.__apply_settings__(settings)
@@ -83,7 +80,7 @@ class BoloDAQGui(QtWidgets.QMainWindow, GuiBuilder):
         self.central_widget.setWhatsThis('cw_panel')
         self.central_widget.setLayout(grid)
         self.setCentralWidget(self.central_widget)
-        self.tool_and_menu_bar_json_path = os.path.join('bd_gui_settings', 'tool_and_menu_bars.json')
+        self.tool_and_menu_bar_json_path = os.path.join('bd_settings', 'tool_and_menu_bars.json')
         self.gb_setup_menu_and_tool_bars(self.tool_and_menu_bar_json_path)
         self.selected_files = []
         self.current_stepper_position = 100
