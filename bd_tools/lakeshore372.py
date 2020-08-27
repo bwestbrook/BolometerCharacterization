@@ -237,8 +237,8 @@ class LakeShore372(QtWidgets.QWidget, GuiBuilder):
     def ls372_get_idn(self):
         '''
         '''
-        self.serial_com.write('*idn? ')
-        self.serial_number = self.serial_com.read()
+        self.serial_com.bs_write('*idn? ')
+        self.serial_number = self.serial_com.bs_read()
 
     def ls372_display_basic_info(self):
         '''
@@ -605,24 +605,24 @@ class LS372Channels():
     def ls372_update_input_channel_settings(self, index, channel_object):
         '''
         '''
-        self.serial_com.write("inset? {0}".format(index))
-        input_setup_config = self.serial_com.read()
+        self.serial_com.bs_write("inset? {0}".format(index))
+        input_setup_config = self.serial_com.bs_read()
         setattr(channel_object, 'channel', index)
         setattr(channel_object, 'enabled', str(input_setup_config.split(',')[0]))
         setattr(channel_object, 'dwell', float(input_setup_config.split(',')[1]))
         setattr(channel_object, 'pause', float(input_setup_config.split(',')[2]))
         setattr(channel_object, 'curve_number', int(input_setup_config.split(',')[3]))
         setattr(channel_object, 'curve_tempco', int(input_setup_config.split(',')[4]))
-        self.serial_com.write("intype? {0}".format(index))
-        input_config = self.serial_com.read()
+        self.serial_com.bs_write("intype? {0}".format(index))
+        input_config = self.serial_com.bs_read()
         setattr(channel_object, 'exc_mode', str(input_config.split(',')[0]))
         setattr(channel_object, 'excitation', str(input_config.split(',')[1]))
         setattr(channel_object, 'autorange', str(input_config.split(',')[2]))
         setattr(channel_object, 'resistance_range', str(input_config.split(',')[3]))
         setattr(channel_object, 'cs_shunt', int(input_config.split(',')[4]))
         setattr(channel_object, 'units', str(input_config.split(',')[5]))
-        self.serial_com.write("filter? {0}".format(index))
-        filter_setup_config = self.serial_com.read()
+        self.serial_com.bs_write("filter? {0}".format(index))
+        filter_setup_config = self.serial_com.bs_read()
         setattr(channel_object, 'filter_on', str(filter_setup_config.split(',')[0]))
         setattr(channel_object, 'filter_settle_time', float(filter_setup_config.split(',')[1]))
         setattr(channel_object, 'filter_window', float(filter_setup_config.split(',')[2]))
@@ -631,16 +631,16 @@ class LS372Channels():
     def ls372_get_channel_value(self, index, reading='resistance'):
         '''
         '''
-        #self.serial_com.write('scan {0},0 '. format(index))
-        #scan_status = self.serial_com.read()
-        self.serial_com.write('rdgst? {0} '. format(index))
-        sensor_status = self.serial_com.read()
+        #self.serial_com.bs_write('scan {0},0 '. format(index))
+        #scan_status = self.serial_com.bs_read()
+        self.serial_com.bs_write('rdgst? {0} '. format(index))
+        sensor_status = self.serial_com.bs_read()
         if reading == 'resistance':
-            self.serial_com.write('rdgr? {0} '. format(index))
-            sensor_value = self.serial_com.read()
+            self.serial_com.bs_write('rdgr? {0} '. format(index))
+            sensor_value = self.serial_com.bs_read()
         elif reading == 'kelvin':
-            self.serial_com.write('krdg? {0} '. format(index))
-            sensor_value = self.serial_com.read()
+            self.serial_com.bs_write('krdg? {0} '. format(index))
+            sensor_value = self.serial_com.bs_read()
         if sensor_status == '000':
             channel_readout_info = sensor_value
         else:
@@ -651,8 +651,8 @@ class LS372Channels():
         '''
         '''
         scan_cmd = 'scan {0},{1} '.format(index, autoscan)
-        self.serial_com.write(scan_cmd)
-        self.serial_com.read()
+        self.serial_com.bs_write(scan_cmd)
+        self.serial_com.bs_read()
 
     def ls372_write_new_channel_settings(self, set_to_channel, new_settings, channel_object):
         '''
@@ -668,8 +668,8 @@ class LS372Channels():
                                                                   )
         self.status_bar.showMessage('Sending Serial Command "{0}"'.format(intype_cmd))
         QtWidgets.QApplication.processEvents()
-        self.serial_com.write(intype_cmd)
-        result = self.serial_com.read()
+        self.serial_com.bs_write(intype_cmd)
+        result = self.serial_com.bs_read()
         inset_cmd = 'inset {0},{1},{2},{3},{4},{5} '.format(set_to_channel,
                                                             new_settings['enabled'],
                                                             new_settings['dwell'],
@@ -679,8 +679,8 @@ class LS372Channels():
                                                             )
         self.status_bar.showMessage('Sending Serial Command "{0}"'.format(inset_cmd))
         QtWidgets.QApplication.processEvents()
-        self.serial_com.write(inset_cmd)
-        result = self.serial_com.read()
+        self.serial_com.bs_write(inset_cmd)
+        result = self.serial_com.bs_read()
         filter_cmd = 'filter {0},{1},{2},{3} '.format(set_to_channel,
                                                       new_settings['filter_on'],
                                                       new_settings['filter_settle_time'],
@@ -688,8 +688,8 @@ class LS372Channels():
                                                       )
         self.status_bar.showMessage('Sending Serial Command "{0}"'.format(filter_cmd))
         QtWidgets.QApplication.processEvents()
-        self.serial_com.write(filter_cmd)
-        result = self.serial_com.read()
+        self.serial_com.bs_write(filter_cmd)
+        result = self.serial_com.bs_read()
 
 class LS372AnalogOutputs():
 
@@ -713,8 +713,8 @@ class LS372AnalogOutputs():
     def ls372_update_analog_output_settings(self, index, analog_output, analog_output_object):
         '''
         '''
-        self.serial_com.write( "analog? {0}".format(index))
-        analog_output_config = self.serial_com.read()
+        self.serial_com.bs_write( "analog? {0}".format(index))
+        analog_output_config = self.serial_com.bs_read()
         setattr(analog_output_object, 'analog_output', analog_output)
         setattr(analog_output_object, 'polarity', str(analog_output_config.split(',')[0]))
         setattr(analog_output_object, 'analog_mode', str(analog_output_config.split(',')[1]))
@@ -723,8 +723,8 @@ class LS372AnalogOutputs():
         setattr(analog_output_object, 'high_value', float(analog_output_config.split(',')[4]))
         setattr(analog_output_object, 'low_value', float(analog_output_config.split(',')[5]))
         setattr(analog_output_object, 'manual_value', float(analog_output_config.split(',')[6]))
-        self.serial_com.write( "outmode? {0}".format(index))
-        outmode_config = self.serial_com.read()
+        self.serial_com.bs_write( "outmode? {0}".format(index))
+        outmode_config = self.serial_com.bs_read()
         setattr(analog_output_object, 'powerup_enable', str(outmode_config.split(',')[2]))
         setattr(analog_output_object, 'filter_on', str(outmode_config.split(',')[4]))
         setattr(analog_output_object, 'delay', int(outmode_config.split(',')[5]))
@@ -750,8 +750,8 @@ class LS372AnalogOutputs():
                                                                       )
         self.status_bar.showMessage('Sending Serial Command "{0}"'.format(analog_cmd))
         QtWidgets.QApplication.processEvents()
-        self.serial_com.write(analog_cmd)
-        result = self.serial_com.read()
+        self.serial_com.bs_write(analog_cmd)
+        result = self.serial_com.bs_read()
         outmode_cmd = 'outmode {0},{1},{2},{3},{4},{5},{6} '.format(set_to_channel,
                                                                     new_settings['analog_mode'],
                                                                     new_settings['input_channel'],
@@ -761,8 +761,8 @@ class LS372AnalogOutputs():
                                                                     new_settings['delay'],
                                                                     )
         self.status_bar.showMessage('Sending Serial Command "{0}"'.format(outmode_cmd))
-        self.serial_com.write(outmode_cmd)
+        self.serial_com.bs_write(outmode_cmd)
         QtWidgets.QApplication.processEvents()
-        result = self.serial_com.read()
+        result = self.serial_com.bs_read()
 
 

@@ -1207,11 +1207,11 @@ class BoloDAQGui(QtWidgets.QMainWindow, GuiBuilder):
                 okPressed = True
                 if okPressed:
                     self.lakeshore_com_port = com_port
-                    try:
-                        self.ls372_widget = LakeShore372(com_port, self.status_bar)
-                    except:
-                        self.gb_quick_message('Error finding Lakeshore on {0}. Please check'.format(com_port), msg_type='Warning')
-                        return None
+                    #try:
+                    self.ls372_widget = LakeShore372(com_port, self.status_bar)
+                    #except:
+                        #self.gb_quick_message('Error finding Lakeshore on {0} (probably just in use). Please check'.format(com_port), msg_type='Warning')
+                        #return None
         if self.ls372_widget is not None:
             self.central_widget.layout().addWidget(self.ls372_widget, 0, 0, 1, 1)
 

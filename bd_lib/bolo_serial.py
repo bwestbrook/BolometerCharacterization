@@ -39,7 +39,7 @@ class BoloSerial(object):
         self.port = port
         if device in self.serial_com_dict:
             if splash_screen is not None:
-                splash_screen.showMessage('Configuring for {0} using COM{1}'.format(device, self.port))
+                splash_screen.showMessage('Configuring for {0} using {1}'.format(device, self.port))
             self.ser = serial.Serial(port=self.port,
                                      **self.serial_com_dict[device])
         else:
