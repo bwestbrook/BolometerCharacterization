@@ -6,20 +6,29 @@ from PyQt5 import QtCore, QtGui, QtWidgets
 
 class ConfigureStepperMotor(QtWidgets.QWidget, GuiBuilder):
 
-    def __init__(self, com_port, status_bar):
+    def __init__(self, com_port, status_bar, serial_com=None):
         super(ConfigureStepperMotor, self).__init__()
         self.com_port = com_port
         self.status_bar = status_bar
         grid = QtWidgets.QGridLayout()
         self.setLayout(grid)
-        self.serial_com = BoloSerial(self.com_port, device='Stepper')
-        #import ipdb;ipdb.set_trace()
+        if serial_com is None:
+            self.serial_com = self.csm_get_serial_com()
+        else:
+            self.serial_com = serial_com
         is_stepper = self.csm_is_stepper()
         if not is_stepper:
             return None
         self.csm_setup()
         self.csm_input_panel()
         self.csm_get_motor_state()
+
+    def csm_get_serial_com(self):
+        '''
+        '''
+        if not hasattr(self, 'serial_com'):
+            self.serial_com = BoloSerial(self.com_port, device='Stepper')
+        return self.serial_com
 
     ###########################################
     # GUI 
@@ -63,8 +72,6 @@ class ConfigureStepperMotor(QtWidgets.QWidget, GuiBuilder):
             set_item_pushbutton = QtWidgets.QPushButton('Set {0}'.format(item), self)
             set_item_pushbutton.clicked.connect(getattr(self, 'csm_set_{0}'.format(item)))
             self.layout().addWidget(set_item_pushbutton, i + 1, 2, 1, 1)
-        pprint(self.stepper_settings_dict)
-
 
     def csm_setup(self):
         '''
@@ -84,7 +91,6 @@ class ConfigureStepperMotor(QtWidgets.QWidget, GuiBuilder):
         self.csm_send_command(query)
         response = self.serial_com.bs_read()
         return response
-
 
     def csm_reset_zero(self):
         '''

@@ -30,6 +30,7 @@ from bd_tools.fridge_cycle import FridgeCycle
 from bd_tools.data_plotter import DataPlotter
 from bd_tools.fourier_transform_spectrometer import FourierTransformSpectrometer
 from bd_tools.configure_stepper_motor import ConfigureStepperMotor
+from bd_tools.cosmic_rays import CosmicRays
 
 # Libraries
 from bd_lib.fourier import Fourier
@@ -1177,24 +1178,33 @@ class BoloDAQGui(QtWidgets.QMainWindow, GuiBuilder):
     #################################################
 
     def bd_configure_stepper_motor(self):
+        '''
+        '''
         self.gb_initialize_panel('central_widget')
         dialog = 'Select the comport for the stepper motor you wish to configure'
-        if not hasattr(self, 'lakeshore_serial_com'):
-            if self.ls372_widget is None:
-                stepper_motor_ports = ['COM12', 'COM13', 'COM14']
-                com_port, okPressed = self.gb_quick_static_info_gather(title='', dialog=dialog, items=stepper_motor_ports)
-                #com_port = 'COM6'
-                #okPressed = True
-                if okPressed:
-                    csm_widget = ConfigureStepperMotor(com_port, self.status_bar)
-                    setattr(self, 'sm_{0}'.format(com_port), csm_widget)
-                    self.central_widget.layout().addWidget(csm_widget, 0, 0, 1, 1)
+        stepper_motor_ports = ['COM12', 'COM13', 'COM14']
+        com_port, okPressed = self.gb_quick_static_info_gather(title='', dialog=dialog, items=stepper_motor_ports)
+        #com_port = 'COM6'
+        #okPressed = True
+        if not hasattr(self, 'sm_{0}'.format(com_port)) and okPressed:
+            csm_widget = ConfigureStepperMotor(com_port, self.status_bar)
+            csm_serial_com = csm_widget.csm_get_serial_com()
+            setattr(self, 'sm_{0}'.format(com_port), csm_serial_com)
+        elif okPressed:
+            serial_com = getattr(self, 'sm_{0}'.format(com_port))
+            csm_widget = ConfigureStepperMotor(com_port, self.status_bar, serial_com=serial_com)
+        else:
+            return None
+        self.central_widget.layout().addWidget(csm_widget, 0, 0, 1, 1)
+        self.status_bar.showMessage('Ready!')
 
     #################################################
     # Lakeshore
     #################################################
 
     def bd_lakeshore372(self):
+        '''
+        '''
         self.gb_initialize_panel('central_widget')
         dialog = 'Select the comport for the Lakeshore'
         if not hasattr(self, 'lakeshore_serial_com'):
@@ -1204,11 +1214,7 @@ class BoloDAQGui(QtWidgets.QMainWindow, GuiBuilder):
                 okPressed = True
                 if okPressed:
                     self.lakeshore_com_port = com_port
-                    #try:
                     self.ls372_widget = LakeShore372(com_port, self.status_bar)
-                    #except:
-                        #self.gb_quick_message('Error finding Lakeshore on {0} (probably just in use). Please check'.format(com_port), msg_type='Warning')
-                        #return None
         if self.ls372_widget is not None:
             self.central_widget.layout().addWidget(self.ls372_widget, 0, 0, 1, 1)
 
@@ -1217,19 +1223,43 @@ class BoloDAQGui(QtWidgets.QMainWindow, GuiBuilder):
     #################################################
 
     def bd_fts(self):
+        '''
+        '''
         self.gb_initialize_panel('central_widget')
+        dialog = 'Select the comport for the stepper motor you wish to configure'
+        stepper_motor_ports = ['COM12']
+        sm_com_port, okPressed = self.gb_quick_static_info_gather(title='', dialog=dialog, items=stepper_motor_ports)
+        if not hasattr(self, 'sm_{0}'.format(sm_com_port)) and okPressed:
+            csm_widget = ConfigureStepperMotor(sm_com_port, self.status_bar)
+            csm_serial_com = csm_widget.csm_get_serial_com()
+            setattr(self, 'sm_{0}'.format(sm_com_port), csm_serial_com)
+        elif okPressed:
+            serial_com = getattr(self, 'sm_{0}'.format(sm_com_port))
+            csm_widget = ConfigureStepperMotor(sm_com_port, self.status_bar, serial_com=serial_com)
+        else:
+            return None
         if not hasattr(self, 'fts_widget'):
-            self.fts_widget = FourierTransformSpectrometer(self.available_daqs, self.status_bar, self.screen_resolution, self.monitor_dpi)
+            self.fts_widget = FourierTransformSpectrometer(self.available_daqs, self.status_bar, self.screen_resolution, self.monitor_dpi, csm_widget)
         self.central_widget.layout().addWidget(self.fts_widget, 0, 0, 1, 1)
+
 
     #################################################
     # COSMIC RAYS
     #################################################
 
+    def bd_cosmic_rays(self):
+        '''
+        '''
+        self.gb_initialize_panel('central_widget')
+        if not hasattr(self, 'cosmic_ray_widget'):
+            self.cosmic_ray_widget = CosmicRays(self.available_daqs, self.status_bar, self.screen_resolution, self.monitor_dpi)
+        self.cosmic_ray_widget.cr_display_daq_settings()
+        self.central_widget.layout().addWidget(self.cosmic_ray_widget, 0, 0, 1, 1)
+
     def bd_close_cosmic_rays(self):
         self.cosmic_rays_popup.close()
 
-    def bd_cosmic_rays(self):
+    def bd_cosmic_rays2(self):
         if not hasattr(self, 'cosmic_rays_popup'):
             self.gb_create_popup_window('cosmic_rays_popup')
         else:

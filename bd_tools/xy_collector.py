@@ -117,7 +117,6 @@ class XYCollector(QtWidgets.QWidget, GuiBuilder):
             self.daq_y_combobox.addItem(str(daq))
         self.xyc_input_panel.layout().addWidget(self.daq_y_combobox, 1, 3, 1, 1)
 
-
     def xyc_display_daq_settings(self, index):
         '''
         '''

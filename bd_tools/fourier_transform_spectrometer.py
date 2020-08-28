@@ -12,11 +12,12 @@ from bd_tools.configure_stepper_motor import ConfigureStepperMotor
 
 class FourierTransformSpectrometer(QtWidgets.QWidget, GuiBuilder):
 
-    def __init__(self, available_daqs, status_bar, screen_resolution, monitor_dpi):
+    def __init__(self, available_daqs, status_bar, screen_resolution, monitor_dpi, csm_widget):
         '''
         '''
         super(FourierTransformSpectrometer, self).__init__()
         self.status_bar = status_bar
+        self.csm_widget = csm_widget
         self.available_daqs = available_daqs
         self.screen_resolution = screen_resolution
         self.monitor_dpi = monitor_dpi
@@ -203,15 +204,9 @@ class FourierTransformSpectrometer(QtWidgets.QWidget, GuiBuilder):
         if not hasattr(self , 'sm_{0}'.format(sm_com_port)):
             self.status_bar.showMessage('Setting up serial connection to stepper motor on {0}'.format(sm_com_port))
             QtWidgets.QApplication.processEvents()
-            #try:
-            sm_widget = ConfigureStepperMotor(sm_com_port, self.status_bar)
-            #except:
-                ##self.gb_quick_message('Error with {0} (probably just in use right now), please check'.format(sm_com_port), msg_type='Warning')
-                #return None
-            setattr(self, 'sm_{0}'.format(sm_com_port), sm_widget)
             sm_settings_str = ''
-            self.scan_settings_dict.update(sm_widget.stepper_settings_dict)
-            for setting, value in sm_widget.stepper_settings_dict.items():
+            self.scan_settings_dict.update(self.csm_widget.stepper_settings_dict)
+            for setting, value in self.csm_widget.stepper_settings_dict.items():
                 sm_settings_str += ' '.join([x.title() for x in setting.split('_')])
                 sm_settings_str += ' {0} ::: '.format(value)
             self.stepper_settings_label.setText(sm_settings_str)
@@ -241,18 +236,15 @@ class FourierTransformSpectrometer(QtWidgets.QWidget, GuiBuilder):
         int_time = self.scan_settings_dict['int_time']
         sample_rate = self.scan_settings_dict['sample_rate']
         signal_channel = self.scan_settings_dict['daq']
-        sm_com_port = self.scan_settings_dict['sm_com_port']
         scan_positions = range(start, end + mirror_interval, mirror_interval)
-        if not hasattr(self, 'sm_{0}'.format(sm_com_port)):
-            return None
-        sm_widget = getattr(self, 'sm_{0}'.format(sm_com_port))
         while self.started:
             t_start = datetime.now()
             self.x_data, self.x_stds = [], []
             self.y_data, self.y_stds = [], []
             for i, scan_position in enumerate(scan_positions):
                 time.sleep(pause_time / 1e3)
-                sm_widget.csm_set_position(position=scan_position, verbose=False)
+                print(i, scan_position)
+                self.csm_widget.csm_set_position(position=scan_position, verbose=False)
                 if i == 0:
                     self.status_bar.showMessage('Waiting {0}s for mirror to move to start position'.format(self.start_pause))
                     QtWidgets.QApplication.processEvents()

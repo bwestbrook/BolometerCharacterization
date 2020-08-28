@@ -66,6 +66,7 @@
                 "Shortcut": "4",
                 "StatusTip": "Cosmic Rays",
                 "ToolTip": "Cosmic Rays",
+                "function": "bd_cosmic_rays",
                 "icon": "cosmicrays.png"
             },
             "04_Pol Efficieny": {

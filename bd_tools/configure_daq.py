@@ -65,6 +65,7 @@ class ConfigureDAQ(QtWidgets.QWidget, GuiBuilder):
     def cd_add_channel(self, index):
         '''
         '''
+        self.cd_update_daq()
         if len(self.available_daqs) == 0:
             return None
         device = self.daq_tab_bar.tabText(self.daq_tab_bar.currentIndex())
@@ -114,6 +115,13 @@ class ConfigureDAQ(QtWidgets.QWidget, GuiBuilder):
                 }
         with open(os.path.join('bd_settings', 'daq_settings.json'), 'w') as json_handle:
             simplejson.dump(self.available_daqs, json_handle, indent=4, sort_keys=True)
+        self.cd_update_daq()
+
+    def cd_update_daq(self):
+        '''
+        '''
+        with open(os.path.join('bd_settings', 'daq_settings.json'), 'r') as json_handle:
+            self.available_daqs = simplejson.load(json_handle)
 
     def cd_get_daq(self):
         while self.started:
