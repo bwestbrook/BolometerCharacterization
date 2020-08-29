@@ -11,34 +11,51 @@
                 "function": "bd_close_main",
                 "icon": "close.png"
             },
-            "02_Configure COM Ports": {
-                "ToolTip": "Configure Communication Ports",
-                "function": "bd_configure_com_ports",
+            "02_Settings": {
+                "ToolTip": "Bolo DAQ Settings",
+                "function": "bd_configure_bolo_daq",
+                "icon": "parameters.png"
+            },
+            "03_COM Port Utility": {
+                "ToolTip": "COM Port Utility",
+                "function": "bd_com_port_utility",
                 "icon": "comport.png"
             },
-            "03_Configure DAQ": {
+            "04_Configure DAQ": {
                 "StatusTip": "Configure DAQ",
                 "ToolTip": "Configure DAQ",
                 "function": "bd_configure_daq",
                 "icon": "multimeter.png"
             },
-            "04_Configure Stepper": {
+            "05_Configure Stepper": {
                 "StatusTip": "Configure Steppers",
                 "ToolTip": "Configure Steppers",
                 "function": "bd_configure_stepper_motor",
                 "icon": "steppermotor.png"
             },
-            "05_Fridge Cycle 576": {
+            "06_Fridge Cycle 576": {
                 "StatusTip": "Fridge Cycle 576",
                 "ToolTip": "Fridge Cycle 576",
                 "function": "bd_fridge_cycle",
                 "icon": "snowflake.png"
             },
-            "06_Lakeshore372": {
+            "07_Lakeshore 372": {
                 "StatusTip": "Lakeshore 372",
                 "ToolTip": "Lakeshore 372 Configuration ",
-                "function": "bd_lakeshore372",
+                "function": "bd_lakeshore_372",
                 "icon": "oscilliscope.png"
+            },
+            "08_Agilent E3634A": {
+                "StatusTip": "Agilent E36343A",
+                "ToolTip": "Agilent 36343A Configuration ",
+                "function": "bd_agilent_e3634a",
+                "icon": "power_supply.png"
+            },
+            "08_SRS SR830DSP": {
+                "StatusTip": "Lakeshore 372",
+                "ToolTip": "Lakeshore 372 Configuration ",
+                "function": "bd_stanford_research_systems_sr830_dsp",
+                "icon": "lock_in.png"
             }
         },
         "02_DAQ_Mode": {
@@ -60,6 +77,7 @@
                 "Shortcut": "3",
                 "StatusTip": "Beam Map",
                 "ToolTip": "Beam Map",
+                "function": "bd_beam_mapper",
                 "icon": "beammap.png"
             },
             "04_Cosmic Rays": {
@@ -73,9 +91,17 @@
                 "Shortcut": "5",
                 "StatusTip": "Polarization Efficiency",
                 "ToolTip": "Pol Eff",
+                "function": "bd_polarization_efficiency",
                 "icon": "poleff.png"
             },
-            "05_Data Plotter": {
+            "05_Time Constant": {
+                "Shortcut": "6",
+                "StatusTip": "Polarization Efficiency",
+                "ToolTip": "Pol Eff",
+                "function": "bd_time_constant",
+                "icon": "time_constant.png"
+            },
+            "07_Data Plotter": {
                 "Shortcut": "6",
                 "StatusTip": "Data Plotter",
                 "ToolTip": "Data Plotter",

@@ -13,6 +13,8 @@ from GuiBuilder.gui_builder import GuiBuilder, GenericClass
 class XYCollector(QtWidgets.QWidget, GuiBuilder):
 
     def __init__(self, available_daqs, status_bar, screen_resolution, monitor_dpi):
+        '''
+        '''
         super(XYCollector, self).__init__()
         self.status_bar = status_bar
         self.available_daqs = available_daqs
@@ -49,9 +51,9 @@ class XYCollector(QtWidgets.QWidget, GuiBuilder):
         self.today_str = datetime.strftime(self.today, '%Y_%m_%d')
         self.data_folder = './Data/{0}'.format(self.today_str)
 
-    ###########
+    #########################################################
     # GUI and Input Handling
-    ###########
+    #########################################################
 
     def xyc_populate(self, tab_index):
         '''
@@ -184,11 +186,118 @@ class XYCollector(QtWidgets.QWidget, GuiBuilder):
                 if self.xyc_input_panel.layout().itemAtPosition(x, y) is not None:
                     self.xyc_input_panel.layout().itemAtPosition(x, y).widget().setParent(None)
 
-    ###########
+    #########################################################
     # Plotting
-    ###########
+    #########################################################
 
-    def xyc_plot(self):
+    def xyc_make_plot_panel(self):
+        '''
+        '''
+        # X
+        self.xyc_initialize_plot_panel()
+        self.x_time_stream_label = QtWidgets.QLabel('', self)
+        self.xyc_plot_panel.layout().addWidget(self.x_time_stream_label, 0, 0, 3, 4)
+        x_mean_header_label = QtWidgets.QLabel('X Mean: ', self)
+        self.xyc_plot_panel.layout().addWidget(x_mean_header_label, 3, 0, 1, 1)
+        self.x_mean_label = QtWidgets.QLabel('', self)
+        self.xyc_plot_panel.layout().addWidget(self.x_mean_label, 3, 1, 1, 1)
+        x_std_header_label = QtWidgets.QLabel('X STD: ', self)
+        self.xyc_plot_panel.layout().addWidget(x_std_header_label, 3, 2, 1, 1)
+        self.x_std_label = QtWidgets.QLabel('', self)
+        self.xyc_plot_panel.layout().addWidget(self.x_std_label, 3, 3, 1, 1)
+        # Y
+        self.y_time_stream_label = QtWidgets.QLabel('', self)
+        self.xyc_plot_panel.layout().addWidget(self.y_time_stream_label, 4, 0, 3, 4)
+        y_mean_header_label = QtWidgets.QLabel('Y Mean: ', self)
+        self.xyc_plot_panel.layout().addWidget(y_mean_header_label, 7, 0, 1, 1)
+        self.y_mean_label = QtWidgets.QLabel('', self)
+        self.xyc_plot_panel.layout().addWidget(self.y_mean_label, 7, 1, 1, 1)
+        y_std_header_label = QtWidgets.QLabel('Y STD: ', self)
+        self.xyc_plot_panel.layout().addWidget(y_std_header_label, 7, 2, 1, 1)
+        self.y_std_label = QtWidgets.QLabel('', self)
+        self.xyc_plot_panel.layout().addWidget(self.y_std_label, 7, 3, 1, 1)
+        # XY
+        self.xy_scatter_label = QtWidgets.QLabel('', self)
+        self.xyc_plot_panel.layout().addWidget(self.xy_scatter_label, 8, 0, 3, 4)
+
+    def xyc_initialize_plot_panel(self):
+        for x in range(0, 4):
+            for y in (3, 7):
+                if self.xyc_plot_panel.layout().itemAtPosition(x, y) is not None:
+                    self.xyc_plot_panel.layout().itemAtPosition(x, y).widget().setParent(None)
+
+    #########################################################
+    # Running
+    #########################################################
+
+    def xyc_start_stop(self):
+        '''
+        '''
+        if 'Start' in self.sender().text():
+            self.sender().setText('Stop DAQ')
+            self.started = True
+            self.xyc_collecter()
+        else:
+            self.sender().setText('Start DAQ')
+            self.started = False
+
+    def xyc_collecter(self):
+        '''
+        '''
+        device = self.xyc_daq_combobox.currentText()
+        self.x_data, self.x_stds = [], []
+        self.y_data, self.y_stds = [], []
+        while self.started:
+            x_ts, x_mean, x_min, x_max, x_std = self.daq.get_data(signal_channel=self.x_channel,
+                                                                  int_time=self.int_time_x,
+                                                                  sample_rate=self.sample_rate_x,
+                                                                  device=device)
+            y_ts, y_mean, y_min, y_max, y_std = self.daq.get_data(signal_channel=self.y_channel,
+                                                                  int_time=self.int_time_y,
+                                                                  sample_rate=self.sample_rate_y,
+                                                                  device=device)
+            self.x_mean_label.setText('{0:.5f}'.format(x_mean))
+            self.x_std_label.setText('{0:.5f}'.format(x_std))
+            self.y_mean_label.setText('{0:.5f}'.format(y_mean))
+            self.y_std_label.setText('{0:.5f}'.format(y_std))
+            self.x_data.append(x_mean)
+            self.x_stds.append(x_std)
+            self.y_data.append(y_mean)
+            self.y_stds.append(y_std)
+            self.xyc_plot()
+            QtWidgets.QApplication.processEvents()
+            self.repaint()
+
+    ###################################################
+    # Saving and Plotting
+    ###################################################
+
+    def xyc_index_file_name(self):
+        '''
+        '''
+        for i in range(1, 1000):
+            file_name = '{0}_{1}.txt'.format(self.sample_name_lineedit.text(), str(i).zfill(3))
+            save_path = os.path.join(self.data_folder, file_name)
+            if not os.path.exists(save_path):
+                break
+        return save_path
+
+    def xyc_save(self):
+        '''
+        '''
+        mode = self.xyc_mode_tab_bar.tabText(self.xyc_mode_tab_bar.currentIndex())
+        save_path = self.xyc_index_file_name()
+        save_path = QtWidgets.QFileDialog.getSaveFileName(self, 'Data Save Location', save_path, filter=',*.txt,*.dat')[0]
+        if len(save_path) > 0:
+            with open(save_path, 'w') as save_handle:
+                for i, x_data in enumerate(self.x_data):
+                    line = '{0:.5f}, {1:.5f}, {2:.5f}, {3:.5f}\n'.format(self.x_data[i], self.x_stds[i], self.y_data[i], self.y_stds[i])
+                    save_handle.write(line)
+        else:
+            self.gb_quick_message('Warning Data Not Written to File!', msg_type='Warning')
+        self.xyc_plot(mode)
+
+    def xyc_plot2(self):
         '''
         '''
         self.xyc_plot_x()
@@ -247,109 +356,6 @@ class XYCollector(QtWidgets.QWidget, GuiBuilder):
         fig.subplots_adjust(left=left, right=right, top=top, bottom=bottom)
         return fig, ax
 
-    def xyc_make_plot_panel(self):
-        '''
-        '''
-        # X
-        self.xyc_initialize_plot_panel()
-        self.x_time_stream_label = QtWidgets.QLabel('', self)
-        self.xyc_plot_panel.layout().addWidget(self.x_time_stream_label, 0, 0, 3, 4)
-        x_mean_header_label = QtWidgets.QLabel('X Mean: ', self)
-        self.xyc_plot_panel.layout().addWidget(x_mean_header_label, 3, 0, 1, 1)
-        self.x_mean_label = QtWidgets.QLabel('', self)
-        self.xyc_plot_panel.layout().addWidget(self.x_mean_label, 3, 1, 1, 1)
-        x_std_header_label = QtWidgets.QLabel('X STD: ', self)
-        self.xyc_plot_panel.layout().addWidget(x_std_header_label, 3, 2, 1, 1)
-        self.x_std_label = QtWidgets.QLabel('', self)
-        self.xyc_plot_panel.layout().addWidget(self.x_std_label, 3, 3, 1, 1)
-        # Y
-        self.y_time_stream_label = QtWidgets.QLabel('', self)
-        self.xyc_plot_panel.layout().addWidget(self.y_time_stream_label, 4, 0, 3, 4)
-        y_mean_header_label = QtWidgets.QLabel('Y Mean: ', self)
-        self.xyc_plot_panel.layout().addWidget(y_mean_header_label, 7, 0, 1, 1)
-        self.y_mean_label = QtWidgets.QLabel('', self)
-        self.xyc_plot_panel.layout().addWidget(self.y_mean_label, 7, 1, 1, 1)
-        y_std_header_label = QtWidgets.QLabel('Y STD: ', self)
-        self.xyc_plot_panel.layout().addWidget(y_std_header_label, 7, 2, 1, 1)
-        self.y_std_label = QtWidgets.QLabel('', self)
-        self.xyc_plot_panel.layout().addWidget(self.y_std_label, 7, 3, 1, 1)
-        # XY
-        self.xy_scatter_label = QtWidgets.QLabel('', self)
-        self.xyc_plot_panel.layout().addWidget(self.xy_scatter_label, 8, 0, 3, 4)
-
-    def xyc_initialize_plot_panel(self):
-        for x in range(0, 4):
-            for y in (3, 7):
-                if self.xyc_plot_panel.layout().itemAtPosition(x, y) is not None:
-                    self.xyc_plot_panel.layout().itemAtPosition(x, y).widget().setParent(None)
-
-    ###########
-    # Running
-    ###########
-
-    def xyc_start_stop(self):
-        '''
-        '''
-        if 'Start' in self.sender().text():
-            self.sender().setText('Stop DAQ')
-            self.started = True
-            self.xyc_collecter()
-        else:
-            self.sender().setText('Start DAQ')
-            self.started = False
-
-    def xyc_collecter(self):
-        '''
-        '''
-        device = self.xyc_daq_combobox.currentText()
-        self.x_data, self.x_stds = [], []
-        self.y_data, self.y_stds = [], []
-        while self.started:
-            x_ts, x_mean, x_min, x_max, x_std = self.daq.get_data(signal_channel=self.x_channel,
-                                                                  int_time=self.int_time_x,
-                                                                  sample_rate=self.sample_rate_x,
-                                                                  device=device)
-            y_ts, y_mean, y_min, y_max, y_std = self.daq.get_data(signal_channel=self.y_channel,
-                                                                  int_time=self.int_time_y,
-                                                                  sample_rate=self.sample_rate_y,
-                                                                  device=device)
-            self.x_mean_label.setText('{0:.5f}'.format(x_mean))
-            self.x_std_label.setText('{0:.5f}'.format(x_std))
-            self.y_mean_label.setText('{0:.5f}'.format(y_mean))
-            self.y_std_label.setText('{0:.5f}'.format(y_std))
-            self.x_data.append(x_mean)
-            self.x_stds.append(x_std)
-            self.y_data.append(y_mean)
-            self.y_stds.append(y_std)
-            self.xyc_plot()
-            QtWidgets.QApplication.processEvents()
-            self.repaint()
-
-    def xyc_index_file_name(self):
-        '''
-        '''
-        for i in range(1, 1000):
-            file_name = '{0}_{1}.txt'.format(self.sample_name_lineedit.text(), str(i).zfill(3))
-            save_path = os.path.join(self.data_folder, file_name)
-            if not os.path.exists(save_path):
-                break
-        return save_path
-
-    def xyc_save(self):
-        '''
-        '''
-        mode = self.xyc_mode_tab_bar.tabText(self.xyc_mode_tab_bar.currentIndex())
-        save_path = self.xyc_index_file_name()
-        save_path = QtWidgets.QFileDialog.getSaveFileName(self, 'Data Save Location', save_path, filter=',*.txt,*.dat')[0]
-        if len(save_path) > 0:
-            with open(save_path, 'w') as save_handle:
-                for i, x_data in enumerate(self.x_data):
-                    line = '{0:.5f}, {1:.5f}, {2:.5f}, {3:.5f}\n'.format(self.x_data[i], self.x_stds[i], self.y_data[i], self.y_stds[i])
-                    save_handle.write(line)
-        else:
-            self.gb_quick_message('Warning Data Not Written to File!', msg_type='Warning')
-        self.xyc_plot(mode)
-
     def xyc_plot(self, mode):
         '''
         '''
@@ -399,3 +405,73 @@ class XYCollector(QtWidgets.QWidget, GuiBuilder):
             self.y_stds = np.asarray(self.y_stds) * calibration_factor
         elif mode == 'RT':
             self.y_data = np.asarray(self.y_data) * voltage_reduction_factor
+
+    def xyc_update_fit_data(self, voltage_factor):
+        '''
+        Updates fit limits based on IV data
+        '''
+        fit_clip_hi = self.xdata[0] * float(voltage_factor) * 1e6 # uV
+        data_clip_lo = self.xdata[-1] * float(voltage_factor) * 1e6 + self.data_clip_offset # uV
+        data_clip_hi = fit_clip_hi # uV
+        fit_clip_lo = data_clip_lo + self.fit_clip_offset # uV
+
+    def xyc_final_iv_plot(self):
+        meta_data = self.bd_get_all_meta_data(popup='xy_collector')
+        plot_params = self.bd_get_all_params(meta_data, settings.xy_collector_plot_params, 'xy_collector')
+        pprint(plot_params)
+        label = plot_params['sample_name']
+        fit_clip = [float(plot_params['fit_clip_lo']), float(plot_params['fit_clip_hi'])]
+        data_clip = [float(plot_params['data_clip_lo']), float(plot_params['data_clip_hi'])]
+        voltage_factor = float(plot_params['voltage_factor'])
+        squid_conversion = float(plot_params['squid_conversion'])
+        ivc = IVCurve([])
+        title = '{0} @ {1} w {2} Load'.format(label, plot_params['sample_temp'], plot_params['optical_load'])
+        v_bias_real, i_bolo_real, i_bolo_std = ivc.convert_IV_to_real_units(np.asarray(self.xdata), np.asarray(self.ydata),
+                                                                            stds=np.asarray(self.ystd),
+                                                                            squid_conv=squid_conversion,
+                                                                            v_bias_multiplier=voltage_factor,
+                                                                            determine_calibration=False,
+                                                                            clip=fit_clip, label=label)
+        if hasattr(self, 'parsed_data_path'):
+            with open(self.parsed_data_path[0], 'w') as parsed_data_handle:
+                for i, v_bias in enumerate(v_bias_real):
+                    i_bolo = i_bolo_real[i]
+                    parsed_data_line = '{0}\t{1}\t{2}\n'.format(v_bias, i_bolo, i_bolo_std)
+                    parsed_data_handle.write(parsed_data_line)
+            self.active_fig = ivc.plot_all_curves(v_bias_real, i_bolo_real, stds=i_bolo_std, label=label,
+                                                  fit_clip=fit_clip, plot_clip=data_clip, title=title,
+                                                  pturn=True)
+            self.temp_plot_path = './temp_files/temp_iv_png.png'
+            self.active_fig.savefig(self.temp_plot_path)
+        self.adjust_final_plot_popup('IV', xlabel='Voltage ($\mu$V)', title=title)
+
+    def bd_final_rt_plot(self):
+        '''
+        '''
+        meta_data = self.bd_get_all_meta_data(popup='xy_collector')
+        plot_params = self.bd_get_all_params(meta_data, settings.xy_collector_plot_params, 'xy_collector')
+        rtc = RTCurve([])
+        invert = getattr(self, '_xy_collector_popup_invert_output_checkbox').isChecked()
+        normal_res = str(getattr(self, '_xy_collector_popup_sample_res_lineedit').text())
+        if self.gb_is_float(normal_res, enforce_positive=True):
+            normal_res = float(normal_res)
+        else:
+            normal_res = np.nan
+        pprint(plot_params)
+        title = '{0} R vs. T'.format(plot_params['sample_name'])
+        label = '{0}-{1}'.format(plot_params['sample_name'], plot_params['sample_drift_direction'])
+        data_clip_lo = float(plot_params['data_clip_lo'])
+        data_clip_hi = float(plot_params['data_clip_hi'])
+        if len(self.xdata) > 2:
+            xlim_range = data_clip_hi - data_clip_lo
+            xlim = (data_clip_lo - 0.01 * xlim_range, data_clip_hi + 0.01 * xlim_range)
+            input_dict = {'invert': invert, 'normal_res': normal_res, 'label': label,
+                          'title': title, 'xlim': xlim}
+            sample_res_vector = rtc.normalize_squid_output(self.ydata, input_dict)
+            selector = np.logical_and(np.asarray(self.xdata) > data_clip_lo, np.asarray(self.xdata) < data_clip_hi)
+            self.active_fig = rtc.plot_rt_curves(np.asarray(self.xdata)[selector], np.asarray(sample_res_vector)[selector],
+                                                 in_millikelvin=True, fig=None, input_dict=input_dict)
+            self.temp_plot_path = './temp_files/temp_rt_png.png'
+            self.active_fig.savefig(self.temp_plot_path)
+        self.bd_adjust_final_plot_popup('RT', xlabel='Sample Temp (mK)', ylabel='Sample Res ($\Omega$)', title=title)
+
