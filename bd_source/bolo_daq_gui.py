@@ -34,6 +34,7 @@ from bd_tools.lakeshore_372 import LakeShore372
 from bd_tools.time_constant import TimeConstant
 from bd_tools.agilent_e3634a import AgilentE3634A
 from bd_tools.com_port_utility import ComPortUtility
+from bd_tools.hewlett_packard_34401a import HewlettPackard34401A
 from bd_tools.configure_ni_daq import ConfigureNIDAQ
 from bd_tools.configure_bolo_daq_gui import ConfigureBoloDAQGui
 from bd_tools.configure_stepper_motor import ConfigureStepperMotor
@@ -348,10 +349,35 @@ class BoloDAQGui(QtWidgets.QMainWindow, GuiBuilder):
         '''
         '''
         self.gb_initialize_panel('central_widget')
+        self.status_bar.showMessage('Setting up COM port utility')
+        QtWidgets.QApplication.processEvents()
         if not hasattr(self, 'com_port_utility_widget'):
             self.com_port_utility_widget = ComPortUtility(self.status_bar, self.screen_resolution, self.monitor_dpi)
         self.central_widget.layout().addWidget(self.com_port_utility_widget, 0, 0, 1, 1)
-        self.status_bar.showMessage('COM PORT Utility')
+        self.status_bar.showMessage('COM port utility')
+        QtWidgets.QApplication.processEvents()
+
+    #################################################
+    # Hewlett Packard 34401A
+    #################################################
+
+    def bd_hewlett_packard_34401a(self):
+        '''
+        '''
+        self.gb_initialize_panel('central_widget')
+        self.status_bar.showMessage('Setting up Hewlett Packard 34401A Controller')
+        QtWidgets.QApplication.processEvents()
+        dialog = 'Select the comport for the HP 34401A'
+        com_port, okPressed = self.gb_quick_static_info_gather(title='', dialog=dialog, items=['COM3'])
+        if not hasattr(self, 'ser_{0}'.format(com_port)) and okPressed:
+            serial_com = BoloSerial(com_port, device='HP_34401A', splash_screen=self.status_bar)
+            if not hasattr(self, 'hewlett_packard_34401a_widget'):
+                self.hewlett_packard_34401a_widget = HewlettPackard34401A(serial_com, com_port, self.status_bar, self.screen_resolution, self.monitor_dpi)
+            self.central_widget.layout().addWidget(self.hewlett_packard_34401a_widget, 0, 0, 1, 1)
+        elif okPressed:
+            self.hewlett_packard_34401a_widget.ae_update_serial_com(serial_com)
+            self.central_widget.layout().addWidget(self.hewlett_packard_34401a_widget, 0, 0, 1, 1)
+        self.status_bar.showMessage('Hewlett Packard 34401A Controller')
         QtWidgets.QApplication.processEvents()
 
     #################################################

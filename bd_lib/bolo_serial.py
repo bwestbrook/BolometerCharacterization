@@ -36,6 +36,10 @@ class BoloSerial(object):
                 'baudrate': 9600,
                 'timeout': 2
                 },
+            'HP_34401A': {
+                'baudrate': 9600,
+                'timeout': 3
+                },
             'SRS_SR830_DSP': {
                 'baudrate': 9600,
                 'timeout': 3
@@ -75,10 +79,6 @@ class BoloSerial(object):
         "Returns a properly decoded string of the bytes read from the port"
         response = self.ser.readline()
         response = response.decode(decode).strip('\r\n')
-        print()
-        print(response)
-        print(response)
-        print()
         return response
 
     def bs_write_read(self, string, wait_time=1, verbatim=False):

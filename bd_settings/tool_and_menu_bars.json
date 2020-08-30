@@ -39,23 +39,29 @@
                 "function": "bd_fridge_cycle",
                 "icon": "snowflake.png"
             },
-            "07_Lakeshore 372": {
+            "07_SRS SR830DSP": {
+                "StatusTip": "Lakeshore 372",
+                "ToolTip": "Lakeshore 372 Configuration ",
+                "function": "bd_stanford_research_systems_sr830_dsp",
+                "icon": "lock_in.png"
+            },
+            "08_Lakeshore 372": {
                 "StatusTip": "Lakeshore 372",
                 "ToolTip": "Lakeshore 372 Configuration ",
                 "function": "bd_lakeshore_372",
                 "icon": "oscilliscope.png"
             },
-            "08_Agilent E3634A": {
+            "09_Agilent E3634A": {
                 "StatusTip": "Agilent E36343A",
                 "ToolTip": "Agilent 36343A Configuration ",
                 "function": "bd_agilent_e3634a",
                 "icon": "power_supply.png"
             },
-            "08_SRS SR830DSP": {
-                "StatusTip": "Lakeshore 372",
-                "ToolTip": "Lakeshore 372 Configuration ",
-                "function": "bd_stanford_research_systems_sr830_dsp",
-                "icon": "lock_in.png"
+            "09_HP 34401A": {
+                "StatusTip": "Hewlett Packard 34401A",
+                "ToolTip": "HP 34401A Configuration ",
+                "function": "bd_hewlett_packard_34401a",
+                "icon": "power_supply.png"
             }
         },
         "02_DAQ_Mode": {

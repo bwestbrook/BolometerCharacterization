@@ -77,9 +77,6 @@ class StanfordResearchSystemsSR830DSP(QtWidgets.QWidget, GuiBuilder):
         self.srs_send_command('*CLS ')
         idn = self.srs_query('*IDN? ')
         message = 'ID {0}'.format(idn)
-        print(idn)
-        print(idn)
-        print(idn)
         self.status_bar.showMessage(message)
 
     def srs_zero_lock_in_phase(self):
