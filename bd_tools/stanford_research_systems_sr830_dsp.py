@@ -49,6 +49,9 @@ class StanfordResearchSystemsSR830DSP(QtWidgets.QWidget, GuiBuilder):
         zero_lock_in_pushbutton = QtWidgets.QPushButton('Zero Lock In', self)
         self.layout().addWidget(zero_lock_in_pushbutton, 3, 0, 1, 4)
         zero_lock_in_pushbutton.clicked.connect(self.srs_zero_lock_in_phase)
+        get_id_pushbutton = QtWidgets.QPushButton('Get ID', self)
+        self.layout().addWidget(get_id_pushbutton, 4, 0, 1, 4)
+        get_id_pushbutton.clicked.connect(self.srs_get_id)
 
     def srs_update_serial_com(self, serial_com):
         '''
@@ -71,12 +74,12 @@ class StanfordResearchSystemsSR830DSP(QtWidgets.QWidget, GuiBuilder):
     def srs_get_id(self):
         '''
         '''
-        idn = self.srs_query('*CLS ')
+        self.srs_send_command('*CLS ')
         idn = self.srs_query('*IDN? ')
-        print()
-        print('--------------------')
         message = 'ID {0}'.format(idn)
-        print(message)
+        print(idn)
+        print(idn)
+        print(idn)
         self.status_bar.showMessage(message)
 
     def srs_zero_lock_in_phase(self):

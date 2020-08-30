@@ -12,7 +12,7 @@ from GuiBuilder.gui_builder import GuiBuilder, GenericClass
 
 class BeamMapper(QtWidgets.QWidget, GuiBuilder):
 
-    def __init__(self, daq_settings, status_bar, screen_resolution, monitor_dpi, csm_widget_dict):
+    def __init__(self, daq_settings, status_bar, screen_resolution, monitor_dpi, csm_widget_dict, srs_widget):
         '''
         '''
         super(BeamMapper, self).__init__()
@@ -20,136 +20,334 @@ class BeamMapper(QtWidgets.QWidget, GuiBuilder):
         self.daq_settings = daq_settings
         self.screen_resolution = screen_resolution
         self.monitor_dpi = monitor_dpi
+        self.srs_widget = srs_widget
         self.daq = BoloDAQ()
-        self.csm_widget_x = csm_widget_dict['X']
-        self.csm_widget_y = csm_widget_dict['Y']
+        self.com_port_x = csm_widget_dict['X']['com_port']
+        self.com_port_y = csm_widget_dict['Y']['com_port']
+        self.csm_widget_x = csm_widget_dict['X']['widget']
+        self.csm_widget_y = csm_widget_dict['Y']['widget']
+        self.start_scan_wait_time = 5.0
         grid = QtWidgets.QGridLayout()
         self.setLayout(grid)
-        self.bm_add_common_widgets()
+        grid_2 = QtWidgets.QGridLayout()
+        self.bm_plot_panel = QtWidgets.QWidget(self)
+        self.bm_plot_panel.setLayout(grid_2)
+        self.layout().addWidget(self.bm_plot_panel, 0, 5, 14, 1)
+        self.bm_configure_input_panel()
+        self.bm_configure_plot_panel()
 
-    def bm_add_common_widgets(self):
+    def bm_update_daq_settings(self, daq_settings):
         '''
         '''
-        # Sample Name
+        self.daq_settings = daq_settings
+        self.bm_update_scan_params()
+
+    def bm_configure_input_panel(self):
+        '''
+        '''
+        welcome_header_label = QtWidgets.QLabel('Welcome to pe', self)
+        self.layout().addWidget(welcome_header_label, 0, 0, 1, 1)
+        # DAQ (Device + Channel) Selection
+        device_header_label = QtWidgets.QLabel('Device:', self)
+        self.layout().addWidget(device_header_label, 1, 0, 1, 1)
+        self.device_combobox = QtWidgets.QComboBox(self)
+        self.layout().addWidget(self.device_combobox, 1, 1, 1, 1)
+        for device in self.daq_settings:
+            self.device_combobox.addItem(device)
+        daq_header_label = QtWidgets.QLabel('DAQ:', self)
+        self.layout().addWidget(daq_header_label, 2, 0, 1, 1)
+        self.daq_combobox = QtWidgets.QComboBox(self)
+        self.layout().addWidget(self.daq_combobox, 2, 1, 1, 1)
+        for channel in sorted([int(x) for x in self.daq_settings[device]]):
+            self.daq_combobox.addItem(str(channel))
+        self.daq_settings_label = QtWidgets.QLabel('DAQ Settings', self)
+        self.layout().addWidget(self.daq_settings_label, 3, 1, 1, 1)
+        #Pause Time 
+        pause_time_header_label = QtWidgets.QLabel('Pause Time (ms):', self)
+        self.layout().addWidget(pause_time_header_label, 4, 0, 1, 1)
+        self.pause_time_lineedit = QtWidgets.QLineEdit('100', self)
+        self.pause_time_lineedit.setValidator(QtGui.QIntValidator(0, 25000, self.pause_time_lineedit))
+        self.layout().addWidget(self.pause_time_lineedit, 4, 1, 1, 1)
+        # Stepper Motor Selection
+        stepper_motor_x_header_label = QtWidgets.QLabel('Stepper Motor X: {0}'.format(self.com_port_x), self)
+        self.layout().addWidget(stepper_motor_x_header_label, 5, 0, 1, 1)
+        self.stepper_x_settings_label = QtWidgets.QLabel('Stepper X Settings', self)
+        self.layout().addWidget(self.stepper_x_settings_label, 6, 0, 1, 1)
+        stepper_motor_y_header_label = QtWidgets.QLabel('Stepper Motor Y: {0}'.format(self.com_port_y), self)
+        self.layout().addWidget(stepper_motor_y_header_label, 5, 2, 1, 1)
+        self.stepper_y_settings_label = QtWidgets.QLabel('Stepper Y Settings', self)
+        self.layout().addWidget(self.stepper_y_settings_label, 6, 2, 1, 1)
+        ######
+        # Scan Params
+        ######
+        #Start Scan
+        start_position_x_header_label = QtWidgets.QLabel('Start Position X:', self)
+        self.layout().addWidget(start_position_x_header_label, 7, 0, 1, 1)
+        self.start_position_x_lineedit = QtWidgets.QLineEdit('-30000', self)
+        self.start_position_x_lineedit.setValidator(QtGui.QIntValidator(-500000, 0, self.start_position_x_lineedit))
+        self.start_position_x_lineedit.textChanged.connect(self.bm_update_scan_params)
+        self.layout().addWidget(self.start_position_x_lineedit, 7, 1, 1, 1)
+        start_position_y_header_label = QtWidgets.QLabel('Start Position Y:', self)
+        self.layout().addWidget(start_position_y_header_label, 7, 2, 1, 1)
+        self.start_position_y_lineedit = QtWidgets.QLineEdit('-30000', self)
+        self.start_position_y_lineedit.setValidator(QtGui.QIntValidator(-500000, 0, self.start_position_y_lineedit))
+        self.start_position_y_lineedit.textChanged.connect(self.bm_update_scan_params)
+        self.layout().addWidget(self.start_position_y_lineedit, 7, 3, 1, 1)
+        #End Scan
+        end_position_x_header_label = QtWidgets.QLabel('End Position X:', self)
+        self.layout().addWidget(end_position_x_header_label, 8, 0, 1, 1)
+        self.end_position_x_lineedit = QtWidgets.QLineEdit('30000', self)
+        self.end_position_x_lineedit.setValidator(QtGui.QIntValidator(0, 300000, self.end_position_x_lineedit))
+        self.end_position_x_lineedit.textChanged.connect(self.bm_update_scan_params)
+        self.layout().addWidget(self.end_position_x_lineedit, 8, 1, 1, 1)
+        end_position_y_header_label = QtWidgets.QLabel('End Position Y:', self)
+        self.layout().addWidget(end_position_y_header_label, 8, 2, 1, 1)
+        self.end_position_y_lineedit = QtWidgets.QLineEdit('30000', self)
+        self.end_position_y_lineedit.setValidator(QtGui.QIntValidator(0, 300000, self.end_position_y_lineedit))
+        self.end_position_y_lineedit.textChanged.connect(self.bm_update_scan_params)
+        self.layout().addWidget(self.end_position_y_lineedit, 8, 3, 1, 1)
+        #Step Size 
+        step_size_x_header_label = QtWidgets.QLabel('Step Size X (steps):', self)
+        self.layout().addWidget(step_size_x_header_label, 9, 0, 1, 1)
+        self.step_size_x_lineedit = QtWidgets.QLineEdit('3000', self)
+        self.step_size_x_lineedit.textChanged.connect(self.bm_update_scan_params)
+        self.step_size_x_lineedit.setValidator(QtGui.QIntValidator(1, 200000, self.step_size_x_lineedit))
+        self.layout().addWidget(self.step_size_x_lineedit, 9, 1, 1, 1)
+        step_size_y_header_label = QtWidgets.QLabel('Step Size Y (steps):', self)
+        self.layout().addWidget(step_size_y_header_label, 9, 2, 1, 1)
+        self.step_size_y_lineedit = QtWidgets.QLineEdit('3000', self)
+        self.step_size_y_lineedit.textChanged.connect(self.bm_update_scan_params)
+        self.step_size_y_lineedit.setValidator(QtGui.QIntValidator(1, 200000, self.step_size_y_lineedit))
+        self.layout().addWidget(self.step_size_y_lineedit, 9, 3, 1, 1)
+        #Scan Info size
+        self.scan_info_label = QtWidgets.QLabel('Scan Info', self)
+        self.layout().addWidget(self.scan_info_label, 11, 1, 1, 1)
+        self.bm_update_scan_params()
         sample_name_header_label = QtWidgets.QLabel('Sample Name:', self)
-        self.layout().addWidget(sample_name_header_label, 8, 0, 1, 1)
+        self.layout().addWidget(sample_name_header_label, 12, 0, 1, 1)
         self.sample_name_lineedit = QtWidgets.QLineEdit('', self)
-        self.layout().addWidget(self.sample_name_lineedit, 8, 1, 1, 3)
-        # Buttons
-        start_pushbutton = QtWidgets.QPushButton('Start', self)
-        #start_pushbutton.clicked.connect(self.c_start_stop)
-        self.layout().addWidget(start_pushbutton, 12, 0, 1, 4)
+        self.layout().addWidget(self.sample_name_lineedit, 12, 1, 1, 3)
+        ######
+        # Control Buttons 
+        ######
+        self.start_pushbutton = QtWidgets.QPushButton('Start', self)
+        self.layout().addWidget(self.start_pushbutton, 13, 0, 1, 4)
+        self.start_pushbutton.clicked.connect(self.bm_start_stop_scan)
         save_pushbutton = QtWidgets.QPushButton('Save', self)
-        #save_pushbutton.clicked.connect(self.xyc_save)
-        self.layout().addWidget(save_pushbutton, 13, 0, 1, 4)
+        self.layout().addWidget(save_pushbutton, 14, 0, 1, 4)
+        save_pushbutton.clicked.connect(self.bm_save)
 
-    def bd_close_beam_mapper(self):
+    def bm_configure_plot_panel(self):
         '''
-        Closes the panel with a warning if data is being collected
         '''
-        global continue_run
-        if continue_run:
-            self.gb_quick_message('Taking data!!!\nPlease stop taking data before closing single channel FTS!')
+        self.beam_map_plot_label = QtWidgets.QLabel('', self.bm_plot_panel)
+        self.bm_plot_panel.layout().addWidget(self.beam_map_plot_label, 0, 0, 1, 4)
+        self.time_stream_plot_label = QtWidgets.QLabel('', self.bm_plot_panel)
+        self.bm_plot_panel.layout().addWidget(self.time_stream_plot_label, 1, 0, 1, 4)
+        data_mean_header_label = QtWidgets.QLabel('Data Mean (V):', self.bm_plot_panel)
+        self.bm_plot_panel.layout().addWidget(data_mean_header_label, 2, 0, 1, 1)
+        self.data_mean_label = QtWidgets.QLabel('', self.bm_plot_panel)
+        self.bm_plot_panel.layout().addWidget(self.data_mean_label, 2, 1, 1, 1)
+        data_std_header_label = QtWidgets.QLabel('Data STD (V):', self.bm_plot_panel)
+        self.bm_plot_panel.layout().addWidget(data_std_header_label, 2, 2, 1, 1)
+        self.data_std_label = QtWidgets.QLabel('', self.bm_plot_panel)
+        self.bm_plot_panel.layout().addWidget(self.data_std_label, 2, 3, 1, 1)
+
+    ##############################################################################
+    # Scanning 
+    ##############################################################################
+
+    def bm_update_scan_params(self):
+        '''
+        '''
+        end_x = int(self.end_position_x_lineedit.text())
+        start_x = int(self.start_position_x_lineedit.text())
+        step_size_x = int(self.step_size_x_lineedit.text())
+        end_y = int(self.end_position_y_lineedit.text())
+        start_y = int(self.start_position_y_lineedit.text())
+        step_size_y = int(self.step_size_y_lineedit.text())
+        pause_time = float(self.pause_time_lineedit.text())
+        if step_size_x > 0:
+            n_x_data_points = int((end_x - start_x) / step_size_x)
         else:
-            self.beam_mapper_popup.close()
-            continue_run = False
-
-    def bd_beam_mapper(self):
-        '''
-        Opens the panel
-        '''
-        if not hasattr(self, 'lock_in'):
-            self.lock_in = LockIn()
-        if not hasattr(self, 'beam_mapper_popup'):
-            self.gb_create_popup_window('beam_mapper_popup')
+            n_x_data_points = np.nan
+        if step_size_y > 0:
+            n_y_data_points = int((end_y - start_y) / step_size_y)
         else:
-            self.gb_initialize_panel('beam_mapper_popup')
-        self.gb_build_panel(settings.beam_mapper_build_dict)
-        for combobox_widget, entry_list in self.beam_mapper_combobox_entry_dict.items():
-           self.gb_populate_combobox(combobox_widget, entry_list)
-        self.draw_time_stream([0] * 5, -1, -1, '_beam_mapper_popup_time_stream_label')
-        self.beam_mapper_popup.showMaximized()
-        self.initialize_beam_mapper()
-        meta_data = self.bd_get_all_meta_data(popup='beam_mapper')
-        scan_params = self.bd_get_all_params(meta_data, settings.beam_mapper_params, 'beam_mapper')
-        scan_params = self.get_grid(scan_params)
-        x_com_port = scan_params['x_current_com_port']
-        y_com_port = scan_params['y_current_com_port']
-        x_motor_current = str(getattr(self, 'sm_{0}'.format(x_com_port)).get_motor_current()).replace('CC=', '')
-        x_motor_velocity = str(getattr(self, 'sm_{0}'.format(x_com_port)).get_velocity()).replace('VE=', '')
-        getattr(self, '_beam_mapper_popup_x_motor_current_label').setText(x_motor_current)
-        getattr(self, '_beam_mapper_popup_x_motor_velocity_label').setText(x_motor_velocity)
-        y_motor_current = str(getattr(self, 'sm_{0}'.format(y_com_port)).get_motor_current()).replace('CC=', '')
-        y_motor_velocity = str(getattr(self, 'sm_{0}'.format(y_com_port)).get_velocity()).replace('VE=', '')
-        getattr(self, '_beam_mapper_popup_y_motor_current_label').setText(y_motor_current)
-        getattr(self, '_beam_mapper_popup_y_motor_velocity_label').setText(y_motor_velocity)
-        getattr(self, '_beam_mapper_popup_signal_channel_combobox').setCurrentIndex(1)
-        getattr(self, '_beam_mapper_popup_aperature_size_combobox').setCurrentIndex(1)
-        getattr(self, '_beam_mapper_popup_sample_rate_combobox').setCurrentIndex(2)
-        getattr(self, '_beam_mapper_popup_integration_time_combobox').setCurrentIndex(0)
-        getattr(self, '_beam_mapper_popup_pause_time_combobox').setCurrentIndex(0)
-        self.beam_mapper_popup.repaint()
+            n_y_data_points = np.nan
+        n_data_points = n_y_data_points * n_y_data_points
+        information_string = '{0} x {1} scan {2} total points'.format(n_x_data_points, n_y_data_points, n_data_points)
+        self.scan_info_label.setText(information_string)
+        device = self.device_combobox.currentText()
+        signal_channel = self.daq_combobox.currentText()
+        self.scan_settings_dict = {
+             'device': device,
+             'signal_channel': signal_channel,
+             'end_x': end_x,
+             'start_x': start_x,
+             'step_size_x': step_size_x,
+             'end_y': end_y,
+             'start_y': start_y,
+             'step_size_y': step_size_y,
+             'pause_time': pause_time,
+             'n_x_data_points': n_x_data_points,
+             'n_y_data_points': n_y_data_points,
+             'n_data_points': n_data_points
+            }
+        self.scan_settings_dict.update(self.daq_settings[device][signal_channel])
+        daq_settings_str = ''
+        for setting, value in self.daq_settings[device][signal_channel].items():
+            daq_settings_str += ' '.join([x.title() for x in setting.split('_')])
+            if setting == 'int_time':
+                daq_settings_str += ' (ms): '
+            if setting == 'sample_rate':
+                daq_settings_str += ' (Hz): '
+            daq_settings_str += '{0} ::: '.format(value)
+        self.daq_settings_label.setText(daq_settings_str)
 
-    def bd_initialize_beam_mapper(self):
+    def bm_start_stop_scan(self):
         '''
-        Updates the panel based on inputs of desired grid
         '''
-        if len(str(self.sender().whatsThis())) == 0:
-            return None
+        if self.sender().text() == 'Start':
+            self.bm_update_scan_params()
+            self.sender().setText('Stop')
+            self.started = True
+            self.bm_scan()
         else:
-            meta_data = self.bd_get_all_meta_data(popup='beam_mapper')
-            scan_params = self.bd_get_all_params(meta_data, settings.beam_mapper_params, 'beam_mapper')
-            scan_params = self.get_grid(scan_params)
-            if scan_params is not None and len(scan_params) > 0:
-                #self.bmt.simulate_beam(scan_params, 'temp_files/temp_beam.png')
-                #image = QtGui.QPixmap('temp_files/temp_beam.png')
-                #getattr(self, '_beam_mapper_popup_2D_plot_label').setPixmap(image)
-                n_points_x = int(scan_params['n_points_x'])
-                n_points_y = int(scan_params['n_points_y'])
-                getattr(self,'_beam_mapper_popup_n_points_x_label').setText(str(n_points_x))
-                getattr(self,'_beam_mapper_popup_n_points_y_label').setText(str(n_points_y))
+            self.sender().setText('Start')
+            self.started = False
 
-    def bd_get_grid(self, scan_params):
+    def bm_scan(self):
         '''
-        Sets up a gride to place data points into base on specfied params
         '''
-
-        if self.gb_is_float(scan_params['end_x_position']) \
-                and self.gb_is_float(scan_params['end_y_position']) \
-                and self.gb_is_float(scan_params['end_y_position']) \
-                and self.gb_is_float(scan_params['start_x_position']) \
-                and self.gb_is_float(scan_params['start_y_position']) \
-                and self.gb_is_float(scan_params['step_size_x'], enforce_positive=True) \
-                and self.gb_is_float(scan_params['step_size_y'], enforce_positive=True):
-            x_total = int(scan_params['end_x_position']) - int(scan_params['start_x_position'])
-            x_steps = int(scan_params['step_size_x'])
-            if int(scan_params['step_size_x']) == 0 or  int(scan_params['step_size_y']) == 0:
-                n_points_x = 1e9
-                n_points_y = 1e9
+        device = self.scan_settings_dict['device']
+        signal_channel = self.scan_settings_dict['signal_channel']
+        int_time = self.scan_settings_dict['int_time']
+        sample_rate = self.scan_settings_dict['sample_rate']
+        pause_time = self.scan_settings_dict['pause_time']
+        total_points = self.scan_settings_dict['n_data_points']
+        start_x = self.scan_settings_dict['start_x']
+        start_y = self.scan_settings_dict['start_y']
+        end_x = self.scan_settings_dict['end_x']
+        end_y = self.scan_settings_dict['end_y']
+        step_size_x = self.scan_settings_dict['step_size_x']
+        step_size_y = self.scan_settings_dict['step_size_y']
+        x_grid = np.arange(start_x, end_x + step_size_x, step_size_x)
+        y_grid = np.arange(start_y, end_y + step_size_y, step_size_y)
+        x_ticks = [str(int(x * 1e-3)) for x in x_grid]
+        y_ticks = [str(int(x * 1e-3)) for x in y_grid]
+        y_grid_reversed = np.flip(y_grid)
+        X, Y = np.meshgrid(x_grid, y_grid)
+        Z_data = np.zeros(shape=X.shape)
+        self.z_stds = np.zeros(shape=X.shape)
+        direction = -1
+        start_time = datetime.now()
+        count = 1
+        i = 0
+        while i < len(x_grid) and self.started:
+            x_pos = x_grid[i]
+            print(x_pos)
+            self.csm_widget_x.csm_set_position(x_pos, verbose=False)
+            act_x_pos = x_pos
+            direction *= -1
+            if direction == -1:
+                y_scan = y_grid_reversed
             else:
-                n_points_x = (int(scan_params['end_x_position']) + int(scan_params['step_size_y']) - int(scan_params['start_x_position'])) / int(scan_params['step_size_x'])
-                n_points_y = (int(scan_params['end_y_position']) + int(scan_params['step_size_y']) - int(scan_params['start_y_position'])) / int(scan_params['step_size_y'])
-            scan_params['n_points_x'] = n_points_x
-            scan_params['n_points_y'] = n_points_y
-            scan_params['x_total'] = x_total
-            getattr(self, '_beam_mapper_popup_total_x_label').setText('{0} steps'.format(str(int(x_total))))
-            y_total = int(scan_params['end_y_position']) - int(scan_params['start_y_position'])
-            y_steps = int(scan_params['step_size_y'])
-            getattr(self, '_beam_mapper_popup_total_y_label').setText('{0} steps'.format(str(int(y_total))))
-            scan_params['y_total'] = y_total
-        return scan_params
+                y_scan = y_grid
+            j = 0
+            while j < len(y_scan) and self.started:
+                y_pos = y_scan[j]
+                self.csm_widget_y.csm_set_position(x_pos, verbose=False)
+                act_y_pos = y_pos
+                if i == 0 and j == 0: #sleep extra long on the first point
+                    time.sleep(self.start_scan_wait_time)
+                    self.status_bar.showMessage('Waiting {0} to move mirrors to start position'.format(self.start_scan_wait_time))
+                    QtWidgets.QApplication.processEvents()
+                else:
+                    time.sleep(pause_time * 1e-3)
+                self.srs_widget.srs_zero_lock_in_phase()
+                time.sleep((pause_time / 2) * 1e-3)
+                data_time_stream, mean, min_, max_, std = self.daq.get_data(signal_channel=signal_channel, int_time=int_time,
+                                                                            sample_rate=sample_rate, device=device)
+                self.bm_plot_time_stream(data_time_stream, min_, max_)
+                Z_datum = mean
+                if direction == -1:
+                    self.z_stds[len(y_scan) -1 - j][i] = std
+                    Z_data[len(y_scan) - 1- j][i] = Z_datum
+                else:
+                    self.z_stds[j][i] = std
+                    Z_data[j][i] = Z_datum
+                self.bm_plot_beam_map( x_ticks, y_ticks, Z_data, running=True)
+                self.data_mean_label.setText('{0:.6f}'.format(mean))
+                self.data_std_label.setText('{0:.6f}'.format(std))
+                now_time = datetime.now()
+                now_time_str = datetime.strftime(now_time, '%H:%M')
+                duration = now_time - start_time
+                time_per_step = duration.seconds / count
+                steps_left = total_points - count
+                time_left = time_per_step * steps_left / 60
+                status_msg = 'X: {0} Y: {1} ::: '.format(act_x_pos, act_y_pos)
+                status_msg += '{0} of {1} ::: Total Duration {2:.2f} (m) ::: Time per Point {3:.2f} (s) ::: Time Left {4:.2f} (m)'.format(count, total_points, duration.seconds / 60, time_per_step, time_left)
+                self.status_bar.showMessage(status_msg)
+                QtWidgets.QApplication.processEvents()
+                self.repaint()
+                count += 1
+                j += 1
+            if i + 1 == len(x_grid):
+                self.started = False
+                self.start_pushbutton.setText('Start')
+            i += 1
 
-    def bd_plot_beam_map(self, x_ticks, y_ticks, Z, scan_params):
+    ##############################################################################
+    # Saving and plotting
+    ##############################################################################
+
+    def bm_create_blank_fig(self, frac_screen_width=0.5, frac_screen_height=0.8,
+                             left=0.18, right=0.98, top=0.95, bottom=0.08, n_axes=1,
+                             aspect=None):
+        if frac_screen_width is None and frac_screen_height is None:
+            fig = pl.figure()
+        else:
+            width = (frac_screen_width * self.screen_resolution.width()) / self.monitor_dpi
+            height = (frac_screen_height * self.screen_resolution.height()) / self.monitor_dpi
+            fig = pl.figure(figsize=(width, height))
+        fig.subplots_adjust(left=left, right=right, top=top, bottom=bottom)
+        if n_axes == 2:
+            ax1 = fig.add_subplot(211, label='int')
+            ax2 = fig.add_subplot(212, label='spec')
+            return fig, ax1, ax2
+        else:
+            if aspect is None:
+                ax = fig.add_subplot(111)
+            else:
+                ax = fig.add_subplot(111, aspect=aspect)
+            return fig, ax
+
+    def bm_plot_time_stream(self, ts, min_, max_):
         '''
         '''
-        fig, ax = self.bd_create_blank_fig(left=0.02, bottom=0.19, right=0.98, top=0.9,
-                                         frac_screen_width=None, frac_screen_height=None,
-                                         aspect='equal')
+        fig, ax = self.bm_create_blank_fig(left=0.1, bottom=0.12, right=0.98, top=0.95,
+                                           frac_screen_width=0.6, frac_screen_height=0.25)
+        ax.plot(ts)
+        ax.set_xlabel('Samples', fontsize=14)
+        ax.set_ylabel('Voltage (V)', fontsize=14)
+        ax.set_title('Data Monitor', fontsize=14)
+        fig.savefig('temp_files/temp_ts.png', transperant=True)
+        pl.close('all')
+        image = QtGui.QPixmap('temp_files/temp_ts.png')
+        self.time_stream_plot_label.setPixmap(image)
+
+    def bm_plot_beam_map(self, x_ticks, y_ticks, Z, running=False):
+        '''
+        '''
+        fig, ax = self.bm_create_blank_fig(left=0.02, bottom=0.08, right=0.98, top=0.95,
+                                           frac_screen_width=0.6, frac_screen_height=0.7,
+                                           aspect='equal')
         #ax_image = ax.imshow(Z)
         ax_image = ax.pcolormesh(Z)
-        ax.set_title('BEAM DATA', fontsize=12)
-        ax.set_xlabel('X Position (k-steps)', fontsize=12)
-        ax.set_ylabel('Y Position (k-steps)', fontsize=12)
+        ax.set_title('BEAM DATA', fontsize=16)
+        ax.set_xlabel('X Position (k-steps)', fontsize=14)
+        ax.set_ylabel('Y Position (k-steps)', fontsize=14)
         x_tick_locs = [0.5 + x for x in range(len(x_ticks))]
         y_tick_locs = [0.5 + x for x in range(len(x_ticks))]
         ax.set_xticks(x_tick_locs)
@@ -157,119 +355,36 @@ class BeamMapper(QtWidgets.QWidget, GuiBuilder):
         ax.set_xticklabels(x_ticks, rotation=35, fontsize=10)
         ax.set_yticklabels(y_ticks, fontsize=10)
         color_bar = fig.colorbar(ax_image, ax=ax)
-        fig.savefig('temp_files/temp_beam.png')
-        shutil.copy('temp_files/temp_beam.png', self.raw_data_path[0].replace('.dat', '.png'))
-        pl.close('all')
-        image = QtGui.QPixmap('temp_files/temp_beam.png')
-        getattr(self, '_beam_mapper_popup_2D_plot_label').setPixmap(image)
+        if running:
+            fig.savefig('temp_files/temp_beam.png', transperant=True)
+            pl.close('all')
+            image = QtGui.QPixmap('temp_files/temp_beam.png')
+            self.beam_map_plot_label.setPixmap(image)
+        else:
+            pl.show()
 
-    def bd_take_beam_map(self):
+    def bm_index_file_name(self):
         '''
-        Executes a data taking run
         '''
-        global continue_run
-        global pause_run
-        continue_run = True
-        pause_run = False
-        meta_data = self.bd_get_all_meta_data()
-        scan_params = self.bd_get_all_params(meta_data, settings.beam_mapper_params, 'beam_mapper')
-        x_start = int(scan_params['start_x_position'])
-        x_end =  int(scan_params['end_x_position'])
-        x_step = int(scan_params['step_size_x'])
-        y_start = int(scan_params['start_y_position'])
-        y_end =  int(scan_params['end_y_position'])
-        y_step = int(scan_params['step_size_y'])
-        x_grid = np.arange(x_start, x_end + x_step, x_step)
-        y_grid = np.arange(y_start, y_end + y_step, y_step)
-        x_ticks = [str(int(x * 1e-3)) for x in x_grid]
-        y_ticks = [str(int(x * 1e-3)) for x in y_grid]
-        #x_grid = np.linspace(int(scan_params['start_x_position']), int(scan_params['end_x_position']),  int(scan_params['n_points_x']) + 1)
-        #y_grid = np.linspace(int(scan_params['start_y_position']), int(scan_params['end_y_position']),  int(scan_params['n_points_y']) + 1)
-        y_grid_reversed = np.flip(y_grid)
-        X, Y = np.meshgrid(x_grid, y_grid)
-        #import ipdb;ipdb.set_trace()
-        Z_data = np.zeros(shape=X.shape)
-        self.stds = np.zeros(shape=X.shape)
-        x_com_port = scan_params['x_current_com_port']
-        y_com_port = scan_params['y_current_com_port']
-        total_points = int(scan_params['n_points_x']) * int(scan_params['n_points_y'])
-        self.get_raw_data_save_path()
-        direction = -1
-        if self.raw_data_path is not None:
-            start_time = datetime.now()
-            getattr(self, '_beam_mapper_popup_start_pushbutton').setDisabled(True)
-            with open(self.raw_data_path[0], 'w') as data_handle:
-                count = 1
-                with open(self.raw_data_path[0].replace('.dat', '.json'), 'w') as meta_data_handle:
-                    simplejson.dump(meta_data, meta_data_handle)
-                i = 0
-                while i < len(x_grid) and continue_run:
-                    x_pos = x_grid[i]
-                    getattr(self, 'sm_{0}'.format(x_com_port)).move_to_position(x_pos)
-                    #act_x_pos = str(getattr(self, 'sm_{0}'.format(x_com_port)).get_position()).replace('SP=', '')
-                    act_x_pos = x_pos
-                    direction *= -1
-                    if direction == -1:
-                        y_scan = y_grid_reversed
-                    else:
-                        y_scan = y_grid
-                    j = 0
-                    while j < len(y_scan) and continue_run:
-                        y_pos = y_scan[j]
-                        getattr(self, 'sm_{0}'.format(y_com_port)).move_to_position(y_pos)
-                        #act_y_pos = str(getattr(self, 'sm_{0}'.format(y_com_port)).get_position()).replace('SP=', '')
-                        act_y_pos = y_pos
-                        if i == 0 and j == 0: #sleep extra long on the first point
-                            time.sleep(4)
-                        else:
-                            time.sleep((int(scan_params['pause_time']) / 2) * 1e-3)
-                        self.lock_in._zero_lock_in_phase()
-                        time.sleep((int(scan_params['pause_time']) / 2) * 1e-3)
-                        data_time_stream, mean, min_, max_, std = self.daq.get_data(signal_channel=scan_params['signal_channel'], integration_time=scan_params['integration_time'],
-                                                                                         sample_rate=scan_params['sample_rate'], active_daqs=self.active_daqs)
-                        self.draw_time_stream(data_time_stream, min_, max_,'_beam_mapper_popup_time_stream_label')
-                        Z_datum = mean
-                        if direction == -1:
-                            self.stds[len(y_scan) -1 - j][i] = std
-                            Z_data[len(y_scan) - 1- j][i] = Z_datum
-                        else:
-                            self.stds[j][i] = std
-                            Z_data[j][i] = Z_datum
-                        self.plot_beam_map(x_ticks, y_ticks, Z_data, scan_params)
-                        getattr(self, '_beam_mapper_popup_data_mean_label').setText('{0:.3f}'.format(mean))
-                        getattr(self, '_beam_mapper_popup_x_position_label').setText('{0}'.format(act_x_pos))
-                        getattr(self, '_beam_mapper_popup_y_position_label').setText('{0}'.format(act_y_pos))
-                        getattr(self, '_beam_mapper_popup_data_std_label').setText('{0:.3f}'.format(std))
-                        data_line = '{0}\t{1}\t{2:.4f}\t{3:.4f}\n'.format(act_x_pos, act_y_pos, Z_datum, std)
-                        data_handle.write(data_line)
-                        now_time = datetime.now()
-                        now_time_str = datetime.strftime(now_time, '%H:%M')
-                        duration = now_time - start_time
-                        time_per_step = duration.seconds / count
-                        steps_left = total_points - count
-                        time_left = time_per_step * steps_left / 60
-                        status_msg = '{0} of {1} ::: Total Duration {2:.2f} (m) ::: Time per Point {3:.2f} (s) ::: Time Left {4:.2f} (m)'.format(count, total_points, duration.seconds / 60,
-                                                                                                                                                 time_per_step, time_left)
-                        getattr(self, '_beam_mapper_popup_status_label').setText(status_msg)
-                        self.repaint()
-                        root.update()
-                        count += 1
-                        j += 1
-                        while pause_run:
-                            print('pausing beam mapper')
-                            time.sleep(1)
-                            root.update()
-                    if i + 1 == len(x_grid):
-                        continue_run = False
-                    i += 1
-        #import ipdb;ipdb.set_trace()
-        #getattr(self, '_beam_mapper_popup_save_pushbutton').setEnableI#
-        # Restore to (0, 0) and erase Z data
-        getattr(self, 'sm_{0}'.format(x_com_port)).move_to_position(0)
-        getattr(self, 'sm_{0}'.format(y_com_port)).move_to_position(0)
-        getattr(self, '_beam_mapper_popup_start_pushbutton').setEnabled(True)
-        self.lock_in._zero_lock_in_phase()
-        Z_data = np.zeros(shape=X.shape)
-        self.update_log()
+        for i in range(1, 1000):
+            file_name = '{0}_{1}.dat'.format(self.sample_name_lineedit.text(), str(i).zfill(3))
+            save_path = os.path.join(self.data_folder, file_name)
+            if not os.path.exists(save_path):
+                break
+        return save_path
+
+
+    def bm_save(self):
+        '''
+        '''
+        save_path = self.fts_index_file_name()
+        save_path = QtWidgets.QFileDialog.getSaveFileName(self, 'Data Save Location', save_path, filter='*.txt,*.dat')[0]
+        if len(if_save_path) > 0:
+            with open(save_path, 'w') as save_handle:
+                for i, x_data in enumerate(self.x_data):
+                    line = '{0:.5f}, {1:.5f}, {2:.5f}, {3:.5f}\n'.format(self.x_data[i], self.x_stds[i], self.y_data[i], self.y_stds[i], self.z_data[i], self.z_stds[i])
+                    save_handle.write(line)
+        else:
+            self.gb_quick_message('Warning {0} Data Not Written to File!'.format(suffix), msg_type='Warning')
 
 

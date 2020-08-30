@@ -17,7 +17,7 @@ class CosmicRays(QtWidgets.QWidget, GuiBuilder):
         '''
         super(CosmicRays, self).__init__()
         self.status_bar = status_bar
-        self.daq_settings = available_daqs
+        self.daq_settings = daq_settings
         self.screen_resolution = screen_resolution
         self.monitor_dpi = monitor_dpi
         self.daq = BoloDAQ()
@@ -29,6 +29,11 @@ class CosmicRays(QtWidgets.QWidget, GuiBuilder):
         self.cr_daq_panel()
         self.cr_display_daq_settings()
 
+    def cr_update_daq_settings(self, daq_settings):
+        '''
+        '''
+        self.daq_settings = daq_settings
+
     def cr_daq_panel(self):
         '''
         '''
@@ -37,18 +42,21 @@ class CosmicRays(QtWidgets.QWidget, GuiBuilder):
         self.device_combobox = QtWidgets.QComboBox(self)
         for device in self.daq_settings:
             self.device_combobox.addItem(device)
+        self.device_combobox.activated.connect(self.cr_display_daq_settings)
         self.layout().addWidget(self.device_combobox, 0, 1, 1, 1)
         daq_1_header_label = QtWidgets.QLabel('DAQ Ch 1 Data:', self)
         self.layout().addWidget(daq_1_header_label, 1, 0, 1, 1)
         self.daq_1_combobox = QtWidgets.QComboBox(self)
         for daq in range(0, 4):
             self.daq_1_combobox.addItem(str(daq))
+        self.daq_1_combobox.activated.connect(self.cr_display_daq_settings)
         self.layout().addWidget(self.daq_1_combobox, 1, 1, 1, 1)
         daq_1_header_label = QtWidgets.QLabel('DAQ Ch 1 Data:', self)
         self.layout().addWidget(daq_1_header_label, 1, 2, 1, 1)
         self.daq_2_combobox = QtWidgets.QComboBox(self)
         for daq in range(0, 4):
             self.daq_2_combobox.addItem(str(daq))
+        self.daq_2_combobox.activated.connect(self.cr_display_daq_settings)
         self.layout().addWidget(self.daq_2_combobox, 1, 3, 1, 1)
         # Chan 1
         self.channel_1_settings_label = QtWidgets.QLabel('', self)
@@ -92,16 +100,9 @@ class CosmicRays(QtWidgets.QWidget, GuiBuilder):
         self.daq_2_combobox.activated.connect(self.cr_display_daq_settings)
         self.device_combobox.activated.connect(self.cr_display_daq_settings)
 
-    def cr_update_daq(self):
-        '''
-        '''
-        with open(os.path.join('bd_settings', 'daq_settings.json'), 'r') as json_handle:
-            self.daq_settings = simplejson.load(json_handle)
-
     def cr_display_daq_settings(self):
         '''
         '''
-        self.cr_update_daq()
         self.device = self.device_combobox.currentText()
         self.channel_1 = self.daq_1_combobox.currentIndex()
         self.channel_2 = self.daq_2_combobox.currentIndex()

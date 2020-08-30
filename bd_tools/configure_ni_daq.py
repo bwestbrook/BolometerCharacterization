@@ -6,12 +6,12 @@ from pprint import pprint
 from PyQt5 import QtCore, QtGui, QtWidgets
 from GuiBuilder.gui_builder import GuiBuilder
 
-class ConfigureDAQ(QtWidgets.QWidget, GuiBuilder):
+class ConfigureNIDAQ(QtWidgets.QWidget, GuiBuilder):
 
     def __init__(self, available_daqs, status_bar, n_channels=8):
         '''
         '''
-        super(ConfigureDAQ, self).__init__()
+        super(ConfigureNIDAQ, self).__init__()
         self.status_bar = status_bar
         self.available_daqs = available_daqs
         self.n_channels = n_channels

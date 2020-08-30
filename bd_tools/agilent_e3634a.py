@@ -12,41 +12,77 @@ from GuiBuilder.gui_builder import GuiBuilder, GenericClass
 
 class AgilentE3634A(QtWidgets.QWidget, GuiBuilder):
 
-    def __init__(self, status_bar, screen_resolution, monitor_dpi):
+    def __init__(self, serial_com, status_bar, screen_resolution, monitor_dpi):
         '''
         '''
         super(AgilentE3634A, self).__init__()
+        self.serial_com = serial_com
         self.status_bar = status_bar
         self.screen_resolution = screen_resolution
         self.monitor_dpi = monitor_dpi
         grid = QtWidgets.QGridLayout()
         self.setLayout(grid)
-        test_widget = QtWidgets.QLabel('adfadfasdf', self)
-        self.layout().addWidget(test_widget, 1, 0, 1, 1)
+        self.ae_build_panel()
 
-    # Power Supply Agilent E3634A
+    def ae_update_serial_com(self, serial_com):
+        '''
+        '''
+        self.serial_com = serial_com
+        self.ae_get_id()
 
-    def bd_close_power_supply(self):
-        self.power_supply_popup.close()
+    def ae_send_command(self, msg):
+        '''
+        '''
+        self.serial_com.bs_write(msg)
 
-    def bd_e3634a(self):
-        if not hasattr(self, 'ps'):
-            self.ps = PowerSupply()
-        if not hasattr(self, 'power_supply_popup'):
-            self.gb_create_popup_window('power_supply_popup')
-        else:
-            self.gb_initialize_panel('power_supply_popup')
-        self.gb_build_panel(settings.power_supply_popup_build_dict)
-        #for combobox_widget, entry_list in self.power_supply_combobox_entry_dict.items():
-            #self.gb_populate_combobox(combobox_widget, entry_list)
-        #voltage_to_set, voltage_to_set_str = self.ps.get_voltage()
-        #if voltage_to_set < 0:
-            #voltage_to_set, voltage_to_set_str = 0.0, '0.0'
-        #self.set_ps_voltage(voltage_to_set=voltage_to_set)
-        #getattr(self, '_power_supply_popup_set_voltage_lineedit').setText(voltage_to_set_str)
-        self.power_supply_popup.showMaximized()
-        self.power_supply_popup.setWindowTitle('Agilent E3634 A')
-        self.repaint()
+    def ae_query(self, query, timeout=0.5):
+        '''
+        '''
+        self.ae_send_command(query)
+        response = self.serial_com.bs_read()
+        return response
+
+    def ae_build_panel(self):
+        '''
+        '''
+        id_number = self.ae_get_id()
+        welcome_label = QtWidgets.QLabel('Welcome to the Agilent E3634A Controller {0}'.format(id_number), self)
+        self.layout().addWidget(welcome_label, 0, 0, 1, 1)
+        for i, config in enumerate(['Voltage']):
+            header_label = QtWidgets.QLabel('{0}: '.format(config), self)
+            self.layout().addWidget(header_label, i + 1, 0, 1, 1)
+            combobox = QtWidgets.QComboBox(self)
+            #for item in getattr(self, '{0}_dict'.format(config.lower())):
+                #combobox.addItem(item)
+            setattr(self, '{0}_combobox'.format(config.lower()), combobox)
+            self.layout().addWidget(combobox, i + 1, 1, 1, 1)
+            lineedit = QtWidgets.QLineEdit('', self)
+            setattr(self, '{0}_lineedit'.format(config.lower()), lineedit)
+            self.layout().addWidget(lineedit, i + 1, 2, 1, 1)
+            update_pushbutton = QtWidgets.QPushButton('Update', self)
+            update_pushbutton.setWhatsThis('{0}_update_pushbutton'.format(config.lower()))
+            setattr(self, '{0}_update_pushbutton'.format(config.lower()), lineedit)
+            self.layout().addWidget(update_pushbutton, i + 1, 3, 1, 1)
+            add_pushbutton = QtWidgets.QPushButton('Add', self)
+            add_pushbutton.setWhatsThis('{0}_add_pushbutton'.format(config.lower()))
+            self.layout().addWidget(add_pushbutton, i + 1, 4, 1, 1)
+            setattr(self, '{0}_add_pushbutton'.format(config.lower()), lineedit)
+            remove_pushbutton = QtWidgets.QPushButton('Remove', self)
+            remove_pushbutton.setWhatsThis('{0}_remove_pushbutton'.format(config.lower()))
+            setattr(self, '{0}_remove_pushbutton'.format(config.lower()), lineedit)
+            self.layout().addWidget(remove_pushbutton, i + 1, 5, 1, 1)
+            #add_pushbutton.clicked.connect(self.cbd_update_dict)
+            #update_pushbutton.clicked.connect(self.cbd_update_dict)
+            #remove_pushbutton.clicked.connect(self.cbd_update_dict)
+
+    def ae_get_id(self):
+        '''
+        '''
+        self.ae_send_command('*CLS ')
+        idn = self.ae_query('*IDN? ')
+        message = 'ID {0}'.format(idn)
+        self.status_bar.showMessage(message)
+        return idn
 
     def bd_set_ps_voltage(self, voltage_to_set=None):
         if voltage_to_set is None or type(voltage_to_set) is bool:

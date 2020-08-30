@@ -21,10 +21,10 @@
                 "function": "bd_com_port_utility",
                 "icon": "comport.png"
             },
-            "04_Configure DAQ": {
-                "StatusTip": "Configure DAQ",
-                "ToolTip": "Configure DAQ",
-                "function": "bd_configure_daq",
+            "04_Configure NI DAQ": {
+                "StatusTip": "Configure NI DAQ",
+                "ToolTip": "Configure NI DAQ",
+                "function": "bd_configure_ni_daq",
                 "icon": "multimeter.png"
             },
             "05_Configure Stepper": {

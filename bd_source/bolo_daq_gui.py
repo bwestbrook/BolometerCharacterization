@@ -31,10 +31,10 @@ from bd_tools.xy_collector import XYCollector
 from bd_tools.fridge_cycle import FridgeCycle
 from bd_tools.data_plotter import DataPlotter
 from bd_tools.lakeshore_372 import LakeShore372
-from bd_tools.configure_daq import ConfigureDAQ
 from bd_tools.time_constant import TimeConstant
 from bd_tools.agilent_e3634a import AgilentE3634A
 from bd_tools.com_port_utility import ComPortUtility
+from bd_tools.configure_ni_daq import ConfigureNIDAQ
 from bd_tools.configure_bolo_daq_gui import ConfigureBoloDAQGui
 from bd_tools.configure_stepper_motor import ConfigureStepperMotor
 from bd_tools.polarization_efficiency import PolarizationEfficiency
@@ -98,7 +98,7 @@ class BoloDAQGui(QtWidgets.QMainWindow, GuiBuilder):
             os.makedirs(self.data_folder)
         self.bd_setup_status_bar()
         self.bd_get_active_serial_ports()
-        self.bd_configure_daq()
+        self.bd_configure_ni_daq()
         self.splash_screen.close()
         self.move(50, 50)
         self.show()
@@ -267,19 +267,23 @@ class BoloDAQGui(QtWidgets.QMainWindow, GuiBuilder):
         if not hasattr(self, 'fridge_cycle_widget'):
             self.fridge_cycle_widget = FridgeCycle(self.status_bar)
         self.central_widget.layout().addWidget(self.fridge_cycle_widget, 0, 0, 1, 1)
+        self.status_bar.showMessage('Fridge Cycle')
+        QtWidgets.QApplication.processEvents()
 
     #################################################
     # Configure DAQ
     #################################################
 
-    def bd_configure_daq(self):
+    def bd_configure_ni_daq(self):
         '''
         '''
-        self.bd_get_available_daq_settings()
         self.gb_initialize_panel('central_widget')
-        if not hasattr(self, 'configure_daq_widget'):
-            self.configure_daq_widget = ConfigureDAQ(self.available_daq_settings, self.status_bar)
-        self.central_widget.layout().addWidget(self.configure_daq_widget, 0, 0, 1, 1)
+        self.bd_get_available_daq_settings()
+        if not hasattr(self, 'configure_ni_daq_widget'):
+            self.configure_ni_daq_widget = ConfigureNIDAQ(self.available_daq_settings, self.status_bar)
+        self.central_widget.layout().addWidget(self.configure_ni_daq_widget, 0, 0, 1, 1)
+        self.status_bar.showMessage('Configure National Intruments DAQ')
+        QtWidgets.QApplication.processEvents()
 
     #################################################
     # Data Plotter 
@@ -290,6 +294,8 @@ class BoloDAQGui(QtWidgets.QMainWindow, GuiBuilder):
         if not hasattr(self, 'data_plotter_widget'):
             self.data_plotter_widget = DataPlotter(self.status_bar, self.screen_resolution, self.monitor_dpi, self.data_folder)
         self.central_widget.layout().addWidget(self.data_plotter_widget, 0, 0, 1, 1)
+        self.status_bar.showMessage('Data Plotter')
+        QtWidgets.QApplication.processEvents()
 
     #################################################
     # Configure the GUI
@@ -303,6 +309,8 @@ class BoloDAQGui(QtWidgets.QMainWindow, GuiBuilder):
             self.configure_bolo_daq_gui_widget = ConfigureBoloDAQGui(self.available_daq_settings, self.status_bar, self.screen_resolution, self.monitor_dpi)
         #self.time_constant_widget.tc_display_daq_settings()
         self.central_widget.layout().addWidget(self.configure_bolo_daq_gui_widget, 0, 0, 1, 1)
+        self.status_bar.showMessage('Bolo DAQ GUI Settings')
+        QtWidgets.QApplication.processEvents()
 
     #################################################
     #################################################
@@ -319,10 +327,7 @@ class BoloDAQGui(QtWidgets.QMainWindow, GuiBuilder):
         '''
         self.gb_initialize_panel('central_widget')
         dialog = 'Select the comport for the Lakeshore'
-        com_port, okPressed = self.gb_quick_static_info_gather(title='', dialog=dialog, items=self.active_ports)
-        print(com_port)
-        print(self, 'ser_{0}'.format(com_port))
-        print(hasattr(self, 'ser_{0}'.format(com_port)))
+        com_port, okPressed = self.gb_quick_static_info_gather(title='', dialog=dialog, items=['COM10'])
         if not hasattr(self, 'ser_{0}'.format(com_port)) and okPressed:
             serial_com = BoloSerial(com_port, device='SRS_SR830_DSP', splash_screen=self.status_bar)
             if not hasattr(self, 'srs_sr830dsp_widget'):
@@ -332,6 +337,8 @@ class BoloDAQGui(QtWidgets.QMainWindow, GuiBuilder):
             self.central_widget.layout().addWidget(self.srs_sr830dsp_widget, 0, 0, 1, 1)
         elif okPressed:
             self.central_widget.layout().addWidget(self.srs_sr830dsp_widget, 0, 0, 1, 1)
+        self.status_bar.showMessage('SRS SR830 Control')
+        QtWidgets.QApplication.processEvents()
 
     #################################################
     # Comport Utility
@@ -344,6 +351,8 @@ class BoloDAQGui(QtWidgets.QMainWindow, GuiBuilder):
         if not hasattr(self, 'com_port_utility_widget'):
             self.com_port_utility_widget = ComPortUtility(self.status_bar, self.screen_resolution, self.monitor_dpi)
         self.central_widget.layout().addWidget(self.com_port_utility_widget, 0, 0, 1, 1)
+        self.status_bar.showMessage('COM PORT Utility')
+        QtWidgets.QApplication.processEvents()
 
     #################################################
     # Power Supply Agilent E3634A
@@ -355,16 +364,16 @@ class BoloDAQGui(QtWidgets.QMainWindow, GuiBuilder):
         self.gb_initialize_panel('central_widget')
         dialog = 'Select the comport for the Agilent E3634A'
         com_port, okPressed = self.gb_quick_static_info_gather(title='', dialog=dialog, items=['COM19'])
-        print(com_port)
-        print(self, 'ser_{0}'.format(com_port))
-        print(hasattr(self, 'ser_{0}'.format(com_port)))
         if not hasattr(self, 'ser_{0}'.format(com_port)) and okPressed:
             serial_com = BoloSerial(com_port, device='Agilent_E3634A', splash_screen=self.status_bar)
             if not hasattr(self, 'agilent_e3634a_widget'):
-                self.agilent_e3634a_widget = AgilentE3634A(self.status_bar, self.screen_resolution, self.monitor_dpi)
+                self.agilent_e3634a_widget = AgilentE3634A(serial_com, self.status_bar, self.screen_resolution, self.monitor_dpi)
             self.central_widget.layout().addWidget(self.agilent_e3634a_widget, 0, 0, 1, 1)
         elif okPressed:
+            self.agilent_e3634a_widget.ae_update_serial_com(serial_com)
             self.central_widget.layout().addWidget(self.agilent_e3634a_widget, 0, 0, 1, 1)
+        self.status_bar.showMessage('Agilent E3634A Controller')
+        QtWidgets.QApplication.processEvents()
 
     #################################################
     # Lakeshore
@@ -382,6 +391,8 @@ class BoloDAQGui(QtWidgets.QMainWindow, GuiBuilder):
             if not hasattr(self, 'ls_372_widget'):
                 self.ls_372_widget = LakeShore372(serial_com, com_port, self.status_bar)
             self.central_widget.layout().addWidget(self.ls_372_widget, 0, 0, 1, 1)
+        self.status_bar.showMessage('Lakeshore 372 Controller')
+        QtWidgets.QApplication.processEvents()
 
     #################################################
     #################################################
@@ -401,6 +412,8 @@ class BoloDAQGui(QtWidgets.QMainWindow, GuiBuilder):
         if not hasattr(self, 'xyc_widget'):
             self.xyc_widget = XYCollector(self.available_daq_settings, self.status_bar, self.screen_resolution, self.monitor_dpi)
         self.central_widget.layout().addWidget(self.xyc_widget, 0, 0, 1, 1)
+        self.status_bar.showMessage('XY Collector')
+        QtWidgets.QApplication.processEvents()
 
     #################################################
     # Configure Stepper Motors
@@ -422,7 +435,8 @@ class BoloDAQGui(QtWidgets.QMainWindow, GuiBuilder):
             return None
         csm_widget.csm_get_motor_state()
         self.central_widget.layout().addWidget(csm_widget, 0, 0, 1, 1)
-        self.status_bar.showMessage('Ready!')
+        self.status_bar.showMessage('Configure Stepper Motors')
+        QtWidgets.QApplication.processEvents()
 
     #################################################
     # COSMIC RAYS
@@ -434,8 +448,11 @@ class BoloDAQGui(QtWidgets.QMainWindow, GuiBuilder):
         self.gb_initialize_panel('central_widget')
         if not hasattr(self, 'cosmic_ray_widget'):
             self.cosmic_ray_widget = CosmicRays(self.available_daq_settings, self.status_bar, self.screen_resolution, self.monitor_dpi)
-        self.cosmic_ray_widget.cr_display_daq_settings()
+        self.bd_get_saved_daq_settings()
+        self.cosmic_ray_widget.cr_update_daq_settings(self.daq_settings)
         self.central_widget.layout().addWidget(self.cosmic_ray_widget, 0, 0, 1, 1)
+        self.status_bar.showMessage('Cosmic Ray Data')
+        QtWidgets.QApplication.processEvents()
 
     #################################################
     # TIME CONSTANT 
@@ -447,8 +464,9 @@ class BoloDAQGui(QtWidgets.QMainWindow, GuiBuilder):
         self.gb_initialize_panel('central_widget')
         if not hasattr(self, 'time_constant_widget'):
             self.time_constant_widget = TimeConstant(self.available_daq_settings, self.status_bar, self.screen_resolution, self.monitor_dpi)
-        #self.time_constant_widget.tc_display_daq_settings()
         self.central_widget.layout().addWidget(self.time_constant_widget, 0, 0, 1, 1)
+        self.status_bar.showMessage('Bolometer Time Constant')
+        QtWidgets.QApplication.processEvents()
 
     #################################################
     # BEAM MAPPER 
@@ -458,26 +476,39 @@ class BoloDAQGui(QtWidgets.QMainWindow, GuiBuilder):
         '''
         '''
         self.gb_initialize_panel('central_widget')
+        dialog = 'Select the comport for the SRS 830'
+        com_port, okPressed = self.gb_quick_static_info_gather(title='', dialog=dialog, items=['COM10'])
+        if not hasattr(self, 'ser_{0}'.format(com_port)) and okPressed:
+            if not hasattr(self, 'srs_sr830dsp_widget'):
+                serial_com = BoloSerial(com_port, device='SRS_SR830_DSP', splash_screen=self.status_bar)
+                setattr(self, 'ser_{0}'.format(com_port), serial_com)
+                self.srs_sr830dsp_widget = StanfordResearchSystemsSR830DSP(serial_com, com_port, self.status_bar, self.screen_resolution, self.monitor_dpi)
         stepper_motor_ports = ['COM13', 'COM14']
         self.csm_widget_dict = {}
-        for dim in ('X', 'Y'):
+        for i, dim in enumerate(('X', 'Y')):
             dialog = 'Select the comport for the {0} stepper motor you wish to configure'.format(dim)
-            sm_com_port, okPressed = self.gb_quick_static_info_gather(title='', dialog=dialog, items=stepper_motor_ports)
-            if not hasattr(self, 'sm_{0}'.format(sm_com_port)) and okPressed:
+            #sm_com_port, okPressed = self.gb_quick_static_info_gather(title='', dialog=dialog, items=stepper_motor_ports)
+            sm_com_port = stepper_motor_ports[0]
+            okPressed = True
+            if not hasattr(self, 'csm_widget_{0}'.format(sm_com_port)) and okPressed:
                 csm_widget = ConfigureStepperMotor(sm_com_port, self.status_bar)
-                csm_serial_com = csm_widget.csm_get_serial_com()
-                setattr(self, 'sm_{0}'.format(sm_com_port), csm_serial_com)
+                setattr(self, 'csm_widget_{0}'.format(sm_com_port), csm_widget)
             elif okPressed:
-                serial_com = getattr(self, 'sm_{0}'.format(sm_com_port))
-                csm_widget = ConfigureStepperMotor(sm_com_port, self.status_bar, serial_com=serial_com)
+                csm_widget = getattr(self, 'csm_widget_{0}'.format(sm_com_port))
             else:
                 return None
             stepper_motor_ports.pop(stepper_motor_ports.index(sm_com_port))
-            self.csm_widget_dict[dim] = csm_widget
+            self.csm_widget_dict[dim] = {
+                'widget': csm_widget,
+                'com_port': sm_com_port
+                }
         if not hasattr(self, 'beam_mapper_widget'):
-            self.beam_mapper_widget = BeamMapper(self.available_daq_settings, self.status_bar, self.screen_resolution, self.monitor_dpi, self.csm_widget_dict)
-        #self.time_constant_widget.tc_display_daq_settings()
+            self.beam_mapper_widget = BeamMapper(self.available_daq_settings, self.status_bar, self.screen_resolution, self.monitor_dpi, self.csm_widget_dict, self.srs_sr830dsp_widget)
+        self.bd_get_saved_daq_settings()
+        self.beam_mapper_widget.bm_update_daq_settings(self.daq_settings)
         self.central_widget.layout().addWidget(self.beam_mapper_widget, 0, 0, 1, 1)
+        self.status_bar.showMessage('Beam Mapper')
+        QtWidgets.QApplication.processEvents()
 
     #################################################
     # Polarization Efficiency
@@ -487,7 +518,7 @@ class BoloDAQGui(QtWidgets.QMainWindow, GuiBuilder):
         '''
         '''
         self.gb_initialize_panel('central_widget')
-        dialog = 'Select the comport for the X stepper motor you wish to configure'
+        dialog = 'Select the comport for the stepper motor you wish to configure'
         stepper_motor_ports = ['COM12']
         sm_com_port, okPressed = self.gb_quick_static_info_gather(title='', dialog=dialog, items=stepper_motor_ports)
         if not hasattr(self, 'csm_widget_{0}'.format(sm_com_port)) and okPressed:
@@ -502,6 +533,8 @@ class BoloDAQGui(QtWidgets.QMainWindow, GuiBuilder):
         self.bd_get_saved_daq_settings()
         self.polarization_efficiency_widget.pe_update_daq_settings(self.daq_settings)
         self.central_widget.layout().addWidget(self.polarization_efficiency_widget, 0, 0, 1, 1)
+        self.status_bar.showMessage('Polarization Efficiency')
+        QtWidgets.QApplication.processEvents()
 
     #################################################
     # SINGLE CHANNEL FTS BILLS
@@ -533,6 +566,8 @@ class BoloDAQGui(QtWidgets.QMainWindow, GuiBuilder):
         self.bd_get_saved_daq_settings()
         self.fts_widget.fts_update_daq_settings(self.daq_settings)
         self.central_widget.layout().addWidget(self.fts_widget, 0, 0, 1, 1)
+        self.status_bar.showMessage('Polarization Efficiency')
+        QtWidgets.QApplication.processEvents()
 
 
 if __name__ == '__main__':

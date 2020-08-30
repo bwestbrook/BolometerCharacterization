@@ -29,7 +29,7 @@ class BoloSerial(object):
                 },
             'Agilent E3634A': {
                 'baudrate': 9600,
-                'parity': serial.PARITY_NONE,
+                #'parity': serial.PARITY_NONE,
                 'timeout': 2
                 },
             'Stepper': {
@@ -38,8 +38,6 @@ class BoloSerial(object):
                 },
             'SRS_SR830_DSP': {
                 'baudrate': 9600,
-                'parity': serial.PARITY_NONE,
-                'bytesize': serial.EIGHTBITS,
                 'timeout': 3
                 }
             }
@@ -64,23 +62,27 @@ class BoloSerial(object):
         self.ser.flushInput()
         self.ser.flushOutput()
 
-    def bs_write(self, string, encode=None):
+    def bs_write(self, string, encode=None, verbatim=False):
         """
         Properly terminates and encodes a message, then writes it to the port
         """
-        if not string.endswith('\r\n'):
+        if not string.endswith('\r\n') and not verbatim:
             string += '\r\n'
-        #self.ser.write(string.encode('utf-8')) # unicode not supported for serial module in python 3
-        self.ser.write(string.encode('ASCII')) # unicode not supported for serial module in python 3
+        self.ser.write(string.encode('utf-8')) # unicode not supported for serial module in python 3
+        #self.ser.write(string.encode('ASCII')) # unicode not supported for serial module in python 3
 
     def bs_read(self, decode='latin-1'):
         "Returns a properly decoded string of the bytes read from the port"
         response = self.ser.readline()
         response = response.decode(decode).strip('\r\n')
+        print()
+        print(response)
+        print(response)
+        print()
         return response
 
-    def bs_write_read(self, string, wait_time=0.5):
-        self.bs_write(string)
+    def bs_write_read(self, string, wait_time=1, verbatim=False):
+        self.bs_write(string, verbatim=verbatim)
         time.sleep(wait_time)
         return self.bs_read()
 
@@ -112,5 +114,7 @@ class BoloSerial(object):
 
 if __name__ == '__main__':
     bs = BoloSerial('COM10', device='SRS_SR830_DSP')
-    bs.bs_write_read('*IDN? ')
+    bs.bs_write('*cls ')
+    idn = bs.bs_write_read('*idn? \n', verbatim=True)
+    print(idn)
     import ipdb;ipdb.set_trace()

@@ -134,16 +134,16 @@ class PolarizationEfficiency(QtWidgets.QWidget, GuiBuilder):
     def pe_configure_plot_panel(self):
         '''
         '''
-        self.inteferogram_plot_label = QtWidgets.QLabel('', self.pe_plot_panel)
-        self.pe_plot_panel.layout().addWidget(self.inteferogram_plot_label, 0, 0, 1, 4)
-        int_data_mean_header_label = QtWidgets.QLabel('Data Mean (V):', self.pe_plot_panel)
-        self.pe_plot_panel.layout().addWidget(int_data_mean_header_label, 1, 0, 1, 1)
-        self.int_data_mean_label = QtWidgets.QLabel('', self.pe_plot_panel)
-        self.pe_plot_panel.layout().addWidget(self.int_data_mean_label, 1, 1, 1, 1)
-        int_data_std_header_label = QtWidgets.QLabel('Data STD (V):', self.pe_plot_panel)
-        self.pe_plot_panel.layout().addWidget(int_data_std_header_label, 1, 2, 1, 1)
-        self.int_data_std_label = QtWidgets.QLabel('', self.pe_plot_panel)
-        self.pe_plot_panel.layout().addWidget(self.int_data_std_label, 1, 3, 1, 1)
+        self.plot_label = QtWidgets.QLabel('', self.pe_plot_panel)
+        self.pe_plot_panel.layout().addWidget(self.plot_label, 0, 0, 1, 4)
+        data_mean_header_label = QtWidgets.QLabel('Data Mean (V):', self.pe_plot_panel)
+        self.pe_plot_panel.layout().addWidget(data_mean_header_label, 1, 0, 1, 1)
+        self.data_mean_label = QtWidgets.QLabel('', self.pe_plot_panel)
+        self.pe_plot_panel.layout().addWidget(self.data_mean_label, 1, 1, 1, 1)
+        data_std_header_label = QtWidgets.QLabel('Data STD (V):', self.pe_plot_panel)
+        self.pe_plot_panel.layout().addWidget(data_std_header_label, 1, 2, 1, 1)
+        self.data_std_label = QtWidgets.QLabel('', self.pe_plot_panel)
+        self.pe_plot_panel.layout().addWidget(self.data_std_label, 1, 3, 1, 1)
         # X
         self.running_plot_label = QtWidgets.QLabel('', self.pe_plot_panel)
         self.pe_plot_panel.layout().addWidget(self.running_plot_label, 2, 0, 1, 4)
@@ -261,8 +261,8 @@ class PolarizationEfficiency(QtWidgets.QWidget, GuiBuilder):
                 self.y_data.append(out_mean)
                 self.y_stds.append(out_std)
                 self.pe_plot(running=True)
-                self.int_data_mean_label.setText('{0:.6f}'.format(out_mean))
-                self.int_data_std_label.setText('{0:.6f}'.format(out_std))
+                self.data_mean_label.setText('{0:.6f}'.format(out_mean))
+                self.data_std_label.setText('{0:.6f}'.format(out_std))
                 # Compute and report time diagnostics
                 t_now = datetime.now()
                 t_elapsed = t_now - t_start
@@ -282,24 +282,6 @@ class PolarizationEfficiency(QtWidgets.QWidget, GuiBuilder):
     # Saving and Plotting
     ###################################################################
 
-    def pe_plot(self, running=False):
-        '''
-        '''
-        pl.close('all')
-        fig, ax = self.pe_create_blank_fig(n_axes=1)
-        ax.set_xlabel('Steps', fontsize=10)
-        ax.set_ylabel('Amplitude', fontsize=10)
-        title = 'Polarization Efficiency for {0}'.format(self.sample_name_lineedit.text())
-        ax.set_title(title, fontsize=14)
-        ax.errorbar(self.x_data, self.x_stds, self.y_data, self.y_stds, marker='.', linestyle='-')
-        if running:
-            fig.savefig('temp_files/temp_pol.png')
-            image = QtGui.QPixmap('temp_files/temp_pol.png')
-            self.running_plot_label.setPixmap(image)
-            os.remove('temp_files/temp_pol.png')
-        else:
-            pl.show()
-
     def pe_create_blank_fig(self, frac_screen_width=0.5, frac_screen_height=0.8,
                              left=0.13, right=0.98, top=0.95, bottom=0.08, n_axes=2,
                              aspect=None):
@@ -317,6 +299,24 @@ class PolarizationEfficiency(QtWidgets.QWidget, GuiBuilder):
         else:
             ax = fig.add_subplot(111)
             return fig, ax
+
+    def pe_plot(self, running=False):
+        '''
+        '''
+        pl.close('all')
+        fig, ax = self.pe_create_blank_fig(n_axes=1)
+        ax.set_xlabel('Steps', fontsize=10)
+        ax.set_ylabel('Amplitude', fontsize=10)
+        title = 'Polarization Efficiency for {0}'.format(self.sample_name_lineedit.text())
+        ax.set_title(title, fontsize=14)
+        ax.errorbar(self.x_data, self.x_stds, self.y_data, self.y_stds, marker='.', linestyle='-')
+        if running:
+            fig.savefig('temp_files/temp_pol.png')
+            image = QtGui.QPixmap('temp_files/temp_pol.png')
+            self.running_plot_label.setPixmap(image)
+            os.remove('temp_files/temp_pol.png')
+        else:
+            pl.show()
 
     def pe_index_file_name(self):
         '''
