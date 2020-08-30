@@ -27,13 +27,20 @@ class BoloSerial(object):
                 'bytesize': serial.SEVENBITS,
                 'timeout': 2
                 },
-            'E3634A': {
+            'Agilent E3634A': {
                 'baudrate': 9600,
+                'parity': serial.PARITY_NONE,
                 'timeout': 2
                 },
             'Stepper': {
                 'baudrate': 9600,
                 'timeout': 2
+                },
+            'SRS_SR830_DSP': {
+                'baudrate': 9600,
+                'parity': serial.PARITY_NONE,
+                'bytesize': serial.EIGHTBITS,
+                'timeout': 3
                 }
             }
         self.port = port
@@ -72,7 +79,7 @@ class BoloSerial(object):
         response = response.decode(decode).strip('\r\n')
         return response
 
-    def bs_write_read(self, string, wait_time=0.1):
+    def bs_write_read(self, string, wait_time=0.5):
         self.bs_write(string)
         time.sleep(wait_time)
         return self.bs_read()
@@ -104,5 +111,6 @@ class BoloSerial(object):
         return is_stepper
 
 if __name__ == '__main__':
-    LS = lab_serial()
+    bs = BoloSerial('COM10', device='SRS_SR830_DSP')
+    bs.bs_write_read('*IDN? ')
     import ipdb;ipdb.set_trace()

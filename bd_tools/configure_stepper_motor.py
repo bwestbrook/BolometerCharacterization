@@ -72,6 +72,10 @@ class ConfigureStepperMotor(QtWidgets.QWidget, GuiBuilder):
             set_item_pushbutton = QtWidgets.QPushButton('Set {0}'.format(item), self)
             set_item_pushbutton.clicked.connect(getattr(self, 'csm_set_{0}'.format(item)))
             self.layout().addWidget(set_item_pushbutton, i + 1, 2, 1, 1)
+        reset_zero_pushbutton = QtWidgets.QPushButton('Reset Zero', self)
+        reset_zero_pushbutton.clicked.connect(self.csm_reset_zero)
+        self.layout().addWidget(reset_zero_pushbutton, i + 2, 0, 1, 2)
+
 
     def csm_setup(self):
         '''

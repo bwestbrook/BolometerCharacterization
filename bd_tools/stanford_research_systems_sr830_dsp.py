@@ -12,58 +12,150 @@ from GuiBuilder.gui_builder import GuiBuilder, GenericClass
 
 class StanfordResearchSystemsSR830DSP(QtWidgets.QWidget, GuiBuilder):
 
-    def __init__(self, available_daqs, status_bar, screen_resolution, monitor_dpi):
+    def __init__(self, serial_com, com_port, status_bar, screen_resolution, monitor_dpi):
         '''
         '''
         super(StanfordResearchSystemsSR830DSP, self).__init__()
+        self.serial_com = serial_com
+        self.com_port = com_port
         self.status_bar = status_bar
-        self.available_daqs = available_daqs
         self.screen_resolution = screen_resolution
         self.monitor_dpi = monitor_dpi
         grid = QtWidgets.QGridLayout()
         self.setLayout(grid)
-        test_widget = QtWidgets.QLabel('SRS ', self)
-        self.layout().addWidget(test_widget, 1, 0, 1, 1)
+        self.srs_get_id()
+        self.srs_build_control_panel()
 
-    def bd_close_lock_in(self):
-        self.lock_in_popup.close()
+    def srs_build_control_panel(self):
+        '''
+        '''
+        welcome_label = QtWidgets.QLabel('Welcome to the Stanford Research Systems SR830 DSP Controller!', self)
+        self.layout().addWidget(welcome_label, 0, 0, 1, 4)
+        # Sensitivity Range
+        sensitivity_down_pushbutton = QtWidgets.QPushButton('Sensitivity Down', self)
+        sensitivity_down_pushbutton.clicked.connect(self.srs_change_lock_in_sensitivity_range)
+        self.layout().addWidget(sensitivity_down_pushbutton, 1, 0, 1, 2)
+        sensitivity_up_pushbutton = QtWidgets.QPushButton('Sensitivity Up', self)
+        sensitivity_up_pushbutton.clicked.connect(self.srs_change_lock_in_sensitivity_range)
+        self.layout().addWidget(sensitivity_up_pushbutton, 1, 2, 1, 2)
+        # Time Constant 
+        time_constant_pushbutton = QtWidgets.QPushButton('Time Constant Down', self)
+        time_constant_pushbutton.clicked.connect(self.srs_change_lock_in_time_constant)
+        self.layout().addWidget(time_constant_pushbutton, 2, 0, 1, 2)
+        sensitivity_up_pushbutton = QtWidgets.QPushButton('Time Constant Up', self)
+        sensitivity_up_pushbutton.clicked.connect(self.srs_change_lock_in_time_constant)
+        self.layout().addWidget(sensitivity_up_pushbutton, 2, 2, 1, 2)
+        # Zero
+        zero_lock_in_pushbutton = QtWidgets.QPushButton('Zero Lock In', self)
+        self.layout().addWidget(zero_lock_in_pushbutton, 3, 0, 1, 4)
+        zero_lock_in_pushbutton.clicked.connect(self.srs_zero_lock_in_phase)
 
-    def bd_sr830_dsp(self):
-        if not hasattr(self, 'lock_in'):
-            self.lock_in = LockIn()
-        if not hasattr(self, 'lock_in_popup'):
-            self.gb_create_popup_window('lock_in_popup')
+    def srs_update_serial_com(self, serial_com):
+        '''
+        '''
+        self.serial_com = serial_com
+        self.srs_get_id()
+
+    def srs_send_command(self, msg):
+        '''
+        '''
+        self.serial_com.bs_write(msg)
+
+    def srs_query(self, query, timeout=0.5):
+        '''
+        '''
+        self.srs_send_command(query)
+        response = self.serial_com.bs_read()
+        return response
+
+    def srs_get_id(self):
+        '''
+        '''
+        idn = self.srs_query('*CLS ')
+        idn = self.srs_query('*IDN? ')
+        print()
+        print('--------------------')
+        message = 'ID {0}'.format(idn)
+        print(message)
+        self.status_bar.showMessage(message)
+
+    def srs_zero_lock_in_phase(self):
+        '''
+        '''
+        self.srs_send_command('APHS')
+
+    def srs_change_lock_in_sensitivity_range(self):
+        '''
+        '''
+        direction = self.sender().text().split(' ')[-1]
+        current_value = self.srs_get_current_sensitivity_range()
+
+    def srs_change_lock_in_sensitivity_range(self):
+        '''
+        '''
+        direction = self.sender().text().split(' ')[-1]
+        current_value = self.srs_get_current_sensitivity_range()
+        print(current_value)
+        if self.gb_is_float(current_value):
+            current_value = int(current_value)
+            if direction is not None:
+                if direction == 'Up':
+                    new_value = int(current_value + 1)
+                elif direction == 'Down':
+                    new_value = int(current_value - 1)
+                else:
+                    print("please specificy 'up' or 'down'")
+                    new_value = int(current_value)
+            elif setting is not None:
+                new_value = int(setting)
+            if new_value > 26:
+                new_value = 26
+            if new_value < 0:
+                new_value = 0
+            self.srs_send_command('SENS {0}'.format(new_value))
+
+    def srs_get_current_sensitivity_range(self):
+        '''
+        '''
+        sensitivity_range_index = self.srs_query('SENS?')
+        print()
+        print(sensitivity_range_index)
+        if self.gb_is_float(sensitivity_range_index):
+            return int(sensitivity_range_index)
         else:
-            self.gb_initialize_panel('lock_in_popup')
-        self.gb_build_panel(settings.lock_in_popup_build_dict)
-        for combobox_widget, entry_list in self.lock_in_combobox_entry_dict.items():
-            self.gb_populate_combobox(combobox_widget, entry_list)
-        # Set current values to gui
-        #time_constant_index = self.lock_in._get_current_time_constant()
-        #getattr(self, '_lock_in_popup_lock_in_time_constant_combobox').setCurrentIndex(time_constant_index)
-        getattr(self, '_lock_in_popup_lock_in_sensitivity_range_combobox').setCurrentIndex(22)
-        self.lock_in_popup.showMaximized()
-        self.lock_in_popup.setWindowTitle('SR830 DSP')
-        self.repaint()
+            return 0
 
-    def bd_change_lock_in_sensitivity_range(self):
-        if 'combobox' in str(self.sender().whatsThis()):
-            new_value = int(getattr(self, '_lock_in_popup_lock_in_sensitivity_range_combobox').currentText())
-            self.lock_in._change_lock_in_sensitivity_range(setting=new_value)
-        elif 'down' in str(self.sender().whatsThis()):
-            self.lock_in._change_lock_in_sensitivity_range(direction='down')
+    def srs_change_lock_in_time_constant(self, direction=None, setting=None):
+        '''
+        '''
+        direction = self.sender().text().split(' ')[-1]
+        current_value = self.srs_get_current_time_constant()
+        print('tc', current_value)
+        if self.gb_is_float(current_value):
+            current_value = int(current_value)
+            if direction is not None:
+                if direction == 'Up':
+                    new_value = int(current_value + 1)
+                elif direction == 'Down':
+                    new_value = int(current_value - 1)
+                else:
+                    print("please specificy 'up' or 'down'")
+                    new_value = int(current_value)
+            elif setting is not None:
+                new_value = int(setting)
+            if new_value > 19:
+                new_value = 19
+            if new_value < 0:
+                new_value = 0
+            self.srs_send_command('OFLT {0}'.format(new_value))
+
+    def srs_get_current_time_constant(self):
+        '''
+        '''
+        time_constant_index = self.srs_query('OFLT?')
+        print()
+        print(time_constant_index)
+        if self.gb_is_float(time_constant_index):
+            return int(time_constant_index)
         else:
-            self.lock_in._change_lock_in_sensitivity_range(direction='up')
-
-    def bd_change_lock_in_time_constant(self):
-        if 'combobox' in str(self.sender().whatsThis()):
-            new_value = int(getattr(self, '_lock_in_popup_lock_in_time_constant_combobox').currentText())
-            self.lock_in._change_lock_in_time_constant(setting=new_value)
-        elif 'down' in str(self.sender().whatsThis()):
-            self.lock_in._change_lock_in_time_constant(direction='down')
-        else:
-            self.lock_in._change_lock_in_time_constant(direction='up')
-
-    def bd_zero_lock_in_phase(self):
-        self.lock_in._zero_lock_in_phase()
-
+            return 0

@@ -12,13 +12,14 @@ from bd_tools.configure_stepper_motor import ConfigureStepperMotor
 
 class FourierTransformSpectrometer(QtWidgets.QWidget, GuiBuilder):
 
-    def __init__(self, available_daqs, status_bar, screen_resolution, monitor_dpi, csm_widget):
+    def __init__(self, daq_settings, status_bar, screen_resolution, monitor_dpi, csm_widget, srs_sr830_widget):
         '''
         '''
         super(FourierTransformSpectrometer, self).__init__()
         self.status_bar = status_bar
+        self.srs_sr830_widget = srs_sr830_widget
         self.csm_widget = csm_widget
-        self.available_daqs = available_daqs
+        self.daq_settings = daq_settings
         self.screen_resolution = screen_resolution
         self.monitor_dpi = monitor_dpi
         self.daq = BoloDAQ()
@@ -41,6 +42,13 @@ class FourierTransformSpectrometer(QtWidgets.QWidget, GuiBuilder):
     # Gui Config
     #################################################
 
+    def fts_update_daq_settings(self, daq_settings):
+        '''
+        '''
+        self.daq_settings = daq_settings
+        self.fts_update_scan_params()
+
+
     def fts_configure_input_panel(self):
         '''
         '''
@@ -51,13 +59,13 @@ class FourierTransformSpectrometer(QtWidgets.QWidget, GuiBuilder):
         self.layout().addWidget(device_header_label, 1, 0, 1, 1)
         self.device_combobox = QtWidgets.QComboBox(self)
         self.layout().addWidget(self.device_combobox, 1, 1, 1, 1)
-        for device in self.available_daqs:
+        for device in self.daq_settings:
             self.device_combobox.addItem(device)
         daq_header_label = QtWidgets.QLabel('DAQ:', self)
         self.layout().addWidget(daq_header_label, 2, 0, 1, 1)
         self.daq_combobox = QtWidgets.QComboBox(self)
         self.layout().addWidget(self.daq_combobox, 2, 1, 1, 1)
-        for channel in sorted([int(x) for x in self.available_daqs[device]]):
+        for channel in sorted([int(x) for x in self.daq_settings[device]]):
             self.daq_combobox.addItem(str(channel))
         self.daq_settings_label = QtWidgets.QLabel('DAQ Settings', self)
         self.layout().addWidget(self.daq_settings_label, 3, 1, 1, 1)
@@ -183,10 +191,10 @@ class FourierTransformSpectrometer(QtWidgets.QWidget, GuiBuilder):
         device = self.device_combobox.currentText()
         daq = self.daq_combobox.currentText()
         self.scan_settings_dict.update({'device': device, 'daq': daq})
-        daq_settings = str(self.available_daqs[device][daq])
+        daq_settings = str(self.daq_settings[device][daq])
         daq_settings_str = ''
-        self.scan_settings_dict.update(self.available_daqs[device][daq])
-        for setting, value in self.available_daqs[device][daq].items():
+        self.scan_settings_dict.update(self.daq_settings[device][daq])
+        for setting, value in self.daq_settings[device][daq].items():
             daq_settings_str += ' '.join([x.title() for x in setting.split('_')])
             if setting == 'int_time':
                 daq_settings_str += ' (ms): '
@@ -201,15 +209,14 @@ class FourierTransformSpectrometer(QtWidgets.QWidget, GuiBuilder):
         '''
         sm_com_port = self.stepper_motor_combobox.currentText()
         self.scan_settings_dict.update({'sm_com_port': sm_com_port})
-        if not hasattr(self , 'sm_{0}'.format(sm_com_port)):
-            self.status_bar.showMessage('Setting up serial connection to stepper motor on {0}'.format(sm_com_port))
-            QtWidgets.QApplication.processEvents()
-            sm_settings_str = ''
-            self.scan_settings_dict.update(self.csm_widget.stepper_settings_dict)
-            for setting, value in self.csm_widget.stepper_settings_dict.items():
-                sm_settings_str += ' '.join([x.title() for x in setting.split('_')])
-                sm_settings_str += ' {0} ::: '.format(value)
-            self.stepper_settings_label.setText(sm_settings_str)
+        self.status_bar.showMessage('Setting up serial connection to stepper motor on {0}'.format(sm_com_port))
+        QtWidgets.QApplication.processEvents()
+        sm_settings_str = ''
+        self.scan_settings_dict.update(self.csm_widget.stepper_settings_dict)
+        for setting, value in self.csm_widget.stepper_settings_dict.items():
+            sm_settings_str += ' '.join([x.title() for x in setting.split('_')])
+            sm_settings_str += ' {0} ::: '.format(value)
+        self.stepper_settings_label.setText(sm_settings_str)
 
     def fts_start_stop_scan(self):
         '''
@@ -242,6 +249,7 @@ class FourierTransformSpectrometer(QtWidgets.QWidget, GuiBuilder):
             self.x_data, self.x_stds = [], []
             self.y_data, self.y_stds = [], []
             for i, scan_position in enumerate(scan_positions):
+                self.srs_sr830_widget.srs_zero_lock_in_phase()
                 time.sleep(pause_time / 1e3)
                 print(i, scan_position)
                 self.csm_widget.csm_set_position(position=scan_position, verbose=False)
@@ -305,7 +313,7 @@ class FourierTransformSpectrometer(QtWidgets.QWidget, GuiBuilder):
                     save_handle.write(line)
             fft_freq_vector, fft_vector, phase_corrected_fft_vector, position_vector, efficiency_vector = self.fourier.convert_IF_to_FFT_data(self.x_data, self.y_data, mirror_interval, data_selector='All')
             normalized_phase_corrected_fft_vector = np.abs(phase_corrected_fft_vector.real)
-            normalized_phase_corrected_fft_vector = np.abs(phase_corrected_fft_vector.real / np.max(phase_corrected_fft_vector.real))
+            #normalized_phase_corrected_fft_vector = np.abs(phase_corrected_fft_vector.real / np.max(phase_corrected_fft_vector.real))
             with open(fft_save_path, 'w') as save_handle:
                 for i, fft_freq in enumerate(fft_freq_vector):
                     if fft_freq >= 0:

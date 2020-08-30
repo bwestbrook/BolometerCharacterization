@@ -12,12 +12,12 @@ from GuiBuilder.gui_builder import GuiBuilder, GenericClass
 
 class PolarizationEfficiency(QtWidgets.QWidget, GuiBuilder):
 
-    def __init__(self, available_daqs, status_bar, screen_resolution, monitor_dpi, csm_widget):
+    def __init__(self, daq_settings, status_bar, screen_resolution, monitor_dpi, csm_widget):
         '''
         '''
         super(PolarizationEfficiency, self).__init__()
         self.status_bar = status_bar
-        self.available_daqs = available_daqs
+        self.daq_settings = daq_settings
         self.screen_resolution = screen_resolution
         self.monitor_dpi = monitor_dpi
         self.csm_widget = csm_widget
@@ -40,6 +40,12 @@ class PolarizationEfficiency(QtWidgets.QWidget, GuiBuilder):
     # Gui Config
     #################################################
 
+    def pe_update_daq_settings(self, daq_settings):
+        '''
+        '''
+        self.daq_settings = daq_settings
+        self.pe_update_scan_params()
+
     def pe_configure_input_panel(self):
         '''
         '''
@@ -50,13 +56,13 @@ class PolarizationEfficiency(QtWidgets.QWidget, GuiBuilder):
         self.layout().addWidget(device_header_label, 1, 0, 1, 1)
         self.device_combobox = QtWidgets.QComboBox(self)
         self.layout().addWidget(self.device_combobox, 1, 1, 1, 1)
-        for device in self.available_daqs:
+        for device in self.daq_settings:
             self.device_combobox.addItem(device)
         daq_header_label = QtWidgets.QLabel('DAQ:', self)
         self.layout().addWidget(daq_header_label, 2, 0, 1, 1)
         self.daq_combobox = QtWidgets.QComboBox(self)
         self.layout().addWidget(self.daq_combobox, 2, 1, 1, 1)
-        for channel in sorted([int(x) for x in self.available_daqs[device]]):
+        for channel in sorted([int(x) for x in self.daq_settings[device]]):
             self.daq_combobox.addItem(str(channel))
         self.daq_settings_label = QtWidgets.QLabel('DAQ Settings', self)
         self.layout().addWidget(self.daq_settings_label, 3, 1, 1, 1)
@@ -99,14 +105,14 @@ class PolarizationEfficiency(QtWidgets.QWidget, GuiBuilder):
         self.grid_angle_interval_lineedit.textChanged.connect(self.pe_update_scan_params)
         self.grid_angle_interval_lineedit.setValidator(QtGui.QIntValidator(1, 200000, self.grid_angle_interval_lineedit))
         self.layout().addWidget(self.grid_angle_interval_lineedit, 9, 1, 1, 1)
-        #Step size (Fixed for Bill's pe right now)
-        distance_per_step_header_label = QtWidgets.QLabel('Distance Per Step (nm):', self)
-        self.layout().addWidget(distance_per_step_header_label, 10, 0, 1, 1)
-        self.distance_per_step_combobox = QtWidgets.QComboBox(self)
-        for distance_per_step in ['250.39']:
-            self.distance_per_step_combobox.addItem(distance_per_step)
-        self.distance_per_step_combobox.activated.connect(self.pe_update_scan_params)
-        self.layout().addWidget(self.distance_per_step_combobox, 10, 1, 1, 1)
+        #Angle Step size (Fixed for Bill's pe right now)
+        angle_per_step_header_label = QtWidgets.QLabel('Angle Per Step (mDeg):', self)
+        self.layout().addWidget(angle_per_step_header_label, 10, 0, 1, 1)
+        self.angle_per_step_combobox = QtWidgets.QComboBox(self)
+        for angle_per_step in ['72']:
+            self.angle_per_step_combobox.addItem(angle_per_step)
+        self.angle_per_step_combobox.activated.connect(self.pe_update_scan_params)
+        self.layout().addWidget(self.angle_per_step_combobox, 10, 1, 1, 1)
         #Scan Info size
         self.scan_info_label = QtWidgets.QLabel('Scan Info', self)
         self.layout().addWidget(self.scan_info_label, 11, 1, 1, 1)
@@ -161,7 +167,7 @@ class PolarizationEfficiency(QtWidgets.QWidget, GuiBuilder):
         end = int(self.end_position_lineedit.text())
         start = int(self.start_position_lineedit.text())
         grid_angle_interval = int(self.grid_angle_interval_lineedit.text())
-        distance_per_step = float(self.distance_per_step_combobox.currentText())
+        angle_per_step = float(self.angle_per_step_combobox.currentText())
         pause_time = float(self.pause_time_lineedit.text())
         if grid_angle_interval > 0:
             self.n_data_points = int((end - start) / grid_angle_interval)
@@ -171,7 +177,7 @@ class PolarizationEfficiency(QtWidgets.QWidget, GuiBuilder):
              'end': end,
              'start': start,
              'grid_angle_interval': grid_angle_interval,
-             'distance_per_step': distance_per_step,
+             'angle_per_step': angle_per_step,
              'pause_time': pause_time,
              'n_data_points': self.n_data_points
             }
@@ -180,10 +186,10 @@ class PolarizationEfficiency(QtWidgets.QWidget, GuiBuilder):
         device = self.device_combobox.currentText()
         daq = self.daq_combobox.currentText()
         self.scan_settings_dict.update({'device': device, 'daq': daq})
-        daq_settings = str(self.available_daqs[device][daq])
+        daq_settings = str(self.daq_settings[device][daq])
         daq_settings_str = ''
-        self.scan_settings_dict.update(self.available_daqs[device][daq])
-        for setting, value in self.available_daqs[device][daq].items():
+        self.scan_settings_dict.update(self.daq_settings[device][daq])
+        for setting, value in self.daq_settings[device][daq].items():
             daq_settings_str += ' '.join([x.title() for x in setting.split('_')])
             if setting == 'int_time':
                 daq_settings_str += ' (ms): '
@@ -198,15 +204,14 @@ class PolarizationEfficiency(QtWidgets.QWidget, GuiBuilder):
         '''
         sm_com_port = self.stepper_motor_combobox.currentText()
         self.scan_settings_dict.update({'sm_com_port': sm_com_port})
-        if not hasattr(self , 'sm_{0}'.format(sm_com_port)):
-            self.status_bar.showMessage('Setting up serial connection to stepper motor on {0}'.format(sm_com_port))
-            QtWidgets.QApplication.processEvents()
-            sm_settings_str = ''
-            self.scan_settings_dict.update(self.csm_widget.stepper_settings_dict)
-            for setting, value in self.csm_widget.stepper_settings_dict.items():
-                sm_settings_str += ' '.join([x.title() for x in setting.split('_')])
-                sm_settings_str += ' {0} ::: '.format(value)
-            self.stepper_settings_label.setText(sm_settings_str)
+        self.status_bar.showMessage('Setting up serial connection to stepper motor on {0}'.format(sm_com_port))
+        QtWidgets.QApplication.processEvents()
+        sm_settings_str = ''
+        self.scan_settings_dict.update(self.csm_widget.stepper_settings_dict)
+        for setting, value in self.csm_widget.stepper_settings_dict.items():
+            sm_settings_str += ' '.join([x.title() for x in setting.split('_')])
+            sm_settings_str += ' {0} ::: '.format(value)
+        self.stepper_settings_label.setText(sm_settings_str)
 
     def pe_start_stop_scan(self):
         '''
@@ -291,7 +296,7 @@ class PolarizationEfficiency(QtWidgets.QWidget, GuiBuilder):
             fig.savefig('temp_files/temp_pol.png')
             image = QtGui.QPixmap('temp_files/temp_pol.png')
             self.running_plot_label.setPixmap(image)
-            os.path.remove('temp_files/temp_pol.png')
+            os.remove('temp_files/temp_pol.png')
         else:
             pl.show()
 

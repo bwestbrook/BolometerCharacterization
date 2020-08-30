@@ -12,10 +12,10 @@ from GuiBuilder.gui_builder import GuiBuilder, GenericClass
 
 class TimeConstant(QtWidgets.QWidget, GuiBuilder):
 
-    def __init__(self, available_daqs, status_bar, screen_resolution, monitor_dpi):
+    def __init__(self, daq_settings, status_bar, screen_resolution, monitor_dpi):
         super(TimeConstant, self).__init__()
         self.status_bar = status_bar
-        self.available_daqs = available_daqs
+        self.daq_settings = daq_settings
         self.screen_resolution = screen_resolution
         self.monitor_dpi = monitor_dpi
         self.daq = BoloDAQ()

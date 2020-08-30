@@ -13,7 +13,7 @@
             },
             "02_Settings": {
                 "ToolTip": "Bolo DAQ Settings",
-                "function": "bd_configure_bolo_daq",
+                "function": "bd_configure_bolo_daq_gui",
                 "icon": "parameters.png"
             },
             "03_COM Port Utility": {

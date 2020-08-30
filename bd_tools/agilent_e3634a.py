@@ -12,12 +12,11 @@ from GuiBuilder.gui_builder import GuiBuilder, GenericClass
 
 class AgilentE3634A(QtWidgets.QWidget, GuiBuilder):
 
-    def __init__(self, available_daqs, status_bar, screen_resolution, monitor_dpi):
+    def __init__(self, status_bar, screen_resolution, monitor_dpi):
         '''
         '''
         super(AgilentE3634A, self).__init__()
         self.status_bar = status_bar
-        self.available_daqs = available_daqs
         self.screen_resolution = screen_resolution
         self.monitor_dpi = monitor_dpi
         grid = QtWidgets.QGridLayout()

@@ -12,12 +12,12 @@ from GuiBuilder.gui_builder import GuiBuilder, GenericClass
 
 class XYCollector(QtWidgets.QWidget, GuiBuilder):
 
-    def __init__(self, available_daqs, status_bar, screen_resolution, monitor_dpi):
+    def __init__(self, daq_settings, status_bar, screen_resolution, monitor_dpi):
         '''
         '''
         super(XYCollector, self).__init__()
         self.status_bar = status_bar
-        self.available_daqs = available_daqs
+        self.daq_settings = daq_settings
         self.screen_resolution = screen_resolution
         self.monitor_dpi = monitor_dpi
         self.daq = BoloDAQ()
@@ -101,7 +101,7 @@ class XYCollector(QtWidgets.QWidget, GuiBuilder):
         xyc_daq_header_label = QtWidgets.QLabel('DAQ Device:', self)
         self.xyc_input_panel.layout().addWidget(xyc_daq_header_label, 0, 0, 1, 1)
         self.xyc_daq_combobox = QtWidgets.QComboBox(self)
-        for daq in self.available_daqs:
+        for daq in self.daq_settings:
             self.xyc_daq_combobox.addItem(daq)
         self.xyc_input_panel.layout().addWidget(self.xyc_daq_combobox, 0, 1, 1, 1)
         self.xyc_daq_combobox.currentIndexChanged.connect(self.xyc_display_daq_settings)
@@ -119,7 +119,13 @@ class XYCollector(QtWidgets.QWidget, GuiBuilder):
             self.daq_y_combobox.addItem(str(daq))
         self.xyc_input_panel.layout().addWidget(self.daq_y_combobox, 1, 3, 1, 1)
 
-    def xyc_display_daq_settings(self, index):
+    def xyc_update_daq_settings(self, daq_settings):
+        '''
+        '''
+        self.daq_settings = daq_settings
+        self.xyc_display_daq_settings()
+
+    def xyc_display_daq_settings(self):
         '''
         '''
         self.xyc_initialize_input()
@@ -129,23 +135,23 @@ class XYCollector(QtWidgets.QWidget, GuiBuilder):
         # X
         int_time_x_header_label = QtWidgets.QLabel('Int Time X:', self.xyc_input_panel)
         self.xyc_input_panel.layout().addWidget(int_time_x_header_label, 2, 0, 1, 1)
-        self.int_time_x = self.available_daqs[daq][str(self.x_channel)]['int_time']
+        self.int_time_x = self.daq_settings[daq][str(self.x_channel)]['int_time']
         int_time_x_label = QtWidgets.QLabel(str(self.int_time_x), self.xyc_input_panel)
         self.xyc_input_panel.layout().addWidget(int_time_x_label, 2, 1, 1, 1)
         sample_rate_x_header_label = QtWidgets.QLabel('Sample Rate X:', self.xyc_input_panel)
         self.xyc_input_panel.layout().addWidget(sample_rate_x_header_label, 3, 0, 1, 1)
-        self.sample_rate_x = self.available_daqs[daq][str(self.x_channel)]['sample_rate']
+        self.sample_rate_x = self.daq_settings[daq][str(self.x_channel)]['sample_rate']
         sample_rate_x_label = QtWidgets.QLabel(str(self.sample_rate_x), self.xyc_input_panel)
         self.xyc_input_panel.layout().addWidget(sample_rate_x_label, 3, 1, 1, 1)
         # Y
         int_time_y_header_label = QtWidgets.QLabel('Int Time Y:', self.xyc_input_panel)
         self.xyc_input_panel.layout().addWidget(int_time_y_header_label, 2, 2, 1, 1)
-        self.int_time_y = self.available_daqs[daq][str(self.y_channel)]['int_time']
+        self.int_time_y = self.daq_settings[daq][str(self.y_channel)]['int_time']
         int_time_y_label = QtWidgets.QLabel(str(self.int_time_y), self.xyc_input_panel)
         self.xyc_input_panel.layout().addWidget(int_time_y_label, 2, 3, 1, 1)
         sample_rate_y_header_label = QtWidgets.QLabel('Sample Rate Y:', self.xyc_input_panel)
         self.xyc_input_panel.layout().addWidget(sample_rate_y_header_label, 3, 2, 1, 1)
-        self.sample_rate_y = self.available_daqs[daq][str(self.y_channel)]['sample_rate']
+        self.sample_rate_y = self.daq_settings[daq][str(self.y_channel)]['sample_rate']
         sample_rate_y_label = QtWidgets.QLabel(str(self.sample_rate_y), self.xyc_input_panel)
         self.xyc_input_panel.layout().addWidget(sample_rate_y_label, 3, 3, 1, 1)
 
@@ -245,6 +251,7 @@ class XYCollector(QtWidgets.QWidget, GuiBuilder):
         '''
         '''
         device = self.xyc_daq_combobox.currentText()
+        mode = self.xyc_mode_tab_bar.tabText(self.xyc_mode_tab_bar.currentIndex())
         self.x_data, self.x_stds = [], []
         self.y_data, self.y_stds = [], []
         while self.started:
@@ -264,13 +271,14 @@ class XYCollector(QtWidgets.QWidget, GuiBuilder):
             self.x_stds.append(x_std)
             self.y_data.append(y_mean)
             self.y_stds.append(y_std)
-            self.xyc_plot()
+            self.xyc_plot_running()
             QtWidgets.QApplication.processEvents()
             self.repaint()
 
     ###################################################
     # Saving and Plotting
     ###################################################
+
 
     def xyc_index_file_name(self):
         '''
@@ -297,7 +305,7 @@ class XYCollector(QtWidgets.QWidget, GuiBuilder):
             self.gb_quick_message('Warning Data Not Written to File!', msg_type='Warning')
         self.xyc_plot(mode)
 
-    def xyc_plot2(self):
+    def xyc_plot_running(self):
         '''
         '''
         self.xyc_plot_x()
@@ -356,7 +364,7 @@ class XYCollector(QtWidgets.QWidget, GuiBuilder):
         fig.subplots_adjust(left=left, right=right, top=top, bottom=bottom)
         return fig, ax
 
-    def xyc_plot(self, mode):
+    def xyc_plot(self, mode, running=True):
         '''
         '''
         fig, ax = self.xyc_create_blank_fig(frac_screen_width=0.5, frac_screen_height=0.5,

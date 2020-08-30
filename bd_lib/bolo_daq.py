@@ -10,7 +10,7 @@ from nidaqmx.constants import AcquisitionType, Edge, WAIT_INFINITELY
 class BoloDAQ():
 
     def __init__(self):
-        self.active_daqs = self.get_active_daqs()
+        self.active_daqs = self.initialize_daqs()
 
     def get_data(self, signal_channel=3, int_time=50, sample_rate=500, device=None):
         with nidaqmx.Task() as task:
@@ -30,7 +30,7 @@ class BoloDAQ():
         std_ = np.std(data_time_stream)
         return data_time_stream, mean, min_, max_, std_
 
-    def get_active_daqs(self):
+    def initialize_daqs(self):
         active_daqs = {}
         with nidaqmx.Task() as task:
             for i in range(16): # Typically no more than a few here

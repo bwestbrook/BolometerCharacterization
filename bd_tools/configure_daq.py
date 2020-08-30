@@ -56,7 +56,7 @@ class ConfigureDAQ(QtWidgets.QWidget, GuiBuilder):
             self.sender().setText('Stop DAQ')
             self.started = True
             self.status_bar.showMessage('Collecting Data')
-            self.cd_get_daq()
+            self.cd_run_daq()
         else:
             self.sender().setText('Start DAQ')
             self.started = False
@@ -115,6 +115,7 @@ class ConfigureDAQ(QtWidgets.QWidget, GuiBuilder):
                 }
         with open(os.path.join('bd_settings', 'daq_settings.json'), 'w') as json_handle:
             simplejson.dump(self.available_daqs, json_handle, indent=4, sort_keys=True)
+        pprint(self.available_daqs)
         self.cd_update_daq()
 
     def cd_update_daq(self):
@@ -123,7 +124,7 @@ class ConfigureDAQ(QtWidgets.QWidget, GuiBuilder):
         with open(os.path.join('bd_settings', 'daq_settings.json'), 'r') as json_handle:
             self.available_daqs = simplejson.load(json_handle)
 
-    def cd_get_daq(self):
+    def cd_run_daq(self):
         while self.started:
             enabled = False
             for i in range(self.n_channels):

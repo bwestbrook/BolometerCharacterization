@@ -10,14 +10,14 @@ from bd_lib.bolo_daq import BoloDAQ
 from PyQt5 import QtCore, QtGui, QtWidgets
 from GuiBuilder.gui_builder import GuiBuilder, GenericClass
 
-class ConfigureBoloDAQ(QtWidgets.QWidget, GuiBuilder):
+class ConfigureBoloDAQGui(QtWidgets.QWidget, GuiBuilder):
 
-    def __init__(self, available_daqs, status_bar, screen_resolution, monitor_dpi):
+    def __init__(self, daq_settings, status_bar, screen_resolution, monitor_dpi):
         '''
         '''
-        super(ConfigureBoloDAQ, self).__init__()
+        super(ConfigureBoloDAQGui, self).__init__()
         self.status_bar = status_bar
-        self.available_daqs = available_daqs
+        self.daq_settings = daq_settings
         self.screen_resolution = screen_resolution
         self.monitor_dpi = monitor_dpi
         grid = QtWidgets.QGridLayout()

@@ -8,7 +8,7 @@ from GuiBuilder.gui_builder import GuiBuilder, GenericClass
 
 class LakeShore372(QtWidgets.QWidget, GuiBuilder):
 
-    def __init__(self, com_port, status_bar):
+    def __init__(self, serial_com, com_port, status_bar):
         super(LakeShore372, self).__init__()
         self.status_bar = status_bar
         grid = QtWidgets.QGridLayout()
