@@ -15,7 +15,7 @@ class LakeShore372(QtWidgets.QWidget, GuiBuilder):
         self.setLayout(grid)
         self.auto_scan = False
         self.scan_channel = False
-        self.serial_com = BoloSerial(com_port, device='Model372', splash_screen=status_bar)
+        self.serial_com = serial_com
         self.com_port = com_port
         self.channel_indicies = [str(x) for x in range(1, 17)]
         self.analog_output_indicies = [str(x) for x in range(1, 4)]
@@ -225,6 +225,12 @@ class LakeShore372(QtWidgets.QWidget, GuiBuilder):
         self.exceptions = ['analog_output', 'channel', 'cs_shunt', 'curve_number', 'curve_tempco']
         self.ls372_get_idn()
         self.ls372_populate_gui()
+
+    def ls372_update_serial_com(self, serial_com):
+        '''
+        '''
+        self.serial_com = serial_com
+        self.ls372_get_idn()
 
     def ls372_populate_gui(self):
         '''

@@ -150,10 +150,11 @@ class ConfigureBoloDAQGui(QtWidgets.QWidget, GuiBuilder):
         dict_to_edit = getattr(self, '{0}_dict'.format(setting))
         key_to_delete, okPressed1 = self.gb_quick_static_info_gather(dialog='{0} to delete'.format(setting), items=dict_to_edit.keys())
         if okPressed1:
-            dict_to_edit.pop(key_to_delete)
-            path = os.path.join('bd_settings', '{0}_settings.json'.format(setting))
-            with open(path, 'w') as fh:
-                simplejson.dump(dict_to_edit, fh)
+            if key_to_delete in dict_to_edit:
+                dict_to_edit.pop(key_to_delete)
+                path = os.path.join('bd_settings', '{0}_settings.json'.format(setting))
+                with open(path, 'w') as fh:
+                    simplejson.dump(dict_to_edit, fh)
         self.cbd_populate_combobox(setting)
 
     def cbd_update_label(self, index):

@@ -209,8 +209,6 @@ class BoloDAQGui(QtWidgets.QMainWindow, GuiBuilder):
             except (OSError, serial.SerialException):
                 pass
         self.active_ports
-        #self.bd_get_com_device_types()
-        print(self.active_ports)
 
     #################################################
     # Logging and File Management
@@ -341,8 +339,8 @@ class BoloDAQGui(QtWidgets.QMainWindow, GuiBuilder):
         com_port, okPressed = self.gb_quick_static_info_gather(title='', dialog=dialog, items=['COM10'])
         if not hasattr(self, 'ser_{0}'.format(com_port)) and okPressed:
             serial_com = BoloSerial(com_port, device='SRS_SR830_DSP', splash_screen=self.status_bar)
+            setattr(self, 'ser_{0}'.format(com_port), serial_com)
             if not hasattr(self, 'srs_sr830dsp_widget'):
-                setattr(self, 'ser_{0}'.format(com_port), serial_com)
                 self.srs_sr830dsp_widget = StanfordResearchSystemsSR830DSP(serial_com, com_port, self.status_bar, self.screen_resolution, self.monitor_dpi)
             self.srs_sr830dsp_widget.srs_update_serial_com(serial_com)
             self.central_widget.layout().addWidget(self.srs_sr830dsp_widget, 0, 0, 1, 1)
@@ -381,6 +379,7 @@ class BoloDAQGui(QtWidgets.QMainWindow, GuiBuilder):
         com_port, okPressed = self.gb_quick_static_info_gather(title='', dialog=dialog, items=['COM3'])
         if not hasattr(self, 'ser_{0}'.format(com_port)) and okPressed:
             serial_com = BoloSerial(com_port, device='HP_34401A', splash_screen=self.status_bar)
+            setattr(self, 'ser_{0}'.format(com_port), serial_com)
             if not hasattr(self, 'hewlett_packard_34401a_widget'):
                 self.hewlett_packard_34401a_widget = HewlettPackard34401A(serial_com, com_port, self.status_bar, self.screen_resolution, self.monitor_dpi)
             self.central_widget.layout().addWidget(self.hewlett_packard_34401a_widget, 0, 0, 1, 1)
@@ -402,10 +401,12 @@ class BoloDAQGui(QtWidgets.QMainWindow, GuiBuilder):
         com_port, okPressed = self.gb_quick_static_info_gather(title='', dialog=dialog, items=['COM19'])
         if not hasattr(self, 'ser_{0}'.format(com_port)) and okPressed:
             serial_com = BoloSerial(com_port, device='Agilent_E3634A', splash_screen=self.status_bar)
+            setattr(self, 'ser_{0}'.format(com_port), serial_com)
             if not hasattr(self, 'agilent_e3634a_widget'):
                 self.agilent_e3634a_widget = AgilentE3634A(serial_com, self.status_bar, self.screen_resolution, self.monitor_dpi)
             self.central_widget.layout().addWidget(self.agilent_e3634a_widget, 0, 0, 1, 1)
         elif okPressed:
+            serial_com = getattr(self, 'ser_{0}'.format(com_port))
             self.agilent_e3634a_widget.ae_update_serial_com(serial_com)
             self.central_widget.layout().addWidget(self.agilent_e3634a_widget, 0, 0, 1, 1)
         self.status_bar.showMessage('Agilent E3634A Controller')
@@ -422,10 +423,14 @@ class BoloDAQGui(QtWidgets.QMainWindow, GuiBuilder):
         dialog = 'Select the comport for the Lakeshore'
         com_port, okPressed = self.gb_quick_static_info_gather(title='', dialog=dialog, items=['COM6'])
         if not hasattr(self, 'ser_{0}'.format(com_port)) and okPressed:
-            serial_com = BoloSerial(com_port, device='Model372', splash_screen=status_bar)
+            serial_com = BoloSerial(com_port, device='Model372', splash_screen=self.status_bar)
             setattr(self, 'ser_{0}'.format(com_port), serial_com)
             if not hasattr(self, 'ls_372_widget'):
                 self.ls_372_widget = LakeShore372(serial_com, com_port, self.status_bar)
+            self.central_widget.layout().addWidget(self.ls_372_widget, 0, 0, 1, 1)
+        elif okPressed:
+            serial_com = getattr(self, 'ser_{0}'.format(com_port))
+            self.ls_372_widget.ls372_update_serial_com(serial_com)
             self.central_widget.layout().addWidget(self.ls_372_widget, 0, 0, 1, 1)
         self.status_bar.showMessage('Lakeshore 372 Controller')
         QtWidgets.QApplication.processEvents()
