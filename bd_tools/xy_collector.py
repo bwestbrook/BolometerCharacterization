@@ -21,17 +21,13 @@ class XYCollector(QtWidgets.QWidget, GuiBuilder):
         self.screen_resolution = screen_resolution
         self.monitor_dpi = monitor_dpi
         self.daq = BoloDAQ()
-        self.squid_calibration_dict  = {
-            '1': 30.0,
-            '2': 26.8,
-            '3': 24.67,
-            '4': 30.1,
-            '5': 25.9,
-            '6': 25.0
-            }
+        with open(os.path.join('bd_settings', 'squids_settings.json'), 'r') as fh:
+            self.squid_calibration_dict = simplejson.load(fh)
         self.voltage_reduction_factor_dict  = {
             '1': 1e-4,
-            '2': 1e-5
+            '2': 1e-5,
+            '3': 100,
+            '4': 1e3,
             }
         grid_1 = QtWidgets.QGridLayout()
         self.setLayout(grid_1)
@@ -45,11 +41,14 @@ class XYCollector(QtWidgets.QWidget, GuiBuilder):
         self.xyc_plot_panel.setLayout(grid_3)
         self.layout().addWidget(self.xyc_plot_panel, 2, 1, 1, 1)
         self.x_data = []
+        self.x_stds = []
         self.y_data = []
+        self.y_stds = []
         self.xyc_populate(0)
         self.today = datetime.now()
         self.today_str = datetime.strftime(self.today, '%Y_%m_%d')
         self.data_folder = './Data/{0}'.format(self.today_str)
+        self.xyc_plot_running()
 
     #########################################################
     # GUI and Input Handling
@@ -68,23 +67,37 @@ class XYCollector(QtWidgets.QWidget, GuiBuilder):
             self.xyc_rt_config()
         self.xyc_make_plot_panel()
         self.xyc_add_common_widgets()
+        self.xyc_plot_running()
         self.xyc_mode_tab_bar.currentChanged.connect(self.xyc_populate)
 
     def xyc_add_common_widgets(self):
         '''
         '''
         # Sample Name
-        sample_name_header_label = QtWidgets.QLabel('Sample Name:', self)
-        self.xyc_input_panel.layout().addWidget(sample_name_header_label, 8, 0, 1, 1)
-        self.sample_name_lineedit = QtWidgets.QLineEdit('', self)
-        self.xyc_input_panel.layout().addWidget(self.sample_name_lineedit, 8, 1, 1, 3)
+        sample_name_header_label = QtWidgets.QLabel('Sample Name:', self.xyc_input_panel)
+        self.xyc_input_panel.layout().addWidget(sample_name_header_label, 6, 0, 1, 1)
+        self.sample_name_lineedit = QtWidgets.QLineEdit('', self.xyc_input_panel)
+        self.xyc_input_panel.layout().addWidget(self.sample_name_lineedit, 6, 1, 1, 3)
+        # Data Clip
+        data_clip_lo_header_label = QtWidgets.QLabel('Data Clip Lo (%):', self.xyc_input_panel)
+        self.xyc_input_panel.layout().addWidget(data_clip_lo_header_label, 8, 0, 1, 1)
+        data_clip_lo_lineedit = QtWidgets.QLineEdit('0.0', self.xyc_input_panel)
+        self.xyc_input_panel.layout().addWidget(data_clip_lo_lineedit, 8, 1, 1, 1)
+        self.data_clip_lo_lineedit = data_clip_lo_lineedit
+        data_clip_hi_header_label = QtWidgets.QLabel('Data Clip Hi (%):', self.xyc_input_panel)
+        self.xyc_input_panel.layout().addWidget(data_clip_hi_header_label, 8, 2, 1, 1)
+        data_clip_hi_lineedit = QtWidgets.QLineEdit('0.0', self.xyc_input_panel)
+        self.xyc_input_panel.layout().addWidget(data_clip_hi_lineedit, 8, 3, 1, 1)
+        self.data_clip_hi_lineedit = data_clip_hi_lineedit
         # Buttons
-        start_pushbutton = QtWidgets.QPushButton('Start', self)
+        start_pushbutton = QtWidgets.QPushButton('Start', self.xyc_input_panel)
         start_pushbutton.clicked.connect(self.xyc_start_stop)
         self.xyc_input_panel.layout().addWidget(start_pushbutton, 12, 0, 1, 4)
-        save_pushbutton = QtWidgets.QPushButton('Save', self)
+        save_pushbutton = QtWidgets.QPushButton('Save', self.xyc_input_panel)
         save_pushbutton.clicked.connect(self.xyc_save)
         self.xyc_input_panel.layout().addWidget(save_pushbutton, 13, 0, 1, 4)
+        spacer_label = QtWidgets.QLabel(' ', self.xyc_input_panel)
+        self.xyc_input_panel.layout().addWidget(spacer_label, 14, 0, 10, 4)
 
     def xyc_make_tab_bar(self):
         '''
@@ -103,19 +116,19 @@ class XYCollector(QtWidgets.QWidget, GuiBuilder):
         self.xyc_daq_combobox = QtWidgets.QComboBox(self)
         for daq in self.daq_settings:
             self.xyc_daq_combobox.addItem(daq)
-        self.xyc_input_panel.layout().addWidget(self.xyc_daq_combobox, 0, 1, 1, 1)
+        self.xyc_input_panel.layout().addWidget(self.xyc_daq_combobox, 0, 1, 1, 3)
         self.xyc_daq_combobox.currentIndexChanged.connect(self.xyc_display_daq_settings)
         daq_x_header_label = QtWidgets.QLabel('DAQ Ch X Data:', self)
         self.xyc_input_panel.layout().addWidget(daq_x_header_label, 1, 0, 1, 1)
         self.daq_x_combobox = QtWidgets.QComboBox(self)
-        for daq in range(0, 4):
+        for daq in range(0, 8):
             self.daq_x_combobox.addItem(str(daq))
         self.xyc_input_panel.layout().addWidget(self.daq_x_combobox, 1, 1, 1, 1)
         daq_y_header_label = QtWidgets.QLabel('DAQ Ch Y Data:', self)
         self.xyc_input_panel.layout().addWidget(daq_y_header_label, 1, 2, 1, 1)
         self.daq_y_combobox = QtWidgets.QComboBox(self)
         self.daq_y_combobox.currentIndexChanged.connect(self.xyc_display_daq_settings)
-        for daq in range(0, 4):
+        for daq in range(0, 8):
             self.daq_y_combobox.addItem(str(daq))
         self.xyc_input_panel.layout().addWidget(self.daq_y_combobox, 1, 3, 1, 1)
 
@@ -133,55 +146,84 @@ class XYCollector(QtWidgets.QWidget, GuiBuilder):
         self.x_channel = self.daq_x_combobox.currentIndex()
         self.y_channel = self.daq_y_combobox.currentIndex()
         # X
-        int_time_x_header_label = QtWidgets.QLabel('Int Time X:', self.xyc_input_panel)
-        self.xyc_input_panel.layout().addWidget(int_time_x_header_label, 2, 0, 1, 1)
         self.int_time_x = self.daq_settings[daq][str(self.x_channel)]['int_time']
-        int_time_x_label = QtWidgets.QLabel(str(self.int_time_x), self.xyc_input_panel)
-        self.xyc_input_panel.layout().addWidget(int_time_x_label, 2, 1, 1, 1)
-        sample_rate_x_header_label = QtWidgets.QLabel('Sample Rate X:', self.xyc_input_panel)
-        self.xyc_input_panel.layout().addWidget(sample_rate_x_header_label, 3, 0, 1, 1)
         self.sample_rate_x = self.daq_settings[daq][str(self.x_channel)]['sample_rate']
-        sample_rate_x_label = QtWidgets.QLabel(str(self.sample_rate_x), self.xyc_input_panel)
-        self.xyc_input_panel.layout().addWidget(sample_rate_x_label, 3, 1, 1, 1)
+        daq_settings_x_info = 'Int Time (ms): {0}\n'.format(self.int_time_x)
+        daq_settings_x_info += 'Sample Rate (Hz): {0}'.format(str(self.sample_rate_x))
+        daq_settings_x_label = QtWidgets.QLabel(daq_settings_x_info)
+        self.xyc_input_panel.layout().addWidget(daq_settings_x_label, 2, 1, 1, 1)
         # Y
-        int_time_y_header_label = QtWidgets.QLabel('Int Time Y:', self.xyc_input_panel)
-        self.xyc_input_panel.layout().addWidget(int_time_y_header_label, 2, 2, 1, 1)
         self.int_time_y = self.daq_settings[daq][str(self.y_channel)]['int_time']
-        int_time_y_label = QtWidgets.QLabel(str(self.int_time_y), self.xyc_input_panel)
-        self.xyc_input_panel.layout().addWidget(int_time_y_label, 2, 3, 1, 1)
-        sample_rate_y_header_label = QtWidgets.QLabel('Sample Rate Y:', self.xyc_input_panel)
-        self.xyc_input_panel.layout().addWidget(sample_rate_y_header_label, 3, 2, 1, 1)
         self.sample_rate_y = self.daq_settings[daq][str(self.y_channel)]['sample_rate']
-        sample_rate_y_label = QtWidgets.QLabel(str(self.sample_rate_y), self.xyc_input_panel)
-        self.xyc_input_panel.layout().addWidget(sample_rate_y_label, 3, 3, 1, 1)
+        daq_settings_y_info = 'Int Time (ms): {0}\n'.format(self.int_time_y)
+        daq_settings_y_info += 'Sample Rate (Hz): {0}'.format(str(self.sample_rate_y))
+        daq_settings_y_label = QtWidgets.QLabel(daq_settings_y_info)
+        self.xyc_input_panel.layout().addWidget(daq_settings_y_label, 2, 3, 1, 1)
 
     def xyc_iv_config(self):
         '''
         '''
-        # SQUID
-        squid_header_label = QtWidgets.QLabel('SQUID (uA/V):', self)
-        self.xyc_input_panel.layout().addWidget(squid_header_label, 7, 0, 1, 1)
-        self.squid_combobox = QtWidgets.QComboBox(self)
-        for squid, calibration in self.squid_calibration_dict.items():
-            self.squid_combobox.addItem('{0} ({1:.1f})'.format(squid, calibration))
-        self.xyc_input_panel.layout().addWidget(self.squid_combobox, 7, 1, 1, 1)
-        # Voltage Factor
-        voltage_factor_header_label = QtWidgets.QLabel('Voltage Factor:', self)
-        self.xyc_input_panel.layout().addWidget(voltage_factor_header_label, 7, 2, 1, 1)
-        self.voltage_factor_combobox = QtWidgets.QComboBox(self)
+        # X Voltage Factor
+        x_voltage_factor_header_label = QtWidgets.QLabel('Voltage Factor:', self.xyc_input_panel)
+        self.xyc_input_panel.layout().addWidget(x_voltage_factor_header_label, 7, 0, 1, 1)
+        self.x_correction_combobox = QtWidgets.QComboBox(self.xyc_input_panel)
         for index, voltage_reduction_factor in self.voltage_reduction_factor_dict.items():
-            self.voltage_factor_combobox.addItem('{0}'.format(voltage_reduction_factor))
-        self.xyc_input_panel.layout().addWidget(self.voltage_factor_combobox, 7, 3, 1, 1)
+            self.x_correction_combobox.addItem('{0}'.format(voltage_reduction_factor))
+        self.xyc_input_panel.layout().addWidget(self.x_correction_combobox, 7, 1, 1, 1)
+        # SQUID
+        squid_header_label = QtWidgets.QLabel('SQUID (uA/V):', self.xyc_input_panel)
+        self.xyc_input_panel.layout().addWidget(squid_header_label, 7, 2, 1, 1)
+        self.y_correction_combobox = QtWidgets.QComboBox(self.xyc_input_panel)
+        for squid, calibration in self.squid_calibration_dict.items():
+            self.y_correction_combobox.addItem('{0} ::: {1:.1f} (uA/V)'.format(squid, float(calibration)))
+        self.xyc_input_panel.layout().addWidget(self.y_correction_combobox, 7, 3, 1, 1)
+        # Fit Clip
+        fit_clip_lo_header_label = QtWidgets.QLabel('Fit Clip Lo (uV):', self.xyc_input_panel)
+        self.xyc_input_panel.layout().addWidget(fit_clip_lo_header_label, 9, 0, 1, 1)
+        fit_clip_lo_lineedit = QtWidgets.QLineEdit('0.0', self.xyc_input_panel)
+        self.xyc_input_panel.layout().addWidget(fit_clip_lo_lineedit, 9, 1, 1, 1)
+        self.fit_clip_lo_lineedit = fit_clip_lo_lineedit
+        fit_clip_hi_header_label = QtWidgets.QLabel('Fit Clip Hi (uV):', self.xyc_input_panel)
+        self.xyc_input_panel.layout().addWidget(fit_clip_hi_header_label, 9, 2, 1, 1)
+        fit_clip_hi_lineedit = QtWidgets.QLineEdit('0.0', self.xyc_input_panel)
+        self.xyc_input_panel.layout().addWidget(fit_clip_hi_lineedit, 9, 3, 1, 1)
+        self.fit_clip_hi_lineedit = fit_clip_hi_lineedit
+        # Extra information
+        sample_temp_header_label = QtWidgets.QLabel('Sample Temp (K):', self.xyc_input_panel)
+        self.xyc_input_panel.layout().addWidget(sample_temp_header_label, 10, 0, 1, 1)
+        self.sample_temp_lineedit = QtWidgets.QLineEdit('', self.xyc_input_panel)
+        self.sample_temp_lineedit.setValidator(QtGui.QDoubleValidator(0, 5, 8, self.sample_temp_lineedit))
+        self.xyc_input_panel.layout().addWidget(self.sample_temp_lineedit, 10, 1, 1, 1)
+        optical_load_header_label = QtWidgets.QLabel('Optical Load (K):', self.xyc_input_panel)
+        self.xyc_input_panel.layout().addWidget(optical_load_header_label, 10, 2, 1, 1)
+        self.optical_load_lineedit = QtWidgets.QLineEdit('', self.xyc_input_panel)
+        self.optical_load_lineedit.setValidator(QtGui.QDoubleValidator(0, 5, 8, self.optical_load_lineedit))
+        self.xyc_input_panel.layout().addWidget(self.optical_load_lineedit, 10, 3, 1, 1)
+        sample_band_header_label = QtWidgets.QLabel('Sample Band (GHz):', self.xyc_input_panel)
+        self.xyc_input_panel.layout().addWidget(sample_band_header_label, 11, 0, 1, 1)
+        self.sample_band_combobox = QtWidgets.QComboBox(self.xyc_input_panel)
+        self.xyc_input_panel.layout().addWidget(self.sample_band_combobox, 11, 1, 1, 1)
+        for sample_band in ['', 'MF-Sinuous1p5', 'MF-Sinuous0p8', '30', '40', '90', '150', '220', '270']:
+            self.sample_band_combobox.addItem(sample_band)
+
 
     def xyc_rt_config(self):
         '''
         '''
+        # GRT Serial 
         grt_serial_header_label = QtWidgets.QLabel('GRT SERIAL:', self)
         self.xyc_input_panel.layout().addWidget(grt_serial_header_label, 7, 0, 1, 1)
-        self.grt_serial_combobox = QtWidgets.QComboBox(self)
+        self.x_correction_combobox = QtWidgets.QComboBox(self)
         for grt_serial in ['Lakeshore']:
-            self.grt_serial_combobox.addItem(grt_serial)
-        self.xyc_input_panel.layout().addWidget(self.grt_serial_combobox, 7, 1, 1, 1)
+            self.x_correction_combobox.addItem(grt_serial)
+        self.xyc_input_panel.layout().addWidget(self.x_correction_combobox, 7, 1, 1, 1)
+        # Y Voltage Factor 
+        y_voltage_factor_header_label = QtWidgets.QLabel('Resistance Voltage Factor', self)
+        self.xyc_input_panel.layout().addWidget(y_voltage_factor_header_label, 7, 2, 1, 1)
+        self.y_correction_combobox = QtWidgets.QComboBox(self)
+        for index, voltage_reduction_factor in self.voltage_reduction_factor_dict.items():
+            self.y_correction_combobox.addItem('{0}'.format(voltage_reduction_factor))
+        self.xyc_input_panel.layout().addWidget(self.y_correction_combobox, 7, 3, 1, 1)
 
     def xyc_initialize_input(self):
         '''
@@ -279,32 +321,6 @@ class XYCollector(QtWidgets.QWidget, GuiBuilder):
     # Saving and Plotting
     ###################################################
 
-
-    def xyc_index_file_name(self):
-        '''
-        '''
-        for i in range(1, 1000):
-            file_name = '{0}_{1}.txt'.format(self.sample_name_lineedit.text(), str(i).zfill(3))
-            save_path = os.path.join(self.data_folder, file_name)
-            if not os.path.exists(save_path):
-                break
-        return save_path
-
-    def xyc_save(self):
-        '''
-        '''
-        mode = self.xyc_mode_tab_bar.tabText(self.xyc_mode_tab_bar.currentIndex())
-        save_path = self.xyc_index_file_name()
-        save_path = QtWidgets.QFileDialog.getSaveFileName(self, 'Data Save Location', save_path, filter=',*.txt,*.dat')[0]
-        if len(save_path) > 0:
-            with open(save_path, 'w') as save_handle:
-                for i, x_data in enumerate(self.x_data):
-                    line = '{0:.5f}, {1:.5f}, {2:.5f}, {3:.5f}\n'.format(self.x_data[i], self.x_stds[i], self.y_data[i], self.y_stds[i])
-                    save_handle.write(line)
-        else:
-            self.gb_quick_message('Warning Data Not Written to File!', msg_type='Warning')
-        self.xyc_plot(mode)
-
     def xyc_plot_running(self):
         '''
         '''
@@ -345,26 +361,32 @@ class XYCollector(QtWidgets.QWidget, GuiBuilder):
         self.xy_scatter_label.setPixmap(image_to_display)
         os.remove('temp_xy.png')
 
-    def xyc_create_blank_fig(self, frac_screen_width=0.5, frac_screen_height=0.25,
-                             left=0.12, right=0.98, top=0.9, bottom=0.23, multiple_axes=False,
-                             aspect=None):
-        if frac_screen_width is None and frac_screen_height is None:
-            fig = pl.figure()
-        else:
-            width = (frac_screen_width * self.screen_resolution.width()) / self.monitor_dpi
-            height = (frac_screen_height * self.screen_resolution.height()) / self.monitor_dpi
-            fig = pl.figure(figsize=(width, height))
-        if not multiple_axes:
-            if aspect is None:
-                ax = fig.add_subplot(111)
-            else:
-                ax = fig.add_subplot(111, aspect=aspect)
-        else:
-            ax = None
-        fig.subplots_adjust(left=left, right=right, top=top, bottom=bottom)
-        return fig, ax
+    def xyc_index_file_name(self):
+        '''
+        '''
+        for i in range(1, 1000):
+            file_name = '{0}_{1}.txt'.format(self.sample_name_lineedit.text(), str(i).zfill(3))
+            save_path = os.path.join(self.data_folder, file_name)
+            if not os.path.exists(save_path):
+                break
+        return save_path
 
-    def xyc_plot(self, mode, running=True):
+    def xyc_save(self):
+        '''
+        '''
+        mode = self.xyc_mode_tab_bar.tabText(self.xyc_mode_tab_bar.currentIndex())
+        save_path = self.xyc_index_file_name()
+        save_path = QtWidgets.QFileDialog.getSaveFileName(self, 'Data Save Location', save_path, filter=',*.txt,*.dat')[0]
+        if len(save_path) > 0:
+            with open(save_path, 'w') as save_handle:
+                for i, x_data in enumerate(self.x_data):
+                    line = '{0:.5f}, {1:.5f}, {2:.5f}, {3:.5f}\n'.format(self.x_data[i], self.x_stds[i], self.y_data[i], self.y_stds[i])
+                    save_handle.write(line)
+        else:
+            self.gb_quick_message('Warning Data Not Written to File!', msg_type='Warning')
+        self.xyc_plot_final(mode)
+
+    def xyc_plot_final(self, mode, running=True):
         '''
         '''
         fig, ax = self.xyc_create_blank_fig(frac_screen_width=0.5, frac_screen_height=0.5,
@@ -377,7 +399,7 @@ class XYCollector(QtWidgets.QWidget, GuiBuilder):
             else:
                 ax.set_title('I vs V Curve')
             ax.set_xlabel('Bias Voltage (uV)')
-            ax.set_ylabel('SQUID Out (V)')
+            ax.set_ylabel('SQUID Out (uA)')
         elif mode == 'RT':
             if len(title) > 0:
                 ax.set_title(title)
@@ -394,9 +416,16 @@ class XYCollector(QtWidgets.QWidget, GuiBuilder):
         '''
         '''
         mode = self.xyc_mode_tab_bar.tabText(self.xyc_mode_tab_bar.currentIndex())
+        x_correciton = self.x_correction_combobox.currentText()
+        y_correction = self.y_correction_combobox.currentText()
         if mode == 'IV':
-            voltage_reduction_factor = float(self.voltage_factor_combobox.currentText())
+            voltage_reduction_factor = float(x_correciton)
             self.x_data = np.asarray(self.x_data) * voltage_reduction_factor
+            self.x_data = list(self.x_data)
+            import ipdb;ipdb.set_trace()
+            squid_index = self.y_correction_combobox.currentIndex()
+            squid_calibration = self.squid_calibration_dict[self.squid_calibration_dict.keys()[squid_index]]
+            self.y_data = np.asarray(self.y_data) * float(squid_calibration)
         elif mode == 'RT':
             grt_serial = self.grt_serial_combobox.currentText()
             if grt_serial == 'Lakeshore':
@@ -424,16 +453,23 @@ class XYCollector(QtWidgets.QWidget, GuiBuilder):
         fit_clip_lo = data_clip_lo + self.fit_clip_offset # uV
 
     def xyc_final_iv_plot(self):
-        meta_data = self.bd_get_all_meta_data(popup='xy_collector')
-        plot_params = self.bd_get_all_params(meta_data, settings.xy_collector_plot_params, 'xy_collector')
-        pprint(plot_params)
-        label = plot_params['sample_name']
-        fit_clip = [float(plot_params['fit_clip_lo']), float(plot_params['fit_clip_hi'])]
-        data_clip = [float(plot_params['data_clip_lo']), float(plot_params['data_clip_hi'])]
-        voltage_factor = float(plot_params['voltage_factor'])
-        squid_conversion = float(plot_params['squid_conversion'])
+        '''
+        '''
+        # Data fitting and clipping
+        fit_clip_hi = self.fit_clip_hi_lineedit.text()
+        fit_clip_lo = self.fit_clip_lo_lineedit.text()
+        data_clip_lo = self.data_clip_lo_lineedit.text()
+        data_clip_hi = self.data_clip_hi_lineedit.text()
+        fit_clip = (fit_clip_lo, fit_clip_hi)
+        data_clip = (data_clip_lo, data_clip_hi)
+        # Extra parameters 
+        sample_temp = self.sample_temp_lineedit.text()
+        optical_load = self.optical_load_lineedit.text()
+        sample_band = self.sample_band_lineedit.currentText()
+        # Extra parameters 
+        label = self.sample_name_lineedit.text()
         ivc = IVCurve([])
-        title = '{0} @ {1} w {2} Load'.format(label, plot_params['sample_temp'], plot_params['optical_load'])
+        title = '{0} @ {1} w {2} Load'.format(label, sample_temp, optical_load)
         v_bias_real, i_bolo_real, i_bolo_std = ivc.convert_IV_to_real_units(np.asarray(self.xdata), np.asarray(self.ydata),
                                                                             stds=np.asarray(self.ystd),
                                                                             squid_conv=squid_conversion,
@@ -451,7 +487,6 @@ class XYCollector(QtWidgets.QWidget, GuiBuilder):
                                                   pturn=True)
             self.temp_plot_path = './temp_files/temp_iv_png.png'
             self.active_fig.savefig(self.temp_plot_path)
-        self.adjust_final_plot_popup('IV', xlabel='Voltage ($\mu$V)', title=title)
 
     def bd_final_rt_plot(self):
         '''
@@ -483,3 +518,21 @@ class XYCollector(QtWidgets.QWidget, GuiBuilder):
             self.active_fig.savefig(self.temp_plot_path)
         self.bd_adjust_final_plot_popup('RT', xlabel='Sample Temp (mK)', ylabel='Sample Res ($\Omega$)', title=title)
 
+    def xyc_create_blank_fig(self, frac_screen_width=0.5, frac_screen_height=0.25,
+                             left=0.12, right=0.98, top=0.9, bottom=0.23, multiple_axes=False,
+                             aspect=None):
+        if frac_screen_width is None and frac_screen_height is None:
+            fig = pl.figure()
+        else:
+            width = (frac_screen_width * self.screen_resolution.width()) / self.monitor_dpi
+            height = (frac_screen_height * self.screen_resolution.height()) / self.monitor_dpi
+            fig = pl.figure(figsize=(width, height))
+        if not multiple_axes:
+            if aspect is None:
+                ax = fig.add_subplot(111)
+            else:
+                ax = fig.add_subplot(111, aspect=aspect)
+        else:
+            ax = None
+        fig.subplots_adjust(left=left, right=right, top=top, bottom=bottom)
+        return fig, ax
