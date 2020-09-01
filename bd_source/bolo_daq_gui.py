@@ -265,6 +265,8 @@ class BoloDAQGui(QtWidgets.QMainWindow, GuiBuilder):
         '''
         '''
         self.gb_initialize_panel('central_widget')
+        self.status_bar.showMessage('Launching Fridge Cycle')
+        QtWidgets.QApplication.processEvents()
         if not hasattr(self, 'fridge_cycle_widget'):
             self.fridge_cycle_widget = FridgeCycle(self.status_bar)
         self.central_widget.layout().addWidget(self.fridge_cycle_widget, 0, 0, 1, 1)
@@ -279,6 +281,8 @@ class BoloDAQGui(QtWidgets.QMainWindow, GuiBuilder):
         '''
         '''
         self.gb_initialize_panel('central_widget')
+        self.status_bar.showMessage('Launching Configure National Intruments DAQ')
+        QtWidgets.QApplication.processEvents()
         self.bd_get_available_daq_settings()
         if not hasattr(self, 'configure_ni_daq_widget'):
             self.configure_ni_daq_widget = ConfigureNIDAQ(self.available_daq_settings, self.status_bar)
@@ -292,6 +296,8 @@ class BoloDAQGui(QtWidgets.QMainWindow, GuiBuilder):
 
     def bd_data_plotter(self):
         self.gb_initialize_panel('central_widget')
+        self.status_bar.showMessage('Launching Data Plotter')
+        QtWidgets.QApplication.processEvents()
         if not hasattr(self, 'data_plotter_widget'):
             self.data_plotter_widget = DataPlotter(self.status_bar, self.screen_resolution, self.monitor_dpi, self.data_folder)
         self.central_widget.layout().addWidget(self.data_plotter_widget, 0, 0, 1, 1)
@@ -306,6 +312,8 @@ class BoloDAQGui(QtWidgets.QMainWindow, GuiBuilder):
         '''
         '''
         self.gb_initialize_panel('central_widget')
+        self.status_bar.showMessage('Launching Bolo DAQ GUI Settings')
+        QtWidgets.QApplication.processEvents()
         if not hasattr(self, 'configure_bolo_daq_gui_widget'):
             self.configure_bolo_daq_gui_widget = ConfigureBoloDAQGui(self.available_daq_settings, self.status_bar, self.screen_resolution, self.monitor_dpi)
         #self.time_constant_widget.tc_display_daq_settings()
@@ -327,6 +335,8 @@ class BoloDAQGui(QtWidgets.QMainWindow, GuiBuilder):
         '''
         '''
         self.gb_initialize_panel('central_widget')
+        self.status_bar.showMessage('Launching SRS SR830 Control')
+        QtWidgets.QApplication.processEvents()
         dialog = 'Select the comport for the Lakeshore'
         com_port, okPressed = self.gb_quick_static_info_gather(title='', dialog=dialog, items=['COM10'])
         if not hasattr(self, 'ser_{0}'.format(com_port)) and okPressed:
