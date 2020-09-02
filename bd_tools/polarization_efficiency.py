@@ -12,12 +12,13 @@ from GuiBuilder.gui_builder import GuiBuilder, GenericClass
 
 class PolarizationEfficiency(QtWidgets.QWidget, GuiBuilder):
 
-    def __init__(self, daq_settings, status_bar, screen_resolution, monitor_dpi, csm_widget):
+    def __init__(self, daq_settings, status_bar, screen_resolution, monitor_dpi, csm_widget, srs_widget):
         '''
         '''
         super(PolarizationEfficiency, self).__init__()
         self.status_bar = status_bar
         self.daq_settings = daq_settings
+        self.srs_widget = srs_widget
         self.screen_resolution = screen_resolution
         self.monitor_dpi = monitor_dpi
         self.csm_widget = csm_widget
@@ -26,8 +27,9 @@ class PolarizationEfficiency(QtWidgets.QWidget, GuiBuilder):
         self.setLayout(grid)
         grid_2 = QtWidgets.QGridLayout()
         self.pe_plot_panel = QtWidgets.QWidget(self)
-        self.layout().addWidget(self.pe_plot_panel, 0, 2, 14, 1)
+        self.layout().addWidget(self.pe_plot_panel, 0, 2, 20, 1)
         self.pe_plot_panel.setLayout(grid_2)
+        self.pe_plot_panel.setFixedWidth(0.7 * screen_resolution.width())
         self.pe_configure_input_panel()
         self.pe_configure_plot_panel()
         self.today = datetime.now()
@@ -35,6 +37,12 @@ class PolarizationEfficiency(QtWidgets.QWidget, GuiBuilder):
         self.data_folder = './Data/{0}'.format(self.today_str)
         self.start_pause = 5.0
         self.status_bar.showMessage('Ready')
+        self.x_data = []
+        self.x_stds = []
+        self.y_data = []
+        self.y_stds = []
+        self.pe_plot_time_stream([0], -1, 1.0)
+        self.pe_plot(running=True)
 
     #################################################
     # Gui Config
@@ -49,8 +57,9 @@ class PolarizationEfficiency(QtWidgets.QWidget, GuiBuilder):
     def pe_configure_input_panel(self):
         '''
         '''
-        welcome_header_label = QtWidgets.QLabel('Welcome to pe', self)
-        self.layout().addWidget(welcome_header_label, 0, 0, 1, 1)
+        welcome_header_label = QtWidgets.QLabel('Welcome to Polarization Efficiency', self)
+        welcome_header_label.setFixedWidth(0.3 * self.screen_resolution.width())
+        self.layout().addWidget(welcome_header_label, 0, 0, 1, 2)
         # DAQ (Device + Channel) Selection
         device_header_label = QtWidgets.QLabel('Device:', self)
         self.layout().addWidget(device_header_label, 1, 0, 1, 1)
@@ -121,32 +130,39 @@ class PolarizationEfficiency(QtWidgets.QWidget, GuiBuilder):
         self.layout().addWidget(sample_name_header_label, 12, 0, 1, 1)
         self.sample_name_lineedit = QtWidgets.QLineEdit('', self)
         self.layout().addWidget(self.sample_name_lineedit, 12, 1, 1, 1)
-        ######
+        # Zero Lock in
+        self.zero_lock_in_checkbox = QtWidgets.QCheckBox('Zero Lock In?', self)
+        self.zero_lock_in_checkbox.setChecked(True)
+        self.layout().addWidget(self.zero_lock_in_checkbox, 13, 0, 1, 1)
+        #####
         # Control Buttons 
         ######
         self.start_pushbutton = QtWidgets.QPushButton('Start', self)
-        self.layout().addWidget(self.start_pushbutton, 13, 0, 1, 2)
+        self.layout().addWidget(self.start_pushbutton, 14, 0, 1, 2)
         self.start_pushbutton.clicked.connect(self.pe_start_stop_scan)
         save_pushbutton = QtWidgets.QPushButton('Save', self)
-        self.layout().addWidget(save_pushbutton, 14, 0, 1, 2)
+        self.layout().addWidget(save_pushbutton, 15, 0, 1, 2)
         save_pushbutton.clicked.connect(self.pe_save)
+        spacer_label = QtWidgets.QLabel(' ', self)
+        self.layout().addWidget(spacer_label, 15, 0, 8, 2)
 
     def pe_configure_plot_panel(self):
         '''
         '''
-        self.plot_label = QtWidgets.QLabel('', self.pe_plot_panel)
-        self.pe_plot_panel.layout().addWidget(self.plot_label, 0, 0, 1, 4)
+        self.pe_plot_label = QtWidgets.QLabel('', self.pe_plot_panel)
+        self.pe_plot_label.setAttribute(QtCore.Qt.WA_TranslucentBackground)
+        self.pe_plot_panel.layout().addWidget(self.pe_plot_label, 0, 0, 1, 4)
+        self.time_stream_plot_label = QtWidgets.QLabel('', self.pe_plot_panel)
+        self.time_stream_plot_label.setAttribute(QtCore.Qt.WA_TranslucentBackground)
+        self.pe_plot_panel.layout().addWidget(self.time_stream_plot_label, 1, 0, 1, 4)
         data_mean_header_label = QtWidgets.QLabel('Data Mean (V):', self.pe_plot_panel)
-        self.pe_plot_panel.layout().addWidget(data_mean_header_label, 1, 0, 1, 1)
+        self.pe_plot_panel.layout().addWidget(data_mean_header_label, 2, 0, 1, 1)
         self.data_mean_label = QtWidgets.QLabel('', self.pe_plot_panel)
-        self.pe_plot_panel.layout().addWidget(self.data_mean_label, 1, 1, 1, 1)
+        self.pe_plot_panel.layout().addWidget(self.data_mean_label, 2, 1, 1, 1)
         data_std_header_label = QtWidgets.QLabel('Data STD (V):', self.pe_plot_panel)
-        self.pe_plot_panel.layout().addWidget(data_std_header_label, 1, 2, 1, 1)
+        self.pe_plot_panel.layout().addWidget(data_std_header_label, 2, 2, 1, 1)
         self.data_std_label = QtWidgets.QLabel('', self.pe_plot_panel)
-        self.pe_plot_panel.layout().addWidget(self.data_std_label, 1, 3, 1, 1)
-        # X
-        self.running_plot_label = QtWidgets.QLabel('', self.pe_plot_panel)
-        self.pe_plot_panel.layout().addWidget(self.running_plot_label, 2, 0, 1, 4)
+        self.pe_plot_panel.layout().addWidget(self.data_std_label, 2, 3, 1, 1)
 
     def bd_get_simulated_data(self, datatype, current_position, noise=10):
         '''
@@ -244,8 +260,9 @@ class PolarizationEfficiency(QtWidgets.QWidget, GuiBuilder):
             self.x_data, self.x_stds = [], []
             self.y_data, self.y_stds = [], []
             for i, scan_position in enumerate(scan_positions):
+                if self.zero_lock_in_checkbox.isChecked():
+                    self.srs_widget.srs_zero_lock_in_phase()
                 time.sleep(pause_time / 1e3)
-                print(i, scan_position)
                 self.csm_widget.csm_set_position(position=scan_position, verbose=False)
                 if i == 0:
                     self.status_bar.showMessage('Waiting {0}s for grid to move to start position'.format(self.start_pause))
@@ -260,6 +277,7 @@ class PolarizationEfficiency(QtWidgets.QWidget, GuiBuilder):
                                                                                 device=device)
                 self.y_data.append(out_mean)
                 self.y_stds.append(out_std)
+                self.pe_plot_time_stream(out_ts, out_min, out_max)
                 self.pe_plot(running=True)
                 self.data_mean_label.setText('{0:.6f}'.format(out_mean))
                 self.data_std_label.setText('{0:.6f}'.format(out_std))
@@ -281,42 +299,6 @@ class PolarizationEfficiency(QtWidgets.QWidget, GuiBuilder):
     ###################################################################
     # Saving and Plotting
     ###################################################################
-
-    def pe_create_blank_fig(self, frac_screen_width=0.5, frac_screen_height=0.8,
-                             left=0.13, right=0.98, top=0.95, bottom=0.08, n_axes=2,
-                             aspect=None):
-        if frac_screen_width is None and frac_screen_height is None:
-            fig = pl.figure()
-        else:
-            width = (frac_screen_width * self.screen_resolution.width()) / self.monitor_dpi
-            height = (frac_screen_height * self.screen_resolution.height()) / self.monitor_dpi
-            fig = pl.figure(figsize=(width, height))
-        fig.subplots_adjust(left=left, right=right, top=top, bottom=bottom)
-        if n_axes == 2:
-            ax1 = fig.add_subplot(211, label='int')
-            ax2 = fig.add_subplot(212, label='spec')
-            return fig, ax1, ax2
-        else:
-            ax = fig.add_subplot(111)
-            return fig, ax
-
-    def pe_plot(self, running=False):
-        '''
-        '''
-        pl.close('all')
-        fig, ax = self.pe_create_blank_fig(n_axes=1)
-        ax.set_xlabel('Steps', fontsize=10)
-        ax.set_ylabel('Amplitude', fontsize=10)
-        title = 'Polarization Efficiency for {0}'.format(self.sample_name_lineedit.text())
-        ax.set_title(title, fontsize=14)
-        ax.errorbar(self.x_data, self.x_stds, self.y_data, self.y_stds, marker='.', linestyle='-')
-        if running:
-            fig.savefig('temp_files/temp_pol.png')
-            image = QtGui.QPixmap('temp_files/temp_pol.png')
-            self.running_plot_label.setPixmap(image)
-            os.remove('temp_files/temp_pol.png')
-        else:
-            pl.show()
 
     def pe_index_file_name(self):
         '''
@@ -340,3 +322,52 @@ class PolarizationEfficiency(QtWidgets.QWidget, GuiBuilder):
                     save_handle.write(line)
         else:
             self.gb_quick_message('Warning {0} Data Not Written to File!'.format(suffix), msg_type='Warning')
+
+    def pe_plot_time_stream(self, ts, min_, max_):
+        '''
+        '''
+        fig, ax = self.pe_create_blank_fig(frac_screen_width=0.7, frac_screen_height=0.17, top=0.9, bottom=0.17, n_axes=1)
+        ax.plot(ts)
+        ax.set_xlabel('Samples', fontsize=14)
+        ax.set_ylabel('Voltage (V)', fontsize=14)
+        ax.set_title('Data Monitor', fontsize=14)
+        fig.savefig('temp_files/temp_ts.png', transparent=True)
+        pl.close('all')
+        image = QtGui.QPixmap('temp_files/temp_ts.png')
+        self.time_stream_plot_label.setPixmap(image)
+
+    def pe_plot(self, running=False):
+        '''
+        '''
+        pl.close('all')
+        fig, ax = self.pe_create_blank_fig(frac_screen_width=0.7, frac_screen_height=0.65, n_axes=1)
+        ax.set_xlabel('Steps', fontsize=10)
+        ax.set_ylabel('Amplitude', fontsize=10)
+        title = 'Polarization Efficiency for {0}'.format(self.sample_name_lineedit.text())
+        ax.set_title(title, fontsize=14)
+        ax.errorbar(self.x_data, self.x_stds, self.y_data, self.y_stds, marker='.', linestyle='-')
+        if running:
+            fig.savefig('temp_files/temp_pol.png', transparent=True)
+            image = QtGui.QPixmap('temp_files/temp_pol.png')
+            self.pe_plot_label.setPixmap(image)
+            os.remove('temp_files/temp_pol.png')
+        else:
+            pl.show()
+
+    def pe_create_blank_fig(self, frac_screen_width=0.5, frac_screen_height=0.8,
+                             left=0.08, right=0.98, top=0.95, bottom=0.08, n_axes=2,
+                             aspect=None):
+        if frac_screen_width is None and frac_screen_height is None:
+            fig = pl.figure()
+        else:
+            width = (frac_screen_width * self.screen_resolution.width()) / self.monitor_dpi
+            height = (frac_screen_height * self.screen_resolution.height()) / self.monitor_dpi
+            fig = pl.figure(figsize=(width, height))
+        fig.subplots_adjust(left=left, right=right, top=top, bottom=bottom)
+        if n_axes == 2:
+            ax1 = fig.add_subplot(211, label='int')
+            ax2 = fig.add_subplot(212, label='spec')
+            return fig, ax1, ax2
+        else:
+            ax = fig.add_subplot(111)
+            return fig, ax

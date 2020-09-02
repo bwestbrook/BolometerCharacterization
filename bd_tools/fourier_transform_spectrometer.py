@@ -12,12 +12,12 @@ from bd_tools.configure_stepper_motor import ConfigureStepperMotor
 
 class FourierTransformSpectrometer(QtWidgets.QWidget, GuiBuilder):
 
-    def __init__(self, daq_settings, status_bar, screen_resolution, monitor_dpi, csm_widget, srs_sr830_widget):
+    def __init__(self, daq_settings, status_bar, screen_resolution, monitor_dpi, csm_widget, srs_widget):
         '''
         '''
         super(FourierTransformSpectrometer, self).__init__()
         self.status_bar = status_bar
-        self.srs_sr830_widget = srs_sr830_widget
+        self.srs_widget = srs_widget
         self.csm_widget = csm_widget
         self.daq_settings = daq_settings
         self.screen_resolution = screen_resolution
@@ -27,7 +27,8 @@ class FourierTransformSpectrometer(QtWidgets.QWidget, GuiBuilder):
         self.setLayout(grid)
         grid_2 = QtWidgets.QGridLayout()
         self.fts_plot_panel = QtWidgets.QWidget(self)
-        self.layout().addWidget(self.fts_plot_panel, 0, 2, 14, 1)
+        self.layout().addWidget(self.fts_plot_panel, 0, 2, 20, 1)
+        self.fts_plot_panel.setFixedWidth(0.65 * screen_resolution.width())
         self.fts_plot_panel.setLayout(grid_2)
         self.fts_configure_input_panel()
         self.fts_configure_plot_panel()
@@ -37,6 +38,12 @@ class FourierTransformSpectrometer(QtWidgets.QWidget, GuiBuilder):
         self.fourier = Fourier()
         self.start_pause = 5.0
         self.status_bar.showMessage('Ready')
+        self.x_data = []
+        self.x_stds = []
+        self.y_data = []
+        self.y_stds = []
+        self.fts_plot(running=True)
+        self.fts_plot_time_stream([0], -1.0, 1.0)
 
     #################################################
     # Gui Config
@@ -53,7 +60,8 @@ class FourierTransformSpectrometer(QtWidgets.QWidget, GuiBuilder):
         '''
         '''
         welcome_header_label = QtWidgets.QLabel('Welcome to FTS', self)
-        self.layout().addWidget(welcome_header_label, 0, 0, 1, 1)
+        welcome_header_label.setFixedWidth(0.3 * self.screen_resolution.width())
+        self.layout().addWidget(welcome_header_label, 0, 0, 1, 2)
         # DAQ (Device + Channel) Selection
         device_header_label = QtWidgets.QLabel('Device:', self)
         self.layout().addWidget(device_header_label, 1, 0, 1, 1)
@@ -124,32 +132,41 @@ class FourierTransformSpectrometer(QtWidgets.QWidget, GuiBuilder):
         self.layout().addWidget(sample_name_header_label, 12, 0, 1, 1)
         self.sample_name_lineedit = QtWidgets.QLineEdit('', self)
         self.layout().addWidget(self.sample_name_lineedit, 12, 1, 1, 1)
+        # Zero Lockin
+        self.zero_lock_in_checkbox = QtWidgets.QCheckBox('Zero Lock in?', self)
+        self.layout().addWidget(self.zero_lock_in_checkbox, 13, 0, 1, 1)
+        self.zero_lock_in_checkbox.setChecked(True)
+
         ######
         # Control Buttons 
         ######
         self.start_pushbutton = QtWidgets.QPushButton('Start', self)
-        self.layout().addWidget(self.start_pushbutton, 13, 0, 1, 2)
+        self.layout().addWidget(self.start_pushbutton, 14, 0, 1, 2)
         self.start_pushbutton.clicked.connect(self.fts_start_stop_scan)
         save_pushbutton = QtWidgets.QPushButton('Save', self)
-        self.layout().addWidget(save_pushbutton, 14, 0, 1, 2)
+        self.layout().addWidget(save_pushbutton, 15, 0, 1, 2)
         save_pushbutton.clicked.connect(self.fts_save)
+        spacer_label = QtWidgets.QLabel(' ', self)
+        self.layout().addWidget(spacer_label, 16, 0, 8, 2)
 
     def fts_configure_plot_panel(self):
         '''
         '''
-        self.inteferogram_plot_label = QtWidgets.QLabel('', self.fts_plot_panel)
-        self.fts_plot_panel.layout().addWidget(self.inteferogram_plot_label, 0, 0, 1, 4)
+        self.int_spec_plot_label = QtWidgets.QLabel('', self.fts_plot_panel)
+        self.int_spec_plot_label.setAttribute(QtCore.Qt.WA_TranslucentBackground)
+        self.fts_plot_panel.layout().addWidget(self.int_spec_plot_label, 0, 0, 1, 4)
+        self.time_stream_plot_label = QtWidgets.QLabel('', self.fts_plot_panel)
+        self.time_stream_plot_label.setAttribute(QtCore.Qt.WA_TranslucentBackground)
+        self.fts_plot_panel.layout().addWidget(self.time_stream_plot_label, 1, 0, 1, 4)
         int_data_mean_header_label = QtWidgets.QLabel('Data Mean (V):', self.fts_plot_panel)
-        self.fts_plot_panel.layout().addWidget(int_data_mean_header_label, 1, 0, 1, 1)
+        self.fts_plot_panel.layout().addWidget(int_data_mean_header_label, 2, 0, 1, 1)
         self.int_data_mean_label = QtWidgets.QLabel('', self.fts_plot_panel)
-        self.fts_plot_panel.layout().addWidget(self.int_data_mean_label, 1, 1, 1, 1)
+        self.fts_plot_panel.layout().addWidget(self.int_data_mean_label, 2, 1, 1, 1)
         int_data_std_header_label = QtWidgets.QLabel('Data STD (V):', self.fts_plot_panel)
-        self.fts_plot_panel.layout().addWidget(int_data_std_header_label, 1, 2, 1, 1)
+        self.fts_plot_panel.layout().addWidget(int_data_std_header_label, 2, 2, 1, 1)
         self.int_data_std_label = QtWidgets.QLabel('', self.fts_plot_panel)
-        self.fts_plot_panel.layout().addWidget(self.int_data_std_label, 1, 3, 1, 1)
+        self.fts_plot_panel.layout().addWidget(self.int_data_std_label, 2, 3, 1, 1)
         # X
-        self.spectrum_plot_label = QtWidgets.QLabel('', self.fts_plot_panel)
-        self.fts_plot_panel.layout().addWidget(self.spectrum_plot_label, 2, 0, 1, 4)
 
     #################################################
     # Scanning
@@ -249,9 +266,9 @@ class FourierTransformSpectrometer(QtWidgets.QWidget, GuiBuilder):
             self.x_data, self.x_stds = [], []
             self.y_data, self.y_stds = [], []
             for i, scan_position in enumerate(scan_positions):
-                self.srs_sr830_widget.srs_zero_lock_in_phase()
+                if self.zero_lock_in_checkbox.isChecked():
+                    self.srs_widget.srs_zero_lock_in_phase()
                 time.sleep(pause_time / 1e3)
-                print(i, scan_position)
                 self.csm_widget.csm_set_position(position=scan_position, verbose=False)
                 if i == 0:
                     self.status_bar.showMessage('Waiting {0}s for mirror to move to start position'.format(self.start_pause))
@@ -267,6 +284,7 @@ class FourierTransformSpectrometer(QtWidgets.QWidget, GuiBuilder):
                 self.y_data.append(out_mean)
                 self.y_stds.append(out_std)
                 self.fts_plot(running=True)
+                self.fts_plot_time_stream(out_ts, out_min, out_max)
                 self.int_data_mean_label.setText('{0:.6f}'.format(out_mean))
                 self.int_data_std_label.setText('{0:.6f}'.format(out_std))
                 # Compute and report time diagnostics
@@ -325,12 +343,25 @@ class FourierTransformSpectrometer(QtWidgets.QWidget, GuiBuilder):
         self.fts_plot_int()
         self.fts_plot_spectra()
 
+    def fts_plot_time_stream(self, ts, min_, max_):
+        '''
+        '''
+        fig, ax = self.fts_create_blank_fig(frac_screen_width=0.65, frac_screen_height=0.2, top=0.9, bottom=0.17, n_axes=1)
+        ax.plot(ts)
+        ax.set_xlabel('Samples', fontsize=14)
+        ax.set_ylabel('Voltage (V)', fontsize=14)
+        ax.set_title('Data Monitor', fontsize=14)
+        fig.savefig('temp_files/temp_ts.png', transparent=True)
+        image = QtGui.QPixmap('temp_files/temp_ts.png')
+        self.time_stream_plot_label.setPixmap(image)
+        pl.close('all')
+
     def fts_plot(self, running=False):
         '''
         '''
         pl.close('all')
         mirror_interval = self.scan_settings_dict['mirror_interval']
-        fig, ax1, ax2 = self.fts_create_blank_fig()
+        fig, ax1, ax2 = self.fts_create_blank_fig(frac_screen_width=0.65, frac_screen_height=0.65)
         ax1.set_xlabel('Mirror Position (Steps)', fontsize=14)
         ax1.set_ylabel('Bolometer Response (V)', fontsize=14)
         ax2.set_xlabel('Frequency (GHz)', fontsize=14)
@@ -348,9 +379,9 @@ class FourierTransformSpectrometer(QtWidgets.QWidget, GuiBuilder):
             ax1.errorbar(self.x_data, self.y_data, yerr=self.y_stds, marker='.', linestyle='-')
         if running:
             temp_png_path = os.path.join('temp_files', 'temp_int.png')
-            fig.savefig(temp_png_path)
+            fig.savefig(temp_png_path, transparent=True)
             image_to_display = QtGui.QPixmap(temp_png_path)
-            self.inteferogram_plot_label.setPixmap(image_to_display)
+            self.int_spec_plot_label.setPixmap(image_to_display)
             os.remove(temp_png_path)
         else:
             pl.show()
@@ -385,7 +416,7 @@ class FourierTransformSpectrometer(QtWidgets.QWidget, GuiBuilder):
         pl.show()
 
     def fts_create_blank_fig(self, frac_screen_width=0.5, frac_screen_height=0.8,
-                             left=0.13, right=0.98, top=0.95, bottom=0.08, n_axes=2,
+                             left=0.08, right=0.98, top=0.95, bottom=0.08, n_axes=2,
                              aspect=None):
         if frac_screen_width is None and frac_screen_height is None:
             fig = pl.figure()

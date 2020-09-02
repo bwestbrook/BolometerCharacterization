@@ -340,8 +340,6 @@ class DataPlotter(QtWidgets.QWidget, GuiBuilder):
                     yerr = data_dict[data_row]['yerr'][lo_index:hi_index]
                     label = data_dict[data_row]['label']
                     ax.errorbar(x_data, y_data, xerr=xerr, yerr=yerr, marker='.', linestyle='-', lw=5, label=label)
-            ax.tick_params(axis='x', labelsize=16)
-            ax.tick_params(axis='y', labelsize=16)
             ax.set_xlabel(x_label_1, fontsize=16)
             ax.set_ylabel(y_label_1, fontsize=16)
             ax.set_title(title, fontsize=16)
@@ -369,4 +367,6 @@ class DataPlotter(QtWidgets.QWidget, GuiBuilder):
         else:
             ax = None
         fig.subplots_adjust(left=left, right=right, top=top, bottom=bottom)
+        ax.tick_params(axis='x', labelsize=16)
+        ax.tick_params(axis='y', labelsize=16)
         return fig, ax

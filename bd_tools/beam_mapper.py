@@ -31,10 +31,13 @@ class BeamMapper(QtWidgets.QWidget, GuiBuilder):
         self.setLayout(grid)
         grid_2 = QtWidgets.QGridLayout()
         self.bm_plot_panel = QtWidgets.QWidget(self)
+        self.bm_plot_panel.setFixedWidth(0.7 * screen_resolution.width())
         self.bm_plot_panel.setLayout(grid_2)
-        self.layout().addWidget(self.bm_plot_panel, 0, 5, 14, 1)
+        self.layout().addWidget(self.bm_plot_panel, 0, 5, 20, 1)
         self.bm_configure_input_panel()
         self.bm_configure_plot_panel()
+        self.bm_plot_time_stream([0], -1.0, 1.0)
+        self.bm_plot_beam_map([], [], [], running=True)
 
     def bm_update_daq_settings(self, daq_settings):
         '''
@@ -45,8 +48,9 @@ class BeamMapper(QtWidgets.QWidget, GuiBuilder):
     def bm_configure_input_panel(self):
         '''
         '''
-        welcome_header_label = QtWidgets.QLabel('Welcome to pe', self)
-        self.layout().addWidget(welcome_header_label, 0, 0, 1, 1)
+        welcome_header_label = QtWidgets.QLabel('Welcome to Beam Mapper', self)
+        welcome_header_label.setFixedWidth(0.3 * self.screen_resolution.width())
+        self.layout().addWidget(welcome_header_label, 0, 0, 1, 4)
         # DAQ (Device + Channel) Selection
         device_header_label = QtWidgets.QLabel('Device:', self)
         self.layout().addWidget(device_header_label, 1, 0, 1, 1)
@@ -127,22 +131,30 @@ class BeamMapper(QtWidgets.QWidget, GuiBuilder):
         self.layout().addWidget(sample_name_header_label, 12, 0, 1, 1)
         self.sample_name_lineedit = QtWidgets.QLineEdit('', self)
         self.layout().addWidget(self.sample_name_lineedit, 12, 1, 1, 3)
+        # Zero Lock in
+        self.zero_lock_in_checkbox = QtWidgets.QCheckBox('Zero Lock In?', self)
+        self.zero_lock_in_checkbox.setChecked(True)
+        self.layout().addWidget(self.zero_lock_in_checkbox, 13, 0, 1, 1)
         ######
         # Control Buttons 
         ######
         self.start_pushbutton = QtWidgets.QPushButton('Start', self)
-        self.layout().addWidget(self.start_pushbutton, 13, 0, 1, 4)
+        self.layout().addWidget(self.start_pushbutton, 14, 0, 1, 4)
         self.start_pushbutton.clicked.connect(self.bm_start_stop_scan)
         save_pushbutton = QtWidgets.QPushButton('Save', self)
-        self.layout().addWidget(save_pushbutton, 14, 0, 1, 4)
+        self.layout().addWidget(save_pushbutton, 15, 0, 1, 4)
         save_pushbutton.clicked.connect(self.bm_save)
+        spacer_label = QtWidgets.QLabel(' ', self)
+        self.layout().addWidget(spacer_label, 16, 0, 10, 4)
 
     def bm_configure_plot_panel(self):
         '''
         '''
         self.beam_map_plot_label = QtWidgets.QLabel('', self.bm_plot_panel)
+        self.beam_map_plot_label.setAttribute(QtCore.Qt.WA_TranslucentBackground)
         self.bm_plot_panel.layout().addWidget(self.beam_map_plot_label, 0, 0, 1, 4)
         self.time_stream_plot_label = QtWidgets.QLabel('', self.bm_plot_panel)
+        self.time_stream_plot_label.setAttribute(QtCore.Qt.WA_TranslucentBackground)
         self.bm_plot_panel.layout().addWidget(self.time_stream_plot_label, 1, 0, 1, 4)
         data_mean_header_label = QtWidgets.QLabel('Data Mean (V):', self.bm_plot_panel)
         self.bm_plot_panel.layout().addWidget(data_mean_header_label, 2, 0, 1, 1)
@@ -245,8 +257,10 @@ class BeamMapper(QtWidgets.QWidget, GuiBuilder):
         count = 1
         i = 0
         while i < len(x_grid) and self.started:
+            if self.zero_lock_in_checkbox.isChecked():
+                self.srs_widget.srs_zero_lock_in_phase()
+            time.sleep(pause_time / 1e3)
             x_pos = x_grid[i]
-            print(x_pos)
             self.csm_widget_x.csm_set_position(x_pos, verbose=False)
             act_x_pos = x_pos
             direction *= -1
@@ -302,67 +316,6 @@ class BeamMapper(QtWidgets.QWidget, GuiBuilder):
     # Saving and plotting
     ##############################################################################
 
-    def bm_create_blank_fig(self, frac_screen_width=0.5, frac_screen_height=0.8,
-                             left=0.18, right=0.98, top=0.95, bottom=0.08, n_axes=1,
-                             aspect=None):
-        if frac_screen_width is None and frac_screen_height is None:
-            fig = pl.figure()
-        else:
-            width = (frac_screen_width * self.screen_resolution.width()) / self.monitor_dpi
-            height = (frac_screen_height * self.screen_resolution.height()) / self.monitor_dpi
-            fig = pl.figure(figsize=(width, height))
-        fig.subplots_adjust(left=left, right=right, top=top, bottom=bottom)
-        if n_axes == 2:
-            ax1 = fig.add_subplot(211, label='int')
-            ax2 = fig.add_subplot(212, label='spec')
-            return fig, ax1, ax2
-        else:
-            if aspect is None:
-                ax = fig.add_subplot(111)
-            else:
-                ax = fig.add_subplot(111, aspect=aspect)
-            return fig, ax
-
-    def bm_plot_time_stream(self, ts, min_, max_):
-        '''
-        '''
-        fig, ax = self.bm_create_blank_fig(left=0.1, bottom=0.12, right=0.98, top=0.95,
-                                           frac_screen_width=0.6, frac_screen_height=0.25)
-        ax.plot(ts)
-        ax.set_xlabel('Samples', fontsize=14)
-        ax.set_ylabel('Voltage (V)', fontsize=14)
-        ax.set_title('Data Monitor', fontsize=14)
-        fig.savefig('temp_files/temp_ts.png', transperant=True)
-        pl.close('all')
-        image = QtGui.QPixmap('temp_files/temp_ts.png')
-        self.time_stream_plot_label.setPixmap(image)
-
-    def bm_plot_beam_map(self, x_ticks, y_ticks, Z, running=False):
-        '''
-        '''
-        fig, ax = self.bm_create_blank_fig(left=0.02, bottom=0.08, right=0.98, top=0.95,
-                                           frac_screen_width=0.6, frac_screen_height=0.7,
-                                           aspect='equal')
-        #ax_image = ax.imshow(Z)
-        ax_image = ax.pcolormesh(Z)
-        ax.set_title('BEAM DATA', fontsize=16)
-        ax.set_xlabel('X Position (k-steps)', fontsize=14)
-        ax.set_ylabel('Y Position (k-steps)', fontsize=14)
-        x_tick_locs = [0.5 + x for x in range(len(x_ticks))]
-        y_tick_locs = [0.5 + x for x in range(len(x_ticks))]
-        ax.set_xticks(x_tick_locs)
-        ax.set_yticks(y_tick_locs)
-        ax.set_xticklabels(x_ticks, rotation=35, fontsize=10)
-        ax.set_yticklabels(y_ticks, fontsize=10)
-        color_bar = fig.colorbar(ax_image, ax=ax)
-        if running:
-            fig.savefig('temp_files/temp_beam.png', transperant=True)
-            pl.close('all')
-            image = QtGui.QPixmap('temp_files/temp_beam.png')
-            self.beam_map_plot_label.setPixmap(image)
-        else:
-            pl.show()
-
     def bm_index_file_name(self):
         '''
         '''
@@ -372,7 +325,6 @@ class BeamMapper(QtWidgets.QWidget, GuiBuilder):
             if not os.path.exists(save_path):
                 break
         return save_path
-
 
     def bm_save(self):
         '''
@@ -387,4 +339,70 @@ class BeamMapper(QtWidgets.QWidget, GuiBuilder):
         else:
             self.gb_quick_message('Warning {0} Data Not Written to File!'.format(suffix), msg_type='Warning')
 
+    def bm_plot_time_stream(self, ts, min_, max_):
+        '''
+        '''
+        fig, ax = self.bm_create_blank_fig(left=0.1, bottom=0.17, right=0.98, top=0.93,
+                                           frac_screen_width=0.7, frac_screen_height=0.2)
+        ax.plot(ts)
+        ax.set_xlabel('Samples', fontsize=14)
+        ax.set_ylabel('Voltage (V)', fontsize=14)
+        ax.set_title('Data Monitor', fontsize=14)
+        fig.savefig('temp_files/temp_ts.png', transparent=True)
+        pl.close('all')
+        image = QtGui.QPixmap('temp_files/temp_ts.png')
+        self.time_stream_plot_label.setPixmap(image)
 
+    def bm_plot_beam_map(self, x_ticks, y_ticks, Z, running=False):
+        '''
+        '''
+        fig, ax = self.bm_create_blank_fig(left=0.02, bottom=0.08, right=0.98, top=0.95,
+                                           frac_screen_width=0.7, frac_screen_height=0.65,
+                                           aspect='equal')
+        #ax_image = ax.imshow(Z)
+        if len(x_ticks) > 0:
+            ax_image = ax.pcolormesh(Z)
+            ax.set_title('BEAM DATA', fontsize=16)
+            ax.set_xlabel('X Position (k-steps)', fontsize=14)
+            ax.set_ylabel('Y Position (k-steps)', fontsize=14)
+            x_tick_locs = [0.5 + x for x in range(len(x_ticks))]
+            y_tick_locs = [0.5 + x for x in range(len(x_ticks))]
+            ax.set_xticks(x_tick_locs)
+            ax.set_yticks(y_tick_locs)
+            ax.set_xticklabels(x_ticks, rotation=35, fontsize=10)
+            ax.set_yticklabels(y_ticks, fontsize=10)
+            color_bar = fig.colorbar(ax_image, ax=ax)
+        if running:
+            fig.savefig('temp_files/temp_beam.png', transparent=True)
+            pl.close('all')
+            image = QtGui.QPixmap('temp_files/temp_beam.png')
+            self.beam_map_plot_label.setPixmap(image)
+        else:
+            pl.show()
+
+    def bm_create_blank_fig(self, frac_screen_width=0.5, frac_screen_height=0.8,
+                             left=0.18, right=0.98, top=0.95, bottom=0.08, n_axes=1,
+                             aspect=None):
+        if frac_screen_width is None and frac_screen_height is None:
+            fig = pl.figure()
+        else:
+            width = (frac_screen_width * self.screen_resolution.width()) / self.monitor_dpi
+            height = (frac_screen_height * self.screen_resolution.height()) / self.monitor_dpi
+            fig = pl.figure(figsize=(width, height))
+        fig.subplots_adjust(left=left, right=right, top=top, bottom=bottom)
+        if n_axes == 2:
+            ax1 = fig.add_subplot(211, label='int')
+            ax2 = fig.add_subplot(212, label='spec')
+            ax1.tick_params(axis='x', labelsize=16)
+            ax1.tick_params(axis='y', labelsize=16)
+            ax2.tick_params(axis='x', labelsize=16)
+            ax2.tick_params(axis='y', labelsize=16)
+            return fig, ax1, ax2
+        else:
+            if aspect is None:
+                ax = fig.add_subplot(111)
+            else:
+                ax = fig.add_subplot(111, aspect=aspect)
+            ax.tick_params(axis='x', labelsize=16)
+            ax.tick_params(axis='y', labelsize=16)
+            return fig, ax

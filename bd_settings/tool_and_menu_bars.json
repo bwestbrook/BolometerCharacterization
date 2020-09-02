@@ -60,56 +60,64 @@
     "Right": {},
     "Top": {
         "02_DAQ_Mode": {
-            "01_XY Collector": {
+            "01_IV Curves": {
                 "Shortcut": "1",
-                "StatusTip": "XY Collector",
-                "ToolTip": "XY Collector",
-                "function": "bd_xy_collector",
-                "icon": "scatter.png"
+                "StatusTip": "IV Curves",
+                "ToolTip": "IV Curves",
+                "function": "bd_iv_curves",
+                "icon": "iv_curves.png"
             },
-            "02_FTS": {
+            "02_RT Curves": {
                 "Shortcut": "2",
+                "StatusTip": "RT Curves",
+                "ToolTip": "RT Curves",
+                "function": "bd_rt_curves",
+                "icon": "rt_curves.png"
+            },
+            "03_FTS": {
+                "Shortcut": "3",
                 "StatusTip": "Fourier Transform Spectrometer",
                 "ToolTip": "FTS",
                 "function": "bd_fts",
                 "icon": "fourier.png"
             },
-            "03_Beam Map": {
-                "Shortcut": "3",
-                "StatusTip": "Beam Map",
-                "ToolTip": "Beam Map",
-                "function": "bd_beam_mapper",
-                "icon": "beammap.png"
-            },
-            "04_Cosmic Rays": {
-                "Shortcut": "4",
-                "StatusTip": "Cosmic Rays",
-                "ToolTip": "Cosmic Rays",
-                "function": "bd_cosmic_rays",
-                "icon": "cosmicrays.png"
-            },
             "04_Pol Efficieny": {
-                "Shortcut": "5",
+                "Shortcut": "6",
                 "StatusTip": "Polarization Efficiency",
                 "ToolTip": "Pol Eff",
                 "function": "bd_polarization_efficiency",
                 "icon": "poleff.png"
             },
-            "05_Time Constant": {
-                "Shortcut": "6",
+            "05_Beam Map": {
+                "Shortcut": "4",
+                "StatusTip": "Beam Map",
+                "ToolTip": "Beam Map",
+                "function": "bd_beam_mapper",
+                "icon": "beammap.png"
+            },
+            "06_Cosmic Rays": {
+                "Shortcut": "5",
+                "StatusTip": "Cosmic Rays",
+                "ToolTip": "Cosmic Rays",
+                "function": "bd_cosmic_rays",
+                "icon": "cosmicrays.png"
+            },
+            "07_Time Constant": {
+                "Shortcut": "7",
                 "StatusTip": "Polarization Efficiency",
                 "ToolTip": "Pol Eff",
                 "function": "bd_time_constant",
                 "icon": "time_constant.png"
             },
-            "06_Data Plotter": {
-                "Shortcut": "6",
+            "08_Data Plotter": {
+                "Shortcut": "8",
                 "StatusTip": "Data Plotter",
                 "ToolTip": "Data Plotter",
                 "function": "bd_data_plotter",
                 "icon": "data.png"
             },
-            "07_Fridge Cycle 576": {
+            "09_Fridge Cycle 576": {
+                "Shortcut": "9",
                 "StatusTip": "Fridge Cycle 576",
                 "ToolTip": "Fridge Cycle 576",
                 "function": "bd_fridge_cycle",
