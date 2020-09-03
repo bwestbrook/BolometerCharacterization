@@ -145,6 +145,7 @@ class BeamMapper(QtWidgets.QWidget, GuiBuilder):
         self.layout().addWidget(save_pushbutton, 15, 0, 1, 4)
         save_pushbutton.clicked.connect(self.bm_save)
         spacer_label = QtWidgets.QLabel(' ', self)
+        spacer_label.setFixedWidth(0.3 * self.screen_resolution.width())
         self.layout().addWidget(spacer_label, 16, 0, 10, 4)
 
     def bm_configure_plot_panel(self):
@@ -157,10 +158,12 @@ class BeamMapper(QtWidgets.QWidget, GuiBuilder):
         self.time_stream_plot_label.setAttribute(QtCore.Qt.WA_TranslucentBackground)
         self.bm_plot_panel.layout().addWidget(self.time_stream_plot_label, 1, 0, 1, 4)
         data_mean_header_label = QtWidgets.QLabel('Data Mean (V):', self.bm_plot_panel)
+        data_mean_header_label.setAlignment(QtCore.Qt.AlignRight)
         self.bm_plot_panel.layout().addWidget(data_mean_header_label, 2, 0, 1, 1)
         self.data_mean_label = QtWidgets.QLabel('', self.bm_plot_panel)
         self.bm_plot_panel.layout().addWidget(self.data_mean_label, 2, 1, 1, 1)
         data_std_header_label = QtWidgets.QLabel('Data STD (V):', self.bm_plot_panel)
+        data_std_header_label.setAlignment(QtCore.Qt.AlignRight)
         self.bm_plot_panel.layout().addWidget(data_std_header_label, 2, 2, 1, 1)
         self.data_std_label = QtWidgets.QLabel('', self.bm_plot_panel)
         self.bm_plot_panel.layout().addWidget(self.data_std_label, 2, 3, 1, 1)
@@ -216,6 +219,18 @@ class BeamMapper(QtWidgets.QWidget, GuiBuilder):
                 daq_settings_str += ' (Hz): '
             daq_settings_str += '{0} ::: '.format(value)
         self.daq_settings_label.setText(daq_settings_str)
+        sm_settings_str = ''
+        self.scan_settings_dict.update(self.csm_widget_x.stepper_settings_dict)
+        for setting, value in self.csm_widget_x.stepper_settings_dict.items():
+            sm_settings_str += ' '.join([x.title() for x in setting.split('_')])
+            sm_settings_str += ': {0}\n'.format(value)
+        self.stepper_x_settings_label.setText(sm_settings_str)
+        sm_settings_str = ''
+        self.scan_settings_dict.update(self.csm_widget_y.stepper_settings_dict)
+        for setting, value in self.csm_widget_y.stepper_settings_dict.items():
+            sm_settings_str += ' '.join([x.title() for x in setting.split('_')])
+            sm_settings_str += ': {0}\n'.format(value)
+        self.stepper_y_settings_label.setText(sm_settings_str)
 
     def bm_start_stop_scan(self):
         '''
@@ -257,11 +272,8 @@ class BeamMapper(QtWidgets.QWidget, GuiBuilder):
         count = 1
         i = 0
         while i < len(x_grid) and self.started:
-            if self.zero_lock_in_checkbox.isChecked():
-                self.srs_widget.srs_zero_lock_in_phase()
-            time.sleep(pause_time / 1e3)
             x_pos = x_grid[i]
-            self.csm_widget_x.csm_set_position(x_pos, verbose=False)
+            self.csm_widget_x.csm_set_position(position=int(x_pos), verbose=False)
             act_x_pos = x_pos
             direction *= -1
             if direction == -1:
@@ -271,7 +283,8 @@ class BeamMapper(QtWidgets.QWidget, GuiBuilder):
             j = 0
             while j < len(y_scan) and self.started:
                 y_pos = y_scan[j]
-                self.csm_widget_y.csm_set_position(x_pos, verbose=False)
+                self.csm_widget_y.csm_set_position(position=int(y_pos), verbose=False)
+                print(x_pos, y_pos)
                 act_y_pos = y_pos
                 if i == 0 and j == 0: #sleep extra long on the first point
                     time.sleep(self.start_scan_wait_time)
@@ -279,8 +292,9 @@ class BeamMapper(QtWidgets.QWidget, GuiBuilder):
                     QtWidgets.QApplication.processEvents()
                 else:
                     time.sleep(pause_time * 1e-3)
-                self.srs_widget.srs_zero_lock_in_phase()
-                time.sleep((pause_time / 2) * 1e-3)
+                if self.zero_lock_in_checkbox.isChecked():
+                    self.srs_widget.srs_zero_lock_in_phase()
+                time.sleep(pause_time * 1e-3)
                 data_time_stream, mean, min_, max_, std = self.daq.get_data(signal_channel=signal_channel, int_time=int_time,
                                                                             sample_rate=sample_rate, device=device)
                 self.bm_plot_time_stream(data_time_stream, min_, max_)
@@ -342,12 +356,11 @@ class BeamMapper(QtWidgets.QWidget, GuiBuilder):
     def bm_plot_time_stream(self, ts, min_, max_):
         '''
         '''
-        fig, ax = self.bm_create_blank_fig(left=0.1, bottom=0.17, right=0.98, top=0.93,
-                                           frac_screen_width=0.7, frac_screen_height=0.2)
+        fig, ax = self.bm_create_blank_fig(left=0.12, bottom=0.26, right=0.98, top=0.93,
+                                           frac_screen_width=0.7, frac_screen_height=0.25)
         ax.plot(ts)
         ax.set_xlabel('Samples', fontsize=14)
-        ax.set_ylabel('Voltage (V)', fontsize=14)
-        ax.set_title('Data Monitor', fontsize=14)
+        ax.set_ylabel('($V$)', fontsize=14)
         fig.savefig('temp_files/temp_ts.png', transparent=True)
         pl.close('all')
         image = QtGui.QPixmap('temp_files/temp_ts.png')
@@ -356,8 +369,8 @@ class BeamMapper(QtWidgets.QWidget, GuiBuilder):
     def bm_plot_beam_map(self, x_ticks, y_ticks, Z, running=False):
         '''
         '''
-        fig, ax = self.bm_create_blank_fig(left=0.02, bottom=0.08, right=0.98, top=0.95,
-                                           frac_screen_width=0.7, frac_screen_height=0.65,
+        fig, ax = self.bm_create_blank_fig(left=0.02, bottom=0.11, right=0.98, top=0.95,
+                                           frac_screen_width=0.65, frac_screen_height=0.65,
                                            aspect='equal')
         #ax_image = ax.imshow(Z)
         if len(x_ticks) > 0:

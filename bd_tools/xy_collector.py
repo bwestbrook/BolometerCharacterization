@@ -41,7 +41,7 @@ class XYCollector(QtWidgets.QWidget, GuiBuilder):
         self.xyc_plot_panel = QtWidgets.QWidget(self)
         self.xyc_plot_panel.setLayout(grid_3)
         self.xyc_plot_panel.setFixedWidth(0.7 * screen_resolution.width())
-        self.layout().addWidget(self.xyc_plot_panel, 2, 1, 1, 1)
+        self.layout().addWidget(self.xyc_plot_panel, 2, 1, 20, 1)
         self.x_data = []
         self.x_stds = []
         self.y_data = []
@@ -77,6 +77,7 @@ class XYCollector(QtWidgets.QWidget, GuiBuilder):
         '''
         # Sample Name
         sample_name_header_label = QtWidgets.QLabel('Sample Name:', self.xyc_input_panel)
+        sample_name_header_label.setAlignment(QtCore.Qt.AlignRight)
         self.xyc_input_panel.layout().addWidget(sample_name_header_label, 6, 0, 1, 1)
         self.sample_name_lineedit = QtWidgets.QLineEdit('', self.xyc_input_panel)
         self.xyc_input_panel.layout().addWidget(self.sample_name_lineedit, 6, 1, 1, 3)
@@ -88,7 +89,7 @@ class XYCollector(QtWidgets.QWidget, GuiBuilder):
         save_pushbutton.clicked.connect(self.xyc_save)
         self.xyc_input_panel.layout().addWidget(save_pushbutton, 13, 0, 1, 4)
         spacer_label = QtWidgets.QLabel(' ', self.xyc_input_panel)
-        self.xyc_input_panel.layout().addWidget(spacer_label, 14, 0, 10, 4)
+        self.xyc_input_panel.layout().addWidget(spacer_label, 14, 0, 6, 4)
 
     def xyc_daq_panel(self):
         '''
@@ -102,12 +103,14 @@ class XYCollector(QtWidgets.QWidget, GuiBuilder):
         self.xyc_input_panel.layout().addWidget(self.xyc_daq_combobox, 0, 1, 1, 3)
         self.xyc_daq_combobox.currentIndexChanged.connect(self.xyc_display_daq_settings)
         daq_x_header_label = QtWidgets.QLabel('DAQ Ch X Data:', self)
+        daq_x_header_label.setAlignment(QtCore.Qt.AlignRight)
         self.xyc_input_panel.layout().addWidget(daq_x_header_label, 1, 0, 1, 1)
         self.daq_x_combobox = QtWidgets.QComboBox(self)
         for daq in range(0, 8):
             self.daq_x_combobox.addItem(str(daq))
         self.xyc_input_panel.layout().addWidget(self.daq_x_combobox, 1, 1, 1, 1)
         daq_y_header_label = QtWidgets.QLabel('DAQ Ch Y Data:', self)
+        daq_y_header_label.setAlignment(QtCore.Qt.AlignRight)
         self.xyc_input_panel.layout().addWidget(daq_y_header_label, 1, 2, 1, 1)
         self.daq_y_combobox = QtWidgets.QComboBox(self)
         self.daq_y_combobox.currentIndexChanged.connect(self.xyc_display_daq_settings)
@@ -262,19 +265,19 @@ class XYCollector(QtWidgets.QWidget, GuiBuilder):
         # Y
         self.y_time_stream_label = QtWidgets.QLabel('', self)
         self.y_time_stream_label.setAttribute(QtCore.Qt.WA_TranslucentBackground)
-        self.xyc_plot_panel.layout().addWidget(self.y_time_stream_label, 4, 0, 3, 4)
+        self.xyc_plot_panel.layout().addWidget(self.y_time_stream_label, 0, 4, 3, 4)
         y_mean_header_label = QtWidgets.QLabel('Y Mean: ', self)
-        self.xyc_plot_panel.layout().addWidget(y_mean_header_label, 7, 0, 1, 1)
+        self.xyc_plot_panel.layout().addWidget(y_mean_header_label, 4, 5, 1, 1)
         self.y_mean_label = QtWidgets.QLabel('', self)
-        self.xyc_plot_panel.layout().addWidget(self.y_mean_label, 7, 1, 1, 1)
+        self.xyc_plot_panel.layout().addWidget(self.y_mean_label, 4, 6, 1, 1)
         y_std_header_label = QtWidgets.QLabel('Y STD: ', self)
-        self.xyc_plot_panel.layout().addWidget(y_std_header_label, 7, 2, 1, 1)
+        self.xyc_plot_panel.layout().addWidget(y_std_header_label, 4, 7, 1, 1)
         self.y_std_label = QtWidgets.QLabel('', self)
-        self.xyc_plot_panel.layout().addWidget(self.y_std_label, 7, 3, 1, 1)
+        self.xyc_plot_panel.layout().addWidget(self.y_std_label, 4, 8, 1, 1)
         # XY
         self.xy_scatter_label = QtWidgets.QLabel('', self)
         self.xy_scatter_label.setAttribute(QtCore.Qt.WA_TranslucentBackground)
-        self.xyc_plot_panel.layout().addWidget(self.xy_scatter_label, 8, 0, 3, 4)
+        self.xyc_plot_panel.layout().addWidget(self.xy_scatter_label, 8, 0, 3, 8)
 
     def xyc_initialize_plot_panel(self):
         for x in range(0, 4):
@@ -328,56 +331,6 @@ class XYCollector(QtWidgets.QWidget, GuiBuilder):
     # Saving and Plotting
     ###################################################
 
-    def xyc_plot_running(self):
-        '''
-        '''
-        self.xyc_plot_x()
-        self.xyc_plot_y()
-        self.xyc_plot_xy()
-
-    def xyc_plot_x(self):
-        '''
-        '''
-        fig, ax = self.xyc_create_blank_fig(frac_screen_width=0.7)
-        ax.set_xlabel('Sample', fontsize=16)
-        ax.set_ylabel('Voltage ($V$)', fontsize=16)
-        ax.errorbar(range(len(self.x_data)), self.x_data, self.x_stds, marker='.', linestyle='None')
-        fig.savefig('temp_x.png', transparent=True)
-        pl.close('all')
-        image_to_display = QtGui.QPixmap('temp_x.png')
-        self.x_time_stream_label.setPixmap(image_to_display)
-        os.remove('temp_x.png')
-
-    def xyc_plot_y(self):
-        '''
-        '''
-        fig, ax = self.xyc_create_blank_fig(frac_screen_width=0.7)
-        ax.set_xlabel('Sample', fontsize=16)
-        ax.set_ylabel('Voltage ($V$)', fontsize=16)
-        ax.errorbar(range(len(self.y_data)), self.y_data, self.y_stds, marker='.', linestyle='None')
-        fig.savefig('temp_y.png', transparent=True)
-        pl.close('all')
-        image_to_display = QtGui.QPixmap('temp_y.png')
-        self.y_time_stream_label.setPixmap(image_to_display)
-        os.remove('temp_y.png')
-
-    def xyc_plot_xy(self):
-        '''
-        '''
-        fig, ax = self.xyc_create_blank_fig(frac_screen_width=0.7)
-        if self.mode == 'iv':
-            ax.set_xlabel('Bias Voltage ($\mu V$)', fontsize=16)
-            ax.set_ylabel('TES Current ($\mu A$)', fontsize=16)
-        else:
-            ax.set_xlabel('Temperature ($mK$)', fontsize=16)
-            ax.set_ylabel('Resistance ($\Omega$)', fontsize=16)
-        ax.errorbar(self.x_data, self.y_data, self.y_stds, marker='.', linestyle='-')
-        fig.savefig('temp_xy.png', transparent=True)
-        pl.close('all')
-        image_to_display = QtGui.QPixmap('temp_xy.png')
-        self.xy_scatter_label.setPixmap(image_to_display)
-        os.remove('temp_xy.png')
-
     def xyc_index_file_name(self):
         '''
         '''
@@ -400,12 +353,64 @@ class XYCollector(QtWidgets.QWidget, GuiBuilder):
                     save_handle.write(line)
         else:
             self.gb_quick_message('Warning Data Not Written to File!', msg_type='Warning')
+        self.xyc_plot_final()
 
-    def xyc_plot_final(self, running=True):
+
+    def xyc_plot_running(self):
+        '''
+        '''
+        self.xyc_plot_x()
+        self.xyc_plot_y()
+        self.xyc_plot_xy()
+
+    def xyc_plot_x(self):
+        '''
+        '''
+        fig, ax = self.xyc_create_blank_fig(frac_screen_width=0.35, frac_screen_height=0.35, left=0.23)
+        ax.set_xlabel('Sample', fontsize=12)
+        ax.set_ylabel('X ($V$)', fontsize=12)
+        ax.errorbar(range(len(self.x_data)), self.x_data, self.x_stds, marker='.', linestyle='None')
+        fig.savefig('temp_x.png', transparent=True)
+        pl.close('all')
+        image_to_display = QtGui.QPixmap('temp_x.png')
+        self.x_time_stream_label.setPixmap(image_to_display)
+        os.remove('temp_x.png')
+
+    def xyc_plot_y(self):
+        '''
+        '''
+        fig, ax = self.xyc_create_blank_fig(frac_screen_width=0.35, frac_screen_height=0.35, left=0.23)
+        ax.set_xlabel('Sample', fontsize=12)
+        ax.set_ylabel('Y ($V$)', fontsize=12)
+        ax.errorbar(range(len(self.y_data)), self.y_data, self.y_stds, marker='.', linestyle='None')
+        fig.savefig('temp_y.png', transparent=True)
+        pl.close('all')
+        image_to_display = QtGui.QPixmap('temp_y.png')
+        self.y_time_stream_label.setPixmap(image_to_display)
+        os.remove('temp_y.png')
+
+    def xyc_plot_xy(self):
+        '''
+        '''
+        fig, ax = self.xyc_create_blank_fig(frac_screen_width=0.7, frac_screen_height=0.5)
+        if self.mode == 'iv':
+            ax.set_xlabel('Bias Voltage ($\mu V$)', fontsize=14)
+            ax.set_ylabel('TES Current ($\mu A$)', fontsize=14)
+        else:
+            ax.set_xlabel('Temperature ($mK$)', fontsize=14)
+            ax.set_ylabel('Resistance ($\Omega$)', fontsize=14)
+        ax.errorbar(self.x_data, self.y_data, self.y_stds, marker='.', linestyle='-')
+        fig.savefig('temp_xy.png', transparent=True)
+        pl.close('all')
+        image_to_display = QtGui.QPixmap('temp_xy.png')
+        self.xy_scatter_label.setPixmap(image_to_display)
+        os.remove('temp_xy.png')
+
+    def xyc_plot_final(self):
         '''
         '''
         fig, ax = self.xyc_create_blank_fig(frac_screen_width=0.5, frac_screen_height=0.5,
-                                            left=0.12, right=0.98, top=0.9, bottom=0.13, multiple_axes=False,
+                                            left=0.2, right=0.98, top=0.9, bottom=0.13, multiple_axes=False,
                                             aspect=None)
         title, okPressed = self.gb_quick_info_gather(title='Plot Title', dialog='What is the title of this plot?')
         if self.mode == 'IV':
@@ -520,7 +525,7 @@ class XYCollector(QtWidgets.QWidget, GuiBuilder):
         self.bd_adjust_final_plot_popup('RT', xlabel='Sample Temp (mK)', ylabel='Sample Res ($\Omega$)', title=title)
 
     def xyc_create_blank_fig(self, frac_screen_width=0.5, frac_screen_height=0.25,
-                             left=0.08, right=0.98, top=0.9, bottom=0.23, multiple_axes=False,
+                             left=0.15, right=0.98, top=0.9, bottom=0.23, multiple_axes=False,
                              aspect=None):
         if frac_screen_width is None and frac_screen_height is None:
             fig = pl.figure()

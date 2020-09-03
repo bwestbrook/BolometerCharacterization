@@ -40,6 +40,10 @@ class BoloSerial(object):
                 'baudrate': 9600,
                 'timeout': 3
                 },
+            'QD 550 DC SQUID': {
+                'baudrate': 9600,
+                'timeout': 3
+                },
             'SRS_SR830_DSP': {
                 'baudrate': 9600,
                 'timeout': 3
@@ -54,7 +58,6 @@ class BoloSerial(object):
         else:
             self.ser = serial.Serial(port=self.port,
                                      baudrate = 9600,
-                                     parity = serial.PARITY_EVEN,
                                      timeout = 5)
         if not self.ser.isOpen():
             self.ser.open() # sometimes it's already open

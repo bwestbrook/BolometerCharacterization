@@ -78,10 +78,8 @@ class PolarizationEfficiency(QtWidgets.QWidget, GuiBuilder):
         # Stepper Motor Selection
         stepper_motor_header_label = QtWidgets.QLabel('Stepper Motor:', self)
         self.layout().addWidget(stepper_motor_header_label, 4, 0, 1, 1)
-        self.stepper_motor_combobox = QtWidgets.QComboBox(self)
-        for com_port in ['COM12']:
-            self.stepper_motor_combobox.addItem(com_port)
-        self.layout().addWidget(self.stepper_motor_combobox, 4, 1, 1, 1)
+        self.stepper_motor_label = QtWidgets.QLabel(self.csm_widget.com_port, self)
+        self.layout().addWidget(self.stepper_motor_label, 4, 1, 1, 1)
         self.stepper_settings_label = QtWidgets.QLabel('Stepper Settings', self)
         self.layout().addWidget(self.stepper_settings_label, 5, 1, 1, 1)
         ######
@@ -156,10 +154,12 @@ class PolarizationEfficiency(QtWidgets.QWidget, GuiBuilder):
         self.time_stream_plot_label.setAttribute(QtCore.Qt.WA_TranslucentBackground)
         self.pe_plot_panel.layout().addWidget(self.time_stream_plot_label, 1, 0, 1, 4)
         data_mean_header_label = QtWidgets.QLabel('Data Mean (V):', self.pe_plot_panel)
+        data_mean_header_label.setAlignment(QtCore.Qt.AlignRight)
         self.pe_plot_panel.layout().addWidget(data_mean_header_label, 2, 0, 1, 1)
         self.data_mean_label = QtWidgets.QLabel('', self.pe_plot_panel)
         self.pe_plot_panel.layout().addWidget(self.data_mean_label, 2, 1, 1, 1)
         data_std_header_label = QtWidgets.QLabel('Data STD (V):', self.pe_plot_panel)
+        data_std_header_label.setAlignment(QtCore.Qt.AlignRight)
         self.pe_plot_panel.layout().addWidget(data_std_header_label, 2, 2, 1, 1)
         self.data_std_label = QtWidgets.QLabel('', self.pe_plot_panel)
         self.pe_plot_panel.layout().addWidget(self.data_std_label, 2, 3, 1, 1)
@@ -218,7 +218,7 @@ class PolarizationEfficiency(QtWidgets.QWidget, GuiBuilder):
     def pe_setup_stepper(self):
         '''
         '''
-        sm_com_port = self.stepper_motor_combobox.currentText()
+        sm_com_port = self.stepper_motor_label.text()
         self.scan_settings_dict.update({'sm_com_port': sm_com_port})
         self.status_bar.showMessage('Setting up serial connection to stepper motor on {0}'.format(sm_com_port))
         QtWidgets.QApplication.processEvents()
@@ -260,14 +260,14 @@ class PolarizationEfficiency(QtWidgets.QWidget, GuiBuilder):
             self.x_data, self.x_stds = [], []
             self.y_data, self.y_stds = [], []
             for i, scan_position in enumerate(scan_positions):
-                if self.zero_lock_in_checkbox.isChecked():
-                    self.srs_widget.srs_zero_lock_in_phase()
-                time.sleep(pause_time / 1e3)
                 self.csm_widget.csm_set_position(position=scan_position, verbose=False)
                 if i == 0:
                     self.status_bar.showMessage('Waiting {0}s for grid to move to start position'.format(self.start_pause))
                     QtWidgets.QApplication.processEvents()
                     time.sleep(self.start_pause) # wait for motor to reach starting point
+                if self.zero_lock_in_checkbox.isChecked():
+                    self.srs_widget.srs_zero_lock_in_phase()
+                time.sleep(pause_time * 1e-3)
                 # Gather Data and Append to Vector then plot
                 self.x_data.append(scan_position)
                 self.x_stds.append(3) # guesstimated < 3 step error in position
@@ -322,15 +322,15 @@ class PolarizationEfficiency(QtWidgets.QWidget, GuiBuilder):
                     save_handle.write(line)
         else:
             self.gb_quick_message('Warning {0} Data Not Written to File!'.format(suffix), msg_type='Warning')
+        self.pe_plot()
 
     def pe_plot_time_stream(self, ts, min_, max_):
         '''
         '''
-        fig, ax = self.pe_create_blank_fig(frac_screen_width=0.7, frac_screen_height=0.17, top=0.9, bottom=0.17, n_axes=1)
+        fig, ax = self.pe_create_blank_fig(frac_screen_width=0.7, frac_screen_height=0.3, top=0.9, bottom=0.21, n_axes=1)
         ax.plot(ts)
         ax.set_xlabel('Samples', fontsize=14)
-        ax.set_ylabel('Voltage (V)', fontsize=14)
-        ax.set_title('Data Monitor', fontsize=14)
+        ax.set_ylabel('($V$)', fontsize=14)
         fig.savefig('temp_files/temp_ts.png', transparent=True)
         pl.close('all')
         image = QtGui.QPixmap('temp_files/temp_ts.png')
@@ -340,10 +340,12 @@ class PolarizationEfficiency(QtWidgets.QWidget, GuiBuilder):
         '''
         '''
         pl.close('all')
-        fig, ax = self.pe_create_blank_fig(frac_screen_width=0.7, frac_screen_height=0.65, n_axes=1)
+        fig, ax = self.pe_create_blank_fig(frac_screen_width=0.7, frac_screen_height=0.6, n_axes=1)
         ax.set_xlabel('Steps', fontsize=10)
         ax.set_ylabel('Amplitude', fontsize=10)
-        title = 'Polarization Efficiency for {0}'.format(self.sample_name_lineedit.text())
+        title = 'Polarization Efficiency'
+        if len(self.sample_name_lineedit.text()) > 0:
+            title += '{0}'.format(self.sample_name_lineedit.text())
         ax.set_title(title, fontsize=14)
         ax.errorbar(self.x_data, self.x_stds, self.y_data, self.y_stds, marker='.', linestyle='-')
         if running:

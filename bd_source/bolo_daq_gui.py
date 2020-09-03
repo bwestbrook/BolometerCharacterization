@@ -90,7 +90,7 @@ class BoloDAQGui(QtWidgets.QMainWindow, GuiBuilder):
         self.central_widget.setLayout(grid)
         self.setCentralWidget(self.central_widget)
         self.tool_and_menu_bar_json_path = os.path.join('bd_settings', 'tool_and_menu_bars.json')
-        self.gb_setup_menu_and_tool_bars(self.tool_and_menu_bar_json_path)
+        self.gb_setup_menu_and_tool_bars(self.tool_and_menu_bar_json_path, icon_size=25)
         self.selected_files = []
         self.user_desktop_path = os.path.expanduser('~')
         self.monitor_dpi = 120.0
@@ -100,11 +100,15 @@ class BoloDAQGui(QtWidgets.QMainWindow, GuiBuilder):
         if not os.path.exists(self.data_folder):
             os.makedirs(self.data_folder)
         self.bd_setup_status_bar()
-        self.bd_get_active_serial_ports()
-        self.bd_configure_ni_daq()
+        self.com_port_utility_widget = ComPortUtility(self.splash_screen, self.screen_resolution, self.monitor_dpi)
+        self.bd_get_available_daq_settings()
         self.splash_screen.close()
-        self.move(50, 50)
+        self.resize(0.95 * self.screen_resolution.width(), 0.8 * self.screen_resolution.height())
+        self.move(0, 0)
+        #getattr(self, 'action_Bolo_DAQ_Settings').trigger()
         self.show()
+        getattr(self, 'action_Bolo_DAQ_Settings').trigger()
+        #getattr(self, 'action_FTS').trigger()
 
     ##################################################################################
     #### Start up Tasks ##############################################################
@@ -180,37 +184,6 @@ class BoloDAQGui(QtWidgets.QMainWindow, GuiBuilder):
             with open(os.path.join('bd_settings', 'daq_settings.json'), 'w') as json_handle:
                 simplejson.dump(self.active_daqs, json_handle)
 
-    #################################################
-    # Com ports
-    #################################################
-
-    def bd_get_active_serial_ports(self):
-        """ Lists serial port names
-
-            :raises EnvironmentError:
-                On unsupported or unknown platforms
-            :returns:
-                A list of the serial ports available on the system
-        """
-        if sys.platform.startswith('win'):
-            ports = ['COM%s' % (i + 1) for i in range(256)]
-        elif sys.platform.startswith('linux') or sys.platform.startswith('cygwin'):
-            # this excludes your current terminal "/dev/tty"
-            ports = glob.glob('/dev/tty[A-Za-z]*')
-        elif sys.platform.startswith('darwin'):
-            ports = glob.glob('/dev/tty.*')
-        else:
-            raise EnvironmentError('Unsupported platform')
-        self.active_ports = []
-        for port in ports:
-            self.splash_screen.showMessage('Checking COM Port {0}'.format(port))
-            try:
-                s = serial.Serial(port)
-                s.close()
-                self.active_ports.append(port)
-            except (OSError, serial.SerialException):
-                pass
-        self.active_ports
 
     #################################################
     # Logging and File Management
@@ -297,6 +270,8 @@ class BoloDAQGui(QtWidgets.QMainWindow, GuiBuilder):
     #################################################
 
     def bd_data_plotter(self):
+        '''
+        '''
         self.gb_initialize_panel('central_widget')
         self.status_bar.showMessage('Launching Data Plotter')
         QtWidgets.QApplication.processEvents()
@@ -369,6 +344,7 @@ class BoloDAQGui(QtWidgets.QMainWindow, GuiBuilder):
         if not hasattr(self, 'com_port_utility_widget'):
             self.com_port_utility_widget = ComPortUtility(self.status_bar, self.screen_resolution, self.monitor_dpi)
         self.central_widget.layout().addWidget(self.com_port_utility_widget, 0, 0, 1, 1)
+        self.com_port_utility_widget.cpu_change_status_bar(self.status_bar)
         self.status_bar.showMessage('COM port utility')
         QtWidgets.QApplication.processEvents()
         self.showNormal()
