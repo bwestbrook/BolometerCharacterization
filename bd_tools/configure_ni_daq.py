@@ -8,12 +8,13 @@ from GuiBuilder.gui_builder import GuiBuilder
 
 class ConfigureNIDAQ(QtWidgets.QWidget, GuiBuilder):
 
-    def __init__(self, available_daqs, status_bar, n_channels=8):
+    def __init__(self, daq_settings, status_bar, n_channels=8):
         '''
         '''
         super(ConfigureNIDAQ, self).__init__()
+        pprint(daq_settings)
         self.status_bar = status_bar
-        self.available_daqs = available_daqs
+        self.daq_settings = daq_settings
         self.n_channels = n_channels
         self.class_name = 'md'
         grid = QtWidgets.QGridLayout()
@@ -38,10 +39,10 @@ class ConfigureNIDAQ(QtWidgets.QWidget, GuiBuilder):
         '''
         daq_tab_bar = QtWidgets.QTabBar(self)
         self.daq_tab_bar = daq_tab_bar
-        for active_daq in self.available_daqs:
+        for active_daq in self.daq_settings:
             daq_tab_bar.addTab(active_daq)
         self.layout().addWidget(daq_tab_bar, 0, 0, 1, 16)
-        self.daq_tab_bar.setCurrentIndex(len(self.available_daqs) - 1)
+        self.daq_tab_bar.setCurrentIndex(len(self.daq_settings) - 1)
 
     def cd_add_channels(self):
         '''
@@ -66,7 +67,7 @@ class ConfigureNIDAQ(QtWidgets.QWidget, GuiBuilder):
         '''
         '''
         self.cd_update_daq()
-        if len(self.available_daqs) == 0:
+        if len(self.daq_settings) == 0:
             return None
         device = self.daq_tab_bar.tabText(self.daq_tab_bar.currentIndex())
         channel_header_label = QtWidgets.QLabel('DAQ {0}'.format(index), self)
@@ -85,7 +86,8 @@ class ConfigureNIDAQ(QtWidgets.QWidget, GuiBuilder):
         self.layout().addWidget(channel_sample_rate_combobox, 4, index * 2 + 1, 1, 1)
         for i, sample_rate in enumerate([100, 500, 1000, 2000, 5000]):
             channel_sample_rate_combobox.addItem(str(sample_rate))
-            saved_value = self.available_daqs[device][str(index)]['sample_rate']
+            print(device, str(index))
+            saved_value = self.daq_settings[device][str(index)]['sample_rate']
             if str(saved_value) == str(sample_rate):
                 saved_index = i
         channel_sample_rate_combobox.setCurrentIndex(saved_index)
@@ -96,7 +98,7 @@ class ConfigureNIDAQ(QtWidgets.QWidget, GuiBuilder):
         setattr(self, 'channel_{0}_int_time_combobox'.format(index), channel_int_time_combobox)
         for i, int_time in enumerate([100, 500, 1000]):
             channel_int_time_combobox.addItem(str(int_time))
-            saved_value = self.available_daqs[device][str(index)]['int_time']
+            saved_value = self.daq_settings[device][str(index)]['int_time']
             if str(saved_value) == str(int_time):
                 saved_index = i
         channel_int_time_combobox.setCurrentIndex(saved_index)
@@ -109,22 +111,24 @@ class ConfigureNIDAQ(QtWidgets.QWidget, GuiBuilder):
         for i in range(self.n_channels):
             sample_rate = getattr(self, 'channel_{0}_sample_rate_combobox'.format(i)).currentText()
             int_time = getattr(self, 'channel_{0}_int_time_combobox'.format(i)).currentText()
-            self.available_daqs[device][i] = {
+            self.daq_settings[device][i] = {
                 'sample_rate' : sample_rate,
                 'int_time' : int_time,
                 }
         with open(os.path.join('bd_settings', 'daq_settings.json'), 'w') as json_handle:
-            simplejson.dump(self.available_daqs, json_handle, indent=4, sort_keys=True)
-        pprint(self.available_daqs)
+            simplejson.dump(self.daq_settings, json_handle, indent=4, sort_keys=True)
+        pprint(self.daq_settings)
         self.cd_update_daq()
 
     def cd_update_daq(self):
         '''
         '''
         with open(os.path.join('bd_settings', 'daq_settings.json'), 'r') as json_handle:
-            self.available_daqs = simplejson.load(json_handle)
+            self.daq_settings = simplejson.load(json_handle)
 
     def cd_run_daq(self):
+        '''
+        '''
         while self.started:
             enabled = False
             for i in range(self.n_channels):

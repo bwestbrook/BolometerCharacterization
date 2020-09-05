@@ -31,18 +31,18 @@ class BoloDAQ():
         return data_time_stream, mean, min_, max_, std_
 
     def initialize_daqs(self):
-        active_daqs = {}
+        daq_settings = {}
         with nidaqmx.Task() as task:
             for i in range(16): # Typically no more than a few here
                 device = 'Dev{0}'.format(i)
                 try:
                     task.ai_channels.add_ai_voltage_chan("{0}/ai0".format(device))
-                    active_daqs[device] = {}
+                    daq_settings[device] = {}
                     for j in range(16):
-                        active_daqs[device].update({str(j): {'sample_rate': 500, 'int_time': 500}})
+                        daq_settings[device].update({str(j): {'sample_rate': 500, 'int_time': 500}})
                 except nidaqmx.DaqError:
                     pass
-        return active_daqs
+        return daq_settings
 
 if __name__ == '__main__':
     daq = DAQ()

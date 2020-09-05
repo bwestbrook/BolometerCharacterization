@@ -1,5 +1,6 @@
 import time
 import os
+import numpy as np
 from copy import copy
 from pprint import pprint
 from bd_lib.bolo_serial import BoloSerial
@@ -20,6 +21,7 @@ class LakeShore372(QtWidgets.QWidget, GuiBuilder):
         self.channel_indicies = [str(x) for x in range(1, 17)]
         self.analog_output_indicies = [str(x) for x in range(1, 4)]
         self.analog_output_indicies = ['sample', 'warmup', 'aux']
+        self.temp_control = LS372TempControl(self.serial_com, status_bar)
         self.channels = LS372Channels(self.serial_com, status_bar)
         self.analog_outputs = LS372AnalogOutputs(self.serial_com, status_bar)
         self.lakeshore372_command_dict = {
@@ -589,6 +591,131 @@ class LakeShore372(QtWidgets.QWidget, GuiBuilder):
         self.ls372_populate_gui()
         self.ls372_edit_analog_output(clicked=False, analog_output=self.set_to_analog_output)
         self.status_bar.showMessage('Wrote new settings to analog output "{0}"'.format(self.set_to_analog_output))
+
+class LS372TempControl():
+
+    def __init__(self, serial_com, status_bar):
+        '''
+        '''
+        self.channel_indicies = [str(x) for x in range(1, 17)]
+        self.serial_com = serial_com
+        self.status_bar = status_bar
+        self.ls372_heater_range_dict = {
+            '0': 0,
+            '1': 31.6e-6,
+            '2': 100e-6,
+            '3': 316e-6,
+            '4': 1e-3,
+            '5': 3.16e-3,
+            '6': 10e-3,
+            '7': 31.6e-3,
+            '8': 100e-3
+            }
+
+    def ls372_get_pid(self):
+        '''
+        '''
+        result = self.serial_com.bs_read()
+        pid_query = 'pid?'
+        self.status_bar.showMessage('Sending Serial Command "{0}"'.format(pid_query))
+        self.serial_com.bs_write(pid_query)
+        QtWidgets.QApplication.processEvents()
+        result = self.serial_com.bs_read()
+        p, i, d = [float(x) for x in result.split(',')]
+        return p, i, d
+
+    def ls372_set_pid(self, p=0.0, i=0.0, d=0.0):
+        '''
+        '''
+        result = self.serial_com.bs_read()
+        set_pid_command = 'pid 0,{0},{1},{2} '.format(p, i, d)
+        self.status_bar.showMessage('Sending Serial Command "{0}"'.format(set_pid_command))
+        self.serial_com.bs_write(set_pid_command)
+        QtWidgets.QApplication.processEvents()
+        result = self.serial_com.bs_read()
+
+
+    def ls372_get_ramp(self):
+        '''
+        '''
+        result = self.serial_com.bs_read()
+        ramp_query = 'ramp? 0 '
+        self.status_bar.showMessage('Sending Serial Command "{0}"'.format(ramp_query))
+        self.serial_com.bs_write(ramp_query)
+        QtWidgets.QApplication.processEvents()
+        response = self.serial_com.bs_read()
+        ramp_on, ramp_value = response.split(',')
+        return ramp_on, ramp_value
+
+    def ls372_set_ramp(self, ramp):
+        '''
+        '''
+        result = self.serial_com.bs_read()
+        set_ramp_command = 'ramp 0,1,{0} '.format(ramp)
+        self.status_bar.showMessage('Sending Serial Command "{0}"'.format(set_ramp_command))
+        self.serial_com.bs_write(set_ramp_command)
+        QtWidgets.QApplication.processEvents()
+        result = self.serial_com.bs_read()
+
+    def ls372_get_heater_range(self):
+        '''
+        '''
+        result = self.serial_com.bs_read()
+        heater_range_query = 'range? 0 '
+        self.status_bar.showMessage('Sending Serial Command "{0}"'.format(heater_range_query))
+        self.serial_com.bs_write(heater_range_query)
+        QtWidgets.QApplication.processEvents()
+        range_index = self.serial_com.bs_read()
+        range_value = self.ls372_heater_range_dict[range_index]
+        return range_index, range_value
+
+    def ls372_set_heater_range(self, range_index):
+        '''
+        '''
+        result = self.serial_com.bs_read()
+        set_heater_range_command = 'range 0,{0} '.format(range_index)
+        self.status_bar.showMessage('Sending Serial Command "{0}"'.format(set_heater_range_command))
+        self.serial_com.bs_write(set_heater_range_command)
+        QtWidgets.QApplication.processEvents()
+        result = self.serial_com.bs_read()
+
+    def ls372_get_heater_value(self):
+        '''
+        '''
+        heater_set_command = 'htrset 0,120,0,0,2 ' # makes sure heater out is in amps not power
+        self.status_bar.showMessage('Sending Serial Command "{0}"'.format(heater_set_command))
+        self.serial_com.bs_write(heater_set_command)
+        result = self.serial_com.bs_read()
+        heater_value_query = 'htr? '
+        self.status_bar.showMessage('Sending Serial Command "{0}"'.format(heater_value_query))
+        self.serial_com.bs_write(heater_value_query)
+        QtWidgets.QApplication.processEvents()
+        response = self.serial_com.bs_read()
+        if len(response) > 0:
+            heater_value = float(response)
+        else:
+            heater_value = np.nan
+        return heater_value
+
+    def ls372_get_temp_set_point(self):
+        '''
+        '''
+        temp_set_point_query = 'setp? 0 '
+        self.status_bar.showMessage('Sending Serial Command "{0}"'.format(temp_set_point_query))
+        self.serial_com.bs_write(temp_set_point_query)
+        set_point = float(self.serial_com.bs_read())
+        return set_point
+
+    def ls372_set_temp_set_point(self, set_point):
+        '''
+        '''
+        set_temp_set_point_command = 'setp 0,{0} '.format(set_point)
+        self.status_bar.showMessage('Sending Serial Command "{0}"'.format(set_temp_set_point_command))
+        self.serial_com.bs_write(set_temp_set_point_command)
+        QtWidgets.QApplication.processEvents()
+        result = self.serial_com.bs_read()
+
+
 
 class LS372Channels():
 

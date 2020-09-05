@@ -27,7 +27,8 @@ from bd_settings.bd_global_settings import settings
 # Widgets
 from bd_tools.cosmic_rays import CosmicRays
 from bd_tools.beam_mapper import BeamMapper
-from bd_tools.xy_collector import XYCollector
+from bd_tools.iv_collector import IVCollector
+from bd_tools.rt_collector import RTCollector
 from bd_tools.fridge_cycle import FridgeCycle
 from bd_tools.data_plotter import DataPlotter
 from bd_tools.lakeshore_372 import LakeShore372
@@ -103,7 +104,7 @@ class BoloDAQGui(QtWidgets.QMainWindow, GuiBuilder):
         self.com_port_utility_widget = ComPortUtility(self.splash_screen, self.screen_resolution, self.monitor_dpi)
         self.bd_get_available_daq_settings()
         self.splash_screen.close()
-        self.resize(0.95 * self.screen_resolution.width(), 0.8 * self.screen_resolution.height())
+        self.resize(int(0.95 * self.screen_resolution.width()), int(0.8 * self.screen_resolution.height()))
         self.move(0, 0)
         #getattr(self, 'action_Bolo_DAQ_Settings').trigger()
         self.show()
@@ -180,9 +181,16 @@ class BoloDAQGui(QtWidgets.QMainWindow, GuiBuilder):
             with open(os.path.join('bd_settings', 'daq_settings.json'), 'r') as json_handle:
                 self.daq_settings = simplejson.load(json_handle)
         else:
+            print()
+            print()
+            print()
+            print()
+            print()
+            print()
             self.daq_settings = self.daq.initialize_daqs()
+            pprint(self.daq_settings)
             with open(os.path.join('bd_settings', 'daq_settings.json'), 'w') as json_handle:
-                simplejson.dump(self.active_daqs, json_handle)
+                simplejson.dump(self.daq_settings, json_handle)
 
 
     #################################################
@@ -406,18 +414,22 @@ class BoloDAQGui(QtWidgets.QMainWindow, GuiBuilder):
         '''
         '''
         self.gb_initialize_panel('central_widget')
+        self.status_bar.showMessage('Setting Up Lakeshore 372 Controller')
+        QtWidgets.QApplication.processEvents()
         dialog = 'Select the comport for the Lakeshore'
-        com_port, okPressed = self.gb_quick_static_info_gather(title='', dialog=dialog, items=['COM6'])
+        com_port, okPressed = self.gb_quick_static_info_gather(title='', dialog=dialog, items=['COM6', 'COM4'])
         if not hasattr(self, 'ser_{0}'.format(com_port)) and okPressed:
             serial_com = BoloSerial(com_port, device='Model372', splash_screen=self.status_bar)
             setattr(self, 'ser_{0}'.format(com_port), serial_com)
             if not hasattr(self, 'ls_372_widget'):
-                self.ls_372_widget = LakeShore372(serial_com, com_port, self.status_bar)
-            self.central_widget.layout().addWidget(self.ls_372_widget, 0, 0, 1, 1)
+                ls_372_widget = LakeShore372(serial_com, com_port, self.status_bar)
+                setattr(self, 'ls_372_widget_{0}'.format(com_port), ls_372_widget)
+            self.central_widget.layout().addWidget(ls_372_widget, 0, 0, 1, 1)
         elif okPressed:
             serial_com = getattr(self, 'ser_{0}'.format(com_port))
-            self.ls_372_widget.ls372_update_serial_com(serial_com)
-            self.central_widget.layout().addWidget(self.ls_372_widget, 0, 0, 1, 1)
+            ls_372_widget = getattr(self, 'ls_372_widget_{0}'.format(com_port))
+            ls_372_widget.ls372_update_serial_com(serial_com)
+            self.central_widget.layout().addWidget(ls_372_widget, 0, 0, 1, 1)
         self.status_bar.showMessage('Lakeshore 372 Controller')
         QtWidgets.QApplication.processEvents()
         self.showNormal()
@@ -440,10 +452,10 @@ class BoloDAQGui(QtWidgets.QMainWindow, GuiBuilder):
         self.status_bar.showMessage('Loading IV Curves')
         QtWidgets.QApplication.processEvents()
         if not hasattr(self, 'xyc_widget'):
-            self.xyc_widget = XYCollector('iv', self.available_daq_settings, self.status_bar, self.screen_resolution, self.monitor_dpi)
+            self.ivc_widget = IVCollector(self.available_daq_settings, self.status_bar, self.screen_resolution, self.monitor_dpi)
         else:
-            self.xyc_widget.xyc_populate('iv')
-        self.central_widget.layout().addWidget(self.xyc_widget, 0, 0, 1, 1)
+            self.ivc_widget.ivc_populate()
+        self.central_widget.layout().addWidget(self.ivc_widget, 0, 0, 1, 1)
         self.status_bar.showMessage('IV Curves')
         QtWidgets.QApplication.processEvents()
         self.show()
@@ -460,11 +472,29 @@ class BoloDAQGui(QtWidgets.QMainWindow, GuiBuilder):
         self.gb_initialize_panel('central_widget')
         self.status_bar.showMessage('Loading RT Curves')
         QtWidgets.QApplication.processEvents()
-        if not hasattr(self, 'xyc_widget'):
-            self.xyc_widget = XYCollector('rt', self.available_daq_settings, self.status_bar, self.screen_resolution, self.monitor_dpi)
+        dialog = 'Select the comport for the Temperature Lakeshore'
+        #com_port, okPressed = self.gb_quick_static_info_gather(title='', dialog=dialog, items=['COM4'])
+        com_port, okPressed = 'COM4', True
+        if not hasattr(self, 'ser_{0}'.format(com_port)) and okPressed:
+            serial_com = BoloSerial(com_port, device='Model372', splash_screen=self.status_bar)
+            setattr(self, 'ser_{0}'.format(com_port), serial_com)
+            if not hasattr(self, 'ls_372_widget_{0}'.format(com_port)):
+                ls_372_widget_temp = LakeShore372(serial_com, com_port, self.status_bar)
+                setattr(self, 'ls_372_widget_{0}'.format(com_port), ls_372_widget_temp)
+        dialog = 'Select the comport for the Sample Lakeshore'
+        #com_port, okPressed = self.gb_quick_static_info_gather(title='', dialog=dialog, items=['COM6'])
+        com_port, okPressed = 'COM6', True
+        if not hasattr(self, 'ser_{0}'.format(com_port)) and okPressed:
+            serial_com = BoloSerial(com_port, device='Model372', splash_screen=self.status_bar)
+            setattr(self, 'ser_{0}'.format(com_port), serial_com)
+            if not hasattr(self, 'ls_372_widget_{0}'.format(com_port)):
+                ls_372_widget_samples = LakeShore372(serial_com, com_port, self.status_bar)
+                setattr(self, 'ls_372_widget_{0}'.format(com_port), ls_372_widget_samples)
+        if not hasattr(self, 'rtc_widget'):
+            self.rtc_widget = RTCollector(self.available_daq_settings, self.status_bar, self.screen_resolution, self.monitor_dpi, ls_372_widget_temp, ls_372_widget_samples)
         else:
-            self.xyc_widget.xyc_populate('rt')
-        self.central_widget.layout().addWidget(self.xyc_widget, 0, 0, 1, 1)
+            self.rtc_widget.rtc_populate()
+        self.central_widget.layout().addWidget(self.rtc_widget, 0, 0, 1, 1)
         self.status_bar.showMessage('RT Curves')
         QtWidgets.QApplication.processEvents()
         self.show()
