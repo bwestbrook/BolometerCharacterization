@@ -85,7 +85,7 @@ class RTCollector(QtWidgets.QWidget, GuiBuilder):
         set_point = self.ls372_widget_temp.temp_control.ls372_get_temp_set_point()
         self.temp_set_point_lineedit.setText('{0:.4f}'.format(set_point * 1e3))
         mxc_temp = float(self.ls372_widget_temp.channels.ls372_get_channel_value(6, reading='kelvin')) * 1e3
-        self.temp_display_label.setText('Current Temp {0}mK (Set) | {1:.3f}mK (Act)'.format(set_point * 1e3, mxc_temp))
+        self.temp_display_label.setText('Current Temp {0:.3f}mK (Set) | {1:.3f}mK (Act)'.format(set_point * 1e3, mxc_temp))
         ramp_on, ramp_value = self.ls372_widget_temp.temp_control.ls372_get_ramp()
         self.ramp_lineedit = self.gb_make_labeled_lineedit(label_text='Ramp (K/min): ')
         self.ramp_lineedit.setText('{0}'.format(ramp_value))
@@ -98,12 +98,15 @@ class RTCollector(QtWidgets.QWidget, GuiBuilder):
         p, i, d = self.ls372_widget_temp.temp_control.ls372_get_pid()
         self.p_lineedit = self.gb_make_labeled_lineedit(label_text='P: ')
         self.p_lineedit.setValidator(QtGui.QDoubleValidator(0, 300, 2, self.p_lineedit))
+        self.p_lineedit.setText(str(p))
         self.layout().addWidget(self.p_lineedit, 2, 5, 1, 1)
         self.i_lineedit = self.gb_make_labeled_lineedit(label_text='I: ')
         self.i_lineedit.setValidator(QtGui.QDoubleValidator(0, 300, 2, self.i_lineedit))
+        self.i_lineedit.setText(str(i))
         self.layout().addWidget(self.i_lineedit, 2, 6, 1, 1)
         self.d_lineedit = self.gb_make_labeled_lineedit(label_text='D: ')
         self.d_lineedit.setValidator(QtGui.QDoubleValidator(0, 300, 2, self.d_lineedit))
+        self.d_lineedit.setText(str(d))
         self.layout().addWidget(self.d_lineedit, 2, 7, 1, 1)
         self.pid_header_label = QtWidgets.QLabel('', self)
         self.pid_header_label.setText( 'P:{0} ::: I:{1} ::: D:{2} '.format(p, i, d))
@@ -169,7 +172,7 @@ class RTCollector(QtWidgets.QWidget, GuiBuilder):
         heater_value = self.ls372_widget_temp.temp_control.ls372_get_heater_value()
         set_point = self.ls372_widget_temp.temp_control.ls372_get_temp_set_point()
         self.heater_range_header_label.setText('Heater Value {0:.5f} (A)'.format(heater_value))
-        self.temp_display_label.setText('Current Temp {0}mK (Set) | {1:.3f}mK (Act)'.format(set_point * 1e3, mxc_temp))
+        self.temp_display_label.setText('Current Temp {0:.3f}mK (Set) | {1:.3f}mK (Act)'.format(set_point * 1e3, mxc_temp))
 
     def rtc_edit_lakeshore_temp_control(self):
         '''
@@ -190,7 +193,7 @@ class RTCollector(QtWidgets.QWidget, GuiBuilder):
         self.ls372_widget_temp.temp_control.ls372_set_temp_set_point(new_set_point)
         # Update with read out values
         mxc_temp = float(self.ls372_widget_temp.channels.ls372_get_channel_value(6, reading='kelvin')) * 1e3
-        self.temp_display_label.setText('Current Temp {0}mK (Set) | {1:.3f}mK (Act)'.format(set_point * 1e3, mxc_temp))
+        self.temp_display_label.setText('Current Temp {0:.3f}mK (Set) | {1:.3f}mK (Act)'.format(set_point * 1e3, mxc_temp))
         # Heater Range
         new_range_index = self.heater_range_combobox.currentIndex()
         self.ls372_widget_temp.temp_control.ls372_set_heater_range(new_range_index)
@@ -413,7 +416,7 @@ class RTCollector(QtWidgets.QWidget, GuiBuilder):
                 heater_value = self.ls372_widget_temp.temp_control.ls372_get_heater_value()
                 set_point = self.ls372_widget_temp.temp_control.ls372_get_temp_set_point()
                 self.heater_range_header_label.setText('Heater Value {0:.5f} (A)'.format(heater_value))
-                self.temp_display_label.setText('Current Temp {0}mK (Set) | {1:.3f}mK (Act)'.format(set_point * 1e3, mxc_temp))
+                self.temp_display_label.setText('Current Temp {0:.3f}mK (Set) | {1:.3f}mK (Act)'.format(set_point * 1e3, mxc_temp))
             QtWidgets.QApplication.processEvents()
             i += 1
             self.repaint()
@@ -461,7 +464,7 @@ class RTCollector(QtWidgets.QWidget, GuiBuilder):
         ax.set_ylabel('X ($V$)', fontsize=14)
         label = 'DAQ {0}'.format(self.x_channel)
         ax.errorbar(range(len(self.x_data)), self.x_data, self.x_stds, marker='.', linestyle='None', label=label)
-        pl.legend(loc='best', transparent=True)
+        pl.legend(loc='best', fontsize=14)
         fig.savefig('temp_x.png', transparent=True)
         pl.close('all')
         image_to_display = QtGui.QPixmap('temp_x.png')
@@ -476,7 +479,7 @@ class RTCollector(QtWidgets.QWidget, GuiBuilder):
         ax.set_ylabel('Y ($V$)', fontsize=14)
         label = 'DAQ {0}'.format(self.y_channel)
         ax.errorbar(range(len(self.y_data)), self.y_data, self.y_stds, marker='.', linestyle='None', label=label)
-        pl.legend(loc='best')
+        pl.legend(loc='best', fontsize=14)
         fig.savefig('temp_y.png', transparent=True)
         pl.close('all')
         image_to_display = QtGui.QPixmap('temp_y.png')
