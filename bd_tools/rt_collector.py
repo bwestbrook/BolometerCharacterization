@@ -8,6 +8,7 @@ from datetime import datetime
 from pprint import pprint
 from bd_lib.bolo_daq import BoloDAQ
 from PyQt5 import QtCore, QtGui, QtWidgets
+from bd_lib.saving_manager import SavingManager
 from GuiBuilder.gui_builder import GuiBuilder, GenericClass
 
 class RTCollector(QtWidgets.QWidget, GuiBuilder):
@@ -46,6 +47,7 @@ class RTCollector(QtWidgets.QWidget, GuiBuilder):
         self.today = datetime.now()
         self.today_str = datetime.strftime(self.today, '%Y_%m_%d')
         self.data_folder = os.path.join('Data', '{0}'.format(self.today_str))
+        self.saving_manager = SavingManager(self, self.data_folder)
         self.rtc_populate()
         self.rtc_plot_running()
 
@@ -388,6 +390,7 @@ class RTCollector(QtWidgets.QWidget, GuiBuilder):
         else:
             self.sender().setText('Start DAQ')
             self.started = False
+            self.saving_manager.auto_save()
 
     def rtc_collecter(self, monitor=False):
         '''
@@ -435,6 +438,10 @@ class RTCollector(QtWidgets.QWidget, GuiBuilder):
             if not os.path.exists(save_path):
                 break
         return save_path
+
+    def rtc_auto_save(self):
+        '''
+        '''
 
     def rtc_save(self):
         '''
