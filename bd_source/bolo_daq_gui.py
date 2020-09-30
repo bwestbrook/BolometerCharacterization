@@ -491,6 +491,7 @@ class BoloDAQGui(QtWidgets.QMainWindow, GuiBuilder):
                 ls_372_widget_samples = LakeShore372(serial_com, com_port, self.status_bar)
                 setattr(self, 'ls_372_widget_{0}'.format(com_port), ls_372_widget_samples)
         if not hasattr(self, 'rtc_widget'):
+            ls_372_widget_samples = getattr(self, 'ls_372_widget_{0}'.format(com_port))
             self.rtc_widget = RTCollector(self.available_daq_settings, self.status_bar, self.screen_resolution, self.monitor_dpi, ls_372_widget_temp, ls_372_widget_samples)
         else:
             self.rtc_widget.rtc_populate()

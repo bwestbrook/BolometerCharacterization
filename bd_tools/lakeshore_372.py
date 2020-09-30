@@ -470,8 +470,13 @@ class LakeShore372(QtWidgets.QWidget, GuiBuilder):
                 value = new_settings[header]
                 if header == 'exc_mode':
                     exc_mode = copy(value)
+                print(header)
+                #import ipdb;ipdb.set_trace()
                 if header == 'excitation':
-                    new_value = self.lakeshore372_command_dict[header][exc_mode][float(value)]
+                    if float(value) in self.lakeshore372_command_dict[header][exc_mode]:
+                        new_value = self.lakeshore372_command_dict[header][exc_mode][float(value)]
+                    else:
+                        new_value = list(self.lakeshore372_command_dict[header][exc_mode].values())[0]
                 elif header == 'resistance_range':
                     new_value = self.lakeshore372_command_dict[header][float(value)]
                 else:
@@ -715,8 +720,6 @@ class LS372TempControl():
         QtWidgets.QApplication.processEvents()
         result = self.serial_com.bs_read()
 
-
-
 class LS372Channels():
 
     def __init__(self, serial_com, status_bar):
@@ -784,6 +787,7 @@ class LS372Channels():
         '''
         '''
         scan_cmd = 'scan {0},{1} '.format(index, autoscan)
+        self.status_bar.showMessage('Sending Serial Command "{0}"'.format(scan_cmd))
         self.serial_com.bs_write(scan_cmd)
         self.serial_com.bs_read()
 
