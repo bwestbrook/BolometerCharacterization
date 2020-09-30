@@ -9,7 +9,17 @@ class SavingManager():
         self.widget = widget
 
 
-    def auto_save(self):
+    def smgr_index_file_name(self):
+        '''
+        '''
+        for i in range(1, 1000):
+            file_name = '{0}_{1}.txt'.format(self.sample_name_lineedit.text(), str(i).zfill(3))
+            save_path = os.path.join(self.data_folder, file_name)
+            if not os.path.exists(save_path):
+                break
+        return save_path
+
+    def smgr_auto_save(self):
         '''
         '''
         for x in dir(widget):

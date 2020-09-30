@@ -13,7 +13,7 @@ from GuiBuilder.gui_builder import GuiBuilder, GenericClass
 
 class RTCollector(QtWidgets.QWidget, GuiBuilder):
 
-    def __init__(self, daq_settings, status_bar, screen_resolution, monitor_dpi, ls372_widget_temp, ls372_widget_sample):
+    def __init__(self, daq_settings, status_bar, screen_resolution, monitor_dpi, ls372_temp_widget, ls372_samples_widget):
         '''
         '''
         super(RTCollector, self).__init__()
@@ -22,8 +22,8 @@ class RTCollector(QtWidgets.QWidget, GuiBuilder):
         self.screen_resolution = screen_resolution
         self.monitor_dpi = monitor_dpi
         self.daq = BoloDAQ()
-        self.ls372_widget_temp = ls372_widget_temp
-        self.ls372_widget_sample = ls372_widget_sample
+        self.ls372_temp_widget = ls372_temp_widget
+        self.ls372_samples_widget = ls372_samples_widget
         with open(os.path.join('bd_settings', 'squids_settings.json'), 'r') as fh:
             self.squid_calibration_dict = simplejson.load(fh)
         with open(os.path.join('bd_settings', 'samples_settings.json'), 'r') as fh:
@@ -70,10 +70,15 @@ class RTCollector(QtWidgets.QWidget, GuiBuilder):
         self.rtc_add_common_widgets()
         self.rtc_daq_panel()
         self.rtc_rt_config()
-        self.rtc_lakeshore_panel()
+        if self.ls372_temp_widget is not None:
+            self.rtc_lakeshore_panel()
         self.rtc_make_plot_panel()
         self.rtc_display_daq_settings()
         self.rtc_plot_running()
+
+    #############################################
+    # Lakeshore stuff for DR
+    #############################################
 
     def rtc_lakeshore_panel(self):
         '''
@@ -87,11 +92,11 @@ class RTCollector(QtWidgets.QWidget, GuiBuilder):
         temp_set_point_pushbuton = QtWidgets.QPushButton('Set New', self)
         temp_set_point_pushbuton.clicked.connect(self.rtc_update_set_point)
         self.layout().addWidget(temp_set_point_pushbuton, 0, 7, 1, 1)
-        set_point = self.ls372_widget_temp.temp_control.ls372_get_temp_set_point()
+        set_point = self.ls372_temp_widget.temp_control.ls372_get_temp_set_point()
         self.temp_set_point_lineedit.setText('{0:.4f}'.format(set_point * 1e3))
-        mxc_temp = float(self.ls372_widget_temp.channels.ls372_get_channel_value(6, reading='kelvin')) * 1e3
+        mxc_temp = float(self.ls372_temp_widget.channels.ls372_get_channel_value(6, reading='kelvin')) * 1e3
         self.temp_display_label.setText('Current Temp {0:.3f}mK (Set) | {1:.3f}mK (Act)'.format(set_point * 1e3, mxc_temp))
-        ramp_on, ramp_value = self.ls372_widget_temp.temp_control.ls372_get_ramp()
+        ramp_on, ramp_value = self.ls372_temp_widget.temp_control.ls372_get_ramp()
         self.ramp_lineedit = self.gb_make_labeled_lineedit(label_text='Ramp (K/min): ')
         self.ramp_lineedit.setText('{0}'.format(ramp_value))
         self.ramp_lineedit.setValidator(QtGui.QDoubleValidator(0, 2, 3, self.ramp_lineedit))
@@ -100,7 +105,7 @@ class RTCollector(QtWidgets.QWidget, GuiBuilder):
         self.layout().addWidget(set_ramp_pushbutton, 1, 7, 1, 1)
         set_ramp_pushbutton.clicked.connect(self.rtc_update_ramp)
         # PID Config
-        p, i, d = self.ls372_widget_temp.temp_control.ls372_get_pid()
+        p, i, d = self.ls372_temp_widget.temp_control.ls372_get_pid()
         self.p_lineedit = self.gb_make_labeled_lineedit(label_text='P: ')
         self.p_lineedit.setValidator(QtGui.QDoubleValidator(0, 300, 2, self.p_lineedit))
         self.p_lineedit.setText(str(p))
@@ -117,13 +122,13 @@ class RTCollector(QtWidgets.QWidget, GuiBuilder):
         self.pid_header_label.setText( 'P:{0} ::: I:{1} ::: D:{2} '.format(p, i, d))
         self.layout().addWidget(self.pid_header_label, 3, 7, 1, 1)
         # Heater Range
-        heater_value = self.ls372_widget_temp.temp_control.ls372_get_heater_value()
-        current_range_index, current_range_value = self.ls372_widget_temp.temp_control.ls372_get_heater_range()
+        heater_value = self.ls372_temp_widget.temp_control.ls372_get_heater_value()
+        current_range_index, current_range_value = self.ls372_temp_widget.temp_control.ls372_get_heater_range()
         self.heater_range_header_label = QtWidgets.QLabel('Heater Value {0:.5f} (A)'.format(heater_value), self)
         self.layout().addWidget(self.heater_range_header_label, 3, 5, 1, 1)
         self.heater_range_combobox = QtWidgets.QComboBox(self)
         self.layout().addWidget(self.heater_range_combobox, 3, 6, 1, 1)
-        for range_index, range_value in self.ls372_widget_temp.temp_control.ls372_heater_range_dict.items():
+        for range_index, range_value in self.ls372_temp_widget.temp_control.ls372_heater_range_dict.items():
             self.heater_range_combobox.addItem(str(range_value))
             if int(range_index) == int(current_range_index):
                 set_to_index = int(range_index)
@@ -141,8 +146,7 @@ class RTCollector(QtWidgets.QWidget, GuiBuilder):
         configure_channel_pushbutton.clicked.connect(self.rtc_edit_lakeshore_channel)
         self.channel_combobox = QtWidgets.QComboBox(self)
         self.layout().addWidget(self.channel_combobox, 6, 5, 1, 1)
-
-        #self.ls372_widget_sample.scan_channel(1)
+        #self.ls372_samples_widget.scan_channel(1)
         for channel in range(1, 17):
             self.channel_combobox.addItem(str(channel))
         set_aux_analog_out_pushbutton = QtWidgets.QPushButton('Set Analog Out', self)
@@ -154,7 +158,7 @@ class RTCollector(QtWidgets.QWidget, GuiBuilder):
     def rtc_get_lakeshore_temp_control(self):
         '''
         '''
-        p, i, d = self.ls372_widget_temp.temp_control.ls372_get_pid()
+        p, i, d = self.ls372_temp_widget.temp_control.ls372_get_pid()
         self.pid_header_label.setText( 'P:{0} ::: I:{1} ::: D:{2} '.format(p, i, d))
         self.status_bar.showMessage('Retreived temp control parameters')
 
@@ -162,21 +166,21 @@ class RTCollector(QtWidgets.QWidget, GuiBuilder):
         '''
         '''
         new_set_point = float(self.temp_set_point_lineedit.text()) * 1e-3
-        self.ls372_widget_temp.temp_control.ls372_set_temp_set_point(new_set_point)
+        self.ls372_temp_widget.temp_control.ls372_set_temp_set_point(new_set_point)
         self.rtc_check_set_point()
 
     def rtc_update_ramp(self):
         '''
         '''
         new_ramp = float(self.ramp_lineedit.text())
-        self.ls372_widget_temp.temp_control.ls372_set_ramp(new_ramp)
+        self.ls372_temp_widget.temp_control.ls372_set_ramp(new_ramp)
 
     def rtc_check_set_point(self):
         '''
         '''
-        mxc_temp = float(self.ls372_widget_temp.channels.ls372_get_channel_value(6, reading='kelvin')) * 1e3
-        heater_value = self.ls372_widget_temp.temp_control.ls372_get_heater_value()
-        set_point = self.ls372_widget_temp.temp_control.ls372_get_temp_set_point()
+        mxc_temp = float(self.ls372_temp_widget.channels.ls372_get_channel_value(6, reading='kelvin')) * 1e3
+        heater_value = self.ls372_temp_widget.temp_control.ls372_get_heater_value()
+        set_point = self.ls372_temp_widget.temp_control.ls372_get_temp_set_point()
         self.heater_range_header_label.setText('Heater Value {0:.5f} (A)'.format(heater_value))
         self.temp_display_label.setText('Current Temp {0:.3f}mK (Set) | {1:.3f}mK (Act)'.format(set_point * 1e3, mxc_temp))
 
@@ -185,45 +189,45 @@ class RTCollector(QtWidgets.QWidget, GuiBuilder):
         '''
         #PID Stuff
         new_p, new_i, new_d = float(self.p_lineedit.text()), float(self.i_lineedit.text()), float(self.d_lineedit.text())
-        self.ls372_widget_temp.temp_control.ls372_set_pid(new_p, new_i, new_d)
-        p, i, d = self.ls372_widget_temp.temp_control.ls372_get_pid()
+        self.ls372_temp_widget.temp_control.ls372_set_pid(new_p, new_i, new_d)
+        p, i, d = self.ls372_temp_widget.temp_control.ls372_get_pid()
         self.pid_header_label.setText( 'P:{0} ::: I:{1} ::: D:{2} '.format(p, i, d))
         # Ramp 
         new_ramp = float(self.ramp_lineedit.text())
-        self.ls372_widget_temp.temp_control.ls372_set_ramp(new_ramp)
-        ramp_on, ramp_value = self.ls372_widget_temp.temp_control.ls372_get_ramp()
+        self.ls372_temp_widget.temp_control.ls372_set_ramp(new_ramp)
+        ramp_on, ramp_value = self.ls372_temp_widget.temp_control.ls372_get_ramp()
         self.ramp_lineedit.setText(str(ramp_value))
         #Temp set point 
-        set_point = self.ls372_widget_temp.temp_control.ls372_get_temp_set_point()
+        set_point = self.ls372_temp_widget.temp_control.ls372_get_temp_set_point()
         new_set_point = float(self.temp_set_point_lineedit.text()) * 1e-3
-        self.ls372_widget_temp.temp_control.ls372_set_temp_set_point(new_set_point)
+        self.ls372_temp_widget.temp_control.ls372_set_temp_set_point(new_set_point)
         # Update with read out values
-        mxc_temp = float(self.ls372_widget_temp.channels.ls372_get_channel_value(6, reading='kelvin')) * 1e3
+        mxc_temp = float(self.ls372_temp_widget.channels.ls372_get_channel_value(6, reading='kelvin')) * 1e3
         self.temp_display_label.setText('Current Temp {0:.3f}mK (Set) | {1:.3f}mK (Act)'.format(set_point * 1e3, mxc_temp))
         # Heater Range
         new_range_index = self.heater_range_combobox.currentIndex()
-        self.ls372_widget_temp.temp_control.ls372_set_heater_range(new_range_index)
-        range_index, range_value = self.ls372_widget_temp.temp_control.ls372_get_heater_range()
-        self.ls372_widget_temp.channels.ls372_scan_channel(6) # 6 is the MXC thermometer
-        self.ls372_widget_temp.channels.ls372_scann
+        self.ls372_temp_widget.temp_control.ls372_set_heater_range(new_range_index)
+        range_index, range_value = self.ls372_temp_widget.temp_control.ls372_get_heater_range()
+        self.ls372_temp_widget.channels.ls372_scan_channel(6) # 6 is the MXC thermometer
+        self.ls372_temp_widget.channels.ls372_scann
         self.status_bar.showMessage('Set new temp control parameters and scanning the MXC with temp Lakeshore')
 
     def rtc_scan_lakeshore_channel(self):
         '''
         '''
         channel = self.channel_combobox.currentText()
-        self.ls372_widget_sample.ls372_scan_channel(clicked=True, index=channel)
+        self.ls372_samples_widget.ls372_scan_channel(clicked=True, index=channel)
 
     def rtc_edit_lakeshore_channel(self):
         '''
         '''
         channel = self.channel_combobox.currentText()
-        self.ls372_widget_sample.ls372_edit_channel(clicked=True, index=channel)
+        self.ls372_samples_widget.ls372_edit_channel(clicked=True, index=channel)
 
     def rtc_edit_lakeshore_aux_ouput(self):
         '''
         '''
-        self.ls372_widget_sample.ls372_edit_analog_output(clicked=True, analog_output='aux')
+        self.ls372_samples_widget.ls372_edit_analog_output(clicked=True, analog_output='aux')
 
     def rtc_display_daq_settings(self):
         '''
@@ -416,9 +420,9 @@ class RTCollector(QtWidgets.QWidget, GuiBuilder):
             self.y_stds.append(y_std)
             self.rtc_plot_running()
             if i % 25 == 0 and monitor:
-                mxc_temp = float(self.ls372_widget_temp.channels.ls372_get_channel_value(6, reading='kelvin')) * 1e3
-                heater_value = self.ls372_widget_temp.temp_control.ls372_get_heater_value()
-                set_point = self.ls372_widget_temp.temp_control.ls372_get_temp_set_point()
+                mxc_temp = float(self.ls372_temp_widget.channels.ls372_get_channel_value(6, reading='kelvin')) * 1e3
+                heater_value = self.ls372_temp_widget.temp_control.ls372_get_heater_value()
+                set_point = self.ls372_temp_widget.temp_control.ls372_get_temp_set_point()
                 self.heater_range_header_label.setText('Heater Value {0:.5f} (A)'.format(heater_value))
                 self.temp_display_label.setText('Current Temp {0:.3f}mK (Set) | {1:.3f}mK (Act)'.format(set_point * 1e3, mxc_temp))
             QtWidgets.QApplication.processEvents()

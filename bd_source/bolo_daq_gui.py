@@ -110,6 +110,13 @@ class BoloDAQGui(QtWidgets.QMainWindow, GuiBuilder):
         self.show()
         getattr(self, 'action_Bolo_DAQ_Settings').trigger()
         #getattr(self, 'action_FTS').trigger()
+        if os.getlogin() == 'BoloTester':
+            self.dewar = '576'
+        elif os.getlogin() == 'Bluefors_PC':
+            self.dewar = 'BlueForsDR1'
+        else:
+            self.gb_quick_message('Computer not recgonized', message_type='Warning')
+            os._exit(0)
 
     ##################################################################################
     #### Start up Tasks ##############################################################
@@ -473,26 +480,31 @@ class BoloDAQGui(QtWidgets.QMainWindow, GuiBuilder):
         self.status_bar.showMessage('Loading RT Curves')
         QtWidgets.QApplication.processEvents()
         dialog = 'Select the comport for the Temperature Lakeshore'
-        #com_port, okPressed = self.gb_quick_static_info_gather(title='', dialog=dialog, items=['COM4'])
-        com_port, okPressed = 'COM4', True
-        if not hasattr(self, 'ser_{0}'.format(com_port)) and okPressed:
-            serial_com = BoloSerial(com_port, device='Model372', splash_screen=self.status_bar)
-            setattr(self, 'ser_{0}'.format(com_port), serial_com)
-            if not hasattr(self, 'ls_372_widget_{0}'.format(com_port)):
-                ls_372_widget_temp = LakeShore372(serial_com, com_port, self.status_bar)
-                setattr(self, 'ls_372_widget_{0}'.format(com_port), ls_372_widget_temp)
-        dialog = 'Select the comport for the Sample Lakeshore'
-        #com_port, okPressed = self.gb_quick_static_info_gather(title='', dialog=dialog, items=['COM6'])
-        com_port, okPressed = 'COM6', True
-        if not hasattr(self, 'ser_{0}'.format(com_port)) and okPressed:
-            serial_com = BoloSerial(com_port, device='Model372', splash_screen=self.status_bar)
-            setattr(self, 'ser_{0}'.format(com_port), serial_com)
-            if not hasattr(self, 'ls_372_widget_{0}'.format(com_port)):
-                ls_372_widget_samples = LakeShore372(serial_com, com_port, self.status_bar)
-                setattr(self, 'ls_372_widget_{0}'.format(com_port), ls_372_widget_samples)
+        if self.dewar == '576':
+            ls_372_samples_widget = None
+            ls_372_temp_widget = None
+        elif self.dewar == 'BlueForsDR1':
+            #com_port, okPressed = self.gb_quick_static_info_gather(title='', dialog=dialog, items=['COM4'])
+            com_port, okPressed = 'COM4', True
+            if not hasattr(self, 'ser_{0}'.format(com_port)) and okPressed:
+                serial_com = BoloSerial(com_port, device='Model372', splash_screen=self.status_bar)
+                setattr(self, 'ser_{0}'.format(com_port), serial_com)
+                if not hasattr(self, 'ls_372_{0}_temp'.format(com_port)):
+                    ls_372_widget_temp = LakeShore372(serial_com, com_port, self.status_bar)
+                    setattr(self, 'ls_372_{0}_temp'.format(com_port), ls_372_temp_widget)
+            dialog = 'Select the comport for the Sample Lakeshore'
+            #com_port, okPressed = self.gb_quick_static_info_gather(title='', dialog=dialog, items=['COM6'])
+            com_port, okPressed = 'COM6', True
+            if not hasattr(self, 'ser_{0}'.format(com_port)) and okPressed:
+                serial_com = BoloSerial(com_port, device='Model372', splash_screen=self.status_bar)
+                setattr(self, 'ser_{0}'.format(com_port), serial_com)
+                if not hasattr(self, 'ls_372_widget_{0}'.format(com_port)):
+                    ls_372_samples_widget = LakeShore372(serial_com, com_port, self.status_bar)
+                    setattr(self, 'ls_372_{0}_widget'.format(com_port), ls_372_samples_widget)
         if not hasattr(self, 'rtc_widget'):
-            ls_372_widget_samples = getattr(self, 'ls_372_widget_{0}'.format(com_port))
-            self.rtc_widget = RTCollector(self.available_daq_settings, self.status_bar, self.screen_resolution, self.monitor_dpi, ls_372_widget_temp, ls_372_widget_samples)
+            if self.dewar == 'BlueForsDR1':
+                ls_372_samples_widget = getattr(self, 'ls_372_{0}_widget'.format(com_port))
+            self.rtc_widget = RTCollector(self.available_daq_settings, self.status_bar, self.screen_resolution, self.monitor_dpi, ls_372_temp_widget, ls_372_samples_widget)
         else:
             self.rtc_widget.rtc_populate()
         self.central_widget.layout().addWidget(self.rtc_widget, 0, 0, 1, 1)

@@ -7,8 +7,9 @@ from copy import copy
 from datetime import datetime
 from pprint import pprint
 from bd_lib.bolo_daq import BoloDAQ
-from PyQt5 import QtCore, QtGui, QtWidgets
 from bd_lib.iv_curves import IVCurves
+from bd_lib.saving_manager import SavingManager
+from PyQt5 import QtCore, QtGui, QtWidgets
 from GuiBuilder.gui_builder import GuiBuilder, GenericClass
 
 class IVCollector(QtWidgets.QWidget, GuiBuilder):
@@ -44,6 +45,7 @@ class IVCollector(QtWidgets.QWidget, GuiBuilder):
         self.today = datetime.now()
         self.today_str = datetime.strftime(self.today, '%Y_%m_%d')
         self.data_folder = os.path.join('Data', '{0}'.format(self.today_str))
+        self.saving_manager = SavingManager(self, self.data_folder)
         self.ivc_populate()
         self.ivc_plot_running()
         self.ivc = IVCurves()
@@ -216,9 +218,7 @@ class IVCollector(QtWidgets.QWidget, GuiBuilder):
         self.layout().addWidget(fit_clip_hi_lineedit, 5, 3, 1, 1)
         self.fit_clip_hi_lineedit = fit_clip_hi_lineedit
         # Extra information
-        sample_temp_header_label = QtWidgets.QLabel('Sample Temp (K):', self)
-        self.layout().addWidget(sample_temp_header_label, 6, 0, 1, 1)
-        self.sample_temp_lineedit = QtWidgets.QLineEdit('', self)
+        self.sample_temp_lineedit = self.gb_make_labeled_lineedit(label_text='Sample Temp (K)', parent=self)
         self.sample_temp_lineedit.setValidator(QtGui.QDoubleValidator(0, 10000, 8, self.sample_temp_lineedit))
         self.layout().addWidget(self.sample_temp_lineedit, 6, 1, 1, 1)
         optical_load_header_label = QtWidgets.QLabel('Optical Load (K):', self)
@@ -238,14 +238,12 @@ class IVCollector(QtWidgets.QWidget, GuiBuilder):
         '''
         row = 8
         # Sample Name
-        sample_name_header_label = QtWidgets.QLabel('Sample Name', self)
-        self.layout().addWidget(sample_name_header_label, row, 0, 1, 1)
         self.sample_name_combobox = QtWidgets.QComboBox(self)
         for sample in self.samples_settings:
             self.sample_name_combobox.addItem(sample)
         self.sample_name_combobox.currentIndexChanged.connect(self.ivc_update_sample_name)
         self.layout().addWidget(self.sample_name_combobox, row, 3, 1, 1)
-        self.sample_name_lineedit = QtWidgets.QLineEdit('', self)
+        self.sample_name_lineedit = self.gb_make_labeled_lineedit(label_text='Sample Name')
         self.layout().addWidget(self.sample_name_lineedit, row, 1, 1, 2)
         row += 1
         # Buttons
@@ -319,6 +317,7 @@ class IVCollector(QtWidgets.QWidget, GuiBuilder):
         else:
             self.sender().setText('Start DAQ')
             self.started = False
+            self.saving_manager.auto_save()
 
     def ivc_collecter(self):
         '''
@@ -384,8 +383,8 @@ class IVCollector(QtWidgets.QWidget, GuiBuilder):
         '''
         '''
         fig, ax = self.ivc_create_blank_fig(frac_screen_width=0.4, frac_screen_height=0.28, left=0.23)
-        ax.set_xlabel('Sample', fontsize=14)
-        ax.set_ylabel('X ($V$)', fontsize=14)
+        ax.set_xlabel('Sample', fontsize=12)
+        ax.set_ylabel('X ($V$)', fontsize=12)
         ax.errorbar(range(len(self.x_data)), self.x_data, self.x_stds, marker='.', linestyle='None')
         fig.savefig('temp_x.png', transparent=True)
         pl.close('all')
@@ -397,8 +396,8 @@ class IVCollector(QtWidgets.QWidget, GuiBuilder):
         '''
         '''
         fig, ax = self.ivc_create_blank_fig(frac_screen_width=0.4, frac_screen_height=0.28, left=0.23)
-        ax.set_xlabel('Sample', fontsize=14)
-        ax.set_ylabel('Y ($V$)', fontsize=14)
+        ax.set_xlabel('Sample', fontsize=12)
+        ax.set_ylabel('Y ($V$)', fontsize=12)
         ax.errorbar(range(len(self.y_data)), self.y_data, self.y_stds, marker='.', linestyle='None')
         fig.savefig('temp_y.png', transparent=True)
         pl.close('all')
@@ -420,6 +419,8 @@ class IVCollector(QtWidgets.QWidget, GuiBuilder):
         sample_name = self.sample_name_lineedit.text()
         ax.errorbar(x_data[selector], y_data[selector], xerr=x_stds[selector], yerr=y_stds[selector], marker='.', linestyle='-', label=sample_name)
         if running:
+            ax.set_xlabel('Bias Voltage ($\mu V$)', fontsize=14)
+            ax.set_ylabel('TES Current ($\mu A$)', fontsize=14)
             fig.savefig('temp_xy.png', transparent=True)
             pl.legend(loc='best', fontsize=14)
             pl.close('all')
