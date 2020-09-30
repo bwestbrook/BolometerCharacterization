@@ -47,7 +47,7 @@ class RTCollector(QtWidgets.QWidget, GuiBuilder):
         self.today = datetime.now()
         self.today_str = datetime.strftime(self.today, '%Y_%m_%d')
         self.data_folder = os.path.join('Data', '{0}'.format(self.today_str))
-        self.saving_manager = SavingManager(self, self.data_folder)
+        self.saving_manager = SavingManager(self, self.data_folder, self.rtc_save, 'RT')
         self.rtc_populate()
         self.rtc_plot_running()
 
@@ -394,7 +394,7 @@ class RTCollector(QtWidgets.QWidget, GuiBuilder):
         else:
             self.sender().setText('Start DAQ')
             self.started = False
-            self.saving_manager.auto_save()
+            self.saving_manager.smgr_auto_save()
 
     def rtc_collecter(self, monitor=False):
         '''
@@ -447,11 +447,12 @@ class RTCollector(QtWidgets.QWidget, GuiBuilder):
         '''
         '''
 
-    def rtc_save(self):
+    def rtc_save(self, save_path=None):
         '''
         '''
-        save_path = self.rtc_index_file_name()
-        save_path = QtWidgets.QFileDialog.getSaveFileName(self, 'Data Save Location', save_path, filter=',*.txt,*.dat')[0]
+        if save_path is None:
+            save_path = self.rtc_index_file_name()
+            save_path = QtWidgets.QFileDialog.getSaveFileName(self, 'Data Save Location', save_path, filter=',*.txt,*.dat')[0]
         if len(save_path) > 0:
             with open(save_path, 'w') as save_handle:
                 for i, x_data in enumerate(self.x_data):
