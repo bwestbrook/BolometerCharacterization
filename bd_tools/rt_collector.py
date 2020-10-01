@@ -66,13 +66,15 @@ class RTCollector(QtWidgets.QWidget, GuiBuilder):
         '''
         '''
         self.gb_initialize_panel('self')
-        self.layout().addWidget(self.rtc_plot_panel, 0, 2, 13, 1)
+        if self.ls372_temp_widget is not None:
+            self.rtc_lakeshore_panel()
+            self.layout().addWidget(self.rtc_plot_panel, 0, 4, 20, 1)
+        else:
+            self.layout().addWidget(self.rtc_plot_panel, 0, 2, 13, 1)
         self.gb_initialize_panel('rtc_plot_panel')
         self.rtc_add_common_widgets()
         self.rtc_daq_panel()
         self.rtc_rt_config()
-        if self.ls372_temp_widget is not None:
-            self.rtc_lakeshore_panel()
         self.rtc_make_plot_panel()
         self.rtc_display_daq_settings()
         self.rtc_plot_running()
@@ -86,49 +88,59 @@ class RTCollector(QtWidgets.QWidget, GuiBuilder):
         '''
         # Temp Control
         self.temp_display_label = QtWidgets.QLabel('', self)
-        self.layout().addWidget(self.temp_display_label, 0, 5, 1, 1)
+        self.layout().addWidget(self.temp_display_label, 11, 0, 1, 1)
         self.temp_set_point_lineedit = QtWidgets.QLineEdit('0.001', self)
+        self.temp_set_point_lineedit.setFixedWidth(self.le_width)
         self.temp_set_point_lineedit.setValidator(QtGui.QDoubleValidator(0, 1200, 2, self.temp_set_point_lineedit))
-        self.layout().addWidget(self.temp_set_point_lineedit, 0, 6, 1, 1)
+        self.layout().addWidget(self.temp_set_point_lineedit, 11, 1, 1, 1)
         temp_set_point_pushbuton = QtWidgets.QPushButton('Set New', self)
+        temp_set_point_pushbuton.setFixedWidth(self.le_width)
         temp_set_point_pushbuton.clicked.connect(self.rtc_update_set_point)
-        self.layout().addWidget(temp_set_point_pushbuton, 0, 7, 1, 1)
+        self.layout().addWidget(temp_set_point_pushbuton, 11, 2, 1, 1)
         set_point = self.ls372_temp_widget.temp_control.ls372_get_temp_set_point()
         self.temp_set_point_lineedit.setText('{0:.4f}'.format(set_point * 1e3))
-        mxc_temp = float(self.ls372_temp_widget.channels.ls372_get_channel_value(6, reading='kelvin')) * 1e3
-        self.temp_display_label.setText('Current Temp {0:.3f}mK (Set) | {1:.3f}mK (Act)'.format(set_point * 1e3, mxc_temp))
+        if self.gb_is_float(self.ls372_temp_widget.channels.ls372_get_channel_value(6, reading='kelvin')):
+            mxc_temp = float(self.ls372_temp_widget.channels.ls372_get_channel_value(6, reading='kelvin'))
+        else:
+            mxc_temp = np.nan
+        self.temp_display_label.setText('Set P: {0:.3f} mK\nAct: {1:.3f} mK'.format(set_point * 1e3, mxc_temp))
         ramp_on, ramp_value = self.ls372_temp_widget.temp_control.ls372_get_ramp()
         self.ramp_lineedit = self.gb_make_labeled_lineedit(label_text='Ramp (K/min): ')
+        self.ramp_lineedit.setFixedWidth(2 * self.le_width)
         self.ramp_lineedit.setText('{0}'.format(ramp_value))
-        self.ramp_lineedit.setValidator(QtGui.QDoubleValidator(0, 2, 3, self.ramp_lineedit))
-        self.layout().addWidget(self.ramp_lineedit, 1, 5, 1, 2)
+        self.ramp_lineedit.setValidator(QtGui.QDoubleValidator(12, 2, 3, self.ramp_lineedit))
+        self.layout().addWidget(self.ramp_lineedit, 12, 0, 1, 2)
         set_ramp_pushbutton = QtWidgets.QPushButton('Set Ramp', self)
-        self.layout().addWidget(set_ramp_pushbutton, 1, 7, 1, 1)
+        set_ramp_pushbutton.setFixedWidth(self.le_width)
+        self.layout().addWidget(set_ramp_pushbutton, 12, 2, 1, 1)
         set_ramp_pushbutton.clicked.connect(self.rtc_update_ramp)
         # PID Config
         p, i, d = self.ls372_temp_widget.temp_control.ls372_get_pid()
         self.p_lineedit = self.gb_make_labeled_lineedit(label_text='P: ')
+        self.p_lineedit.setFixedWidth(0.5 * self.le_width)
         self.p_lineedit.setValidator(QtGui.QDoubleValidator(0, 300, 2, self.p_lineedit))
         self.p_lineedit.setText(str(p))
-        self.layout().addWidget(self.p_lineedit, 2, 5, 1, 1)
+        self.layout().addWidget(self.p_lineedit, 13, 0, 1, 1)
         self.i_lineedit = self.gb_make_labeled_lineedit(label_text='I: ')
+        self.i_lineedit.setFixedWidth(0.5 * self.le_width)
         self.i_lineedit.setValidator(QtGui.QDoubleValidator(0, 300, 2, self.i_lineedit))
         self.i_lineedit.setText(str(i))
-        self.layout().addWidget(self.i_lineedit, 2, 6, 1, 1)
+        self.layout().addWidget(self.i_lineedit, 13, 1, 1, 1)
         self.d_lineedit = self.gb_make_labeled_lineedit(label_text='D: ')
+        self.d_lineedit.setFixedWidth(0.5 * self.le_width)
         self.d_lineedit.setValidator(QtGui.QDoubleValidator(0, 300, 2, self.d_lineedit))
         self.d_lineedit.setText(str(d))
-        self.layout().addWidget(self.d_lineedit, 2, 7, 1, 1)
+        self.layout().addWidget(self.d_lineedit, 13, 2, 1, 1)
         self.pid_header_label = QtWidgets.QLabel('', self)
         self.pid_header_label.setText( 'P:{0} ::: I:{1} ::: D:{2} '.format(p, i, d))
-        self.layout().addWidget(self.pid_header_label, 3, 7, 1, 1)
+        self.layout().addWidget(self.pid_header_label, 14, 2, 1, 1)
         # Heater Range
         heater_value = self.ls372_temp_widget.temp_control.ls372_get_heater_value()
         current_range_index, current_range_value = self.ls372_temp_widget.temp_control.ls372_get_heater_range()
         self.heater_range_header_label = QtWidgets.QLabel('Heater Value {0:.5f} (A)'.format(heater_value), self)
-        self.layout().addWidget(self.heater_range_header_label, 3, 5, 1, 1)
+        self.layout().addWidget(self.heater_range_header_label, 14, 0, 1, 1)
         self.heater_range_combobox = QtWidgets.QComboBox(self)
-        self.layout().addWidget(self.heater_range_combobox, 3, 6, 1, 1)
+        self.layout().addWidget(self.heater_range_combobox, 14, 1, 1, 1)
         for range_index, range_value in self.ls372_temp_widget.temp_control.ls372_heater_range_dict.items():
             self.heater_range_combobox.addItem(str(range_value))
             if int(range_index) == int(current_range_index):
@@ -137,24 +149,24 @@ class RTCollector(QtWidgets.QWidget, GuiBuilder):
         # Read and Write Settings
         read_ls372_settings_pushbutton = QtWidgets.QPushButton('Read Settings', self)
         read_ls372_settings_pushbutton.clicked.connect(self.rtc_get_lakeshore_temp_control)
-        self.layout().addWidget(read_ls372_settings_pushbutton, 4, 5, 1, 3)
+        self.layout().addWidget(read_ls372_settings_pushbutton, 15, 0, 1, 3)
         update_ls372_settings_pushbutton = QtWidgets.QPushButton('Update Settings', self)
         update_ls372_settings_pushbutton.clicked.connect(self.rtc_edit_lakeshore_temp_control)
-        self.layout().addWidget(update_ls372_settings_pushbutton, 5, 5, 1, 3)
+        self.layout().addWidget(update_ls372_settings_pushbutton, 16, 0, 1, 3)
         # Control Buttons
         configure_channel_pushbutton = QtWidgets.QPushButton('Configure', self)
-        self.layout().addWidget(configure_channel_pushbutton, 6, 6, 1, 2)
+        self.layout().addWidget(configure_channel_pushbutton, 17, 1, 1, 2)
         configure_channel_pushbutton.clicked.connect(self.rtc_edit_lakeshore_channel)
         self.channel_combobox = QtWidgets.QComboBox(self)
-        self.layout().addWidget(self.channel_combobox, 6, 5, 1, 1)
+        self.layout().addWidget(self.channel_combobox, 17, 0, 1, 1)
         #self.ls372_samples_widget.scan_channel(1)
         for channel in range(1, 17):
             self.channel_combobox.addItem(str(channel))
         set_aux_analog_out_pushbutton = QtWidgets.QPushButton('Set Analog Out', self)
         set_aux_analog_out_pushbutton.clicked.connect(self.rtc_edit_lakeshore_aux_ouput)
-        self.layout().addWidget(set_aux_analog_out_pushbutton, 7, 6, 1, 2)
+        self.layout().addWidget(set_aux_analog_out_pushbutton, 18, 1, 1, 2)
         aux_analog_label = QtWidgets.QLabel('1', self)
-        self.layout().addWidget(aux_analog_label, 7, 5, 1, 1)
+        self.layout().addWidget(aux_analog_label, 18, 0, 1, 1)
 
     def rtc_get_lakeshore_temp_control(self):
         '''
@@ -256,23 +268,23 @@ class RTCollector(QtWidgets.QWidget, GuiBuilder):
         self.rtc_daq_combobox = self.gb_make_labeled_combobox(label_text='DAQ Device:', width=self.le_width)
         for daq in self.daq_settings:
             self.rtc_daq_combobox.addItem(daq)
-        self.layout().addWidget(self.rtc_daq_combobox, 0, 0, 1, 1)
+        self.layout().addWidget(self.rtc_daq_combobox, 0, 0, 1, 3)
         # DAQ Y
         self.daq_x_combobox = self.gb_make_labeled_combobox(label_text='DAQ Ch X Data:', width=self.le_width)
         for daq in range(0, 8):
             self.daq_x_combobox.addItem(str(daq))
-        self.layout().addWidget(self.daq_x_combobox, 1, 0, 1, 1)
+        self.layout().addWidget(self.daq_x_combobox, 1, 0, 1, 3)
         self.daq_settings_x_label = QtWidgets.QLabel('', self)
         self.daq_settings_x_label.setAlignment(QtCore.Qt.AlignRight)
-        self.layout().addWidget(self.daq_settings_x_label, 2, 0, 1, 1)
+        self.layout().addWidget(self.daq_settings_x_label, 2, 0, 1, 3)
         # DAQ Y
         self.daq_y_combobox = self.gb_make_labeled_combobox(label_text='DAQ Ch Y Data:', width=self.le_width)
         for daq in range(0, 8):
             self.daq_y_combobox.addItem(str(daq))
-        self.layout().addWidget(self.daq_y_combobox, 3, 0, 1, 1)
+        self.layout().addWidget(self.daq_y_combobox, 3, 0, 1, 3)
         self.daq_settings_y_label = QtWidgets.QLabel('', self)
         self.daq_settings_y_label.setAlignment(QtCore.Qt.AlignRight)
-        self.layout().addWidget(self.daq_settings_y_label, 4, 0, 1, 1)
+        self.layout().addWidget(self.daq_settings_y_label, 4, 0, 1, 3)
         self.daq_y_combobox.currentIndexChanged.connect(self.rtc_display_daq_settings)
         self.daq_x_combobox.currentIndexChanged.connect(self.rtc_display_daq_settings)
         self.rtc_daq_combobox.currentIndexChanged.connect(self.rtc_display_daq_settings)
@@ -284,19 +296,19 @@ class RTCollector(QtWidgets.QWidget, GuiBuilder):
         self.x_correction_combobox = self.gb_make_labeled_combobox(label_text='GRT Serial:', width=self.le_width)
         for grt_serial in ['Lakeshore']:
             self.x_correction_combobox.addItem(grt_serial)
-        self.layout().addWidget(self.x_correction_combobox, 5, 0, 1, 1)
+        self.layout().addWidget(self.x_correction_combobox, 5, 0, 1, 3)
         # Y Voltage Factor 
         self.y_correction_combobox = self.gb_make_labeled_combobox(label_text='Resistance Correction Factor:', width=self.le_width)
         for index, voltage_reduction_factor in self.voltage_reduction_factor_dict.items():
             self.y_correction_combobox.addItem('{0}'.format(voltage_reduction_factor))
-        self.layout().addWidget(self.y_correction_combobox, 6, 0, 1, 1)
+        self.layout().addWidget(self.y_correction_combobox, 6, 0, 1, 3)
         # Data Clip
         self.data_clip_lo_lineedit = self.gb_make_labeled_lineedit(label_text='Data Clip Lo (mK)', width=self.le_width)
         self.data_clip_lo_lineedit.setText(str(0.0))
-        self.layout().addWidget(self.data_clip_lo_lineedit, 7, 0, 1, 1)
+        self.layout().addWidget(self.data_clip_lo_lineedit, 7, 0, 1, 3)
         self.data_clip_hi_lineedit = self.gb_make_labeled_lineedit(label_text='Data Clip Hi (mK)', width=self.le_width)
         self.data_clip_hi_lineedit.setText(str(1000.0))
-        self.layout().addWidget(self.data_clip_hi_lineedit, 8, 0, 1, 1)
+        self.layout().addWidget(self.data_clip_hi_lineedit, 8, 0, 1, 3)
 
     def rtc_add_common_widgets(self):
         '''
@@ -306,16 +318,16 @@ class RTCollector(QtWidgets.QWidget, GuiBuilder):
         for sample in self.samples_settings:
             self.sample_name_combobox.addItem(sample)
         self.sample_name_combobox.activated.connect(self.rtc_update_sample_name)
-        self.layout().addWidget(self.sample_name_combobox, 9, 0, 1, 1)
+        self.layout().addWidget(self.sample_name_combobox, 9, 0, 1, 3)
         self.sample_name_lineedit = self.gb_make_labeled_lineedit(label_text='Sample Name', width=self.le_width)
-        self.layout().addWidget(self.sample_name_lineedit, 10, 0, 1, 1)
+        self.layout().addWidget(self.sample_name_lineedit, 10, 0, 1, 3)
         # Buttons
         start_pushbutton = QtWidgets.QPushButton('Start', self)
         start_pushbutton.clicked.connect(self.rtc_start_stop)
-        self.layout().addWidget(start_pushbutton, 11, 0, 1, 1)
+        self.layout().addWidget(start_pushbutton, 21, 0, 1, 3)
         save_pushbutton = QtWidgets.QPushButton('Save', self)
         save_pushbutton.clicked.connect(self.rtc_save)
-        self.layout().addWidget(save_pushbutton, 12, 0, 1, 1)
+        self.layout().addWidget(save_pushbutton, 22, 0, 1, 3)
         self.rtc_update_sample_name(0)
 
     def rtc_update_sample_name(self, index):

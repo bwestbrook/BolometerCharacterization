@@ -489,7 +489,7 @@ class BoloDAQGui(QtWidgets.QMainWindow, GuiBuilder):
                 serial_com = BoloSerial(com_port, device='Model372', splash_screen=self.status_bar)
                 setattr(self, 'ser_{0}'.format(com_port), serial_com)
                 if not hasattr(self, 'ls_372_{0}_temp'.format(com_port)):
-                    ls_372_widget_temp = LakeShore372(serial_com, com_port, self.status_bar)
+                    ls_372_temp_widget = LakeShore372(serial_com, com_port, self.status_bar)
                     setattr(self, 'ls_372_{0}_temp'.format(com_port), ls_372_temp_widget)
             dialog = 'Select the comport for the Sample Lakeshore'
             #com_port, okPressed = self.gb_quick_static_info_gather(title='', dialog=dialog, items=['COM6'])
