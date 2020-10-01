@@ -104,7 +104,7 @@ class BoloDAQGui(QtWidgets.QMainWindow, GuiBuilder):
         self.com_port_utility_widget = ComPortUtility(self.splash_screen, self.screen_resolution, self.monitor_dpi)
         self.bd_get_available_daq_settings()
         self.splash_screen.close()
-        self.resize(int(0.95 * self.screen_resolution.width()), int(0.8 * self.screen_resolution.height()))
+        #self.resize(int(0.95 * self.screen_resolution.width()), int(0.8 * self.screen_resolution.height()))
         self.move(0, 0)
         #getattr(self, 'action_Bolo_DAQ_Settings').trigger()
         self.show()
@@ -465,8 +465,7 @@ class BoloDAQGui(QtWidgets.QMainWindow, GuiBuilder):
         self.central_widget.layout().addWidget(self.ivc_widget, 0, 0, 1, 1)
         self.status_bar.showMessage('IV Curves')
         QtWidgets.QApplication.processEvents()
-        self.show()
-        self.showMaximized()
+        self.resize(self.minimumSizeHint().width(), self.minimumSizeHint().height())
 
     #################################################
     # RT Cruves
@@ -510,8 +509,7 @@ class BoloDAQGui(QtWidgets.QMainWindow, GuiBuilder):
         self.central_widget.layout().addWidget(self.rtc_widget, 0, 0, 1, 1)
         self.status_bar.showMessage('RT Curves')
         QtWidgets.QApplication.processEvents()
-        self.show()
-        self.showMaximized()
+        self.resize(self.minimumSizeHint().width(), self.minimumSizeHint().height())
 
     #################################################
     # Configure Stepper Motors
@@ -704,6 +702,7 @@ class BoloDAQGui(QtWidgets.QMainWindow, GuiBuilder):
 if __name__ == '__main__':
     qt_app = QtWidgets.QApplication(sys.argv)
     qt_app.setFont(QtGui.QFont('SansSerif', 10))
+    screen_resolution = qt_app.desktop().availableGeometry()
     screen_resolution = qt_app.desktop().screenGeometry()
     gui = BoloDAQGui(screen_resolution, qt_app)
     gui.show()

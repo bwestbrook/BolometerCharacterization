@@ -36,6 +36,9 @@ class IVCollector(QtWidgets.QWidget, GuiBuilder):
             }
         grid = QtWidgets.QGridLayout()
         self.setLayout(grid)
+        self.ivc_plot_panel = QtWidgets.QWidget(self)
+        grid_2 = QtWidgets.QGridLayout()
+        self.ivc_plot_panel.setLayout(grid_2)
         self.x_data = []
         self.x_stds = []
         self.y_data = []
@@ -62,62 +65,14 @@ class IVCollector(QtWidgets.QWidget, GuiBuilder):
         '''
         '''
         self.gb_initialize_panel('self')
+        self.layout().addWidget(self.ivc_plot_panel, 0, 2, 19, 1)
+        self.gb_initialize_panel('ivc_plot_panel')
         self.ivc_daq_panel()
         self.ivc_iv_config()
         self.ivc_make_plot_panel()
         self.ivc_add_common_widgets()
         self.ivc_display_daq_settings()
         self.ivc_plot_running()
-
-    def ivc_lakeshore_panel(self):
-        '''
-        '''
-        # Temp Control
-        temp_display_label = QtWidgets.QLabel('Current Temp (Set / Act) [mK]', self)
-        self.layout().addWidget(temp_display_label, 0, 5, 1, 1)
-        temp_set_point_lineedit = QtWidgets.QLineEdit('0', self)
-        self.layout().addWidget(temp_set_point_lineedit, 0, 6, 1, 1)
-        temp_set_point_pushbuton = QtWidgets.QPushButton('Set New', self)
-        self.layout().addWidget(temp_set_point_pushbuton, 0, 7, 1, 1)
-        pid_header_label = QtWidgets.QLabel('P I D', self)
-        self.layout().addWidget(pid_header_label, 1, 5, 1, 1)
-        self.p_lineedit = QtWidgets.QLineEdit('0', self)
-        self.layout().addWidget(self.p_lineedit, 3, 5, 1, 1)
-        self.i_lineedit = QtWidgets.QLineEdit('0', self)
-        self.layout().addWidget(self.i_lineedit, 3, 6, 1, 1)
-        self.d_lineedit = QtWidgets.QLineEdit('0', self)
-        self.layout().addWidget(self.d_lineedit, 3, 7, 1, 1)
-
-        # Control Buttons
-        configure_channel_pushbutton = QtWidgets.QPushButton('Configure', self)
-        self.layout().addWidget(configure_channel_pushbutton, 4, 7, 1, 1)
-        configure_channel_pushbutton.clicked.connect(self.ivc_edit_lakeshore_channel)
-        scan_and_readout_pushbutton = QtWidgets.QPushButton('Scan', self)
-        self.layout().addWidget(scan_and_readout_pushbutton, 4, 6, 1, 1)
-        self.channel_combobox = QtWidgets.QComboBox(self)
-        self.layout().addWidget(self.channel_combobox, 4, 5, 1, 1)
-        for channel in range(1, 17):
-            self.channel_combobox.addItem(str(channel))
-
-        set_aux_analog_out_pushbutton = QtWidgets.QPushButton('Set Analog Out', self)
-        set_aux_analog_out_pushbutton.clicked.connect(self.ivc_edit_lakeshore_aux_ouput)
-        self.layout().addWidget(set_aux_analog_out_pushbutton, 5, 5, 1, 3)
-
-        read_ls_372_settings_pushbutton = QtWidgets.QPushButton('Read Settings', self)
-        self.layout().addWidget(read_ls_372_settings_pushbutton, 6, 5, 1, 3)
-        update_ls_372_settings_pushbutton = QtWidgets.QPushButton('Update Settings', self)
-        self.layout().addWidget(update_ls_372_settings_pushbutton, 7, 5, 1, 3)
-
-    def ivc_edit_lakeshore_channel(self):
-        '''
-        '''
-        channel = self.channel_combobox.currentText()
-        self.ls_372_widget.ls372_edit_channel(clicked=True, index=channel)
-
-    def ivc_edit_lakeshore_aux_ouput(self):
-        '''
-        '''
-        self.ls_372_widget.ls372_edit_analog_output(clicked=True, analog_output='aux')
 
     def ivc_display_daq_settings(self):
         '''
@@ -142,26 +97,26 @@ class IVCollector(QtWidgets.QWidget, GuiBuilder):
         '''
         '''
         # Device
-        self.ivc_daq_combobox = self.gb_make_labeled_combobox(label_text='DAQ Device', width=5 * self.le_width)
+        self.ivc_daq_combobox = self.gb_make_labeled_combobox(label_text='DAQ Device', width=self.le_width)
         for daq in self.daq_settings:
             self.ivc_daq_combobox.addItem(daq)
-        self.layout().addWidget(self.ivc_daq_combobox, 0, 0, 1, 4)
+        self.layout().addWidget(self.ivc_daq_combobox, 0, 0, 1, 1)
         # DAQ X
         self.daq_x_combobox = self.gb_make_labeled_combobox(label_text='DAQ X Data:', width=self.le_width)
         for daq in range(0, 8):
             self.daq_x_combobox.addItem(str(daq))
-        self.layout().addWidget(self.daq_x_combobox, 1, 0, 1, 2)
+        self.layout().addWidget(self.daq_x_combobox, 1, 0, 1, 1)
         self.daq_settings_x_label = QtWidgets.QLabel('', self)
         self.daq_settings_x_label.setAlignment(QtCore.Qt.AlignLeft)
-        self.layout().addWidget(self.daq_settings_x_label, 1, 2, 1, 3)
+        self.layout().addWidget(self.daq_settings_x_label, 2, 0, 1, 1)
         # DAQ Y
         self.daq_y_combobox = self.gb_make_labeled_combobox(label_text='DAQ Y Data:', width=self.le_width)
         for daq in range(0, 8):
             self.daq_y_combobox.addItem(str(daq))
-        self.layout().addWidget(self.daq_y_combobox, 2, 0, 1, 2)
+        self.layout().addWidget(self.daq_y_combobox, 4, 0, 1, 1)
         self.daq_settings_y_label = QtWidgets.QLabel('', self)
         self.daq_settings_y_label.setAlignment(QtCore.Qt.AlignLeft)
-        self.layout().addWidget(self.daq_settings_y_label, 2, 2, 1, 3)
+        self.layout().addWidget(self.daq_settings_y_label, 5, 0, 1, 1)
         self.daq_y_combobox.currentIndexChanged.connect(self.ivc_display_daq_settings)
         self.daq_x_combobox.currentIndexChanged.connect(self.ivc_display_daq_settings)
         self.ivc_daq_combobox.currentIndexChanged.connect(self.ivc_display_daq_settings)
@@ -173,63 +128,59 @@ class IVCollector(QtWidgets.QWidget, GuiBuilder):
         self.x_correction_combobox = self.gb_make_labeled_combobox(label_text='Bias Voltage Correction Factor:', width=self.le_width)
         for index, voltage_factor in self.voltage_reduction_factor_dict.items():
             self.x_correction_combobox.addItem('{0}'.format(voltage_factor))
-        self.layout().addWidget(self.x_correction_combobox, 3, 0, 1, 2)
+        self.layout().addWidget(self.x_correction_combobox, 6, 0, 1, 1)
         # SQUID
         self.squid_calibration_label = QtWidgets.QLabel('', self)
-        self.layout().addWidget(self.squid_calibration_label, 3, 3, 1, 1)
+        self.squid_calibration_label.setAlignment(QtCore.Qt.AlignRight)
+        self.layout().addWidget(self.squid_calibration_label, 7, 0, 1, 1)
         self.y_correction_combobox = self.gb_make_labeled_combobox(label_text='Select SQUID', width=self.le_width)
         for squid, calibration in self.squid_calibration_dict.items():
             self.y_correction_combobox.addItem('{0}'.format(squid))
         self.y_correction_combobox.setCurrentIndex(-1)
         self.y_correction_combobox.currentIndexChanged.connect(self.ivc_update_squid_calibration)
         self.y_correction_combobox.setCurrentIndex(0)
-        self.layout().addWidget(self.y_correction_combobox, 3, 2, 1, 1)
+        self.layout().addWidget(self.y_correction_combobox, 8, 0, 1, 1)
         # Data Clip
         self.data_clip_lo_lineedit = self.gb_make_labeled_lineedit(label_text='Data Clip Lo (uV)', lineedit_text='0.0', width=self.le_width)
-        self.layout().addWidget(self.data_clip_lo_lineedit, 4, 0, 1, 2)
+        self.layout().addWidget(self.data_clip_lo_lineedit, 9, 0, 1, 1)
         self.data_clip_hi_lineedit = self.gb_make_labeled_lineedit(label_text='Data Clip Hi (uV)', lineedit_text='1000.0', width=self.le_width)
-        self.layout().addWidget(self.data_clip_hi_lineedit, 4, 2, 1, 2)
+        self.layout().addWidget(self.data_clip_hi_lineedit, 10, 0, 1, 1)
         # Fit Clip
         self.fit_clip_lo_lineedit = self.gb_make_labeled_lineedit(label_text='Fit Clip Lo (uV)', lineedit_text='0.0', width=self.le_width)
-        self.layout().addWidget(self.fit_clip_lo_lineedit, 5, 0, 1, 2)
+        self.layout().addWidget(self.fit_clip_lo_lineedit, 11, 0, 1, 1)
         self.fit_clip_hi_lineedit = self.gb_make_labeled_lineedit(label_text='Fit Clip Hi (uV)', lineedit_text='1000.0', width=self.le_width)
-        self.layout().addWidget(self.fit_clip_hi_lineedit, 5, 2, 1, 2)
+        self.layout().addWidget(self.fit_clip_hi_lineedit, 12, 0, 1, 1)
         # Extra information
         self.sample_temp_lineedit = self.gb_make_labeled_lineedit(label_text='Sample Temp (K)', width=self.le_width)
         self.sample_temp_lineedit.setValidator(QtGui.QDoubleValidator(0, 10000, 8, self.sample_temp_lineedit))
-        self.layout().addWidget(self.sample_temp_lineedit, 6, 0, 1, 2)
+        self.layout().addWidget(self.sample_temp_lineedit, 13, 0, 1, 1)
         self.optical_load_lineedit = self.gb_make_labeled_lineedit(label_text='Optical Load (K)', width=self.le_width)
         self.optical_load_lineedit.setValidator(QtGui.QDoubleValidator(0, 500, 8, self.optical_load_lineedit))
-        self.layout().addWidget(self.optical_load_lineedit, 6, 2, 1, 2)
+        self.layout().addWidget(self.optical_load_lineedit, 14, 0, 1, 1)
         self.sample_band_combobox = self.gb_make_labeled_combobox(label_text='Sample Band (GHz)', width=self.le_width)
-        self.layout().addWidget(self.sample_band_combobox, 7, 0, 1, 2)
+        self.layout().addWidget(self.sample_band_combobox, 15, 0, 1, 1)
         for sample_band in ['', 'MF-Sinuous1p5', 'MF-Sinuous0p8', '30', '40', '90', '150', '220', '270']:
             self.sample_band_combobox.addItem(sample_band)
 
     def ivc_add_common_widgets(self):
         '''
         '''
-        row = 8
         # Sample Name
         self.sample_name_combobox = self.gb_make_labeled_combobox(label_text='Select Sample', width=self.le_width)
         for sample in self.samples_settings:
             self.sample_name_combobox.addItem(sample)
         self.sample_name_combobox.currentIndexChanged.connect(self.ivc_update_sample_name)
-        self.layout().addWidget(self.sample_name_combobox, 8, 0, 1, 2)
+        self.layout().addWidget(self.sample_name_combobox, 16, 0, 1, 1)
         self.sample_name_lineedit = self.gb_make_labeled_lineedit(label_text='Sample Name', width=self.le_width)
-        self.layout().addWidget(self.sample_name_lineedit, 8, 2, 1, 2)
-        row += 1
+        self.layout().addWidget(self.sample_name_lineedit, 17, 0, 1, 1)
         # Buttons
         start_pushbutton = QtWidgets.QPushButton('Start', self)
         start_pushbutton.clicked.connect(self.ivc_start_stop)
-        self.layout().addWidget(start_pushbutton, row, 0, 1, 4)
+        self.layout().addWidget(start_pushbutton, 18, 0, 1, 1)
         save_pushbutton = QtWidgets.QPushButton('Save', self)
         save_pushbutton.clicked.connect(self.ivc_save)
-        row += 1
-        self.layout().addWidget(save_pushbutton, row, 0, 1, 4)
-        row += 1
-        spacer_label = QtWidgets.QLabel(' ', self)
-        self.layout().addWidget(spacer_label, row, 0, 3, 4)
+        self.layout().addWidget(save_pushbutton, 19, 0, 1, 1)
+        self.ivc_update_sample_name(0)
 
     def ivc_update_sample_name(self, index):
         '''
@@ -260,21 +211,21 @@ class IVCollector(QtWidgets.QWidget, GuiBuilder):
         # X
         self.x_time_stream_label = QtWidgets.QLabel('', self)
         self.x_time_stream_label.setAttribute(QtCore.Qt.WA_TranslucentBackground)
-        self.layout().addWidget(self.x_time_stream_label, 0, 5, 5, 2)
+        self.ivc_plot_panel.layout().addWidget(self.x_time_stream_label, 0, 0, 1, 1)
         self.x_data_label = QtWidgets.QLabel('X Data: X STD:', self)
-        self.layout().addWidget(self.x_data_label, 5, 5, 1, 2)
+        self.ivc_plot_panel.layout().addWidget(self.x_data_label, 1, 0, 1, 1)
 
         # Y
         self.y_time_stream_label = QtWidgets.QLabel('', self)
         self.y_time_stream_label.setAttribute(QtCore.Qt.WA_TranslucentBackground)
-        self.layout().addWidget(self.y_time_stream_label, 0, 7, 5, 2)
+        self.ivc_plot_panel.layout().addWidget(self.y_time_stream_label, 0, 1, 1, 1)
         self.y_data_label = QtWidgets.QLabel('Y Data: Y STD:', self)
-        self.layout().addWidget(self.y_data_label, 5, 7, 1, 2)
+        self.ivc_plot_panel.layout().addWidget(self.y_data_label, 1, 1, 1, 1)
 
         # XY
         self.xy_scatter_label = QtWidgets.QLabel('', self)
         self.xy_scatter_label.setAttribute(QtCore.Qt.WA_TranslucentBackground)
-        self.layout().addWidget(self.xy_scatter_label, 6, 5, 5, 4)
+        self.ivc_plot_panel.layout().addWidget(self.xy_scatter_label, 2, 0, 1, 2)
 
     #########################################################
     # Running
@@ -356,10 +307,12 @@ class IVCollector(QtWidgets.QWidget, GuiBuilder):
     def ivc_plot_x(self):
         '''
         '''
-        fig, ax = self.ivc_create_blank_fig(frac_screen_width=0.35, frac_screen_height=0.35, left=0.23)
+        fig, ax = self.ivc_create_blank_fig(frac_screen_width=0.4, frac_screen_height=0.3, left=0.15)
         ax.set_xlabel('Sample', fontsize=12)
         ax.set_ylabel('X ($V$)', fontsize=12)
-        ax.errorbar(range(len(self.x_data)), self.x_data, self.x_stds, marker='.', linestyle='None')
+        label = 'DAQ {0}'.format(self.x_channel)
+        ax.errorbar(range(len(self.x_data)), self.x_data, self.x_stds, marker='.', linestyle='None', label=label)
+        pl.legend(loc='best', fontsize=12)
         fig.savefig('temp_x.png', transparent=True)
         pl.close('all')
         image_to_display = QtGui.QPixmap('temp_x.png')
@@ -369,10 +322,12 @@ class IVCollector(QtWidgets.QWidget, GuiBuilder):
     def ivc_plot_y(self):
         '''
         '''
-        fig, ax = self.ivc_create_blank_fig(frac_screen_width=0.35, frac_screen_height=0.35, left=0.23)
+        fig, ax = self.ivc_create_blank_fig(frac_screen_width=0.4, frac_screen_height=0.3, left=0.15)
         ax.set_xlabel('Sample', fontsize=12)
         ax.set_ylabel('Y ($V$)', fontsize=12)
-        ax.errorbar(range(len(self.y_data)), self.y_data, self.y_stds, marker='.', linestyle='None')
+        label = 'DAQ {0}'.format(self.y_channel)
+        ax.errorbar(range(len(self.y_data)), self.y_data, self.y_stds, marker='.', linestyle='None', label=label)
+        pl.legend(loc='best', fontsize=12)
         fig.savefig('temp_y.png', transparent=True)
         pl.close('all')
         image_to_display = QtGui.QPixmap('temp_y.png')
@@ -382,11 +337,12 @@ class IVCollector(QtWidgets.QWidget, GuiBuilder):
     def ivc_plot_xy(self, running=False):
         '''
         '''
-        fig, ax = self.ivc_create_blank_fig(frac_screen_width=0.7, frac_screen_height=0.65)
+        if running:
+            fig, ax = self.ivc_create_blank_fig(frac_screen_width=0.8, frac_screen_height=0.4, left=0.1, top=0.9)
+        else:
+            fig, ax = self.ivc_create_blank_fig(frac_screen_width=0.8, frac_screen_height=0.4, left=0.1, top=0.9)
         y_data, y_stds = self.ivc_adjust_y_data()
         x_data, x_stds = self.ivc_adjust_x_data()
-        ax.set_xlabel('Bias Voltage ($\mu V$)', fontsize=14)
-        ax.set_ylabel('TES Current ($\mu A$)', fontsize=14)
         data_clip_lo = float(self.data_clip_lo_lineedit.text())
         data_clip_hi = float(self.data_clip_hi_lineedit.text())
         selector =  np.where(np.logical_and(data_clip_lo < x_data, x_data < data_clip_hi))
@@ -395,6 +351,7 @@ class IVCollector(QtWidgets.QWidget, GuiBuilder):
         if running:
             ax.set_xlabel('Bias Voltage ($\mu V$)', fontsize=14)
             ax.set_ylabel('TES Current ($\mu A$)', fontsize=14)
+            ax.set_title(sample_name, fontsize=14)
             fig.savefig('temp_xy.png', transparent=True)
             pl.legend(loc='best', fontsize=14)
             pl.close('all')
@@ -404,6 +361,7 @@ class IVCollector(QtWidgets.QWidget, GuiBuilder):
         else:
             ax.set_xlabel('Bias Voltage ($\mu V$)', fontsize=16)
             ax.set_ylabel('TES Current ($\mu A$)', fontsize=16)
+            ax.set_title(sample_name, fontsize=16)
             ax.tick_params(axis='x', labelsize=16)
             ax.tick_params(axis='y', labelsize=16)
             pl.show()
@@ -478,6 +436,6 @@ class IVCollector(QtWidgets.QWidget, GuiBuilder):
         else:
             ax = None
         fig.subplots_adjust(left=left, right=right, top=top, bottom=bottom)
-        ax.tick_params(axis='x', labelsize=12)
-        ax.tick_params(axis='y', labelsize=12)
+        ax.tick_params(axis='x', labelsize=10)
+        ax.tick_params(axis='y', labelsize=10)
         return fig, ax

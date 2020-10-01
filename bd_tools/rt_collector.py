@@ -22,6 +22,7 @@ class RTCollector(QtWidgets.QWidget, GuiBuilder):
         self.screen_resolution = screen_resolution
         self.monitor_dpi = monitor_dpi
         self.daq = BoloDAQ()
+        self.le_width = int(0.05 * self.screen_resolution.width())
         self.ls372_temp_widget = ls372_temp_widget
         self.ls372_samples_widget = ls372_samples_widget
         with open(os.path.join('bd_settings', 'squids_settings.json'), 'r') as fh:
@@ -65,7 +66,7 @@ class RTCollector(QtWidgets.QWidget, GuiBuilder):
         '''
         '''
         self.gb_initialize_panel('self')
-        self.layout().addWidget(self.rtc_plot_panel, 17, 0, 1, 16)
+        self.layout().addWidget(self.rtc_plot_panel, 0, 2, 13, 1)
         self.gb_initialize_panel('rtc_plot_panel')
         self.rtc_add_common_widgets()
         self.rtc_daq_panel()
@@ -238,13 +239,13 @@ class RTCollector(QtWidgets.QWidget, GuiBuilder):
         # X
         self.int_time_x = self.daq_settings[daq][str(self.x_channel)]['int_time']
         self.sample_rate_x = self.daq_settings[daq][str(self.x_channel)]['sample_rate']
-        daq_settings_x_info = 'Int Time (ms): {0}\n'.format(self.int_time_x)
+        daq_settings_x_info = 'DAQ X: Int Time (ms): {0} ::: '.format(self.int_time_x)
         daq_settings_x_info += 'Sample Rate (Hz): {0}'.format(str(self.sample_rate_x))
         self.daq_settings_x_label.setText(daq_settings_x_info)
         # Y
         self.int_time_y = self.daq_settings[daq][str(self.y_channel)]['int_time']
         self.sample_rate_y = self.daq_settings[daq][str(self.y_channel)]['sample_rate']
-        daq_settings_y_info = 'Int Time (ms): {0}\n'.format(self.int_time_y)
+        daq_settings_y_info = 'DAQ Y: Int Time (ms): {0} ::: '.format(self.int_time_y)
         daq_settings_y_info += 'Sample Rate (Hz): {0}'.format(str(self.sample_rate_y))
         self.daq_settings_y_label.setText(daq_settings_y_info)
 
@@ -252,30 +253,26 @@ class RTCollector(QtWidgets.QWidget, GuiBuilder):
         '''
         '''
         # Device
-        rtc_daq_header_label = QtWidgets.QLabel('DAQ Device:', self)
-        self.layout().addWidget(rtc_daq_header_label, 0, 0, 1, 1)
-        self.rtc_daq_combobox = QtWidgets.QComboBox(self)
+        self.rtc_daq_combobox = self.gb_make_labeled_combobox(label_text='DAQ Device:', width=self.le_width)
         for daq in self.daq_settings:
             self.rtc_daq_combobox.addItem(daq)
-        self.layout().addWidget(self.rtc_daq_combobox, 0, 1, 1, 3)
+        self.layout().addWidget(self.rtc_daq_combobox, 0, 0, 1, 1)
         # DAQ Y
-        daq_x_header_label = QtWidgets.QLabel('DAQ Ch X Data:', self)
-        self.layout().addWidget(daq_x_header_label, 1, 0, 1, 1)
-        self.daq_x_combobox = QtWidgets.QComboBox(self)
+        self.daq_x_combobox = self.gb_make_labeled_combobox(label_text='DAQ Ch X Data:', width=self.le_width)
         for daq in range(0, 8):
             self.daq_x_combobox.addItem(str(daq))
-        self.layout().addWidget(self.daq_x_combobox, 1, 1, 1, 1)
+        self.layout().addWidget(self.daq_x_combobox, 1, 0, 1, 1)
         self.daq_settings_x_label = QtWidgets.QLabel('', self)
-        self.layout().addWidget(self.daq_settings_x_label, 2, 1, 1, 1)
+        self.daq_settings_x_label.setAlignment(QtCore.Qt.AlignRight)
+        self.layout().addWidget(self.daq_settings_x_label, 2, 0, 1, 1)
         # DAQ Y
-        daq_y_header_label = QtWidgets.QLabel('DAQ Ch Y Data:', self)
-        self.layout().addWidget(daq_y_header_label, 1, 2, 1, 1)
-        self.daq_y_combobox = QtWidgets.QComboBox(self)
+        self.daq_y_combobox = self.gb_make_labeled_combobox(label_text='DAQ Ch Y Data:', width=self.le_width)
         for daq in range(0, 8):
             self.daq_y_combobox.addItem(str(daq))
-        self.layout().addWidget(self.daq_y_combobox, 1, 3, 1, 1)
+        self.layout().addWidget(self.daq_y_combobox, 3, 0, 1, 1)
         self.daq_settings_y_label = QtWidgets.QLabel('', self)
-        self.layout().addWidget(self.daq_settings_y_label, 2, 3, 1, 1)
+        self.daq_settings_y_label.setAlignment(QtCore.Qt.AlignRight)
+        self.layout().addWidget(self.daq_settings_y_label, 4, 0, 1, 1)
         self.daq_y_combobox.currentIndexChanged.connect(self.rtc_display_daq_settings)
         self.daq_x_combobox.currentIndexChanged.connect(self.rtc_display_daq_settings)
         self.rtc_daq_combobox.currentIndexChanged.connect(self.rtc_display_daq_settings)
@@ -284,54 +281,41 @@ class RTCollector(QtWidgets.QWidget, GuiBuilder):
         '''
         '''
         # GRT Serial 
-        grt_serial_header_label = QtWidgets.QLabel('GRT SERIAL:', self)
-        self.layout().addWidget(grt_serial_header_label, 3, 0, 1, 1)
-        self.x_correction_combobox = QtWidgets.QComboBox(self)
+        self.x_correction_combobox = self.gb_make_labeled_combobox(label_text='GRT Serial:', width=self.le_width)
         for grt_serial in ['Lakeshore']:
             self.x_correction_combobox.addItem(grt_serial)
-        self.layout().addWidget(self.x_correction_combobox, 3, 1, 1, 1)
+        self.layout().addWidget(self.x_correction_combobox, 5, 0, 1, 1)
         # Y Voltage Factor 
-        y_voltage_factor_header_label = QtWidgets.QLabel('Resistance Voltage Factor', self)
-        self.layout().addWidget(y_voltage_factor_header_label, 3, 2, 1, 1)
-        self.y_correction_combobox = QtWidgets.QComboBox(self)
+        self.y_correction_combobox = self.gb_make_labeled_combobox(label_text='Resistance Correction Factor:', width=self.le_width)
         for index, voltage_reduction_factor in self.voltage_reduction_factor_dict.items():
             self.y_correction_combobox.addItem('{0}'.format(voltage_reduction_factor))
-        self.layout().addWidget(self.y_correction_combobox, 3, 3, 1, 1)
+        self.layout().addWidget(self.y_correction_combobox, 6, 0, 1, 1)
         # Data Clip
-        data_clip_lo_lineedit = self.gb_make_labeled_lineedit(label_text='Data Clip Lo (mK)')
-        data_clip_lo_lineedit.setText(str(0.0))
-        self.layout().addWidget(data_clip_lo_lineedit, 4, 0, 1, 1)
-        self.data_clip_lo_lineedit = data_clip_lo_lineedit
-        data_clip_hi_lineedit = self.gb_make_labeled_lineedit(label_text='Data Clip Hi (mK)')
-        data_clip_hi_lineedit.setText(str(1000.0))
-        self.layout().addWidget(data_clip_hi_lineedit, 4, 2, 1, 1)
-        self.data_clip_hi_lineedit = data_clip_hi_lineedit
+        self.data_clip_lo_lineedit = self.gb_make_labeled_lineedit(label_text='Data Clip Lo (mK)', width=self.le_width)
+        self.data_clip_lo_lineedit.setText(str(0.0))
+        self.layout().addWidget(self.data_clip_lo_lineedit, 7, 0, 1, 1)
+        self.data_clip_hi_lineedit = self.gb_make_labeled_lineedit(label_text='Data Clip Hi (mK)', width=self.le_width)
+        self.data_clip_hi_lineedit.setText(str(1000.0))
+        self.layout().addWidget(self.data_clip_hi_lineedit, 8, 0, 1, 1)
 
     def rtc_add_common_widgets(self):
         '''
         '''
-        start_row = 5
-        row = start_row
         # Sample Name
-        self.sample_name_combobox = QtWidgets.QComboBox(self)
+        self.sample_name_combobox = self.gb_make_labeled_combobox(label_text='Select Sample', width=self.le_width)
         for sample in self.samples_settings:
             self.sample_name_combobox.addItem(sample)
         self.sample_name_combobox.activated.connect(self.rtc_update_sample_name)
-        self.layout().addWidget(self.sample_name_combobox, row, 3, 1, 1)
-        self.sample_name_lineedit = self.gb_make_labeled_lineedit(label_text='Sample Name')
-        self.layout().addWidget(self.sample_name_lineedit, row, 0, 1, 2)
-        row += 1
+        self.layout().addWidget(self.sample_name_combobox, 9, 0, 1, 1)
+        self.sample_name_lineedit = self.gb_make_labeled_lineedit(label_text='Sample Name', width=self.le_width)
+        self.layout().addWidget(self.sample_name_lineedit, 10, 0, 1, 1)
         # Buttons
         start_pushbutton = QtWidgets.QPushButton('Start', self)
         start_pushbutton.clicked.connect(self.rtc_start_stop)
-        self.layout().addWidget(start_pushbutton, row, 0, 1, 4)
+        self.layout().addWidget(start_pushbutton, 11, 0, 1, 1)
         save_pushbutton = QtWidgets.QPushButton('Save', self)
         save_pushbutton.clicked.connect(self.rtc_save)
-        row += 1
-        self.layout().addWidget(save_pushbutton, row, 0, 1, 4)
-        row += 1
-        spacer_label = QtWidgets.QLabel(' ', self)
-        self.layout().addWidget(spacer_label, row, 0, 3, 4)
+        self.layout().addWidget(save_pushbutton, 12, 0, 1, 1)
         self.rtc_update_sample_name(0)
 
     def rtc_update_sample_name(self, index):
@@ -363,22 +347,22 @@ class RTCollector(QtWidgets.QWidget, GuiBuilder):
         # X
         self.x_time_stream_label = QtWidgets.QLabel('', self)
         self.x_time_stream_label.setAttribute(QtCore.Qt.WA_TranslucentBackground)
-        self.rtc_plot_panel.layout().addWidget(self.x_time_stream_label, 17, 0, 1, 1)
+        self.rtc_plot_panel.layout().addWidget(self.x_time_stream_label, 0, 0, 1, 1)
         self.x_data_label = QtWidgets.QLabel('X Data: X STD:', self)
-        self.rtc_plot_panel.layout().addWidget(self.x_data_label, 18, 0, 1, 1)
+        self.rtc_plot_panel.layout().addWidget(self.x_data_label, 1, 0, 1, 1)
 
         # Y
         self.y_time_stream_label = QtWidgets.QLabel('', self)
         self.y_time_stream_label.setAttribute(QtCore.Qt.WA_TranslucentBackground)
-        self.rtc_plot_panel.layout().addWidget(self.y_time_stream_label, 19, 0, 1, 1)
+        self.rtc_plot_panel.layout().addWidget(self.y_time_stream_label, 0, 1, 1, 1)
         self.y_data_label = QtWidgets.QLabel('Y Data: Y STD:', self)
-        self.rtc_plot_panel.layout().addWidget(self.y_data_label, 20, 0, 1, 1)
+        self.rtc_plot_panel.layout().addWidget(self.y_data_label, 1, 1, 1, 1)
 
         # XY
         self.xy_scatter_label = QtWidgets.QLabel('', self)
         self.xy_scatter_label.setAttribute(QtCore.Qt.WA_TranslucentBackground)
         self.xy_scatter_label.setFixedWidth(0.75 * self.screen_resolution.width())
-        self.rtc_plot_panel.layout().addWidget(self.xy_scatter_label, 17, 1, 4, 1)
+        self.rtc_plot_panel.layout().addWidget(self.xy_scatter_label, 2, 0, 1, 2)
 
     #########################################################
     # Running
@@ -443,10 +427,6 @@ class RTCollector(QtWidgets.QWidget, GuiBuilder):
                 break
         return save_path
 
-    def rtc_auto_save(self):
-        '''
-        '''
-
     def rtc_save(self, save_path=None):
         '''
         '''
@@ -472,12 +452,13 @@ class RTCollector(QtWidgets.QWidget, GuiBuilder):
     def rtc_plot_x(self):
         '''
         '''
-        fig, ax = self.rtc_create_blank_fig(frac_screen_width=0.4, frac_screen_height=0.18, left=0.12, top=0.98)
-        ax.set_xlabel('Sample', fontsize=14)
-        ax.set_ylabel('X ($V$)', fontsize=14)
+        fig, ax = self.rtc_create_blank_fig(frac_screen_width=0.4, frac_screen_height=0.3, left=0.15, top=0.98)
+        ax.set_xlabel('Sample', fontsize=12)
+        ax.set_ylabel('X ($V$)', fontsize=12)
         label = 'DAQ {0}'.format(self.x_channel)
         ax.errorbar(range(len(self.x_data)), self.x_data, self.x_stds, marker='.', linestyle='None', label=label)
-        pl.legend(loc='best', fontsize=14)
+        pl.legend(loc='best', fontsize=12)
+        fig.savefig('temp_x.png', transparent=False)
         fig.savefig('temp_x.png', transparent=True)
         pl.close('all')
         image_to_display = QtGui.QPixmap('temp_x.png')
@@ -486,12 +467,13 @@ class RTCollector(QtWidgets.QWidget, GuiBuilder):
     def rtc_plot_y(self):
         '''
         '''
-        fig, ax = self.rtc_create_blank_fig(frac_screen_width=0.4, frac_screen_height=0.18, left=0.12, top=0.98)
-        ax.set_xlabel('Sample', fontsize=14)
-        ax.set_ylabel('Y ($V$)', fontsize=14)
+        fig, ax = self.rtc_create_blank_fig(frac_screen_width=0.4, frac_screen_height=0.3, left=0.15, top=0.98)
+        ax.set_xlabel('Sample', fontsize=12)
+        ax.set_ylabel('Y ($V$)', fontsize=12)
         label = 'DAQ {0}'.format(self.y_channel)
         ax.errorbar(range(len(self.y_data)), self.y_data, self.y_stds, marker='.', linestyle='None', label=label)
-        pl.legend(loc='best', fontsize=14)
+        pl.legend(loc='best', fontsize=12)
+        fig.savefig('temp_y.png', transparent=False)
         fig.savefig('temp_y.png', transparent=True)
         pl.close('all')
         image_to_display = QtGui.QPixmap('temp_y.png')
@@ -500,11 +482,12 @@ class RTCollector(QtWidgets.QWidget, GuiBuilder):
     def rtc_plot_xy(self, running=False):
         '''
         '''
-        fig, ax = self.rtc_create_blank_fig(frac_screen_width=0.75, frac_screen_height=0.55, left=0.08, bottom=0.08, top=0.95)
+        if running:
+            fig, ax = self.rtc_create_blank_fig(frac_screen_width=0.9, frac_screen_height=0.5, left=0.08, bottom=0.16, top=0.92)
+        else:
+            fig, ax = self.rtc_create_blank_fig(frac_screen_width=0.9, frac_screen_height=0.5, left=0.12, bottom=0.16, top=0.92)
         y_data, y_stds = self.rtc_adjust_y_data()
         x_data, x_stds = self.rtc_adjust_x_data()
-        ax.set_xlabel('Temperature ($mK$)', fontsize=14)
-        ax.set_ylabel('Resistance ($m\Omega$)', fontsize=14)
         data_clip_lo = float(self.data_clip_lo_lineedit.text())
         data_clip_hi = float(self.data_clip_hi_lineedit.text())
         selector =  np.where(np.logical_and(data_clip_lo < x_data, x_data < data_clip_hi))
@@ -515,11 +498,14 @@ class RTCollector(QtWidgets.QWidget, GuiBuilder):
             ax.set_ylabel('Resistance ($m\Omega$)', fontsize=14)
             ax.set_title(sample_name, fontsize=14)
             pl.legend(loc='best', fontsize=14)
+            fig.savefig('temp_xy.png', transparent=False)
             fig.savefig('temp_xy.png', transparent=True)
             pl.close('all')
             image_to_display = QtGui.QPixmap('temp_xy.png')
             self.xy_scatter_label.setPixmap(image_to_display)
         else:
+            ax.tick_params(axis='x', labelsize=16)
+            ax.tick_params(axis='y', labelsize=16)
             ax.set_xlabel('Temperature ($mK$)', fontsize=18)
             ax.set_ylabel('Resistance ($m\Omega$)', fontsize=18)
             ax.set_title(sample_name, fontsize=18)
@@ -593,6 +579,6 @@ class RTCollector(QtWidgets.QWidget, GuiBuilder):
         else:
             ax = None
         fig.subplots_adjust(left=left, right=right, top=top, bottom=bottom)
-        ax.tick_params(axis='x', labelsize=16)
-        ax.tick_params(axis='y', labelsize=16)
+        ax.tick_params(axis='x', labelsize=10)
+        ax.tick_params(axis='y', labelsize=10)
         return fig, ax
