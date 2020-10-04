@@ -37,6 +37,8 @@ class SavingManager():
         for dict_item, dict_value in self.widget.__dict__.items():
             if dict_item in ('sample_rate_x', 'int_time_x', 'sample_rate_x', 'int_time_y'):
                 new_dict[dict_item] = dict_value
+            elif dict_item.endswith('label'):
+                new_dict[dict_item] = dict_value.text()
             elif dict_item.endswith('lineedit'):
                 new_dict[dict_item] = dict_value.text()
             elif dict_item.endswith('combobox'):

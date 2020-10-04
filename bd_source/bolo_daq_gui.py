@@ -488,9 +488,9 @@ class BoloDAQGui(QtWidgets.QMainWindow, GuiBuilder):
             if not hasattr(self, 'ser_{0}'.format(com_port)) and okPressed:
                 serial_com = BoloSerial(com_port, device='Model372', splash_screen=self.status_bar)
                 setattr(self, 'ser_{0}'.format(com_port), serial_com)
-                if not hasattr(self, 'ls_372_{0}_temp'.format(com_port)):
+                if not hasattr(self, 'ls_372_widget_{0}'.format(com_port)):
                     ls_372_temp_widget = LakeShore372(serial_com, com_port, self.status_bar)
-                    setattr(self, 'ls_372_{0}_temp'.format(com_port), ls_372_temp_widget)
+                    setattr(self, 'ls_372_widget_{0}'.format(com_port), ls_372_temp_widget)
             dialog = 'Select the comport for the Sample Lakeshore'
             #com_port, okPressed = self.gb_quick_static_info_gather(title='', dialog=dialog, items=['COM6'])
             com_port, okPressed = 'COM6', True
@@ -499,10 +499,10 @@ class BoloDAQGui(QtWidgets.QMainWindow, GuiBuilder):
                 setattr(self, 'ser_{0}'.format(com_port), serial_com)
                 if not hasattr(self, 'ls_372_widget_{0}'.format(com_port)):
                     ls_372_samples_widget = LakeShore372(serial_com, com_port, self.status_bar)
-                    setattr(self, 'ls_372_{0}_widget'.format(com_port), ls_372_samples_widget)
+                    setattr(self, 'ls_372_widget_{0}'.format(com_port), ls_372_samples_widget)
         if not hasattr(self, 'rtc_widget'):
             if self.dewar == 'BlueForsDR1':
-                ls_372_samples_widget = getattr(self, 'ls_372_{0}_widget'.format(com_port))
+                ls_372_samples_widget = getattr(self, 'ls_372_widget_{0}'.format(com_port))
             self.rtc_widget = RTCollector(self.available_daq_settings, self.status_bar, self.screen_resolution, self.monitor_dpi, ls_372_temp_widget, ls_372_samples_widget)
         else:
             self.rtc_widget.rtc_populate()

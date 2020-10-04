@@ -51,6 +51,7 @@ class RTCollector(QtWidgets.QWidget, GuiBuilder):
         self.saving_manager = SavingManager(self, self.data_folder, self.rtc_save, 'RT')
         self.rtc_populate()
         self.rtc_plot_running()
+        self.status_bar.messageChanged.connect(self.rtc_update_panel)
 
     #########################################################
     # GUI and Input Handling
@@ -154,19 +155,20 @@ class RTCollector(QtWidgets.QWidget, GuiBuilder):
         update_ls372_settings_pushbutton.clicked.connect(self.rtc_edit_lakeshore_temp_control)
         self.layout().addWidget(update_ls372_settings_pushbutton, 16, 0, 1, 3)
         # Control Buttons
-        configure_channel_pushbutton = QtWidgets.QPushButton('Configure', self)
+        configure_channel_pushbutton = QtWidgets.QPushButton('Configure And Scan', self)
         self.layout().addWidget(configure_channel_pushbutton, 17, 1, 1, 2)
         configure_channel_pushbutton.clicked.connect(self.rtc_edit_lakeshore_channel)
         self.channel_combobox = QtWidgets.QComboBox(self)
         self.layout().addWidget(self.channel_combobox, 17, 0, 1, 1)
-        #self.ls372_samples_widget.scan_channel(1)
         for channel in range(1, 17):
             self.channel_combobox.addItem(str(channel))
+        self.ls372_samples_widget.channels.ls372_scan_channel(1)
         set_aux_analog_out_pushbutton = QtWidgets.QPushButton('Set Analog Out', self)
         set_aux_analog_out_pushbutton.clicked.connect(self.rtc_edit_lakeshore_aux_ouput)
         self.layout().addWidget(set_aux_analog_out_pushbutton, 18, 1, 1, 2)
-        aux_analog_label = QtWidgets.QLabel('1', self)
-        self.layout().addWidget(aux_analog_label, 18, 0, 1, 1)
+        self.scanned_channel_info_label = QtWidgets.QLabel('', self)
+        self.layout().addWidget(self.scanned_channel_info_label, 19, 0, 1, 2)
+        self.rtc_get_lakeshore_channel_info()
 
     def rtc_get_lakeshore_temp_control(self):
         '''
@@ -222,20 +224,35 @@ class RTCollector(QtWidgets.QWidget, GuiBuilder):
         self.ls372_temp_widget.temp_control.ls372_set_heater_range(new_range_index)
         range_index, range_value = self.ls372_temp_widget.temp_control.ls372_get_heater_range()
         self.ls372_temp_widget.channels.ls372_scan_channel(6) # 6 is the MXC thermometer
-        self.ls372_temp_widget.channels.ls372_scann
         self.status_bar.showMessage('Set new temp control parameters and scanning the MXC with temp Lakeshore')
-
-    def rtc_scan_lakeshore_channel(self):
-        '''
-        '''
-        channel = self.channel_combobox.currentText()
-        self.ls372_samples_widget.ls372_scan_channel(clicked=True, index=channel)
 
     def rtc_edit_lakeshore_channel(self):
         '''
         '''
         channel = self.channel_combobox.currentText()
         self.ls372_samples_widget.ls372_edit_channel(clicked=True, index=channel)
+        self.ls372_samples_widget.channels.ls372_scan_channel(channel)
+
+    def rtc_update_panel(self):
+        '''
+        '''
+        self.rtc_get_lakeshore_channel_info()
+
+
+    def rtc_get_lakeshore_channel_info(self):
+        '''
+        '''
+        channel = self.channel_combobox.currentText()
+        channel_info = 'Scanning {0} '.format(channel)
+        channel_object = self.ls372_samples_widget.channels.__dict__['channel_{0}'.format(channel)]
+        #import ipdb;ipdb.set_trace()
+        exc_mode = self.ls372_samples_widget.lakeshore372_command_dict['exc_mode'][channel_object.__dict__['exc_mode']]
+        excitation = self.ls372_samples_widget.lakeshore372_command_dict['excitation'][exc_mode][channel_object.__dict__['excitation']]
+        resistance_range = self.ls372_samples_widget.lakeshore372_command_dict['resistance_range'][channel_object.__dict__['resistance_range']]
+        channel_info += 'Exc Type: {0} '.format(exc_mode)
+        channel_info += 'Excitation: {0} '.format(excitation)
+        channel_info += 'Range: {0} '.format(resistance_range)
+        self.scanned_channel_info_label.setText(channel_info)
 
     def rtc_edit_lakeshore_aux_ouput(self):
         '''

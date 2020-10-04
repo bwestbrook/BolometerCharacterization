@@ -491,7 +491,6 @@ class LakeShore372(QtWidgets.QWidget, GuiBuilder):
         self.channels.ls372_write_new_channel_settings(self.set_to_channel, new_settings, channel_object)
         self.channels.ls372_update_channels()
         self.ls372_populate_gui()
-        self.ls372_edit_channel(clicked=False, index=self.set_to_channel)
         self.status_bar.showMessage('Wrote new settings to channel "{0}"'.format(self.set_to_channel))
 
     def ls372_analog_output_panel(self):
@@ -594,7 +593,6 @@ class LakeShore372(QtWidgets.QWidget, GuiBuilder):
         self.channels.ls372_scan_channel(new_settings['input_channel'], autoscan=0)
         self.analog_outputs.ls372_update_analog_outputs()
         self.ls372_populate_gui()
-        self.ls372_edit_analog_output(clicked=False, analog_output=self.set_to_analog_output)
         self.status_bar.showMessage('Wrote new settings to analog output "{0}"'.format(self.set_to_analog_output))
 
 class LS372TempControl():
