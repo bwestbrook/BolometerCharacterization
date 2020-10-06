@@ -504,8 +504,6 @@ class BoloDAQGui(QtWidgets.QMainWindow, GuiBuilder):
             if self.dewar == 'BlueForsDR1':
                 ls_372_samples_widget = getattr(self, 'ls_372_widget_{0}'.format(com_port))
             self.rtc_widget = RTCollector(self.available_daq_settings, self.status_bar, self.screen_resolution, self.monitor_dpi, ls_372_temp_widget, ls_372_samples_widget)
-        else:
-            self.rtc_widget.rtc_populate()
         self.central_widget.layout().addWidget(self.rtc_widget, 0, 0, 1, 1)
         self.status_bar.showMessage('RT Curves')
         QtWidgets.QApplication.processEvents()

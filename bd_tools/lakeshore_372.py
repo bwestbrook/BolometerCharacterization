@@ -865,6 +865,22 @@ class LS372AnalogOutputs():
         setattr(analog_output_object, 'delay', int(outmode_config.split(',')[5]))
         return analog_output_object
 
+    def ls372_monitor_channel_aux_analog(self, channel, analog_output_object):
+        '''
+        '''
+        monitor_cmd = 'analog {0},{1},{2},{3},{4},{5},{6},{7} '.format(2,
+                                                                       analog_output_object.polarity,
+                                                                       analog_output_object.analog_mode,
+                                                                       channel,
+                                                                       analog_output_object.source,
+                                                                       analog_output_object.high_value,
+                                                                       analog_output_object.low_value,
+                                                                       analog_output_object.manual_value,
+                                                                       )
+        self.status_bar.showMessage('Sending Serial Command "{0}"'.format(monitor_cmd))
+        self.serial_com.bs_write(monitor_cmd)
+        self.serial_com.bs_read()
+
     def ls372_write_analog_output_settings(self, set_to_channel, new_settings, channel_object):
         '''
         '''

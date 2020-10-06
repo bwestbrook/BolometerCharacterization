@@ -16,7 +16,7 @@ class SavingManager():
         '''
         '''
         for i in range(1, 1000):
-            file_name = '{0}_Scan_{1}.txt'.format(self.data_type, str(i).zfill(3))
+            file_name = '{0}_{1}_Scan_{2}.txt'.format(self.data_type, self.widget.sample_name_lineedit.text(), str(i).zfill(3)).replace(' ' , '_')
             save_path = os.path.join(self.data_folder, file_name)
             if not os.path.exists(save_path):
                 break
@@ -27,7 +27,6 @@ class SavingManager():
         '''
         save_path = self.smgr_index_file_name()
         self.save_function(save_path)
-        self.smgr_auto_log(save_path)
 
     def smgr_auto_log(self, save_path):
         '''
@@ -37,8 +36,8 @@ class SavingManager():
         for dict_item, dict_value in self.widget.__dict__.items():
             if dict_item in ('sample_rate_x', 'int_time_x', 'sample_rate_x', 'int_time_y'):
                 new_dict[dict_item] = dict_value
-            elif dict_item.endswith('label'):
-                new_dict[dict_item] = dict_value.text()
+            #elif dict_item.endswith('label'):
+                #new_dict[dict_item] = dict_value.text()
             elif dict_item.endswith('lineedit'):
                 new_dict[dict_item] = dict_value.text()
             elif dict_item.endswith('combobox'):
