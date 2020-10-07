@@ -25,7 +25,7 @@ class CosmicRays(QtWidgets.QWidget, GuiBuilder):
         self.setLayout(grid)
         self.today = datetime.now()
         self.today_str = datetime.strftime(self.today, '%Y_%m_%d')
-        self.data_folder = './Data/{0}'.format(self.today_str)
+        self.data_folder = os.path.join('Data', '{0}'.format(self.today_str))
         self.cr_daq_panel()
         self.cr_display_daq_settings()
 
@@ -136,9 +136,10 @@ class CosmicRays(QtWidgets.QWidget, GuiBuilder):
         '''
         '''
         device = self.device_combobox.currentText()
-        self.data_1, self.stds_1 = [], []
-        self.data_2, self.stds_2 = [], []
+        self.cr_scan_file_name()
         while self.started:
+            self.data_1, self.stds_1 = [], []
+            self.data_2, self.stds_2 = [], []
             ts_1, mean_1, min_1, max_1, std_1 = self.daq.get_data(signal_channel=self.channel_1,
                                                                   int_time=self.int_time_1,
                                                                   sample_rate=self.sample_rate_1,
@@ -156,15 +157,30 @@ class CosmicRays(QtWidgets.QWidget, GuiBuilder):
             self.data_2.extend(ts_2)
             self.stds_2.append(std_2)
             self.cr_plot(running=True)
+            save_path = self.cr_index_file_name()
+            with open(save_path, 'w') as save_handle:
+                for i, data_1 in enumerate(self.data_1):
+                    line = '{0:.5f}, {1:.5f}\n'.format(self.data_1[i], self.data_2[i])
+                    save_handle.write(line)
             QtWidgets.QApplication.processEvents()
             self.repaint()
+
+    def cr_scan_file_name(self):
+        '''
+        '''
+        for i in range(1, 1000):
+            folder_name = 'CR_Scan_{0}'.format(str(i).zfill(3))
+            self.folder_path = os.path.join(self.data_folder, folder_name)
+            if not os.path.exists(self.folder_path):
+                os.makedirs(self.folder_path)
+                break
 
     def cr_index_file_name(self):
         '''
         '''
         for i in range(1, 1000):
             file_name = '{0}_{1}.txt'.format(self.sample_name_lineedit.text(), str(i).zfill(3))
-            save_path = os.path.join(self.data_folder, file_name)
+            save_path = os.path.join(self.folder_path, file_name)
             if not os.path.exists(save_path):
                 break
         return save_path
