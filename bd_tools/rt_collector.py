@@ -52,7 +52,8 @@ class RTCollector(QtWidgets.QWidget, GuiBuilder):
         self.saving_manager = SavingManager(self, self.data_folder, self.rtc_save, 'RT')
         self.rtc_populate()
         self.rtc_plot_running()
-        self.status_bar.messageChanged.connect(self.rtc_update_panel)
+        if self.ls372_temp_widget is not None:
+            self.status_bar.messageChanged.connect(self.rtc_update_panel)
 
     #########################################################
     # GUI and Input Handling
@@ -541,6 +542,8 @@ class RTCollector(QtWidgets.QWidget, GuiBuilder):
     def rtc_plot_xy(self, running=False, file_name=''):
         '''
         '''
+        if len(self.x_data) == 0:
+            return None
         sample_name = self.sample_name_lineedit.text()
         data_clip_lo = float(self.data_clip_lo_lineedit.text())
         data_clip_hi = float(self.data_clip_hi_lineedit.text())

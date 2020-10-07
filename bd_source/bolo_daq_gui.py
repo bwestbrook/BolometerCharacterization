@@ -458,10 +458,8 @@ class BoloDAQGui(QtWidgets.QMainWindow, GuiBuilder):
         self.gb_initialize_panel('central_widget')
         self.status_bar.showMessage('Loading IV Curves')
         QtWidgets.QApplication.processEvents()
-        if not hasattr(self, 'xyc_widget'):
+        if not hasattr(self, 'ivc_widget'):
             self.ivc_widget = IVCollector(self.available_daq_settings, self.status_bar, self.screen_resolution, self.monitor_dpi)
-        else:
-            self.ivc_widget.ivc_populate()
         self.central_widget.layout().addWidget(self.ivc_widget, 0, 0, 1, 1)
         self.status_bar.showMessage('IV Curves')
         QtWidgets.QApplication.processEvents()
