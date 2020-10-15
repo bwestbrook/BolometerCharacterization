@@ -40,6 +40,7 @@ class ConfigureNIDAQ(QtWidgets.QWidget, GuiBuilder):
         daq_tab_bar = QtWidgets.QTabBar(self)
         self.daq_tab_bar = daq_tab_bar
         for active_daq in self.daq_settings:
+            print(active_daq)
             daq_tab_bar.addTab(active_daq)
         self.layout().addWidget(daq_tab_bar, 0, 0, 1, 16)
         self.daq_tab_bar.setCurrentIndex(len(self.daq_settings) - 1)
@@ -96,7 +97,7 @@ class ConfigureNIDAQ(QtWidgets.QWidget, GuiBuilder):
         self.layout().addWidget(channel_sample_rate_header_label, 5, index * 2, 1, 1)
         channel_int_time_combobox = QtWidgets.QComboBox(self)
         setattr(self, 'channel_{0}_int_time_combobox'.format(index), channel_int_time_combobox)
-        for i, int_time in enumerate([100, 200, 300, 400, 500, 1000, 1500, 2000, 2500, 3000, 5000]):
+        for i, int_time in enumerate([100, 200, 300, 400, 500, 1000, 1500, 2000, 2500, 3000, 5000, 10000, 30000, 60000, 300000, 600000]):
             channel_int_time_combobox.addItem(str(int_time))
             saved_value = self.daq_settings[device][str(index)]['int_time']
             if str(saved_value) == str(int_time):

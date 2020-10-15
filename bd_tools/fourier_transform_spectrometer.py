@@ -29,7 +29,7 @@ class FourierTransformSpectrometer(QtWidgets.QWidget, GuiBuilder):
         self.fts_plot_panel = QtWidgets.QWidget(self)
         self.layout().addWidget(self.fts_plot_panel, 0, 2, 20, 1)
         self.fts_plot_panel.setLayout(grid_2)
-        self.fts_plot_panel.setFixedWidth(0.7 * screen_resolution.width())
+        self.fts_plot_panel.setFixedWidth(0.6 * screen_resolution.width())
         self.fts_configure_input_panel()
         self.fts_configure_plot_panel()
         self.today = datetime.now()
@@ -348,7 +348,7 @@ class FourierTransformSpectrometer(QtWidgets.QWidget, GuiBuilder):
     def fts_plot_time_stream(self, ts, min_, max_):
         '''
         '''
-        fig, ax = self.fts_create_blank_fig(frac_screen_width=0.65, frac_screen_height=0.25, top=0.9, bottom=0.23, n_axes=1, left=0.15)
+        fig, ax = self.fts_create_blank_fig(frac_screen_width=0.5, frac_screen_height=0.25, top=0.9, bottom=0.23, n_axes=1, left=0.15)
         ax.plot(ts)
         ax.set_xlabel('Samples', fontsize=14)
         ax.set_ylabel('($V$)', fontsize=14)
@@ -362,7 +362,7 @@ class FourierTransformSpectrometer(QtWidgets.QWidget, GuiBuilder):
         '''
         pl.close('all')
         mirror_interval = self.scan_settings_dict['mirror_interval']
-        fig, ax1, ax2 = self.fts_create_blank_fig(frac_screen_width=0.65, frac_screen_height=0.65, hspace=0.35, bottom=0.15, left=0.15)
+        fig, ax1, ax2 = self.fts_create_blank_fig(frac_screen_width=0.5, frac_screen_height=0.5, hspace=0.35, bottom=0.15, left=0.15)
         ax1.set_xlabel('Mirror Position (Steps)', fontsize=14)
         ax1.set_ylabel('Response (V)', fontsize=14)
         ax2.set_xlabel('Frequency (GHz)', fontsize=14)
