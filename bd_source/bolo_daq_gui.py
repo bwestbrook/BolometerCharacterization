@@ -91,7 +91,7 @@ class BoloDAQGui(QtWidgets.QMainWindow, GuiBuilder):
         self.central_widget.setLayout(grid)
         self.setCentralWidget(self.central_widget)
         self.tool_and_menu_bar_json_path = os.path.join('bd_settings', 'tool_and_menu_bars.json')
-        self.gb_setup_menu_and_tool_bars(self.tool_and_menu_bar_json_path, icon_size=25)
+        self.gb_setup_menu_and_tool_bars(self.tool_and_menu_bar_json_path, icon_size=45)
         self.selected_files = []
         self.user_desktop_path = os.path.expanduser('~')
         self.monitor_dpi = 120.0
@@ -110,6 +110,8 @@ class BoloDAQGui(QtWidgets.QMainWindow, GuiBuilder):
         self.show()
         getattr(self, 'action_Bolo_DAQ_Settings').trigger()
         #getattr(self, 'action_FTS').trigger()
+        if not hasattr(self, 'configure_ni_daq_widget'):
+            self.configure_ni_daq_widget = ConfigureNIDAQ(self.available_daq_settings, self.status_bar)
         if os.getlogin() == 'BoloTester':
             self.dewar = '576'
         elif os.getlogin() == 'Bluefors_PC':
@@ -188,14 +190,7 @@ class BoloDAQGui(QtWidgets.QMainWindow, GuiBuilder):
             with open(os.path.join('bd_settings', 'daq_settings.json'), 'r') as json_handle:
                 self.daq_settings = simplejson.load(json_handle)
         else:
-            print()
-            print()
-            print()
-            print()
-            print()
-            print()
             self.daq_settings = self.daq.initialize_daqs()
-            pprint(self.daq_settings)
             with open(os.path.join('bd_settings', 'daq_settings.json'), 'w') as json_handle:
                 simplejson.dump(self.daq_settings, json_handle)
 
@@ -460,6 +455,10 @@ class BoloDAQGui(QtWidgets.QMainWindow, GuiBuilder):
         QtWidgets.QApplication.processEvents()
         if not hasattr(self, 'ivc_widget'):
             self.ivc_widget = IVCollector(self.available_daq_settings, self.status_bar, self.screen_resolution, self.monitor_dpi)
+        else:
+            self.available_daq_settings = self.configure_ni_daq_widget.cnd_update_daq()
+            self.ivc_widget.ivc_update_samples()
+            self.ivc_widget.ivc_update_daq_settings(self.available_daq_settings)
         self.central_widget.layout().addWidget(self.ivc_widget, 0, 0, 1, 1)
         self.status_bar.showMessage('IV Curves')
         QtWidgets.QApplication.processEvents()
@@ -502,6 +501,10 @@ class BoloDAQGui(QtWidgets.QMainWindow, GuiBuilder):
             if self.dewar == 'BlueForsDR1':
                 ls_372_samples_widget = getattr(self, 'ls_372_widget_{0}'.format(com_port))
             self.rtc_widget = RTCollector(self.available_daq_settings, self.status_bar, self.screen_resolution, self.monitor_dpi, ls_372_temp_widget, ls_372_samples_widget)
+        else:
+            self.available_daq_settings = self.configure_ni_daq_widget.cnd_update_daq()
+            self.rtc_widget.rtc_update_samples()
+            self.rtc_widget.rtc_update_daq_settings(self.available_daq_settings)
         self.central_widget.layout().addWidget(self.rtc_widget, 0, 0, 1, 1)
         self.status_bar.showMessage('RT Curves')
         QtWidgets.QApplication.processEvents()
@@ -541,8 +544,9 @@ class BoloDAQGui(QtWidgets.QMainWindow, GuiBuilder):
         self.gb_initialize_panel('central_widget')
         if not hasattr(self, 'cosmic_ray_widget'):
             self.cosmic_ray_widget = CosmicRays(self.available_daq_settings, self.status_bar, self.screen_resolution, self.monitor_dpi)
-        self.bd_get_saved_daq_settings()
-        self.cosmic_ray_widget.cr_update_daq_settings(self.daq_settings)
+        else:
+            self.available_daq_settings = self.configure_ni_daq_widget.cnd_update_daq()
+            self.cosmic_ray_widget.cr_update_daq_settings(self.available_daq_settings)
         self.central_widget.layout().addWidget(self.cosmic_ray_widget, 0, 0, 1, 1)
         self.status_bar.showMessage('Cosmic Ray Data')
         QtWidgets.QApplication.processEvents()
@@ -686,8 +690,10 @@ class BoloDAQGui(QtWidgets.QMainWindow, GuiBuilder):
             return None
         if not hasattr(self, 'fts_widget'):
             self.fts_widget = FourierTransformSpectrometer(self.available_daq_settings, self.status_bar, self.screen_resolution, self.monitor_dpi, csm_widget, self.srs_sr830dsp_widget)
-        self.bd_get_saved_daq_settings()
-        self.fts_widget.fts_update_daq_settings(self.daq_settings)
+        else:
+            self.available_daq_settings = self.configure_ni_daq_widget.cnd_update_daq()
+            self.rtc_widget.rtc_update_samples()
+            self.rtc_widget.rtc_update_daq_settings(self.available_daq_settings)
         self.central_widget.layout().addWidget(self.fts_widget, 0, 0, 1, 1)
         self.status_bar.showMessage('FTS')
         QtWidgets.QApplication.processEvents()

@@ -12,29 +12,28 @@ class ConfigureNIDAQ(QtWidgets.QWidget, GuiBuilder):
         '''
         '''
         super(ConfigureNIDAQ, self).__init__()
-        pprint(daq_settings)
         self.status_bar = status_bar
         self.daq_settings = daq_settings
         self.n_channels = n_channels
         self.class_name = 'md'
         grid = QtWidgets.QGridLayout()
         self.setLayout(grid)
-        self.cd_add_daq_tabs()
-        self.cd_add_channels()
-        self.cd_add_controls()
+        self.cnd_add_daq_tabs()
+        self.cnd_add_channels()
+        self.cnd_add_controls()
         self.daq = BoloDAQ()
 
-    def cd_add_controls(self, sample_rate=1000, int_time=500):
+    def cnd_add_controls(self, sample_rate=1000, int_time=500):
         '''
         '''
         read_daq_pushbutton = QtWidgets.QPushButton('Start DAQ', self)
-        read_daq_pushbutton.clicked.connect(self.cd_start_stop)
+        read_daq_pushbutton.clicked.connect(self.cnd_start_stop)
         self.layout().addWidget(read_daq_pushbutton, 10, 0, 1, 16)
         set_daq_pushbutton = QtWidgets.QPushButton('Set DAQ', self)
-        set_daq_pushbutton.clicked.connect(self.cd_set_daq)
+        set_daq_pushbutton.clicked.connect(self.cnd_set_daq)
         self.layout().addWidget(set_daq_pushbutton, 11, 0, 1, 16)
 
-    def cd_add_daq_tabs(self):
+    def cnd_add_daq_tabs(self):
         '''
         '''
         daq_tab_bar = QtWidgets.QTabBar(self)
@@ -44,29 +43,29 @@ class ConfigureNIDAQ(QtWidgets.QWidget, GuiBuilder):
         self.layout().addWidget(daq_tab_bar, 0, 0, 1, 16)
         self.daq_tab_bar.setCurrentIndex(len(self.daq_settings) - 1)
 
-    def cd_add_channels(self):
+    def cnd_add_channels(self):
         '''
         '''
         for i in range(self.n_channels):
-            self.cd_add_channel(i)
+            self.cnd_add_channel(i)
 
-    def cd_start_stop(self, sample_rate=1000, int_time=500):
+    def cnd_start_stop(self, sample_rate=1000, int_time=500):
         '''
         '''
         if 'Start' in self.sender().text():
             self.sender().setText('Stop DAQ')
             self.started = True
             self.status_bar.showMessage('Collecting Data')
-            self.cd_run_daq()
+            self.cnd_run_daq()
         else:
             self.sender().setText('Start DAQ')
             self.started = False
             self.status_bar.showMessage('Paused')
 
-    def cd_add_channel(self, index):
+    def cnd_add_channel(self, index):
         '''
         '''
-        self.cd_update_daq()
+        self.cnd_update_daq()
         if len(self.daq_settings) == 0:
             return None
         device = self.daq_tab_bar.tabText(self.daq_tab_bar.currentIndex())
@@ -86,7 +85,6 @@ class ConfigureNIDAQ(QtWidgets.QWidget, GuiBuilder):
         self.layout().addWidget(channel_sample_rate_combobox, 4, index * 2 + 1, 1, 1)
         for i, sample_rate in enumerate([100, 500, 1000, 2000, 5000]):
             channel_sample_rate_combobox.addItem(str(sample_rate))
-            print(device, str(index))
             saved_value = self.daq_settings[device][str(index)]['sample_rate']
             if str(saved_value) == str(sample_rate):
                 saved_index = i
@@ -104,7 +102,7 @@ class ConfigureNIDAQ(QtWidgets.QWidget, GuiBuilder):
         channel_int_time_combobox.setCurrentIndex(saved_index)
         self.layout().addWidget(channel_int_time_combobox, 5, index * 2 + 1, 1, 1)
 
-    def cd_set_daq(self):
+    def cnd_set_daq(self):
         '''
         '''
         device = self.daq_tab_bar.tabText(self.daq_tab_bar.currentIndex())
@@ -117,16 +115,16 @@ class ConfigureNIDAQ(QtWidgets.QWidget, GuiBuilder):
                 }
         with open(os.path.join('bd_settings', 'daq_settings.json'), 'w') as json_handle:
             simplejson.dump(self.daq_settings, json_handle, indent=4, sort_keys=True)
-        pprint(self.daq_settings)
-        self.cd_update_daq()
+        self.cnd_update_daq()
 
-    def cd_update_daq(self):
+    def cnd_update_daq(self):
         '''
         '''
         with open(os.path.join('bd_settings', 'daq_settings.json'), 'r') as json_handle:
             self.daq_settings = simplejson.load(json_handle)
+        return self.daq_settings
 
-    def cd_run_daq(self):
+    def cnd_run_daq(self):
         '''
         '''
         while self.started:

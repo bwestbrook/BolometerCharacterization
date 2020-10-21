@@ -33,6 +33,7 @@ class CosmicRays(QtWidgets.QWidget, GuiBuilder):
         '''
         '''
         self.daq_settings = daq_settings
+        self.cr_display_daq_settings()
 
     def cr_daq_panel(self):
         '''

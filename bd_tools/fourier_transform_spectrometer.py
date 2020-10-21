@@ -49,6 +49,13 @@ class FourierTransformSpectrometer(QtWidgets.QWidget, GuiBuilder):
     # Gui Config
     #################################################
 
+    def fts_update_samples(self):
+        '''
+        '''
+        with open(os.path.join('bd_settings', 'samples_settings.json'), 'r') as fh:
+            self.samples_settings = simplejson.load(fh)
+        #self.rtc_update_sample_name(self.sample_name_combobox.currentIndex())
+
     def fts_update_daq_settings(self, daq_settings):
         '''
         '''

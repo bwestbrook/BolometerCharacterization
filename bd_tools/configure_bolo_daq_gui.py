@@ -63,9 +63,9 @@ class ConfigureBoloDAQGui(QtWidgets.QWidget, GuiBuilder):
                 combobox.addItem(item)
             setattr(self, '{0}_combobox'.format(config.lower()), combobox)
             self.layout().addWidget(combobox, i + 2, 1, 1, 1)
-            label = QtWidgets.QLabel('', self)
-            setattr(self, '{0}_label'.format(config.lower()), label)
-            self.layout().addWidget(label, i + 2, 2, 1, 1)
+            lineedit = QtWidgets.QLineEdit('', self)
+            setattr(self, '{0}_lineedit'.format(config.lower()), lineedit)
+            self.layout().addWidget(lineedit, i + 2, 2, 1, 1)
             modify_pushbutton = QtWidgets.QPushButton('Modify', self)
             modify_pushbutton.setWhatsThis('{0}_modify_pushbutton'.format(config.lower()))
             setattr(self, '{0}_modify_pushbutton'.format(config.lower()), modify_pushbutton)
@@ -90,7 +90,7 @@ class ConfigureBoloDAQGui(QtWidgets.QWidget, GuiBuilder):
         '''
         '''
         combobox = getattr(self, '{0}_combobox'.format(setting))
-        label = getattr(self, '{0}_label'.format(setting))
+        lineedit = getattr(self, '{0}_lineedit'.format(setting))
         dict_to_edit = getattr(self, '{0}_dict'.format(setting))
         combobox.clear()
         existing_com_ports = []
@@ -107,17 +107,18 @@ class ConfigureBoloDAQGui(QtWidgets.QWidget, GuiBuilder):
         '''
         '''
         setting = self.sender().whatsThis().split('_')[0]
-        dict_to_edit = getattr(self, '{0}_dict'.format(setting))
-        key_to_modify, okPressed1 = self.gb_quick_static_info_gather('{0} to add'.format(setting), items=dict_to_edit.keys())
-        if okPressed1:
-            new_value, okPressed2 = self.gb_quick_info_gather('{0} to add'.format(setting))
-            if okPressed2:
-                dict_to_edit[key_to_modify] = new_value
-                path = os.path.join('bd_settings', '{0}_settings.json'.format(setting))
-                index = getattr(self, '{0}_combobox'.format(setting)).findText(key_to_modify)
-                self.cbd_update_label(index)
-                with open(path, 'w') as fh:
-                    simplejson.dump(dict_to_edit, fh)
+        dict_to_modify = getattr(self, '{0}_dict'.format(setting))
+        key_to_modify = getattr(self, '{0}_combobox'.format(setting.lower())).currentText()
+        new_value = getattr(self, '{0}_lineedit'.format(setting.lower())).text()
+        msg = 'Update "{0}"\nKey: {1}\nNew Value: "{2}"'.format(setting, key_to_modify, new_value)
+        response = self.gb_quick_message(msg=msg, add_cancel=True, add_yes=True)
+        if response == QtWidgets.QMessageBox.Yes:
+            dict_to_modify[key_to_modify] = new_value
+            path = os.path.join('bd_settings', '{0}_settings.json'.format(setting))
+            index = getattr(self, '{0}_combobox'.format(setting)).findText(key_to_modify)
+            self.cbd_update_label(index)
+            with open(path, 'w') as fh:
+                simplejson.dump(dict_to_modify, fh)
 
     def cbd_add_item(self):
         '''
@@ -125,7 +126,7 @@ class ConfigureBoloDAQGui(QtWidgets.QWidget, GuiBuilder):
         function = self.sender().text().lower()
         setting = self.sender().whatsThis().split('_')[0]
         dict_to_edit = getattr(self, '{0}_dict'.format(setting))
-        key, okPressed1 = self.gb_quick_info_gather(dialog='{0} to add'.format(setting))
+        key, okPressed1 = self.gb_quick_info_gather(dialog='{0} key to add'.format(setting))
         value, okPressed2 = self.gb_quick_info_gather(dialog='Value for {0}'.format(setting))
         if okPressed1 and okPressed2:
             dict_to_edit[key] = value
@@ -133,15 +134,22 @@ class ConfigureBoloDAQGui(QtWidgets.QWidget, GuiBuilder):
             index = getattr(self, '{0}_combobox'.format(setting)).findText(key)
             getattr(self, '{0}_combobox'.format(setting)).setCurrentIndex(index)
             if setting == 'squids':
-                getattr(self, '{0}_label'.format(setting)).setText('{0} (uA/V)'.format(value))
+                getattr(self, '{0}_lineedit'.format(setting)).setText('{0} (uA/V)'.format(value))
             else:
-                getattr(self, '{0}_label'.format(setting)).setText(value)
+                getattr(self, '{0}_lineedit'.format(setting)).setText(value)
             setattr(self, '{0}_dict'.format(setting), dict_to_edit)
             path = os.path.join('bd_settings', '{0}_settings.json'.format(setting))
             with open(path, 'w') as fh:
                 simplejson.dump(dict_to_edit, fh)
         else:
             self.gb_quick_message('Please supply an key and value for the setting', msg_type='Warning')
+
+    def cbd_update_settings(self):
+        '''
+        '''
+        with open(os.path.join('bd_settings', 'daq_settings.json'), 'r') as json_handle:
+            self.daq_settings = simplejson.load(json_handle)
+        return self.daq_settings
 
     def cbd_delete_item(self):
         '''
@@ -163,13 +171,13 @@ class ConfigureBoloDAQGui(QtWidgets.QWidget, GuiBuilder):
         setting = self.sender().whatsThis().split('_')[0]
         dict_to_edit = getattr(self, '{0}_dict'.format(setting))
         combobox = getattr(self, '{0}_combobox'.format(setting))
-        label = getattr(self, '{0}_label'.format(setting))
+        lineedit = getattr(self, '{0}_lineedit'.format(setting))
         if combobox.itemText(index) in dict_to_edit:
             value = dict_to_edit[combobox.itemText(index)]
             if setting == 'squids':
-                label.setText('{0} (uA/V)'.format(value))
+                lineedit.setText('{0} (uA/V)'.format(value))
             else:
-                label.setText(value)
+                lineedit.setText(value)
 
 
     #################################################
