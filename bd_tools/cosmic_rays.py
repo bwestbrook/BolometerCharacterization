@@ -157,8 +157,8 @@ class CosmicRays(QtWidgets.QWidget, GuiBuilder):
             self.stds_1.append(std_1)
             self.data_2.extend(ts_2)
             self.stds_2.append(std_2)
-            self.cr_plot(running=True)
             save_path = self.cr_index_file_name()
+            self.cr_plot(running=True, save_path=save_path)
             with open(save_path, 'w') as save_handle:
                 for i, data_1 in enumerate(self.data_1):
                     line = '{0:.5f}, {1:.5f}\n'.format(self.data_1[i], self.data_2[i])
@@ -200,7 +200,7 @@ class CosmicRays(QtWidgets.QWidget, GuiBuilder):
             self.gb_quick_message('Warning Data Not Written to File!', msg_type='Warning')
         self.cr_plot()
 
-    def cr_plot(self, running=False):
+    def cr_plot(self, running=False, save_path=None):
         '''
         '''
         fig, ax1, ax2 = self.cr_create_blank_fig(frac_screen_width=0.75, frac_screen_height=0.5,
@@ -214,7 +214,10 @@ class CosmicRays(QtWidgets.QWidget, GuiBuilder):
             fig.savefig(temp_png_path)
             image_to_display = QtGui.QPixmap(temp_png_path)
             self.running_plot_label.setPixmap(image_to_display)
-            os.remove(temp_png_path)
+            if save_path is not None:
+                fig.savefig(save_path.replace('txt', 'png'))
+            pl.close('all')
+
         else:
             title, okPressed = self.gb_quick_info_gather(title='Plot Title', dialog='What is the title of this plot?')
             ax1.set_title(title)

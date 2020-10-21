@@ -39,7 +39,7 @@ class BoloDAQ():
                     task.ai_channels.add_ai_voltage_chan("{0}/ai0".format(device))
                     daq_settings[device] = {}
                     for j in range(16):
-                        daq_settings[device].update({str(j): {'sample_rate': 500, 'int_time': 500}})
+                        daq_settings[device].update({str(j): {'sample_rate': 5000, 'int_time': 100}})
                 except nidaqmx.DaqError:
                     pass
         return daq_settings

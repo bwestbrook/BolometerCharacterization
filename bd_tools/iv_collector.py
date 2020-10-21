@@ -153,7 +153,7 @@ class IVCollector(QtWidgets.QWidget, GuiBuilder):
         self.data_clip_hi_lineedit = self.gb_make_labeled_lineedit(label_text='Data Clip Hi (uV)', lineedit_text='100.0', width=self.le_width)
         self.layout().addWidget(self.data_clip_hi_lineedit, 10, 0, 1, 1)
         # Fit Clip
-        self.data_fit_lo_lineedit = self.gb_make_labeled_lineedit(label_text='Fit Clip Lo (uV)', lineedit_text='5.0', width=self.le_width)
+        self.data_fit_lo_lineedit = self.gb_make_labeled_lineedit(label_text='Fit Clip Lo (uV)', lineedit_text='0.0', width=self.le_width)
         self.layout().addWidget(self.data_fit_lo_lineedit, 11, 0, 1, 1)
         self.data_fit_hi_lineedit = self.gb_make_labeled_lineedit(label_text='Fit Clip Hi (uV)', lineedit_text='100.0', width=self.le_width)
         self.layout().addWidget(self.data_fit_hi_lineedit, 12, 0, 1, 1)
@@ -314,7 +314,6 @@ class IVCollector(QtWidgets.QWidget, GuiBuilder):
         self.ivc_plot_y()
         self.ivc_plot_xy(running=True)
 
-
     def ivc_plot_x(self):
         '''
         '''
@@ -358,20 +357,23 @@ class IVCollector(QtWidgets.QWidget, GuiBuilder):
         data_clip_hi = float(self.data_clip_hi_lineedit.text())
         data_fit_lo = float(self.data_fit_lo_lineedit.text())
         data_fit_hi = float(self.data_fit_hi_lineedit.text())
+        squid_calibration_factor = float(self.squid_calibration_label.text())
         i_bolo_real = self.ivc_fit_and_remove_squid_offset()
+        i_bolo_std = np.asarray(self.y_stds) * squid_calibration_factor
         v_bias_real = np.asarray(self.x_data) * float(self.x_correction_combobox.currentText()) * 1e6 #uV
         v_bias_std = np.asarray(self.x_stds) * float(self.x_correction_combobox.currentText()) * 1e6 #uV
         fit_selector = np.where(np.logical_and(data_fit_lo < v_bias_real, v_bias_real < data_fit_hi))
-        fit_vals = np.polyfit(v_bias_real[fit_selector], i_bolo_real[fit_selector], 1)
-        resistance = 1.0 / fit_vals[0]
-        fit_vector = np.polyval(fit_vals, v_bias_real)
-        squid_calibration_factor = float(self.squid_calibration_label.text())
-        i_bolo_std = np.asarray(self.y_stds) * squid_calibration_factor
+        try:
+            fit_vals = np.polyfit(v_bias_real[fit_selector], i_bolo_real[fit_selector], 1)
+            resistance = 1.0 / fit_vals[0]
+            fit_vector = np.polyval(fit_vals, v_bias_real)
+            ax.plot(v_bias_real[fit_selector], fit_vector[fit_selector], '-', lw=3, color='r', label='fit')
+        except TypeError:
+            resistance = np.nan
         selector =  np.where(np.logical_and(data_clip_lo < v_bias_real, v_bias_real < data_clip_hi))
         title = 'IV Curve for {0}'.format(self.sample_name_lineedit.text())
         label = 'R={0:.3f} ($\Omega$)'.format(resistance)
         ax.errorbar(v_bias_real[selector], i_bolo_real[selector], xerr=v_bias_std[selector], yerr=i_bolo_std[selector], marker='.', linestyle='-', label=label)
-        ax.plot(v_bias_real[fit_selector], fit_vector[fit_selector], '-', lw=3, color='r', label='fit')
         if running:
             ax.set_xlabel('Bias Voltage ($\mu V$)', fontsize=14)
             ax.set_ylabel('TES Current ($\mu A$)', fontsize=14)
