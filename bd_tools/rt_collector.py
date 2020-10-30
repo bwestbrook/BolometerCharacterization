@@ -64,7 +64,7 @@ class RTCollector(QtWidgets.QWidget, GuiBuilder):
         '''
         with open(os.path.join('bd_settings', 'samples_settings.json'), 'r') as fh:
             self.samples_settings = simplejson.load(fh)
-        self.rtc_update_sample_name(self.sample_name_combobox.currentIndex())
+        self.rtc_update_sample_name()
 
     def rtc_update_daq_settings(self, daq_settings):
         '''
@@ -92,6 +92,7 @@ class RTCollector(QtWidgets.QWidget, GuiBuilder):
     #############################################
     # Lakeshore stuff for DR
     #############################################
+
 
     def rtc_lakeshore_panel(self):
         '''
@@ -245,6 +246,8 @@ class RTCollector(QtWidgets.QWidget, GuiBuilder):
         '''
         '''
         channel = self.channel_combobox.currentText()
+        self.sample_name_combobox.setCurrentIndex(int(channel) - 1)
+        self.rtc_update_sample_name()
         self.ls372_samples_widget.ls372_edit_channel(clicked=True, index=channel)
         self.ls372_samples_widget.channels.ls372_scan_channel(channel)
         self.ls372_samples_widget.analog_outputs.analog_output_aux.input_channel = channel
@@ -389,9 +392,9 @@ class RTCollector(QtWidgets.QWidget, GuiBuilder):
         save_pushbutton = QtWidgets.QPushButton('Save', self)
         save_pushbutton.clicked.connect(self.rtc_save)
         self.layout().addWidget(save_pushbutton, 22, 0, 1, 5)
-        self.rtc_update_sample_name(0)
+        self.rtc_update_sample_name()
 
-    def rtc_update_sample_name(self, index):
+    def rtc_update_sample_name(self):
         '''
         '''
         sample_key = self.sample_name_combobox.currentText()
@@ -474,6 +477,7 @@ class RTCollector(QtWidgets.QWidget, GuiBuilder):
             self.sender().setText('Start DAQ')
             self.started = False
             self.meta_data['n_samples'] = len(self.x_data)
+            pprint(self.meta_data)
             save_path = self.rtc_index_file_name()
             self.rtc_save(save_path)
             self.rtc_plot_xy(file_name=save_path.replace('txt', 'png'))
@@ -552,6 +556,16 @@ class RTCollector(QtWidgets.QWidget, GuiBuilder):
         if len(self.x_data) == 0:
             return None
         sample_name = self.sample_name_lineedit.text()
+        exc_mode = self.meta_data['Exc Mode']
+        ramp_value = self.meta_data['Temp Ramp (K/min)']
+        pprint(self.meta_data)
+        if exc_mode == 'current':
+            excitation = self.meta_data['Excitation (A)']
+            scan_info = 'Exc {0:.2f} uA  Ramp: {1} K/min'.format(float(excitation) * 1e6, ramp_value)
+        else:
+            excitation = self.meta_data['Excitation (V)']
+            scan_info = 'Exc {0:.2f} uV  Ramp: {1} K/min'.format(float(excitation) * 1e6, ramp_value)
+        label = '{0}\n{1}'.format(sample_name, scan_info)
         data_clip_lo = float(self.data_clip_lo_lineedit.text())
         data_clip_hi = float(self.data_clip_hi_lineedit.text())
         self.meta_data['data_clip_lo (mK)'] = data_clip_lo
@@ -561,13 +575,13 @@ class RTCollector(QtWidgets.QWidget, GuiBuilder):
             y_data, y_stds = self.rtc_adjust_y_data()
             x_data, x_stds = self.rtc_adjust_x_data()
             selector =  np.where(np.logical_and(data_clip_lo < x_data, x_data < data_clip_hi))
-            ax.errorbar(x_data[selector], y_data[selector], xerr=x_stds[selector], yerr=y_stds[selector], marker='.', linestyle='-', label=sample_name)
+            ax.errorbar(x_data[selector], y_data[selector], xerr=x_stds[selector], yerr=y_stds[selector], marker='.', linestyle='-', label=label)
         else:
             fig, ax = self.rtc_create_blank_fig(frac_screen_width=0.6, frac_screen_height=0.5, left=0.12, bottom=0.16, top=0.92)
             self.y_data, self.y_stds = self.rtc_adjust_y_data()
             self.x_data, self.x_stds = self.rtc_adjust_x_data()
             selector =  np.where(np.logical_and(data_clip_lo < self.x_data, self.x_data < data_clip_hi))
-            ax.errorbar(self.x_data[selector], self.y_data[selector], xerr=self.x_stds[selector], yerr=self.y_stds[selector], marker='.', linestyle='-', label=sample_name)
+            ax.errorbar(self.x_data[selector], self.y_data[selector], xerr=self.x_stds[selector], yerr=self.y_stds[selector], marker='.', linestyle='-', label=label)
         if running:
             ax.set_xlabel('Temperature ($mK$)', fontsize=14)
             ax.set_ylabel('Resistance ($m\Omega$)', fontsize=14)
