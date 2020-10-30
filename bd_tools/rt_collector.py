@@ -1,4 +1,5 @@
 import time
+import shutil
 import os
 import simplejson
 import pylab as pl
@@ -399,6 +400,16 @@ class RTCollector(QtWidgets.QWidget, GuiBuilder):
         '''
         sample_key = self.sample_name_combobox.currentText()
         sample_name = self.samples_settings[sample_key]
+        exc_mode = self.meta_data['Exc Mode']
+        ramp_value = self.meta_data['Temp Ramp (K/min)']
+        if exc_mode == 'current':
+            sample_name += '_Ramp_{0}'.format(ramp_value.replace('+', ''))
+            excitation = float(self.meta_data['Excitation (A)']) * 1e6
+            sample_name += '_{0:.2f}uA'.format(excitation).replace('.', '_').replace(' ', '_')
+        else:
+            sample_name += '_Ramp_{0}'.format(ramp_value.replace('+', ''))
+            excitation = float(self.meta_data['Excitation (V)']) * 1e6
+            sample_name += '_{0:.2f}uV'.format(excitation).replace('.', '_').replace(' ', '_')
         self.sample_name_lineedit.setText(sample_name)
 
     #########################################################
@@ -477,13 +488,14 @@ class RTCollector(QtWidgets.QWidget, GuiBuilder):
             self.sender().setText('Start DAQ')
             self.started = False
             self.meta_data['n_samples'] = len(self.x_data)
-            pprint(self.meta_data)
             save_path = self.rtc_index_file_name()
-            self.rtc_save(save_path)
-            self.rtc_plot_xy(file_name=save_path.replace('txt', 'png'))
+            notes, okPressed = self.gb_quick_info_gather(title='Good data?', dialog='Data Notes')
+            self.meta_data['notes'] = notes
+            pprint(self.meta_data)
             with open(save_path.replace('txt', 'json'), 'w') as json_handle:
                 simplejson.dump(self.meta_data, json_handle)
-
+            self.rtc_save(save_path)
+            self.rtc_plot_xy(file_name=save_path.replace('txt', 'png'))
 
     ###################################################
     # Saving and Plotting
@@ -510,6 +522,13 @@ class RTCollector(QtWidgets.QWidget, GuiBuilder):
                 for i, x_data in enumerate(self.x_data):
                     line = '{0:.5f}, {1:.5f}, {2:.5f}, {3:.5f}\n'.format(self.x_data[i], self.x_stds[i], self.y_data[i], self.y_stds[i])
                     save_handle.write(line)
+            response = self.gb_quick_message('Put data in good data folder?', add_yes=True, add_no=True)
+            good_data_folder = os.path.join(self.data_folder, 'good_data')
+            if not os.path.exists(good_data_folder):
+                os.makedirs(good_data_folder)
+            if response == QtWidgets.QMessageBox.Yes:
+                good_data_save_path = os.path.join(good_data_folder, os.path.basename(save_path))
+                shutil.copy(save_path, good_data_save_path)
         else:
             self.gb_quick_message('Warning Data Not Written to File!', msg_type='Warning')
 
@@ -558,7 +577,6 @@ class RTCollector(QtWidgets.QWidget, GuiBuilder):
         sample_name = self.sample_name_lineedit.text()
         exc_mode = self.meta_data['Exc Mode']
         ramp_value = self.meta_data['Temp Ramp (K/min)']
-        pprint(self.meta_data)
         if exc_mode == 'current':
             excitation = self.meta_data['Excitation (A)']
             scan_info = 'Exc {0:.2f} uA  Ramp: {1} K/min'.format(float(excitation) * 1e6, ramp_value)
@@ -598,8 +616,11 @@ class RTCollector(QtWidgets.QWidget, GuiBuilder):
             ax.set_xlabel('Temperature ($mK$)', fontsize=18)
             ax.set_ylabel('Resistance ($m\Omega$)', fontsize=18)
             ax.set_title(sample_name, fontsize=18)
+            pl.legend(loc='best', fontsize=14)
             fig.savefig(file_name, transparent=False)
-            pl.show()
+            response = self.gb_quick_info_gather('Open in pylab?')
+            if response == QMessageBox.Yes:
+                pl.show()
 
     def rtc_adjust_x_data(self):
         '''
