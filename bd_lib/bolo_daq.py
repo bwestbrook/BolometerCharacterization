@@ -20,9 +20,6 @@ class BoloDAQ():
             data_dict = {}
             for signal_channel in signal_channels:
                 voltage_chan_str = '{0}/ai{1}'.format(device, signal_channel)
-                print(signal_channels)
-                print(signal_channel)
-                print(voltage_chan_str)
                 task.ai_channels.add_ai_voltage_chan(voltage_chan_str)
                 data_dict[signal_channel] = {}
             int_time = int(int_time)
@@ -46,7 +43,6 @@ class BoloDAQ():
             data_dict[signal_channel].update({'max': max_})
             std_ = np.std(data_time_stream)
             data_dict[signal_channel].update({'std': std_})
-        #import ipdb;ipdb.set_trace()
         return data_dict
 
     def initialize_daqs(self):

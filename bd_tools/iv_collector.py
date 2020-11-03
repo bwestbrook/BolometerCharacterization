@@ -123,6 +123,7 @@ class IVCollector(QtWidgets.QWidget, GuiBuilder):
         self.layout().addWidget(self.daq_y_combobox, 4, 0, 1, 1)
         self.daq_settings_y_label = QtWidgets.QLabel('', self)
         self.daq_settings_y_label.setAlignment(QtCore.Qt.AlignLeft)
+        self.daq_y_combobox.setCurrentIndex(1)
         self.layout().addWidget(self.daq_settings_y_label, 5, 0, 1, 1)
         self.daq_y_combobox.currentIndexChanged.connect(self.ivc_display_daq_settings)
         self.daq_x_combobox.currentIndexChanged.connect(self.ivc_display_daq_settings)
@@ -259,15 +260,23 @@ class IVCollector(QtWidgets.QWidget, GuiBuilder):
         device = self.ivc_daq_combobox.currentText()
         self.x_data, self.x_stds = [], []
         self.y_data, self.y_stds = [], []
+        signal_channels = [self.x_channel, self.y_channel]
         while self.started:
-            x_ts, x_mean, x_min, x_max, x_std = self.daq.get_data(signal_channel=self.x_channel,
-                                                                  int_time=self.int_time_x,
-                                                                  sample_rate=self.sample_rate_x,
-                                                                  device=device)
-            y_ts, y_mean, y_min, y_max, y_std = self.daq.get_data(signal_channel=self.y_channel,
-                                                                  int_time=self.int_time_y,
-                                                                  sample_rate=self.sample_rate_y,
-                                                                  device=device)
+            data_dict = self.daq.get_data(signal_channels=signal_channels,
+                                          int_time=self.int_time_x,
+                                          sample_rate=self.sample_rate_x,
+                                          device=device)
+            x_ts = data_dict[self.x_channel]['ts']
+            x_mean = data_dict[self.x_channel]['mean']
+            x_min = data_dict[self.x_channel]['min']
+            x_max = data_dict[self.x_channel]['max']
+            x_std = data_dict[self.x_channel]['std']
+            y_ts = data_dict[self.y_channel]['ts']
+            y_mean = data_dict[self.y_channel]['mean']
+            y_min = data_dict[self.y_channel]['min']
+            y_max = data_dict[self.y_channel]['max']
+            y_std = data_dict[self.y_channel]['std']
+
             self.x_data_label.setText('X Mean: {0:.5f} ::: X STD: {1:.5f}'.format(x_mean, x_std))
             self.y_data_label.setText('Y Mean: {0:.5f} ::: Y STD: {1:.5f}'.format(y_mean, y_std))
             self.x_data.append(x_mean)

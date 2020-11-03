@@ -57,6 +57,7 @@ class CosmicRays(QtWidgets.QWidget, GuiBuilder):
         self.daq_2_combobox = QtWidgets.QComboBox(self)
         for daq in range(0, 4):
             self.daq_2_combobox.addItem(str(daq))
+        self.daq_2_combobox.setCurrentIndex(1)
         self.daq_2_combobox.activated.connect(self.cr_display_daq_settings)
         self.layout().addWidget(self.daq_2_combobox, 1, 3, 1, 1)
         # Chan 1
@@ -138,17 +139,31 @@ class CosmicRays(QtWidgets.QWidget, GuiBuilder):
         '''
         device = self.device_combobox.currentText()
         self.cr_scan_file_name()
+        signal_channels = [self.channel_1, self.channel_2]
         while self.started:
             self.data_1, self.stds_1 = [], []
             self.data_2, self.stds_2 = [], []
-            ts_1, mean_1, min_1, max_1, std_1 = self.daq.get_data(signal_channel=self.channel_1,
-                                                                  int_time=self.int_time_1,
-                                                                  sample_rate=self.sample_rate_1,
-                                                                  device=device)
-            ts_2, mean_2, min_2, max_2, std_2 = self.daq.get_data(signal_channel=self.channel_2,
-                                                                  int_time=self.int_time_2,
-                                                                  sample_rate=self.sample_rate_2,
-                                                                  device=device)
+            data_dict = self.daq.get_data(signal_channels=signal_channels,
+                                          int_time=self.int_time_1,
+                                          sample_rate=self.sample_rate_1,
+                                          device=device)
+
+            ts_1 = data_dict[self.channel_1]['ts']
+            mean_1 = data_dict[self.channel_1]['mean']
+            min_1 = data_dict[self.channel_1]['min']
+            max_1 = data_dict[self.channel_1]['max']
+            std_1 = data_dict[self.channel_1]['std']
+
+            ts_2 = data_dict[self.channel_2]['ts']
+            mean_2 = data_dict[self.channel_2]['mean']
+            min_2 = data_dict[self.channel_2]['min']
+            max_2 = data_dict[self.channel_2]['max']
+            std_2 = data_dict[self.channel_2]['std']
+
+
+
+
+
             self.mean_1_label.setText('{0:.5f}'.format(mean_1))
             self.std_1_label.setText('{0:.5f}'.format(std_1))
             self.mean_2_label.setText('{0:.5f}'.format(mean_2))

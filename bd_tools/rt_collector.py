@@ -348,6 +348,7 @@ class RTCollector(QtWidgets.QWidget, GuiBuilder):
         self.daq_y_combobox = self.gb_make_labeled_combobox(label_text='DAQ Ch Y Data:', width=self.le_width)
         for daq in range(0, 8):
             self.daq_y_combobox.addItem(str(daq))
+        self.daq_y_combobox.setCurrentIndex(1)
         self.layout().addWidget(self.daq_y_combobox, 3, 0, 1, 3)
         self.daq_settings_y_label = QtWidgets.QLabel('', self)
         self.daq_settings_y_label.setAlignment(QtCore.Qt.AlignRight)
@@ -462,12 +463,12 @@ class RTCollector(QtWidgets.QWidget, GuiBuilder):
                                           int_time=self.int_time_x,
                                           sample_rate=self.sample_rate_x,
                                           device=device)
-            x_ts = data_dict[self.x_channel]
+            x_ts = data_dict[self.x_channel]['ts']
             x_mean = data_dict[self.x_channel]['mean']
             x_min = data_dict[self.x_channel]['min']
             x_max = data_dict[self.x_channel]['max']
             x_std = data_dict[self.x_channel]['std']
-            y_ts = data_dict[self.y_channel]
+            y_ts = data_dict[self.y_channel]['ts']
             y_mean = data_dict[self.y_channel]['mean']
             y_min = data_dict[self.y_channel]['min']
             y_max = data_dict[self.y_channel]['max']
