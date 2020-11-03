@@ -205,6 +205,7 @@ class RTCollector(QtWidgets.QWidget, GuiBuilder):
         new_ramp = float(self.ramp_lineedit.text())
         self.ls372_temp_widget.temp_control.ls372_set_ramp(new_ramp)
         self.meta_data['Temp Ramp (K/min)'] = new_ramp
+        self.rtc_update_sample_name()
 
     def rtc_check_set_point(self):
         '''
@@ -259,6 +260,7 @@ class RTCollector(QtWidgets.QWidget, GuiBuilder):
         '''
         '''
         self.rtc_get_lakeshore_channel_info()
+        self.rtc_update_sample_name()
 
     def rtc_get_lakeshore_channel_info(self):
         '''
@@ -350,6 +352,7 @@ class RTCollector(QtWidgets.QWidget, GuiBuilder):
         self.daq_settings_y_label = QtWidgets.QLabel('', self)
         self.daq_settings_y_label.setAlignment(QtCore.Qt.AlignRight)
         self.layout().addWidget(self.daq_settings_y_label, 4, 0, 1, 3)
+        self.daq_y_combobox.setCurrentIndex(1)
         self.daq_y_combobox.currentIndexChanged.connect(self.rtc_display_daq_settings)
         self.daq_x_combobox.currentIndexChanged.connect(self.rtc_display_daq_settings)
         self.rtc_daq_combobox.currentIndexChanged.connect(self.rtc_display_daq_settings)
@@ -368,9 +371,11 @@ class RTCollector(QtWidgets.QWidget, GuiBuilder):
         # Data Clip
         self.data_clip_lo_lineedit = self.gb_make_labeled_lineedit(label_text='Data Clip Lo (mK)', width=self.le_width)
         self.data_clip_lo_lineedit.setText(str(0.0))
+        self.data_clip_lo_lineedit.setValidator(QtGui.QDoubleValidator(-1e18, 1e18, 5, self.data_clip_lo_lineedit))
         self.layout().addWidget(self.data_clip_lo_lineedit, 7, 0, 1, 3)
         self.data_clip_hi_lineedit = self.gb_make_labeled_lineedit(label_text='Data Clip Hi (mK)', width=self.le_width)
         self.data_clip_hi_lineedit.setText(str(1000.0))
+        self.data_clip_hi_lineedit.setValidator(QtGui.QDoubleValidator(-1e18, 1e18, 5, self.data_clip_hi_lineedit))
         self.meta_data['data_clip_lo (mK)'] = '0.0'
         self.meta_data['data_clip_hi (mK)'] = '1000.0'
         self.layout().addWidget(self.data_clip_hi_lineedit, 8, 0, 1, 3)
@@ -400,8 +405,8 @@ class RTCollector(QtWidgets.QWidget, GuiBuilder):
         '''
         sample_key = self.sample_name_combobox.currentText()
         sample_name = self.samples_settings[sample_key]
-        exc_mode = self.meta_data['Exc Mode']
-        ramp_value = self.meta_data['Temp Ramp (K/min)']
+        exc_mode = str(self.meta_data['Exc Mode'])
+        ramp_value = str(self.meta_data['Temp Ramp (K/min)'])
         if exc_mode == 'current':
             sample_name += '_Ramp_{0}'.format(ramp_value.replace('+', ''))
             excitation = float(self.meta_data['Excitation (A)']) * 1e6
@@ -450,16 +455,24 @@ class RTCollector(QtWidgets.QWidget, GuiBuilder):
         device = self.rtc_daq_combobox.currentText()
         self.x_data, self.x_stds = [], []
         self.y_data, self.y_stds = [], []
+        signal_channels  = [self.x_channel, self.y_channel]
         i = 0
         while self.started:
-            x_ts, x_mean, x_min, x_max, x_std = self.daq.get_data(signal_channel=self.x_channel,
-                                                                  int_time=self.int_time_x,
-                                                                  sample_rate=self.sample_rate_x,
-                                                                  device=device)
-            y_ts, y_mean, y_min, y_max, y_std = self.daq.get_data(signal_channel=self.y_channel,
-                                                                  int_time=self.int_time_y,
-                                                                  sample_rate=self.sample_rate_y,
-                                                                  device=device)
+            data_dict = self.daq.get_data(signal_channels=signal_channels,
+                                          int_time=self.int_time_x,
+                                          sample_rate=self.sample_rate_x,
+                                          device=device)
+            x_ts = data_dict[self.x_channel]
+            x_mean = data_dict[self.x_channel]['mean']
+            x_min = data_dict[self.x_channel]['min']
+            x_max = data_dict[self.x_channel]['max']
+            x_std = data_dict[self.x_channel]['std']
+            y_ts = data_dict[self.y_channel]
+            y_mean = data_dict[self.y_channel]['mean']
+            y_min = data_dict[self.y_channel]['min']
+            y_max = data_dict[self.y_channel]['max']
+            y_std = data_dict[self.y_channel]['std']
+
             self.x_data_label.setText('X Mean: {0:.5f} ::: X STD: {0:.5f}'.format(x_mean, x_std))
             self.y_data_label.setText('Y Mean: {0:.5f} ::: Y STD: {0:.5f}'.format(y_mean, y_std))
             self.x_data.append(x_mean)
@@ -467,6 +480,7 @@ class RTCollector(QtWidgets.QWidget, GuiBuilder):
             self.y_data.append(y_mean)
             self.y_stds.append(y_std)
             self.rtc_plot_running()
+            print(self.x_data, self.y_data)
             if i % 25 == 0 and monitor:
                 mxc_temp = float(self.ls372_temp_widget.channels.ls372_get_channel_value(6, reading='kelvin')) * 1e3
                 heater_value = self.ls372_temp_widget.temp_control.ls372_get_heater_value()
@@ -618,8 +632,8 @@ class RTCollector(QtWidgets.QWidget, GuiBuilder):
             ax.set_title(sample_name, fontsize=18)
             pl.legend(loc='best', fontsize=14)
             fig.savefig(file_name, transparent=False)
-            response = self.gb_quick_info_gather('Open in pylab?')
-            if response == QMessageBox.Yes:
+            response = self.gb_quick_message('Open in pylab?', add_yes=True, add_no=True)
+            if response == QtWidgets.QMessageBox.Yes:
                 pl.show()
 
     def rtc_adjust_x_data(self):

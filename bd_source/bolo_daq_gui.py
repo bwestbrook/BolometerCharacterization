@@ -168,10 +168,10 @@ class BoloDAQGui(QtWidgets.QMainWindow, GuiBuilder):
                     self.splash_screen.showMessage("Configuring NIDAQ: Checking if {0}:::ch{1} is available ({2}/2)".format(device, j, i + 1))
                     QtWidgets.QApplication.processEvents()
                     try:
-                        vol_ts, vol_mean, vol_min, vol_max, vol_std = self.daq.get_data(signal_channel=j,
-                                                                                        int_time=100,
-                                                                                        sample_rate=1000,
-                                                                                        device=device)
+                        test_data_dict = self.daq.get_data(signal_channels=[j],
+                                                           int_time=100,
+                                                           sample_rate=1000,
+                                                           device=device)
                     except nidaqmx.errors.DaqError:
                         self.splash_screen.showMessage("Configuring NIDAQ {0}:::ch{1} is not available".format(device, j))
                         QtWidgets.QApplication.processEvents()
