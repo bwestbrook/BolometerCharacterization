@@ -62,7 +62,6 @@ class FourierTransformSpectrometer(QtWidgets.QWidget, GuiBuilder):
         self.daq_settings = daq_settings
         self.fts_update_scan_params()
 
-
     def fts_configure_input_panel(self):
         '''
         '''
@@ -286,10 +285,15 @@ class FourierTransformSpectrometer(QtWidgets.QWidget, GuiBuilder):
                 # Gather Data and Append to Vector then plot
                 self.x_data.append(scan_position)
                 self.x_stds.append(3) # guesstimated < 3 step error in position
-                out_ts, out_mean, out_min, out_max, out_std = self.daq.get_data(signal_channel=signal_channel,
-                                                                                int_time=int_time,
-                                                                                sample_rate=sample_rate,
-                                                                                device=device)
+                data_dict = self.daq.get_data(signal_channels=[signal_channel],
+                                              int_time=int_time,
+                                              sample_rate=sample_rate,
+                                              device=device)
+                out_ts = data_dict[signal_channel]['ts']
+                out_mean = data_dict[signal_channel]['mean']
+                out_min = data_dict[signal_channel]['min']
+                out_max = data_dict[signal_channel]['max']
+                out_std = data_dict[signal_channel]['std']
                 self.y_data.append(out_mean)
                 self.y_stds.append(out_std)
                 self.fts_plot(running=True)
