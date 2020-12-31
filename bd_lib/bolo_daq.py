@@ -1,4 +1,5 @@
 import nidaqmx
+import simplejson
 import os
 import sys
 import glob
@@ -11,6 +12,7 @@ from nidaqmx.constants import AcquisitionType, Edge, WAIT_INFINITELY
 class BoloDAQ():
 
     def __init__(self):
+        self.ni_system = nidaqmx.system.System()
         self.active_daqs = self.initialize_daqs()
 
     def get_data(self, signal_channels=[3,], int_time=50, sample_rate=500, device=None):
@@ -47,16 +49,23 @@ class BoloDAQ():
         return data_dict
 
     def initialize_daqs(self):
+        daq_settings_path = os.path.join('bd_settings', 'daq_settings.json')
+        if os.path.exists(daq_settings_path):
+            with open(daq_settings_path, 'r') as settings_handle:
+                saved_daq_settings = simplejson.load(settings_handle)
+        else:
+            saved_daq_settings = {}
         daq_settings = {}
-        for i in range(4): # Typically no more than a few here
-            device = 'Dev{0}'.format(i)
-            #device = 'cDAQ1Mod1{0}'.format(i)
+        devices = [x.name for x in self.ni_system.devices]
+        default_settings = {'sample_rate': 5000, 'int_time': 100}
+        for device in devices:
             for j in range(8):
-                if device in daq_settings:
-                    daq_settings[device].update({str(j): {'sample_rate': 5000, 'int_time': 100}})
+                if device in saved_daq_settings:
+                    daq_settings[device] = saved_daq_settings[device]
+                elif device in daq_settings:
+                    daq_settings[device].update({str(j): default_settings})
                 else:
-                    daq_settings[device] =  {str(j): {'sample_rate': 5000, 'int_time': 100}}
-        print(daq_settings)
+                    daq_settings[device] = default_settings
         return daq_settings
 
 if __name__ == '__main__':

@@ -35,15 +35,16 @@ from bd_tools.lakeshore_372 import LakeShore372
 from bd_tools.time_constant import TimeConstant
 from bd_tools.agilent_e3634a import AgilentE3634A
 from bd_tools.com_port_utility import ComPortUtility
-from bd_tools.hewlett_packard_34401a import HewlettPackard34401A
 from bd_tools.configure_ni_daq import ConfigureNIDAQ
+from bd_tools.noise_analyzer import NoiseAnalyzer
+from bd_tools.hewlett_packard_34401a import HewlettPackard34401A
 from bd_tools.configure_bolo_daq_gui import ConfigureBoloDAQGui
 from bd_tools.configure_stepper_motor import ConfigureStepperMotor
 from bd_tools.polarization_efficiency import PolarizationEfficiency
 from bd_tools.fourier_transform_spectrometer import FourierTransformSpectrometer
 from bd_tools.stanford_research_systems_sr830_dsp import StanfordResearchSystemsSR830DSP
 # Libraries
-from bd_lib.fourier import Fourier
+from bd_lib.fourier_transform_spectroscopy import FourierTransformSpectroscopy
 from bd_lib.bolo_daq import BoloDAQ
 from bd_lib.bolo_serial import BoloSerial
 from bd_lib.iv_curves import IVCurves
@@ -102,16 +103,13 @@ class BoloDAQGui(QtWidgets.QMainWindow, GuiBuilder):
             os.makedirs(self.data_folder)
         self.bd_setup_status_bar()
         self.com_port_utility_widget = ComPortUtility(self.splash_screen, self.screen_resolution, self.monitor_dpi)
-        self.bd_get_available_daq_settings()
+        self.bd_get_daq_settings()
         self.splash_screen.close()
-        #self.resize(int(0.95 * self.screen_resolution.width()), int(0.8 * self.screen_resolution.height()))
         self.move(0, 0)
-        #getattr(self, 'action_Bolo_DAQ_Settings').trigger()
         self.show()
         getattr(self, 'action_Bolo_DAQ_Settings').trigger()
-        #getattr(self, 'action_FTS').trigger()
         if not hasattr(self, 'configure_ni_daq_widget'):
-            self.configure_ni_daq_widget = ConfigureNIDAQ(self.available_daq_settings, self.status_bar)
+            self.configure_ni_daq_widget = ConfigureNIDAQ(self.daq_settings, self.status_bar)
         if os.getlogin() == 'BoloTester':
             self.dewar = '576'
         elif os.getlogin() == 'Bluefors_PC':
@@ -137,8 +135,7 @@ class BoloDAQGui(QtWidgets.QMainWindow, GuiBuilder):
         '''
         '''
         custom_widgets = []
-        #custom_widgets.append(custom_widget)
-        permanant_messages = ['Bolo DAQ Benjamin Grey Westbrook 2020']
+        permanant_messages = ['BoloDAQ Benjamin Grey Westbrook 2020']
         self.gb_add_status_bar(permanant_messages=permanant_messages , add_saved=True, custom_widgets=custom_widgets)
 
     def bd_close_main(self):
@@ -150,54 +147,11 @@ class BoloDAQGui(QtWidgets.QMainWindow, GuiBuilder):
     #### Common DAQ     ##############################################################
     ##################################################################################
 
-    def bd_get_available_daq_settings(self):
+    def bd_get_daq_settings(self):
         '''
         '''
-        if hasattr(self, 'available_daq_settings'):
-            return None
-        self.daq = BoloDAQ()
-        if not hasattr(self, 'daq_settings'):
-            self.bd_get_saved_daq_settings()
-        self.available_daq_settings = {}
-        self.splash_screen.showMessage('Configure NIDAQ: Deterimining all available daqs')
-        QtWidgets.QApplication.processEvents()
-        for device, configuration_dict in self.daq_settings.items():
-            available = True
-            for i in range(2):
-                for j in range(4):
-                    self.splash_screen.showMessage("Configuring NIDAQ: Checking if {0}:::ch{1} is available ({2}/2)".format(device, j, i + 1))
-                    QtWidgets.QApplication.processEvents()
-                    try:
-                        test_data_dict = self.daq.get_data(signal_channels=[j],
-                                                           int_time=100,
-                                                           sample_rate=1000,
-                                                           device=device)
-                    except nidaqmx.errors.DaqError:
-                        print("Configuring NIDAQ {0}:::ch{1} is not available".format(device, j))
-                        self.splash_screen.showMessage("Configuring NIDAQ {0}:::ch{1} is not available".format(device, j))
-                        QtWidgets.QApplication.processEvents()
-                        available = False
-                        break
-            if available:
-                self.available_daq_settings[device] = configuration_dict
-        n_devices = len(self.available_daq_settings)
-        devices = list(self.available_daq_settings.keys())
-        print()
-        print(devices)
-        pprint(self.available_daq_settings)
-        self.status_bar.showMessage('Found {0} available devices: {1}'.format(n_devices, devices))
-
-    def bd_get_saved_daq_settings(self):
-        '''
-        '''
-        if os.path.exists(os.path.join('bd_settings', 'daq_settings.json')):
-            with open(os.path.join('bd_settings', 'daq_settings.json'), 'r') as json_handle:
-                self.daq_settings = simplejson.load(json_handle)
-        else:
-            self.daq_settings = self.daq.initialize_daqs()
-            with open(os.path.join('bd_settings', 'daq_settings.json'), 'w') as json_handle:
-                simplejson.dump(self.daq_settings, json_handle)
-
+        self.bolo_daq= BoloDAQ()
+        self.daq_settings = self.bolo_daq.initialize_daqs()
 
     #################################################
     # Logging and File Management
@@ -271,9 +225,9 @@ class BoloDAQGui(QtWidgets.QMainWindow, GuiBuilder):
         self.gb_initialize_panel('central_widget')
         self.status_bar.showMessage('Launching Configure National Intruments DAQ')
         QtWidgets.QApplication.processEvents()
-        self.bd_get_available_daq_settings()
+        self.bd_get_daq_settings()
         if not hasattr(self, 'configure_ni_daq_widget'):
-            self.configure_ni_daq_widget = ConfigureNIDAQ(self.available_daq_settings, self.status_bar)
+            self.configure_ni_daq_widget = ConfigureNIDAQ(self.daq_settings, self.status_bar)
         self.central_widget.layout().addWidget(self.configure_ni_daq_widget, 0, 0, 1, 1)
         self.status_bar.showMessage('Configure National Intruments DAQ')
         QtWidgets.QApplication.processEvents()
@@ -307,8 +261,7 @@ class BoloDAQGui(QtWidgets.QMainWindow, GuiBuilder):
         self.status_bar.showMessage('Launching Bolo DAQ GUI Settings')
         QtWidgets.QApplication.processEvents()
         if not hasattr(self, 'configure_bolo_daq_gui_widget'):
-            self.configure_bolo_daq_gui_widget = ConfigureBoloDAQGui(self.available_daq_settings, self.status_bar, self.screen_resolution, self.monitor_dpi)
-        #self.time_constant_widget.tc_display_daq_settings()
+            self.configure_bolo_daq_gui_widget = ConfigureBoloDAQGui(self.daq_settings, self.status_bar, self.screen_resolution, self.monitor_dpi)
         self.central_widget.layout().addWidget(self.configure_bolo_daq_gui_widget, 0, 0, 1, 1)
         self.status_bar.showMessage('Bolo DAQ GUI Settings')
         QtWidgets.QApplication.processEvents()
@@ -458,11 +411,11 @@ class BoloDAQGui(QtWidgets.QMainWindow, GuiBuilder):
         self.status_bar.showMessage('Loading IV Curves')
         QtWidgets.QApplication.processEvents()
         if not hasattr(self, 'ivc_widget'):
-            self.ivc_widget = IVCollector(self.available_daq_settings, self.status_bar, self.screen_resolution, self.monitor_dpi)
+            self.ivc_widget = IVCollector(self.daq_settings, self.status_bar, self.screen_resolution, self.monitor_dpi)
         else:
-            self.available_daq_settings = self.configure_ni_daq_widget.cnd_update_daq()
+            self.daq_settings = self.configure_ni_daq_widget.cnd_update_daq()
             self.ivc_widget.ivc_update_samples()
-            self.ivc_widget.ivc_update_daq_settings(self.available_daq_settings)
+            self.ivc_widget.ivc_update_daq_settings(self.daq_settings)
         self.central_widget.layout().addWidget(self.ivc_widget, 0, 0, 1, 1)
         self.status_bar.showMessage('IV Curves')
         QtWidgets.QApplication.processEvents()
@@ -504,11 +457,11 @@ class BoloDAQGui(QtWidgets.QMainWindow, GuiBuilder):
         if not hasattr(self, 'rtc_widget'):
             if self.dewar == 'BlueForsDR1':
                 ls_372_samples_widget = getattr(self, 'ls_372_widget_{0}'.format(com_port))
-            self.rtc_widget = RTCollector(self.available_daq_settings, self.status_bar, self.screen_resolution, self.monitor_dpi, ls_372_temp_widget, ls_372_samples_widget)
+            self.rtc_widget = RTCollector(self.daq_settings, self.status_bar, self.screen_resolution, self.monitor_dpi, ls_372_temp_widget, ls_372_samples_widget)
         else:
-            self.available_daq_settings = self.configure_ni_daq_widget.cnd_update_daq()
+            self.daq_settings = self.configure_ni_daq_widget.cnd_update_daq()
             self.rtc_widget.rtc_update_samples()
-            self.rtc_widget.rtc_update_daq_settings(self.available_daq_settings)
+            self.rtc_widget.rtc_update_daq_settings(self.daq_settings)
         self.central_widget.layout().addWidget(self.rtc_widget, 0, 0, 1, 1)
         self.status_bar.showMessage('RT Curves')
         QtWidgets.QApplication.processEvents()
@@ -539,6 +492,24 @@ class BoloDAQGui(QtWidgets.QMainWindow, GuiBuilder):
         self.showNormal()
 
     #################################################
+    # NOISE ANALYZER 
+    #################################################
+
+    def bd_noise_analyzer(self):
+        '''
+        '''
+        self.gb_initialize_panel('central_widget')
+        if not hasattr(self, 'noise_analyzer_widget'):
+            self.noise_analzyer_widget = NoiseAnalyzer(self.daq_settings, self.status_bar, self.screen_resolution, self.monitor_dpi)
+        else:
+            self.daq_settings = self.configure_ni_daq_widget.cnd_update_daq()
+            self.noise_analzyer_widget.na_update_daq_settings(self.daq_settings)
+        self.central_widget.layout().addWidget(self.noise_analzyer_widget, 0, 0, 1, 1)
+        self.status_bar.showMessage('Noise Analyzer')
+        QtWidgets.QApplication.processEvents()
+        self.showNormal()
+
+    #################################################
     # COSMIC RAYS
     #################################################
 
@@ -547,10 +518,10 @@ class BoloDAQGui(QtWidgets.QMainWindow, GuiBuilder):
         '''
         self.gb_initialize_panel('central_widget')
         if not hasattr(self, 'cosmic_ray_widget'):
-            self.cosmic_ray_widget = CosmicRays(self.available_daq_settings, self.status_bar, self.screen_resolution, self.monitor_dpi)
+            self.cosmic_ray_widget = CosmicRays(self.daq_settings, self.status_bar, self.screen_resolution, self.monitor_dpi)
         else:
-            self.available_daq_settings = self.configure_ni_daq_widget.cnd_update_daq()
-            self.cosmic_ray_widget.cr_update_daq_settings(self.available_daq_settings)
+            self.daq_settings = self.configure_ni_daq_widget.cnd_update_daq()
+            self.cosmic_ray_widget.cr_update_daq_settings(self.daq_settings)
         self.central_widget.layout().addWidget(self.cosmic_ray_widget, 0, 0, 1, 1)
         self.status_bar.showMessage('Cosmic Ray Data')
         QtWidgets.QApplication.processEvents()
@@ -565,7 +536,7 @@ class BoloDAQGui(QtWidgets.QMainWindow, GuiBuilder):
         '''
         self.gb_initialize_panel('central_widget')
         if not hasattr(self, 'time_constant_widget'):
-            self.time_constant_widget = TimeConstant(self.available_daq_settings, self.status_bar, self.screen_resolution, self.monitor_dpi)
+            self.time_constant_widget = TimeConstant(self.daq_settings, self.status_bar, self.screen_resolution, self.monitor_dpi)
         self.central_widget.layout().addWidget(self.time_constant_widget, 0, 0, 1, 1)
         self.status_bar.showMessage('Bolometer Time Constant')
         QtWidgets.QApplication.processEvents()
@@ -611,7 +582,7 @@ class BoloDAQGui(QtWidgets.QMainWindow, GuiBuilder):
                 'com_port': sm_com_port
                 }
         if not hasattr(self, 'beam_mapper_widget'):
-            self.beam_mapper_widget = BeamMapper(self.available_daq_settings, self.status_bar, self.screen_resolution, self.monitor_dpi, self.csm_widget_dict, self.srs_sr830dsp_widget)
+            self.beam_mapper_widget = BeamMapper(self.daq_settings, self.status_bar, self.screen_resolution, self.monitor_dpi, self.csm_widget_dict, self.srs_sr830dsp_widget)
         self.bd_get_saved_daq_settings()
         self.beam_mapper_widget.bm_update_daq_settings(self.daq_settings)
         self.central_widget.layout().addWidget(self.beam_mapper_widget, 0, 0, 1, 1)
@@ -652,7 +623,7 @@ class BoloDAQGui(QtWidgets.QMainWindow, GuiBuilder):
         else:
             return None
         if not hasattr(self, 'polarization_efficiency_widget'):
-            self.polarization_efficiency_widget = PolarizationEfficiency(self.available_daq_settings, self.status_bar, self.screen_resolution, self.monitor_dpi, csm_widget, self.srs_sr830dsp_widget)
+            self.polarization_efficiency_widget = PolarizationEfficiency(self.daq_settings, self.status_bar, self.screen_resolution, self.monitor_dpi, csm_widget, self.srs_sr830dsp_widget)
         self.bd_get_saved_daq_settings()
         self.polarization_efficiency_widget.pe_update_daq_settings(self.daq_settings)
         self.central_widget.layout().addWidget(self.polarization_efficiency_widget, 0, 0, 1, 1)
@@ -693,11 +664,11 @@ class BoloDAQGui(QtWidgets.QMainWindow, GuiBuilder):
         else:
             return None
         if not hasattr(self, 'fts_widget'):
-            self.fts_widget = FourierTransformSpectrometer(self.available_daq_settings, self.status_bar, self.screen_resolution, self.monitor_dpi, csm_widget, self.srs_sr830dsp_widget)
+            self.fts_widget = FourierTransformSpectrometer(self.daq_settings, self.status_bar, self.screen_resolution, self.monitor_dpi, csm_widget, self.srs_sr830dsp_widget)
         else:
-            self.available_daq_settings = self.configure_ni_daq_widget.cnd_update_daq()
+            self.daq_settings = self.configure_ni_daq_widget.cnd_update_daq()
             self.rtc_widget.rtc_update_samples()
-            self.rtc_widget.rtc_update_daq_settings(self.available_daq_settings)
+            self.rtc_widget.rtc_update_daq_settings(self.daq_settings)
         self.central_widget.layout().addWidget(self.fts_widget, 0, 0, 1, 1)
         self.status_bar.showMessage('FTS')
         QtWidgets.QApplication.processEvents()

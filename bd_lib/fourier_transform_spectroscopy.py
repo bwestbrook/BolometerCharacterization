@@ -6,7 +6,7 @@ from pprint import pprint
 from copy import copy, deepcopy
 from scipy.signal import blackman, hanning
 
-class Fourier():
+class FourierTransformSpectroscopy():
     '''
     This is a custom class of python function used to conver interferogram data into Spectra for bolometers
     '''

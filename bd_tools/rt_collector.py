@@ -471,7 +471,6 @@ class RTCollector(QtWidgets.QWidget, GuiBuilder):
             self.y_data.append(y_mean)
             self.y_stds.append(y_std)
             self.rtc_plot_running()
-            print(self.x_data, self.y_data)
             if i % 25 == 0 and monitor:
                 mxc_temp = float(self.ls372_temp_widget.channels.ls372_get_channel_value(6, reading='kelvin')) * 1e3
                 heater_value = self.ls372_temp_widget.temp_control.ls372_get_heater_value()
@@ -674,7 +673,6 @@ class RTCollector(QtWidgets.QWidget, GuiBuilder):
             normal_res = float(normal_res)
         else:
             normal_res = np.nan
-        pprint(plot_params)
         title = '{0} R vs. T'.format(plot_params['sample_name'])
         label = '{0}-{1}'.format(plot_params['sample_name'], plot_params['sample_drift_direction'])
         data_clip_lo = float(plot_params['data_clip_lo'])

@@ -5,7 +5,7 @@ import numpy as np
 from datetime import datetime
 from pprint import pprint
 from bd_lib.bolo_daq import BoloDAQ
-from bd_lib.fourier import Fourier
+from bd_lib.fourier_transform_spectroscopy import FourierTransformSpectroscopy
 from PyQt5 import QtCore, QtGui, QtWidgets
 from GuiBuilder.gui_builder import GuiBuilder, GenericClass
 from bd_tools.configure_stepper_motor import ConfigureStepperMotor
@@ -35,7 +35,7 @@ class FourierTransformSpectrometer(QtWidgets.QWidget, GuiBuilder):
         self.today = datetime.now()
         self.today_str = datetime.strftime(self.today, '%Y_%m_%d')
         self.data_folder = os.path.join('Data', '{0}'.format(self.today_str))
-        self.fourier = Fourier()
+        self.fts = FourierTransfromSpectroscopy()
         self.start_pause = 5.0
         self.status_bar.showMessage('Ready')
         self.x_data = []
@@ -342,7 +342,7 @@ class FourierTransformSpectrometer(QtWidgets.QWidget, GuiBuilder):
                 for i, x_data in enumerate(self.x_data):
                     line = '{0:.5f}, {1:.5f}, {2:.5f}, {3:.5f}\n'.format(self.x_data[i], self.x_stds[i], self.y_data[i], self.y_stds[i])
                     save_handle.write(line)
-            fft_freq_vector, fft_vector, phase_corrected_fft_vector, position_vector, efficiency_vector = self.fourier.convert_IF_to_FFT_data(self.x_data, self.y_data, mirror_interval, data_selector='All')
+            fft_freq_vector, fft_vector, phase_corrected_fft_vector, position_vector, efficiency_vector = self.fts.convert_IF_to_FFT_data(self.x_data, self.y_data, mirror_interval, data_selector='All')
             normalized_phase_corrected_fft_vector = np.abs(phase_corrected_fft_vector.real)
             #normalized_phase_corrected_fft_vector = np.abs(phase_corrected_fft_vector.real / np.max(phase_corrected_fft_vector.real))
             with open(fft_save_path, 'w') as save_handle:
@@ -383,7 +383,7 @@ class FourierTransformSpectrometer(QtWidgets.QWidget, GuiBuilder):
             title += ': {0}'.format(self.sample_name_lineedit.text())
         ax1.set_title(title, fontsize=14)
         if len(self.x_data) > 10:
-            fft_freq_vector, fft_vector, phase_corrected_fft_vector, position_vector, efficiency_vector = self.fourier.convert_IF_to_FFT_data(self.x_data, self.y_data, mirror_interval, data_selector='All')
+            fft_freq_vector, fft_vector, phase_corrected_fft_vector, position_vector, efficiency_vector = self.fts.convert_IF_to_FFT_data(self.x_data, self.y_data, mirror_interval, data_selector='All')
             ax1.errorbar(self.x_data, self.y_data, yerr=self.y_stds, marker='.', linestyle='-')
             selector = np.where(fft_freq_vector > 0)
             normalized_phase_corrected_fft_vector = np.abs(phase_corrected_fft_vector.real)
@@ -410,7 +410,7 @@ class FourierTransformSpectrometer(QtWidgets.QWidget, GuiBuilder):
         ax.set_ylabel('Bolometer Response (Au)', fontsize=14)
         title = 'Spectra for {0}'.format(self.sample_name_lineedit.text())
         ax.set_title(title, fontsize=14)
-        fft_freq_vector, fft_vector, phase_corrected_fft_vector, position_vector, efficiency_vector = self.fourier.convert_IF_to_FFT_data(self.x_data, self.y_data, mirror_interval)
+        fft_freq_vector, fft_vector, phase_corrected_fft_vector, position_vector, efficiency_vector = self.fts.convert_IF_to_FFT_data(self.x_data, self.y_data, mirror_interval)
         selector = np.where(fft_freq_vector > 0)
         normalized_phase_corrected_fft_vector = np.abs(phase_corrected_fft_vector.real)
         normalized_phase_corrected_fft_vector = np.abs(phase_corrected_fft_vector.real / np.max(phase_corrected_fft_vector.real))

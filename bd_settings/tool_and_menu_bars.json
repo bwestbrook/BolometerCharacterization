@@ -57,8 +57,8 @@
             },
             "07_Time Constant": {
                 "Shortcut": "7",
-                "StatusTip": "Polarization Efficiency",
-                "ToolTip": "Pol Eff",
+                "StatusTip": "Time Constant",
+                "ToolTip": "Time Constant",
                 "function": "bd_time_constant",
                 "icon": "time_constant.png"
             },
@@ -68,6 +68,13 @@
                 "ToolTip": "Data Plotter",
                 "function": "bd_data_plotter",
                 "icon": "data.png"
+            },
+            "08_Noise_Analyzer": {
+                "Shortcut": "7",
+                "StatusTip": "Noise Analyzer",
+                "ToolTip": "Noise Analyzer",
+                "function": "bd_noise_analyzer",
+                "icon": "noise_analyzer.png"
             },
             "09_Fridge Cycle 576": {
                 "Shortcut": "9",
