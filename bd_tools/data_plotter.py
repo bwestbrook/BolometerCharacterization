@@ -303,7 +303,7 @@ class DataPlotter(QtWidgets.QWidget, GuiBuilder):
                 #return {}
         return data_dict
 
-    def dp_plot(self):
+    def dp_plot(self, clicked=True, sample_rate=5000.):
         '''
         '''
         x_label_1 = self.x_label_lineedit_1.text()
@@ -313,6 +313,7 @@ class DataPlotter(QtWidgets.QWidget, GuiBuilder):
         title = self.title_lineedit.text()
         fig, ax = self.db_create_blank_fig(frac_screen_width=0.5, frac_screen_height=0.5)
         data_dict = self.dp_get_and_check_data()
+        data_type = self.data_type_tab_bar.tabText(self.data_type_tab_bar.currentIndex())
         if len(data_dict) > 0:
             for data_row in self.loaded_file_data_rows:
                 if str(data_row) in self.include_in_plot_list:
@@ -334,12 +335,23 @@ class DataPlotter(QtWidgets.QWidget, GuiBuilder):
                     data_clip_hi = data_dict[data_row]['data_clip_hi']
                     lo_index = int(len(data_dict[data_row]['x_data']) * data_clip_lo)
                     hi_index = int(len(data_dict[data_row]['x_data']) * (1 - data_clip_hi))
-                    x_data = data_dict[data_row]['x_data'][lo_index:hi_index]
-                    xerr = data_dict[data_row]['xerr'][lo_index:hi_index]
-                    y_data = y_data[lo_index:hi_index]
-                    yerr = data_dict[data_row]['yerr'][lo_index:hi_index]
-                    label = data_dict[data_row]['label']
-                    ax.errorbar(x_data, y_data, xerr=xerr, yerr=yerr, marker='.', linestyle='-', lw=5, label=label)
+                    if data_type == 'Cosmic Rays':
+                        x_data = np.arange(len(data_dict[data_row]['x_data'][lo_index:hi_index]))
+                        x_data = x_data / sample_rate
+                        #import ipd#b;ipdb.set_trace()
+                        y1_data = data_dict[data_row]['x_data'][lo_index:hi_index]
+                        y2_data = data_dict[data_row]['y_data'][lo_index:hi_index]
+                        label = 'Sample 1'
+                        ax.errorbar(x_data, y1_data, marker='.', linestyle='-', lw=5, label=label)
+                        label = 'Sample 2'
+                        ax.errorbar(x_data, y2_data, marker='.', linestyle='-', lw=5, label=label)
+                    else:
+                        x_data = data_dict[data_row]['x_data'][lo_index:hi_index]
+                        xerr = data_dict[data_row]['xerr'][lo_index:hi_index]
+                        y_data = y_data[lo_index:hi_index]
+                        yerr = data_dict[data_row]['yerr'][lo_index:hi_index]
+                        label = data_dict[data_row]['label']
+                        ax.errorbar(x_data, y_data, xerr=xerr, yerr=yerr, marker='.', linestyle='-', lw=5, label=label)
             ax.set_xlabel(x_label_1, fontsize=16)
             ax.set_ylabel(y_label_1, fontsize=16)
             ax.set_title(title, fontsize=16)
