@@ -6,6 +6,7 @@ import glob
 #import serial
 import time
 import numpy as np
+from copy import copy
 from pprint import pprint
 from nidaqmx.constants import AcquisitionType, Edge, WAIT_INFINITELY
 
@@ -22,7 +23,6 @@ class BoloDAQ():
             data_dict = {}
             for signal_channel in signal_channels:
                 voltage_chan_str = '{0}/ai{1}'.format(device, signal_channel)
-                voltage_chan_str = 'cDAQ1Mod1/ai{0}'.format(signal_channel)
                 task.ai_channels.add_ai_voltage_chan(voltage_chan_str)
                 data_dict[signal_channel] = {}
             int_time = int(int_time)
@@ -59,13 +59,15 @@ class BoloDAQ():
         devices = [x.name for x in self.ni_system.devices]
         default_settings = {'sample_rate': 5000, 'int_time': 100}
         for device in devices:
-            for j in range(8):
+            for j in range(9):
                 if device in saved_daq_settings:
                     daq_settings[device] = saved_daq_settings[device]
                 elif device in daq_settings:
-                    daq_settings[device].update({str(j): default_settings})
+                    daq_settings[device].update({str(j): copy(default_settings)})
                 else:
-                    daq_settings[device] = default_settings
+                    daq_settings[device] = {'0': copy(default_settings)}
+        with open(daq_settings_path, 'w') as settings_handle:
+            simplejson.dump(daq_settings, settings_handle, indent=4, sort_keys=True)
         return daq_settings
 
 if __name__ == '__main__':

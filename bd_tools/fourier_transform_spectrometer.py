@@ -35,7 +35,7 @@ class FourierTransformSpectrometer(QtWidgets.QWidget, GuiBuilder):
         self.today = datetime.now()
         self.today_str = datetime.strftime(self.today, '%Y_%m_%d')
         self.data_folder = os.path.join('Data', '{0}'.format(self.today_str))
-        self.fts = FourierTransfromSpectroscopy()
+        self.fts = FourierTransformSpectroscopy()
         self.start_pause = 5.0
         self.status_bar.showMessage('Ready')
         self.x_data = []
