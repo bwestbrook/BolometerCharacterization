@@ -164,7 +164,7 @@ class BoloDAQGui(QtWidgets.QMainWindow, GuiBuilder):
         for device, configuration_dict in self.daq_settings.items():
             available = True
             for i in range(2):
-                for j in range(8):
+                for j in range(4):
                     self.splash_screen.showMessage("Configuring NIDAQ: Checking if {0}:::ch{1} is available ({2}/2)".format(device, j, i + 1))
                     QtWidgets.QApplication.processEvents()
                     try:
@@ -173,6 +173,7 @@ class BoloDAQGui(QtWidgets.QMainWindow, GuiBuilder):
                                                            sample_rate=1000,
                                                            device=device)
                     except nidaqmx.errors.DaqError:
+                        print("Configuring NIDAQ {0}:::ch{1} is not available".format(device, j))
                         self.splash_screen.showMessage("Configuring NIDAQ {0}:::ch{1} is not available".format(device, j))
                         QtWidgets.QApplication.processEvents()
                         available = False
@@ -181,6 +182,9 @@ class BoloDAQGui(QtWidgets.QMainWindow, GuiBuilder):
                 self.available_daq_settings[device] = configuration_dict
         n_devices = len(self.available_daq_settings)
         devices = list(self.available_daq_settings.keys())
+        print()
+        print(devices)
+        pprint(self.available_daq_settings)
         self.status_bar.showMessage('Found {0} available devices: {1}'.format(n_devices, devices))
 
     def bd_get_saved_daq_settings(self):

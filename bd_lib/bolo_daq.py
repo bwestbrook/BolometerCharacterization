@@ -20,6 +20,7 @@ class BoloDAQ():
             data_dict = {}
             for signal_channel in signal_channels:
                 voltage_chan_str = '{0}/ai{1}'.format(device, signal_channel)
+                voltage_chan_str = 'cDAQ1Mod1/ai{0}'.format(signal_channel)
                 task.ai_channels.add_ai_voltage_chan(voltage_chan_str)
                 data_dict[signal_channel] = {}
             int_time = int(int_time)
@@ -47,16 +48,15 @@ class BoloDAQ():
 
     def initialize_daqs(self):
         daq_settings = {}
-        with nidaqmx.Task() as task:
-            for i in range(16): # Typically no more than a few here
-                device = 'Dev{0}'.format(i)
-                try:
-                    task.ai_channels.add_ai_voltage_chan("{0}/ai0".format(device))
-                    daq_settings[device] = {}
-                    for j in range(16):
-                        daq_settings[device].update({str(j): {'sample_rate': 5000, 'int_time': 100}})
-                except nidaqmx.DaqError:
-                    pass
+        for i in range(4): # Typically no more than a few here
+            device = 'Dev{0}'.format(i)
+            #device = 'cDAQ1Mod1{0}'.format(i)
+            for j in range(8):
+                if device in daq_settings:
+                    daq_settings[device].update({str(j): {'sample_rate': 5000, 'int_time': 100}})
+                else:
+                    daq_settings[device] =  {str(j): {'sample_rate': 5000, 'int_time': 100}}
+        print(daq_settings)
         return daq_settings
 
 if __name__ == '__main__':

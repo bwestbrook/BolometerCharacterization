@@ -86,6 +86,10 @@ class ConfigureNIDAQ(QtWidgets.QWidget, GuiBuilder):
         self.layout().addWidget(channel_sample_rate_combobox, 4, index * 2 + 1, 1, 1)
         for i, sample_rate in enumerate([100, 500, 1000, 2000, 5000]):
             channel_sample_rate_combobox.addItem(str(sample_rate))
+            print(device)
+            print(device)
+            print(device)
+            print(device)
             saved_value = self.daq_settings[device][str(index)]['sample_rate']
             if str(saved_value) == str(sample_rate):
                 saved_index = i
@@ -136,12 +140,11 @@ class ConfigureNIDAQ(QtWidgets.QWidget, GuiBuilder):
                     device = self.daq_tab_bar.tabText(self.daq_tab_bar.currentIndex())
                     sample_rate = getattr(self, 'channel_{0}_sample_rate_combobox'.format(i)).currentText()
                     int_time = getattr(self, 'channel_{0}_int_time_combobox'.format(i)).currentText()
-                    vol_ts, vol_mean, vol_min, vol_max, vol_std = self.daq.get_data(signal_channel=i,
-                                                                                    int_time=int_time,
-                                                                                    sample_rate=sample_rate,
-                                                                                    device=device)
+                    voltage_dict = self.daq.get_data(signal_channels=[i], int_time=int_time,
+                                                     sample_rate=sample_rate,
+                                                     device=device)
                     info = '\nDevice: ' + str(device)
-                    info = '\n\nVol: ' + str(vol_mean)
+                    info = '\n\nVol: ' + str(voltage_dict[i]['mean'])
                     info += '\n\nSample Rate: ' + str(sample_rate)
                     info += '\n\nIntegration Time: ' + str(int_time)
                     getattr(self, 'channel_{0}_value_label'.format(i)).setText(info)

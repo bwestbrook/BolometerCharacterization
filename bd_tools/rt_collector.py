@@ -406,16 +406,6 @@ class RTCollector(QtWidgets.QWidget, GuiBuilder):
         '''
         sample_key = self.sample_name_combobox.currentText()
         sample_name = self.samples_settings[sample_key]
-        exc_mode = str(self.meta_data['Exc Mode'])
-        ramp_value = str(self.meta_data['Temp Ramp (K/min)'])
-        if exc_mode == 'current':
-            sample_name += '_Ramp_{0}'.format(ramp_value.replace('+', ''))
-            excitation = float(self.meta_data['Excitation (A)']) * 1e6
-            sample_name += '_{0:.2f}uA'.format(excitation).replace('.', '_').replace(' ', '_')
-        else:
-            sample_name += '_Ramp_{0}'.format(ramp_value.replace('+', ''))
-            excitation = float(self.meta_data['Excitation (V)']) * 1e6
-            sample_name += '_{0:.2f}uV'.format(excitation).replace('.', '_').replace(' ', '_')
         self.sample_name_lineedit.setText(sample_name)
 
     #########################################################
@@ -509,6 +499,7 @@ class RTCollector(QtWidgets.QWidget, GuiBuilder):
             pprint(self.meta_data)
             with open(save_path.replace('txt', 'json'), 'w') as json_handle:
                 simplejson.dump(self.meta_data, json_handle)
+            print(save_path)
             self.rtc_save(save_path)
             self.rtc_plot_xy(file_name=save_path.replace('txt', 'png'))
 
@@ -520,7 +511,17 @@ class RTCollector(QtWidgets.QWidget, GuiBuilder):
         '''
         '''
         for i in range(1, 1000):
-            file_name = 'RvT_{0}_Scan_{1}.txt'.format(self.sample_name_lineedit.text(), str(i).zfill(3))
+            exc_mode = str(self.meta_data['Exc Mode'])
+            ramp_value = str(self.meta_data['Temp Ramp (K/min)'])
+            ramp = '{0}'.format(ramp_value.replace('+', '')).replace('.', '_')
+            if exc_mode == 'current':
+                excitation = float(self.meta_data['Excitation (A)']) * 1e6
+                excitation = '{0:.2f}uA'.format(excitation).replace('.', '_').replace(' ', '_')
+            else:
+                excitation = float(self.meta_data['Excitation (V)']) * 1e6
+                excitation = '{0:.2f}uA'.format(excitation).replace('.', '_').replace(' ', '_')
+            sample_name = self.sample_name_lineedit.text().replace('-', '').replace(' ', '_').replace('__', '_')
+            file_name = 'RvT_{0}_Ramp_{1}_Exc_{2}_Scan_{3}.txt'.format(sample_name, ramp, excitation, str(i).zfill(3))
             save_path = os.path.join(self.data_folder, file_name)
             if not os.path.exists(save_path):
                 break
@@ -543,6 +544,7 @@ class RTCollector(QtWidgets.QWidget, GuiBuilder):
                 os.makedirs(good_data_folder)
             if response == QtWidgets.QMessageBox.Yes:
                 good_data_save_path = os.path.join(good_data_folder, os.path.basename(save_path))
+                self.rtc_plot_xy(file_name=good_data_save_path.replace('txt', 'png'))
                 shutil.copy(save_path, good_data_save_path)
         else:
             self.gb_quick_message('Warning Data Not Written to File!', msg_type='Warning')
