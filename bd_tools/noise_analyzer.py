@@ -52,54 +52,50 @@ class NoiseAnalyzer(QtWidgets.QWidget, GuiBuilder):
             self.daq_1_combobox.addItem(str(daq))
         self.daq_1_combobox.activated.connect(self.na_display_daq_settings)
         self.layout().addWidget(self.daq_1_combobox, 1, 1, 1, 1)
-        daq_1_header_label = QtWidgets.QLabel('DAQ Ch 1 Data:', self)
-        self.layout().addWidget(daq_1_header_label, 1, 2, 1, 1)
-        self.daq_2_combobox = QtWidgets.QComboBox(self)
-        for daq in range(0, 4):
-            self.daq_2_combobox.addItem(str(daq))
-        self.daq_2_combobox.setCurrentIndex(1)
-        self.daq_2_combobox.activated.connect(self.na_display_daq_settings)
-        self.layout().addWidget(self.daq_2_combobox, 1, 3, 1, 1)
         # Chan 1
         self.channel_1_settings_label = QtWidgets.QLabel('', self)
         self.layout().addWidget(self.channel_1_settings_label, 2, 0, 1, 2)
         # Chan 2
-        self.channel_2_settings_label = QtWidgets.QLabel('', self)
-        self.layout().addWidget(self.channel_2_settings_label, 2, 2, 1, 2)
         # Sample Name
         sample_name_header_label = QtWidgets.QLabel('Sample Name:', self)
         self.layout().addWidget(sample_name_header_label, 3, 0, 1, 1)
         self.sample_name_lineedit = QtWidgets.QLineEdit('', self)
         self.layout().addWidget(self.sample_name_lineedit, 3, 1, 1, 3)
+        #self.integration_time_lineedit = self.gb_make_labeled_lineedit(label_text='Int Time (s)')
+        #self.integration_time_lineedit.setValidator(QtGui.QDoubleValidator(0, 1200, 2, self.integration_time_lineedit))
+        #self.layout().addWidget(self.integration_time_lineedit, 4, 1, 1, 1)
+        self.noise_bin_low_edge_lineedit = self.gb_make_labeled_lineedit(label_text='Noise Bin Low Edge (Hz)')
+        self.noise_bin_low_edge_lineedit.setValidator(QtGui.QDoubleValidator(0, 1200, 2, self.noise_bin_low_edge_lineedit))
+        self.layout().addWidget(self.noise_bin_low_edge_lineedit, 4, 0, 1, 1)
+
+        self.noise_bin_high_edge_lineedit = self.gb_make_labeled_lineedit(label_text='Noise Bin High Edge (Hz)')
+        self.noise_bin_high_edge_lineedit.setValidator(QtGui.QDoubleValidator(0, 1200, 2, self.noise_bin_high_edge_lineedit))
+        self.layout().addWidget(self.noise_bin_high_edge_lineedit, 4, 1, 1, 1)
+
         # Plot and Data Panel
-        self.running_plot_label = QtWidgets.QLabel('', self)
-        self.layout().addWidget(self.running_plot_label, 4, 0, 1, 4)
+        self.running_ts_label = QtWidgets.QLabel('', self)
+        self.layout().addWidget(self.running_ts_label, 5, 0, 1, 4)
         mean_1_header_label = QtWidgets.QLabel('Mean Ch 1:', self)
-        self.layout().addWidget(mean_1_header_label, 5, 0, 1, 1)
+        self.layout().addWidget(mean_1_header_label, 6, 0, 1, 1)
         self.mean_1_label = QtWidgets.QLabel('', self)
-        self.layout().addWidget(self.mean_1_label, 5, 1, 1, 1)
+        self.layout().addWidget(self.mean_1_label, 6, 1, 1, 1)
         std_1_header_label = QtWidgets.QLabel('STD Ch 1:', self)
-        self.layout().addWidget(std_1_header_label, 5, 2, 1, 1)
+        self.layout().addWidget(std_1_header_label, 6, 2, 1, 1)
         self.std_1_label = QtWidgets.QLabel('', self)
-        self.layout().addWidget(self.std_1_label, 5, 3, 1, 1)
-        mean_2_header_label = QtWidgets.QLabel('Mean Ch 2:', self)
-        self.layout().addWidget(mean_2_header_label, 6, 0, 1, 1)
-        self.mean_2_label = QtWidgets.QLabel('', self)
-        self.layout().addWidget(self.mean_2_label, 6, 1, 1, 1)
-        std_2_header_label = QtWidgets.QLabel('STD Ch 2:', self)
-        self.layout().addWidget(std_2_header_label, 6, 2, 1, 1)
-        self.std_2_label = QtWidgets.QLabel('', self)
-        self.layout().addWidget(self.std_2_label, 6, 3, 1, 1)
+        self.layout().addWidget(self.std_1_label, 6, 3, 1, 1)
+
+        self.running_std_label = QtWidgets.QLabel('', self)
+        self.layout().addWidget(self.running_std_label, 7, 0, 1, 4)
+
         # Buttons
         start_pushbutton = QtWidgets.QPushButton('Start', self)
         start_pushbutton.clicked.connect(self.na_start_stop)
-        self.layout().addWidget(start_pushbutton, 7, 0, 1, 4)
+        self.layout().addWidget(start_pushbutton, 8, 0, 1, 4)
         save_pushbutton = QtWidgets.QPushButton('Save', self)
         save_pushbutton.clicked.connect(self.na_save)
-        self.layout().addWidget(save_pushbutton, 8, 0, 1, 4)
+        self.layout().addWidget(save_pushbutton, 9, 0, 1, 4)
         # Connect to functions after placing widgets
         self.daq_1_combobox.activated.connect(self.na_display_daq_settings)
-        self.daq_2_combobox.activated.connect(self.na_display_daq_settings)
         self.device_combobox.activated.connect(self.na_display_daq_settings)
 
     def na_display_daq_settings(self):
@@ -107,17 +103,14 @@ class NoiseAnalyzer(QtWidgets.QWidget, GuiBuilder):
         '''
         self.device = self.device_combobox.currentText()
         self.channel_1 = self.daq_1_combobox.currentIndex()
-        self.channel_2 = self.daq_2_combobox.currentIndex()
+        pprint(self.daq_settings)
+        print(self.device, self.channel_1)
+        print(self.device, self.channel_1)
         self.int_time_1 = self.daq_settings[self.device][str(self.channel_1)]['int_time']
-        self.int_time_2 = self.daq_settings[self.device][str(self.channel_1)]['int_time']
         self.sample_rate_1 = self.daq_settings[self.device][str(self.channel_1)]['sample_rate']
-        self.sample_rate_2 = self.daq_settings[self.device][str(self.channel_1)]['sample_rate']
         info_str_1 = 'Sample Rate (Hz): {0} :::: '.format(self.sample_rate_1)
         info_str_1 += 'Int Time (ms): {0}'.format(self.int_time_1)
-        info_str_2 = 'Sample Rate (Hz): {0} ::: '.format(self.sample_rate_2)
-        info_str_2 += 'Int Time (ms): {0}'.format(self.int_time_2)
         self.channel_1_settings_label.setText(info_str_1)
-        self.channel_2_settings_label.setText(info_str_2)
 
     ###########
     # Running
@@ -139,45 +132,28 @@ class NoiseAnalyzer(QtWidgets.QWidget, GuiBuilder):
         '''
         device = self.device_combobox.currentText()
         self.na_scan_file_name()
-        signal_channels = [self.channel_1, self.channel_2]
+        signal_channels = [self.channel_1]
         while self.started:
             self.data_1, self.stds_1 = [], []
-            self.data_2, self.stds_2 = [], []
             data_dict = self.daq.get_data(signal_channels=signal_channels,
                                           int_time=self.int_time_1,
                                           sample_rate=self.sample_rate_1,
                                           device=device)
-
             ts_1 = data_dict[self.channel_1]['ts']
             mean_1 = data_dict[self.channel_1]['mean']
             min_1 = data_dict[self.channel_1]['min']
             max_1 = data_dict[self.channel_1]['max']
             std_1 = data_dict[self.channel_1]['std']
-
-            ts_2 = data_dict[self.channel_2]['ts']
-            mean_2 = data_dict[self.channel_2]['mean']
-            min_2 = data_dict[self.channel_2]['min']
-            max_2 = data_dict[self.channel_2]['max']
-            std_2 = data_dict[self.channel_2]['std']
-
-
-
-
-
             self.mean_1_label.setText('{0:.5f}'.format(mean_1))
             self.std_1_label.setText('{0:.5f}'.format(std_1))
-            self.mean_2_label.setText('{0:.5f}'.format(mean_2))
-            self.std_2_label.setText('{0:.5f}'.format(std_2))
             self.data_1.extend(ts_1)
             self.stds_1.append(std_1)
-            self.data_2.extend(ts_2)
-            self.stds_2.append(std_2)
-            save_path = self.na_index_file_name()
-            self.na_plot(running=True, save_path=save_path)
-            with open(save_path, 'w') as save_handle:
-                for i, data_1 in enumerate(self.data_1):
-                    line = '{0:.5f}, {1:.5f}\n'.format(self.data_1[i], self.data_2[i])
-                    save_handle.write(line)
+            #save_path = self.na_index_file_name()
+            #self.na_plot(running=True, save_path=save_path)
+            #with open(save_path, 'w') as save_handle:
+                #for i, data_1 in enumerate(self.data_1):
+                    #line = '{0:.5f}, {1:.5f}\n'.format(self.data_1[i], self.data_2[i])
+                    #save_handle.write(line)
             QtWidgets.QApplication.processEvents()
             self.repaint()
 
@@ -220,10 +196,7 @@ class NoiseAnalyzer(QtWidgets.QWidget, GuiBuilder):
         '''
         fig, ax1, ax2 = self.na_create_blank_fig(frac_screen_width=0.75, frac_screen_height=0.5,
                                                  left=0.12, right=0.98, top=0.9, bottom=0.13, aspect=None)
-        #ax1.errorbar(range(len(self.data_1)), self.data_1, yerr=self.stds_1, marker='.', linestyle='-')
-        #ax2.errorbar(range(len(self.data_2)), self.data_2, yerr=self.stds_2, marker='.', linestyle='-')
         ax1.plot(self.data_1)
-        ax2.plot(self.data_2)
         if running:
             temp_png_path = os.path.join('temp_files', 'temp_cr.png')
             fig.savefig(temp_png_path)

@@ -69,7 +69,7 @@
                 "function": "bd_data_plotter",
                 "icon": "data.png"
             },
-            "08_Noise_Analyzer": {
+            "08_Noise Analyzer": {
                 "Shortcut": "7",
                 "StatusTip": "Noise Analyzer",
                 "ToolTip": "Noise Analyzer",

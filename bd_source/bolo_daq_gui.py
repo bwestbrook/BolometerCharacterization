@@ -413,7 +413,7 @@ class BoloDAQGui(QtWidgets.QMainWindow, GuiBuilder):
         if not hasattr(self, 'ivc_widget'):
             self.ivc_widget = IVCollector(self.daq_settings, self.status_bar, self.screen_resolution, self.monitor_dpi)
         else:
-            self.daq_settings = self.configure_ni_daq_widget.cnd_update_daq()
+            self.daq_settings = self.bolo_daq.initialize_daqs()
             self.ivc_widget.ivc_update_samples()
             self.ivc_widget.ivc_update_daq_settings(self.daq_settings)
         self.central_widget.layout().addWidget(self.ivc_widget, 0, 0, 1, 1)
@@ -459,7 +459,7 @@ class BoloDAQGui(QtWidgets.QMainWindow, GuiBuilder):
                 ls_372_samples_widget = getattr(self, 'ls_372_widget_{0}'.format(com_port))
             self.rtc_widget = RTCollector(self.daq_settings, self.status_bar, self.screen_resolution, self.monitor_dpi, ls_372_temp_widget, ls_372_samples_widget)
         else:
-            self.daq_settings = self.configure_ni_daq_widget.cnd_update_daq()
+            self.daq_settings = self.bolo_daq.initialize_daqs()
             self.rtc_widget.rtc_update_samples()
             self.rtc_widget.rtc_update_daq_settings(self.daq_settings)
         self.central_widget.layout().addWidget(self.rtc_widget, 0, 0, 1, 1)
@@ -502,7 +502,7 @@ class BoloDAQGui(QtWidgets.QMainWindow, GuiBuilder):
         if not hasattr(self, 'noise_analyzer_widget'):
             self.noise_analzyer_widget = NoiseAnalyzer(self.daq_settings, self.status_bar, self.screen_resolution, self.monitor_dpi)
         else:
-            self.daq_settings = self.configure_ni_daq_widget.cnd_update_daq()
+            self.daq_settings = self.bolo_daq.initialize_daqs()
             self.noise_analzyer_widget.na_update_daq_settings(self.daq_settings)
         self.central_widget.layout().addWidget(self.noise_analzyer_widget, 0, 0, 1, 1)
         self.status_bar.showMessage('Noise Analyzer')
@@ -520,7 +520,7 @@ class BoloDAQGui(QtWidgets.QMainWindow, GuiBuilder):
         if not hasattr(self, 'cosmic_ray_widget'):
             self.cosmic_ray_widget = CosmicRays(self.daq_settings, self.status_bar, self.screen_resolution, self.monitor_dpi)
         else:
-            self.daq_settings = self.configure_ni_daq_widget.cnd_update_daq()
+            self.daq_settings = self.bolo_daq.initialize_daqs()
             self.cosmic_ray_widget.cr_update_daq_settings(self.daq_settings)
         self.central_widget.layout().addWidget(self.cosmic_ray_widget, 0, 0, 1, 1)
         self.status_bar.showMessage('Cosmic Ray Data')
@@ -666,7 +666,7 @@ class BoloDAQGui(QtWidgets.QMainWindow, GuiBuilder):
         if not hasattr(self, 'fts_widget'):
             self.fts_widget = FourierTransformSpectrometer(self.daq_settings, self.status_bar, self.screen_resolution, self.monitor_dpi, csm_widget, self.srs_sr830dsp_widget)
         else:
-            self.daq_settings = self.configure_ni_daq_widget.cnd_update_daq()
+            self.daq_settings = self.bolo_daq.initialize_daqs()
             self.rtc_widget.rtc_update_samples()
             self.rtc_widget.rtc_update_daq_settings(self.daq_settings)
         self.central_widget.layout().addWidget(self.fts_widget, 0, 0, 1, 1)

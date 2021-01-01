@@ -52,8 +52,8 @@ class CosmicRays(QtWidgets.QWidget, GuiBuilder):
             self.daq_1_combobox.addItem(str(daq))
         self.daq_1_combobox.activated.connect(self.cr_display_daq_settings)
         self.layout().addWidget(self.daq_1_combobox, 1, 1, 1, 1)
-        daq_1_header_label = QtWidgets.QLabel('DAQ Ch 1 Data:', self)
-        self.layout().addWidget(daq_1_header_label, 1, 2, 1, 1)
+        daq_2_header_label = QtWidgets.QLabel('DAQ Ch 2 Data:', self)
+        self.layout().addWidget(daq_2_header_label, 1, 2, 1, 1)
         self.daq_2_combobox = QtWidgets.QComboBox(self)
         for daq in range(0, 4):
             self.daq_2_combobox.addItem(str(daq))
