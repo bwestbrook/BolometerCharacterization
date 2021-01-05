@@ -135,8 +135,15 @@ class BoloDAQGui(QtWidgets.QMainWindow, GuiBuilder):
         '''
         '''
         custom_widgets = []
+        q_progress_bar = QtWidgets.QProgressBar(self)
+        q_progress_bar.setValue(0)
+        q_progress_bar.setAlignment(QtCore.Qt.AlignBottom)
+        q_progress_bar.setFixedWidth(150)
+        custom_widgets.append(q_progress_bar)
+        self.progress_bar = q_progress_bar
         permanant_messages = ['BoloDAQ Benjamin Grey Westbrook 2020']
         self.gb_add_status_bar(permanant_messages=permanant_messages , add_saved=True, custom_widgets=custom_widgets)
+        self.status_bar.progress_bar = self.progress_bar
 
     def bd_close_main(self):
         '''
@@ -684,4 +691,3 @@ if __name__ == '__main__':
     gui = BoloDAQGui(screen_resolution, qt_app)
     gui.show()
     exit(qt_app.exec_())
-

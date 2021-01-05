@@ -85,7 +85,7 @@ class ConfigureNIDAQ(QtWidgets.QWidget, GuiBuilder):
         channel_sample_rate_combobox = QtWidgets.QComboBox(self)
         setattr(self, 'channel_{0}_sample_rate_combobox'.format(index), channel_sample_rate_combobox)
         self.layout().addWidget(channel_sample_rate_combobox, 4, index * 2 + 1, 1, 1)
-        for i, sample_rate in enumerate([100, 500, 1000, 2000, 5000]):
+        for i, sample_rate in enumerate([100, 500, 1000, 2000, 5000, 10000, 25000, 50000]):
             channel_sample_rate_combobox.addItem(str(sample_rate))
             saved_value = self.daq_settings[device][str(index)]['sample_rate']
             if str(saved_value) == str(sample_rate):
