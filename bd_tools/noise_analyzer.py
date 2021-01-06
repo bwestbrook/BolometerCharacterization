@@ -126,10 +126,12 @@ class NoiseAnalyzer(QtWidgets.QWidget, GuiBuilder):
         self.na_scan_file_name()
         signal_channels = [self.channel]
         self.data, self.stds = [], []
-        self.data_dict = self.daq.get_data(signal_channels=signal_channels,
-                                           int_time=self.int_time,
-                                           sample_rate=self.sample_rate,
-                                           device=device)
+        q_process = QtCore.QProcess()
+        self.data_dict =
+        q_process.start(self.daq.get_data(signal_channels=signal_channels,
+                                          int_time=self.int_time,
+                                          sample_rate=self.sample_rate,
+                                          device=device)
         self.ts = self.data_dict[self.channel]['ts']
         mean = self.data_dict[self.channel]['mean']
         std = self.data_dict[self.channel]['std']
