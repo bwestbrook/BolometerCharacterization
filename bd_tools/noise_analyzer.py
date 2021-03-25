@@ -1,13 +1,17 @@
 import time
+import shutil
+import scipy
 import os
 import simplejson
 import pylab as pl
 import numpy as np
+import pickle as pkl
 from copy import copy
 from datetime import datetime
 from pprint import pprint
 from bd_lib.bolo_daq import BoloDAQ
-from PyQt5 import QtCore, QtGui, QtWidgets
+from PyQt5 import QtGui, QtWidgets
+from PyQt5.QtCore import *
 from bd_lib.fast_fourier_transform import FastFourierTransform
 from GuiBuilder.gui_builder import GuiBuilder, GenericClass
 
@@ -21,7 +25,6 @@ class NoiseAnalyzer(QtWidgets.QWidget, GuiBuilder):
         self.daq_settings = daq_settings
         self.screen_resolution = screen_resolution
         self.monitor_dpi = monitor_dpi
-        self.daq = BoloDAQ()
         grid = QtWidgets.QGridLayout()
         self.setLayout(grid)
         self.today = datetime.now()
@@ -30,6 +33,10 @@ class NoiseAnalyzer(QtWidgets.QWidget, GuiBuilder):
         self.na_daq_panel()
         self.na_display_daq_settings()
         self.fft = FastFourierTransform()
+        self.qthreadpool = QThreadPool()
+        self.timer = QTimer()
+        self.timer.setInterval(100)
+        self.timer.timeout.connect(self.na_update_progress)
 
     def na_update_daq_settings(self, daq_settings):
         '''
@@ -45,6 +52,7 @@ class NoiseAnalyzer(QtWidgets.QWidget, GuiBuilder):
         self.device_combobox = QtWidgets.QComboBox(self)
         for device in self.daq_settings:
             self.device_combobox.addItem(device)
+        self.device_combobox.setCurrentIndex(1)
         self.device_combobox.activated.connect(self.na_display_daq_settings)
         self.layout().addWidget(self.device_combobox, 0, 1, 1, 1)
         daq_header_label = QtWidgets.QLabel('DAQ Ch 1 Data:', self)
@@ -70,34 +78,35 @@ class NoiseAnalyzer(QtWidgets.QWidget, GuiBuilder):
         self.noise_bin_high_edge_lineedit.setValidator(QtGui.QDoubleValidator(0, 1200, 2, self.noise_bin_high_edge_lineedit))
         self.layout().addWidget(self.noise_bin_high_edge_lineedit, 4, 1, 1, 1)
         self.plot_clip_low_lineedit = self.gb_make_labeled_lineedit(label_text='Plot Clip Low (Hz)')
-        self.plot_clip_low_lineedit.setText('0.00001')
+        self.plot_clip_low_lineedit.setText('0.01')
         self.plot_clip_low_lineedit.setValidator(QtGui.QDoubleValidator(0, 1e6, 2, self.plot_clip_low_lineedit))
         self.layout().addWidget(self.plot_clip_low_lineedit, 5, 0, 1, 1)
         self.plot_clip_high_lineedit = self.gb_make_labeled_lineedit(label_text='Plot Clip High (Hz)')
         self.plot_clip_high_lineedit.setValidator(QtGui.QDoubleValidator(0, 1e6, 2, self.plot_clip_high_lineedit))
         self.layout().addWidget(self.plot_clip_high_lineedit, 5, 1, 1, 1)
         # Plot and Data Panel
+        #self.mean_label = QtWidgets.QLabel('', self)
+        #self.std_label = QtWidgets.QLabel('', self)
+        #mean_header_label = QtWidgets.QLabel('Mean Ch 1:', self)
+        #self.layout().addWidget(mean_header_label, 7, 0, 1, 1)
+        #std_header_label = QtWidgets.QLabel('STD Ch 1:', self)
+        #self.layout().addWidget(std_header_label, 7, 2, 1, 1)
         self.ts_label = QtWidgets.QLabel('', self)
-        self.layout().addWidget(self.ts_label, 6, 0, 1, 4)
-        mean_header_label = QtWidgets.QLabel('Mean Ch 1:', self)
-        self.layout().addWidget(mean_header_label, 7, 0, 1, 1)
-        self.mean_label = QtWidgets.QLabel('', self)
-        self.layout().addWidget(self.mean_label, 7, 1, 1, 1)
-        std_header_label = QtWidgets.QLabel('STD Ch 1:', self)
-        self.layout().addWidget(std_header_label, 7, 2, 1, 1)
-        self.std_label = QtWidgets.QLabel('', self)
-        self.layout().addWidget(self.std_label, 7, 3, 1, 1)
+        self.layout().addWidget(self.ts_label, 6, 0, 1, 1)
         self.fft_label = QtWidgets.QLabel('', self)
-        self.layout().addWidget(self.fft_label, 8, 0, 1, 4)
+        self.layout().addWidget(self.fft_label, 6, 1, 1, 1)
         self.in_band_noise_label = QtWidgets.QLabel('In Band Noise (pA/sqrt(Hz)): np.nan', self)
-        self.layout().addWidget(self.in_band_noise_label, 9, 0, 1, 1)
+        self.layout().addWidget(self.in_band_noise_label, 7, 1, 1, 1)
         # Buttons
         start_pushbutton = QtWidgets.QPushButton('Start', self)
         start_pushbutton.clicked.connect(self.na_collector)
         self.layout().addWidget(start_pushbutton, 10, 0, 1, 4)
+        plot_pushbutton = QtWidgets.QPushButton('Plot', self)
+        plot_pushbutton.clicked.connect(self.na_plot)
+        self.layout().addWidget(plot_pushbutton, 11, 0, 1, 4)
         save_pushbutton = QtWidgets.QPushButton('Save', self)
         save_pushbutton.clicked.connect(self.na_save)
-        self.layout().addWidget(save_pushbutton, 11, 0, 1, 4)
+        self.layout().addWidget(save_pushbutton, 12, 0, 1, 4)
         # Connect to functions after placing widgets
         self.daq_combobox.activated.connect(self.na_display_daq_settings)
         self.device_combobox.activated.connect(self.na_display_daq_settings)
@@ -122,26 +131,38 @@ class NoiseAnalyzer(QtWidgets.QWidget, GuiBuilder):
     def na_collector(self):
         '''
         '''
+        self.na_display_daq_settings()
         device = self.device_combobox.currentText()
         self.na_scan_file_name()
         signal_channels = [self.channel]
-        self.data, self.stds = [], []
-        q_process = QtCore.QProcess()
-        self.data_dict =
-        q_process.start(self.daq.get_data(signal_channels=signal_channels,
-                                          int_time=self.int_time,
-                                          sample_rate=self.sample_rate,
-                                          device=device)
-        self.ts = self.data_dict[self.channel]['ts']
-        mean = self.data_dict[self.channel]['mean']
-        std = self.data_dict[self.channel]['std']
-        self.mean_label.setText('{0:.5f}'.format(mean))
-        self.std_label.setText('{0:.5f}'.format(std))
         self.int_time = self.daq_settings[self.device][str(self.channel)]['int_time']
         self.sample_rate = self.daq_settings[self.device][str(self.channel)]['sample_rate']
-        QtWidgets.QApplication.processEvents()
-        self.repaint()
+        self.data, self.stds = [], []
+        daq = BoloDAQ(signal_channels=signal_channels,
+                      int_time=self.int_time,
+                      sample_rate=self.sample_rate,
+                      device=device)
+        self.data_dict = daq.run()
+        #self.qthreadpool.start(daq.run)
+        self.seconds_count = 0
+        n_seconds = float(self.int_time) / 1000.0 + 0.5
+        #self.na_update_progress(n_seconds)
+        #with open('temp.pkl', 'rb') as fh:
+            #data_dict = pkl.load(fh)
+        #self.data_dict = pkl.loads(data_dict)
+        self.ts = self.data_dict[self.channel]['ts']
+        print('ha')
         self.na_plot()
+        self.status_bar.progress_bar.setValue(100)
+
+    def na_update_progress(self, n_seconds, update_interval=0.1):
+        '''
+        '''
+        pct_range = 100. * np.arange(0, float(n_seconds), update_interval) / float(n_seconds)
+        for pct in pct_range:
+            self.status_bar.progress_bar.setValue(pct)
+            time.sleep(update_interval)
+            QtWidgets.QApplication.processEvents()
 
     def na_scan_file_name(self):
         '''
@@ -169,19 +190,44 @@ class NoiseAnalyzer(QtWidgets.QWidget, GuiBuilder):
         save_path = self.na_index_file_name()
         save_path = QtWidgets.QFileDialog.getSaveFileName(self, 'Data Save Location', save_path, filter=',*.txt,*.dat')[0]
         if len(save_path) > 0:
+            self.na_plot()
             with open(save_path, 'w') as save_handle:
-                for i, data in enumerate(self.data):
-                    line = '{0:.5f}, {1:.5f}\n'.format(self.data[i], self.data_2[i])
+                for i, data in enumerate(self.ts):
+                    line = '{0:.5f}\n'.format(data)
                     save_handle.write(line)
+            if 'txt' in save_path:
+                psd_save_path = save_path.replace('.txt', '_psd.txt')
+            else:
+                psd_save_path = save_path.replace('.dat', '_psd.dat')
+            with open(psd_save_path, 'w') as save_handle:
+                for i, freq in enumerate(self.fft_freq_vector):
+                    psd = self.fft_psd_vector[i]
+                    line = '{0:.5f}, {1:.16f}\n'.format(freq, psd)
+                    save_handle.write(line)
+            if 'txt' in save_path:
+                fft_png_path = save_path.replace('.txt', '_fft.png')
+                ts_png_path = save_path.replace('.txt', '_ts.png')
+            else:
+                fft_png_path = save_path.replace('.dat', '_fft.png')
+                ts_png_path = save_path.replace('.dat', '_ts.png')
+
+
+
+            new_fft_png_path = os.path.join(os.path.dirname(fft_png_path), os.path.basename(fft_png_path))
+            new_ts_png_path = os.path.join(os.path.dirname(ts_png_path), os.path.basename(ts_png_path))
+
+            shutil.copy.savefig(fft_png_path, new_fft_png_path)
+            shutil.copy.savefig(fft_ts_path, new_ts_png_path)
+            save_path.replace('.dat', '_fft.png')
+            ts_fig.savefig(save_path.replace('.dat', '_ts.png'))
         else:
             self.gb_quick_message('Warning Data Not Written to File!', msg_type='Warning')
-        self.na_plot()
 
     def na_plot(self, save_path=None):
         '''
         '''
-        ts_fig, ts_ax = self.na_create_blank_fig(frac_screen_width=0.95, frac_screen_height=0.3,
-                                                 left=0.08, right=0.98, top=0.9, bottom=0.13, aspect=None)
+        ts_fig, ts_ax = self.na_create_blank_fig(frac_screen_width=0.5, frac_screen_height=0.5,
+                                                 left=0.14, right=0.98, top=0.9, bottom=0.13, aspect=None)
         ts_ax.set_xlabel('Sample', fontsize=16)
         ts_ax.set_ylabel('Voltage', fontsize=16)
         mean_subtracted_ts = self.ts - np.mean(self.ts)
@@ -190,27 +236,56 @@ class NoiseAnalyzer(QtWidgets.QWidget, GuiBuilder):
         ts_fig.savefig(temp_png_path)
         image_to_display = QtGui.QPixmap(temp_png_path)
         self.ts_label.setPixmap(image_to_display)
-        fft_fig, fft_ax = self.na_create_blank_fig(frac_screen_width=0.95, frac_screen_height=0.3,
-                                                   left=0.08, right=0.98, top=0.9, bottom=0.13, aspect=None)
+        fft_fig, fft_ax = self.na_create_blank_fig(frac_screen_width=0.5, frac_screen_height=0.5,
+                                                   left=0.12, right=0.98, top=0.9, bottom=0.13, aspect=None)
         fft_ax.set_xlabel('Frequency ($Hz$)', fontsize=16)
         fft_ax.set_ylabel('PSD ($pA / \sqrt{Hz}$)', fontsize=16)
         bin_low_edge = float(self.noise_bin_low_edge_lineedit.text())
         bin_high_edge = float(self.noise_bin_high_edge_lineedit.text())
         plot_clip_low = float(self.plot_clip_low_lineedit.text())
         plot_clip_high = float(self.plot_clip_high_lineedit.text())
-
         fft_ax.axvline(bin_low_edge, color='k')
         fft_ax.axvline(bin_high_edge, color='k')
         fft_ax.axvspan(bin_low_edge, bin_high_edge, alpha=0.33, color='c')
-        resolution = 1.0 / (0.5 * float(self.sample_rate)) # Nyquist Sampling
-        fft_freq_vector, fft_vector, fft_psd_vector = self.fft.fast_fourier_transform(self.ts, resolution)
+
+        nperseg = int(float(len(self.ts)) / 10.)
+        fft_freq_vector, fft_psd_vector = scipy.signal.welch(self.ts, fs=float(self.sample_rate), nperseg=nperseg)
+
+        ##############################################
+        ##############################################
+        ##############################################
+        ##############################################
+        print('sample rate')
+        print(float(self.sample_rate)) # in Hz
+        max_frequnecy = 0.5 * float(self.sample_rate)
+        print('max freq')
+        print(max_frequnecy)
+        print('int time')
+        int_time = float(self.int_time) * 1e-3 # in s
+        print(int_time)
+        #import ipdb;ipdb.set_trace()
+        interval_length = 0.5 * int_time
+        min_frequnecy = 1 / interval_length
+        print('min freq')
+        print(min_frequnecy)
+        print('psd freq, min, max')
+        print(min(fft_freq_vector[1:]), max(fft_freq_vector))
+        print('len psd, nperseg')
+        print(len(fft_freq_vector), nperseg)
+        ##############################################
+        ##############################################
+        ##############################################
+        ##############################################
+
         selector = np.where(fft_freq_vector > 0.0)
         mean_selector = np.where(np.logical_and(fft_freq_vector > bin_low_edge, fft_freq_vector < bin_high_edge))
         in_band_noise = np.mean(fft_psd_vector[mean_selector])
         label = 'In Band Noise (pA/sqrt(Hz)): {0:.3f}'.format(in_band_noise)
         noise_vector = np.asarray([in_band_noise] * len(fft_psd_vector))
-        fft_ax.plot(fft_freq_vector[mean_selector], noise_vector[mean_selector], color='r', label=label)
+        #fft_ax.plot(fft_freq_vector[mean_selector], noise_vector[mean_selector], color='r', label=label)
         self.in_band_noise_label.setText(label)
+        print(fft_freq_vector, fft_psd_vector)
+        print(fft_freq_vector[selector], fft_psd_vector[selector])
         fft_ax.loglog(fft_freq_vector[selector], fft_psd_vector[selector])
         fft_ax.set_xlim((plot_clip_low, plot_clip_high))
         pl.legend()
@@ -218,9 +293,21 @@ class NoiseAnalyzer(QtWidgets.QWidget, GuiBuilder):
         fft_fig.savefig(temp_png_path)
         image_to_display = QtGui.QPixmap(temp_png_path)
         self.fft_label.setPixmap(image_to_display)
-        if save_path is not None:
-            fig.savefig(save_path.replace('txt', 'png'))
+        if save_path is not None and save_path:
+            if 'txt' in save_path:
+                fft_fig_path = save_path.replace('.txt', '_fft.png')
+                ts_fig_path = save_path.replace('.txt', '_ts.png')
+            else:
+                fft_fig_path = save_path.replace('.dat', '_fft.png')
+                ts_fig_path = save_path.replace('.dat', '_ts.png')
+            print(fft_fig_path)
+            print(ts_fig_path)
+            print(fft_fig_path)
         pl.close('all')
+        self.fft_label.resize(self.fft_label.maximumSize())
+        self.ts_label.resize(self.ts_label.maximumSize())
+        self.fft_freq_vector = fft_freq_vector
+        self.fft_psd_vector = fft_psd_vector
 
     def na_create_blank_fig(self, frac_screen_width=0.5, frac_screen_height=0.8,
                              left=0.13, right=0.98, top=0.95, bottom=0.08, n_axes=1,

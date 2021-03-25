@@ -314,6 +314,7 @@ class DataPlotter(QtWidgets.QWidget, GuiBuilder):
         fig, ax = self.db_create_blank_fig(frac_screen_width=0.5, frac_screen_height=0.5)
         data_dict = self.dp_get_and_check_data()
         data_type = self.data_type_tab_bar.tabText(self.data_type_tab_bar.currentIndex())
+        pprint(data_dict)
         if len(data_dict) > 0:
             for data_row in self.loaded_file_data_rows:
                 if str(data_row) in self.include_in_plot_list:
@@ -347,17 +348,24 @@ class DataPlotter(QtWidgets.QWidget, GuiBuilder):
                         ax.errorbar(x_data, y2_data, marker='.', linestyle='-', lw=5, label=label)
                     else:
                         x_data = data_dict[data_row]['x_data'][lo_index:hi_index]
-                        xerr = data_dict[data_row]['xerr'][lo_index:hi_index]
+                        if data_dict[data_row]['xerr'] is None:
+                            xerr = None
+                        else:
+                            xerr = data_dict[data_row]['xerr'][lo_index:hi_index]
                         y_data = y_data[lo_index:hi_index]
-                        yerr = data_dict[data_row]['yerr'][lo_index:hi_index]
+                        if data_dict[data_row]['yerr'] is None:
+                            yerr = None
+                        else:
+                            yerr = data_dict[data_row]['yerr'][lo_index:hi_index]
                         label = data_dict[data_row]['label']
                         ax.errorbar(x_data, y_data, xerr=xerr, yerr=yerr, marker='.', linestyle='-', lw=5, label=label)
             ax.set_xlabel(x_label_1, fontsize=16)
             ax.set_ylabel(y_label_1, fontsize=16)
             ax.set_title(title, fontsize=16)
             pl.legend(fontsize=16, loc='best')
-        pl.show()
+        fig.save('temp.png')
         pl.close()
+
 
     def db_create_blank_fig(self, frac_screen_width=0.5, frac_screen_height=0.25,
                              left=0.07, right=0.98, top=0.95, bottom=0.12, multiple_axes=False,

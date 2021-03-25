@@ -96,7 +96,7 @@ class ConfigureNIDAQ(QtWidgets.QWidget, GuiBuilder):
         self.layout().addWidget(channel_sample_rate_header_label, 5, index * 2, 1, 1)
         channel_int_time_combobox = QtWidgets.QComboBox(self)
         setattr(self, 'channel_{0}_int_time_combobox'.format(index), channel_int_time_combobox)
-        for i, int_time in enumerate([100, 200, 300, 400, 500, 1000, 1500, 2000, 2500, 3000, 5000, 10000, 30000, 60000, 300000, 600000]):
+        for i, int_time in enumerate([10, 50,100, 200, 300, 400, 500, 1000, 1500, 2000, 2500, 3000, 5000, 10000, 30000, 60000, 300000, 600000]):
             channel_int_time_combobox.addItem(str(int_time))
             saved_value = self.daq_settings[device][str(index)]['int_time']
             if str(saved_value) == str(int_time):
@@ -108,7 +108,6 @@ class ConfigureNIDAQ(QtWidgets.QWidget, GuiBuilder):
         '''
         '''
         device = self.daq_tab_bar.tabText(self.daq_tab_bar.currentIndex())
-        pprint(self.daq_settings)
         for i in range(self.n_channels):
             sample_rate = getattr(self, 'channel_{0}_sample_rate_combobox'.format(i)).currentText()
             int_time = getattr(self, 'channel_{0}_int_time_combobox'.format(i)).currentText()
@@ -116,7 +115,6 @@ class ConfigureNIDAQ(QtWidgets.QWidget, GuiBuilder):
                 'sample_rate' : sample_rate,
                 'int_time' : int_time,
                 }
-        pprint(self.daq_settings)
         with open(os.path.join('bd_settings', 'daq_settings.json'), 'w') as json_handle:
             simplejson.dump(self.daq_settings, json_handle, indent=4, sort_keys=True)
         self.cnd_update_daq()

@@ -6,20 +6,34 @@ import glob
 #import serial
 import time
 import numpy as np
+import pickle as pkl
 from copy import copy
 from pprint import pprint
 from nidaqmx.constants import AcquisitionType, Edge, WAIT_INFINITELY
+from PyQt5.QtCore import *
 
-class BoloDAQ():
+class BoloDAQ(QRunnable):
 
-    def __init__(self):
+    def __init__(self, signal_channels=[3,], int_time=50, sample_rate=500, device='Dev1'):
+        super(BoloDAQ, self).__init__()
         self.ni_system = nidaqmx.system.System()
         self.active_daqs = self.initialize_daqs()
+        self.signal_channels = signal_channels
+        self.int_time = int_time
+        self.sample_rate = sample_rate
+        self.device = device
 
-    def get_data(self, signal_channels=[3,], int_time=50, sample_rate=500, device=None):
+    @pyqtSlot()
+    def run(self, signal_channels=None, int_time=None, sample_rate=None, device=None):
+        if signal_channels is None:
+            signal_channels = self.signal_channels
+        if int_time is None:
+            int_time = self.int_time
+        if sample_rate is None:
+            sample_rate = self.sample_rate
+        if device is None:
+            device = self.device
         with nidaqmx.Task() as task:
-            if device is None:
-                device = self.active_daqs[0]
             data_dict = {}
             for signal_channel in signal_channels:
                 voltage_chan_str = '{0}/ai{1}'.format(device, signal_channel)
@@ -46,6 +60,9 @@ class BoloDAQ():
             data_dict[signal_channel].update({'max': max_})
             std_ = np.std(data_time_stream)
             data_dict[signal_channel].update({'std': std_})
+        #pkl_data_dict = pkl.dumps(data_dict)
+        #with open('temp.pkl', 'wb') as fh:
+            #pkl.dump(pkl_data_dict, fh)
         return data_dict
 
     def initialize_daqs(self):

@@ -98,7 +98,7 @@ class BoloDAQGui(QtWidgets.QMainWindow, GuiBuilder):
         self.monitor_dpi = 120.0
         self.today = datetime.now()
         self.today_str = datetime.strftime(self.today, '%Y_%m_%d')
-        self.data_folder = './Data/{0}'.format(self.today_str)
+        self.data_folder = os.path.join('S:', 'Daily_Data', '{0}'.format(self.today_str))
         if not os.path.exists(self.data_folder):
             os.makedirs(self.data_folder)
         self.bd_setup_status_bar()
@@ -149,6 +149,7 @@ class BoloDAQGui(QtWidgets.QMainWindow, GuiBuilder):
         '''
         '''
         self.close()
+        os._exit(0)
 
     ##################################################################################
     #### Common DAQ     ##############################################################
@@ -417,12 +418,11 @@ class BoloDAQGui(QtWidgets.QMainWindow, GuiBuilder):
         self.gb_initialize_panel('central_widget')
         self.status_bar.showMessage('Loading IV Curves')
         QtWidgets.QApplication.processEvents()
+        self.daq_settings = self.bolo_daq.initialize_daqs()
         if not hasattr(self, 'ivc_widget'):
             self.ivc_widget = IVCollector(self.daq_settings, self.status_bar, self.screen_resolution, self.monitor_dpi)
-        else:
-            self.daq_settings = self.bolo_daq.initialize_daqs()
-            self.ivc_widget.ivc_update_samples()
-            self.ivc_widget.ivc_update_daq_settings(self.daq_settings)
+        self.ivc_widget.ivc_update_samples()
+        self.ivc_widget.ivc_update_daq_settings(self.daq_settings)
         self.central_widget.layout().addWidget(self.ivc_widget, 0, 0, 1, 1)
         self.status_bar.showMessage('IV Curves')
         QtWidgets.QApplication.processEvents()
@@ -507,11 +507,12 @@ class BoloDAQGui(QtWidgets.QMainWindow, GuiBuilder):
         '''
         self.gb_initialize_panel('central_widget')
         if not hasattr(self, 'noise_analyzer_widget'):
-            self.noise_analzyer_widget = NoiseAnalyzer(self.daq_settings, self.status_bar, self.screen_resolution, self.monitor_dpi)
+            self.daq_settings = self.bolo_daq.initialize_daqs()
+            self.noise_analyzer_widget = NoiseAnalyzer(self.daq_settings, self.status_bar, self.screen_resolution, self.monitor_dpi)
         else:
             self.daq_settings = self.bolo_daq.initialize_daqs()
-            self.noise_analzyer_widget.na_update_daq_settings(self.daq_settings)
-        self.central_widget.layout().addWidget(self.noise_analzyer_widget, 0, 0, 1, 1)
+        self.noise_analyzer_widget.na_update_daq_settings(self.daq_settings)
+        self.central_widget.layout().addWidget(self.noise_analyzer_widget, 0, 0, 1, 1)
         self.status_bar.showMessage('Noise Analyzer')
         QtWidgets.QApplication.processEvents()
         self.showNormal()

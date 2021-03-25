@@ -93,12 +93,16 @@ class ConfigureBoloDAQGui(QtWidgets.QWidget, GuiBuilder):
         lineedit = getattr(self, '{0}_lineedit'.format(setting))
         dict_to_edit = getattr(self, '{0}_dict'.format(setting))
         combobox.clear()
-        existing_com_ports = []
+        existing_items = []
         for i in range(combobox.count()):
-            existing_com_ports.append(combobox.itemText(i))
-        for com_port, instrument in sorted(dict_to_edit.items()):
-            if com_port not in existing_com_ports:
-                combobox.addItem(com_port)
+            existing_items.append(combobox.itemText(i))
+        if setting == 'samples':
+            items = [x for x in dict_to_edit.keys()]
+        else:
+            items = dict_to_edit.keys()
+        for item in sorted(items):
+            if items not in existing_items:
+                combobox.addItem(str(item))
         combobox.currentIndexChanged.connect(self.cbd_update_label)
         combobox.setCurrentIndex(-1)
         combobox.setCurrentIndex(0)

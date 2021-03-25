@@ -3,6 +3,7 @@ import os
 import simplejson
 import pylab as pl
 import numpy as np
+import pickle as pkl
 from copy import copy
 from datetime import datetime
 from pprint import pprint
@@ -23,16 +24,19 @@ class IVCollector(QtWidgets.QWidget, GuiBuilder):
         self.screen_resolution = screen_resolution
         self.monitor_dpi = monitor_dpi
         self.le_width = int(0.05 * self.screen_resolution.width())
-        self.daq = BoloDAQ()
         with open(os.path.join('bd_settings', 'squids_settings.json'), 'r') as fh:
             self.squid_calibration_dict = simplejson.load(fh)
         with open(os.path.join('bd_settings', 'samples_settings.json'), 'r') as fh:
             self.samples_settings = simplejson.load(fh)
         self.voltage_reduction_factor_dict  = {
-            '1': 1e-4,
-            '2': 1e-5,
-            '3': 100,
-            '4': 1e3,
+            '1': 9.09e-8,
+            '2': 4.28e-7,
+            '3': 9.09e-7,
+            '4': 1e-6,
+            '5': 1e-4,
+            '6': 1e-5,
+            '7': 100,
+            '8': 1e3,
             }
         grid = QtWidgets.QGridLayout()
         self.setLayout(grid)
@@ -46,11 +50,12 @@ class IVCollector(QtWidgets.QWidget, GuiBuilder):
         self.y_stds = []
         self.today = datetime.now()
         self.today_str = datetime.strftime(self.today, '%Y_%m_%d')
-        self.data_folder = os.path.join('Data', '{0}'.format(self.today_str))
+        self.data_folder = os.path.join('S:', 'Daily_Data', '{0}'.format(self.today_str))
         self.saving_manager = SavingManager(self, self.data_folder, self.ivc_save, 'IV')
         self.ivc_populate()
         self.ivc_plot_running()
         self.ivc = IVCurves()
+        self.qthreadpool = QtCore.QThreadPool()
 
     #########################################################
     # GUI and Input Handling
@@ -89,7 +94,9 @@ class IVCollector(QtWidgets.QWidget, GuiBuilder):
         self.y_channel = self.daq_y_combobox.currentIndex()
         # X
         self.int_time_x = self.daq_settings[daq][str(self.x_channel)]['int_time']
+        self.int_time = self.int_time_x
         self.sample_rate_x = self.daq_settings[daq][str(self.x_channel)]['sample_rate']
+        self.sample_rate = self.sample_rate_x
         daq_settings_x_info = '\nDAQ X: Int Time (ms): {0} ::: '.format(self.int_time_x)
         daq_settings_x_info += 'Sample Rate (Hz): {0}'.format(str(self.sample_rate_x))
         self.daq_settings_x_label.setText(daq_settings_x_info)
@@ -128,6 +135,7 @@ class IVCollector(QtWidgets.QWidget, GuiBuilder):
         self.daq_y_combobox.currentIndexChanged.connect(self.ivc_display_daq_settings)
         self.daq_x_combobox.currentIndexChanged.connect(self.ivc_display_daq_settings)
         self.ivc_daq_combobox.currentIndexChanged.connect(self.ivc_display_daq_settings)
+        self.ivc_daq_combobox.setCurrentIndex(1)
 
     def ivc_iv_config(self):
         '''
@@ -135,7 +143,9 @@ class IVCollector(QtWidgets.QWidget, GuiBuilder):
         # X Voltage Factor
         self.x_correction_combobox = self.gb_make_labeled_combobox(label_text='Bias Voltage Correction Factor:', width=self.le_width)
         for index, voltage_factor in self.voltage_reduction_factor_dict.items():
+            print(voltage_factor)
             self.x_correction_combobox.addItem('{0}'.format(voltage_factor))
+        self.x_correction_combobox.setCurrentIndex(1)
         self.layout().addWidget(self.x_correction_combobox, 6, 0, 1, 1)
         # SQUID
         self.squid_calibration_label = QtWidgets.QLabel('', self)
@@ -146,13 +156,13 @@ class IVCollector(QtWidgets.QWidget, GuiBuilder):
             self.y_correction_combobox.addItem('{0}'.format(squid))
         self.y_correction_combobox.setCurrentIndex(-1)
         self.y_correction_combobox.currentIndexChanged.connect(self.ivc_update_squid_calibration)
-        self.y_correction_combobox.setCurrentIndex(0)
+        self.y_correction_combobox.setCurrentIndex(2)
         self.layout().addWidget(self.y_correction_combobox, 8, 0, 1, 1)
         # Data Clip
         self.data_clip_lo_lineedit = self.gb_make_labeled_lineedit(label_text='Data Clip Lo (uV)', lineedit_text='0.0', width=self.le_width)
-        self.layout().addWidget(self.data_clip_lo_lineedit, 9, 0, 1, 1)
+        self.layout().addWidget(self.data_clip_lo_lineedit, 9, 0, 1, 2)
         self.data_clip_hi_lineedit = self.gb_make_labeled_lineedit(label_text='Data Clip Hi (uV)', lineedit_text='100.0', width=self.le_width)
-        self.layout().addWidget(self.data_clip_hi_lineedit, 10, 0, 1, 1)
+        self.layout().addWidget(self.data_clip_hi_lineedit, 10, 0, 1, 2)
         # Fit Clip
         self.data_fit_lo_lineedit = self.gb_make_labeled_lineedit(label_text='Fit Clip Lo (uV)', lineedit_text='0.0', width=self.le_width)
         self.layout().addWidget(self.data_fit_lo_lineedit, 11, 0, 1, 1)
@@ -261,11 +271,12 @@ class IVCollector(QtWidgets.QWidget, GuiBuilder):
         self.x_data, self.x_stds = [], []
         self.y_data, self.y_stds = [], []
         signal_channels = [self.x_channel, self.y_channel]
+        daq = BoloDAQ(signal_channels=signal_channels,
+                      int_time=self.int_time,
+                      sample_rate=self.sample_rate,
+                      device=device)
         while self.started:
-            data_dict = self.daq.get_data(signal_channels=signal_channels,
-                                          int_time=self.int_time_x,
-                                          sample_rate=self.sample_rate_x,
-                                          device=device)
+            data_dict = daq.run()
             x_ts = data_dict[self.x_channel]['ts']
             x_mean = data_dict[self.x_channel]['mean']
             x_min = data_dict[self.x_channel]['min']
@@ -276,16 +287,29 @@ class IVCollector(QtWidgets.QWidget, GuiBuilder):
             y_min = data_dict[self.y_channel]['min']
             y_max = data_dict[self.y_channel]['max']
             y_std = data_dict[self.y_channel]['std']
-
-            self.x_data_label.setText('X Mean: {0:.5f} ::: X STD: {1:.5f}'.format(x_mean, x_std))
-            self.y_data_label.setText('Y Mean: {0:.5f} ::: Y STD: {1:.5f}'.format(y_mean, y_std))
             self.x_data.append(x_mean)
             self.x_stds.append(x_std)
             self.y_data.append(y_mean)
             self.y_stds.append(y_std)
             self.ivc_plot_running()
+            self.current_x_mean = x_mean
+            self.current_x_std = x_std
+            self.current_y_mean = y_mean
+            self.current_y_std = y_std
+            self.ivc_display_current_data()
             QtWidgets.QApplication.processEvents()
             self.repaint()
+
+
+    def ivc_display_current_data(self):
+        '''
+        '''
+        x_data_label_str = 'X Mean: {0:.5f} ::: X STD: {1:.5f} (raw)\n'.format(self.current_x_mean, self.current_x_std)
+        x_data_label_str += 'X Mean: {0:.5f} (uV) ::: X STD: {1:.5f} (uV)'.format(self.x_data_real[-1], self.x_stds_real[-1])
+        y_data_label_str = 'Y Mean: {0:.5f} ::: Y STD: {1:.5f} (raw)\n'.format(self.current_y_mean, self.current_y_std)
+        y_data_label_str += 'Y Mean: {0:.5f} (uA)::: Y STD: {1:.5f} (uA)'.format(self.y_data_real[-1], self.y_stds_real[-1])
+        self.x_data_label.setText(x_data_label_str)
+        self.y_data_label.setText(y_data_label_str)
 
     ###################################################
     # Saving and Plotting
@@ -308,9 +332,19 @@ class IVCollector(QtWidgets.QWidget, GuiBuilder):
             save_path = self.ivc_index_file_name()
             save_path = QtWidgets.QFileDialog.getSaveFileName(self, 'Data Save Location', save_path, filter='*.txt,*.dat')[0]
         if len(save_path) > 0:
+            if 'txt' in save_path:
+                calibrated_save_path = save_path.replace('.txt', '_calibrated.txt')
+            elif 'dat' in save_path:
+                calibrated_save_path = save_path.replace('.dat', '_calibrated.dat')
             with open(save_path, 'w') as save_handle:
                 for i, x_data in enumerate(self.x_data):
+                    print(i, 'raw')
                     line = '{0:.5f}, {1:.5f}, {2:.5f}, {3:.5f}\n'.format(self.x_data[i], self.x_stds[i], self.y_data[i], self.y_stds[i])
+                    save_handle.write(line)
+            with open(calibrated_save_path, 'w') as save_handle:
+                for i, x_data in enumerate(self.x_data_real):
+                    print(i, 'real')
+                    line = '{0:.5f}, {1:.5f}, {2:.5f}, {3:.5f}\n'.format(self.x_data_real[i], self.x_stds_real[i], self.y_data_real[i], self.y_stds_real[i])
                     save_handle.write(line)
         else:
             self.gb_quick_message('Warning Data Not Written to File!', msg_type='Warning')
@@ -369,8 +403,15 @@ class IVCollector(QtWidgets.QWidget, GuiBuilder):
         squid_calibration_factor = float(self.squid_calibration_label.text())
         i_bolo_real = self.ivc_fit_and_remove_squid_offset()
         i_bolo_std = np.asarray(self.y_stds) * squid_calibration_factor
+        print(float(self.x_correction_combobox.currentText()) * 1e6) #uV
+        print(float(self.x_correction_combobox.currentText()) * 1e6) #uV
+        print(float(self.x_correction_combobox.currentText()) * 1e6) #uV
+        print(float(self.x_correction_combobox.currentText()) * 1e6) #uV
+        print(float(self.x_correction_combobox.currentText()) * 1e6) #uV
         v_bias_real = np.asarray(self.x_data) * float(self.x_correction_combobox.currentText()) * 1e6 #uV
         v_bias_std = np.asarray(self.x_stds) * float(self.x_correction_combobox.currentText()) * 1e6 #uV
+        #v_bias_real = np.asarray(self.x_data) * float(2e-6) * 1e6 #uV
+        #v_bias_std = np.asarray(self.x_stds) * float(2e-6) * 1e6
         fit_selector = np.where(np.logical_and(data_fit_lo < v_bias_real, v_bias_real < data_fit_hi))
         try:
             fit_vals = np.polyfit(v_bias_real[fit_selector], i_bolo_real[fit_selector], 1)
@@ -382,6 +423,11 @@ class IVCollector(QtWidgets.QWidget, GuiBuilder):
         selector =  np.where(np.logical_and(data_clip_lo < v_bias_real, v_bias_real < data_clip_hi))
         title = 'IV Curve for {0}'.format(self.sample_name_lineedit.text())
         label = 'R={0:.3f} ($\Omega$)'.format(resistance)
+        self.x_data_real = v_bias_real
+        self.x_stds_real = v_bias_std
+        self.y_data_real = i_bolo_real
+        self.y_stds_real = i_bolo_std
+        print(self.x_data_real)
         ax.errorbar(v_bias_real[selector], i_bolo_real[selector], xerr=v_bias_std[selector], yerr=i_bolo_std[selector], marker='.', linestyle='-', label=label)
         if running:
             ax.set_xlabel('Bias Voltage ($\mu V$)', fontsize=14)
@@ -402,7 +448,6 @@ class IVCollector(QtWidgets.QWidget, GuiBuilder):
             ax.tick_params(axis='x', labelsize=16)
             ax.tick_params(axis='y', labelsize=16)
             fig.savefig(file_name, transparent=False)
-            pl.show()
 
     def ivc_adjust_x_data(self):
         '''

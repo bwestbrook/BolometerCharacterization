@@ -4,10 +4,13 @@ import numpy as np
 from copy import copy
 from pprint import pprint
 from bd_lib.bolo_serial import BoloSerial
-from PyQt5 import QtCore, QtGui, QtWidgets
+from PyQt5 import QtGui, QtWidgets
+from PyQt5.QtCore import *
 from GuiBuilder.gui_builder import GuiBuilder, GenericClass
 
 class LakeShore372(QtWidgets.QWidget, GuiBuilder):
+
+    finished = pyqtSignal()
 
     def __init__(self, serial_com, com_port, status_bar):
         super(LakeShore372, self).__init__()
@@ -263,10 +266,10 @@ class LakeShore372(QtWidgets.QWidget, GuiBuilder):
         self.auto_scan_time_lineedit = auto_scan_time_lineedit
         self.layout().addWidget(auto_scan_time_lineedit, 0, 7, 1, 4)
         channels_header_label = QtWidgets.QLabel('Input Channels', self)
-        channels_header_label.setAlignment(QtCore.Qt.AlignCenter)
+        channels_header_label.setAlignment(Qt.AlignCenter)
         self.layout().addWidget(channels_header_label, 1, 0, 1, 17)
         analog_outputs_header_label = QtWidgets.QLabel('Analog Outputs', self)
-        analog_outputs_header_label.setAlignment(QtCore.Qt.AlignCenter)
+        analog_outputs_header_label.setAlignment(Qt.AlignCenter)
         self.layout().addWidget(analog_outputs_header_label, 18, 0, 1, 17)
 
     def ls372_start_stop_autoscan(self):
@@ -560,6 +563,7 @@ class LakeShore372(QtWidgets.QWidget, GuiBuilder):
         ep_central_widget.layout().addWidget(save_pushbutton, i + 1, 1, 1, 1)
         editing_popup.move(250, 250)
         editing_popup.show()
+        finished.emit()
 
     def ls372_update_analog_output(self, ep_central_widget, editing_popup):
         '''
@@ -595,14 +599,17 @@ class LakeShore372(QtWidgets.QWidget, GuiBuilder):
         self.ls372_populate_gui()
         self.status_bar.showMessage('Wrote new settings to analog output "{0}"'.format(self.set_to_analog_output))
 
-class LS372TempControl():
+class LS372TempControl(QRunnable):
 
     def __init__(self, serial_com, status_bar):
         '''
         '''
+        super(LS372TempControl, self).__init__()
+        self.signals = Signals()
         self.channel_indicies = [str(x) for x in range(1, 17)]
         self.serial_com = serial_com
         self.status_bar = status_bar
+        self.setAutoDelete(False)
         self.ls372_heater_range_dict = {
             '0': 0,
             '1': 31.6e-6,
@@ -614,6 +621,22 @@ class LS372TempControl():
             '7': 31.6e-3,
             '8': 100e-3
             }
+
+    @pyqtSlot()
+    def run(self):
+        '''
+        '''
+        self.run_function()
+        self.signals.finished.emit()
+
+    def set_run_function(self, function_name, new_value=None):
+        '''
+        '''
+        function = getattr(self, function_name)
+        if new_value is None:
+            self.run_function = function
+        else:
+            self.run_function = lambda: function(new_value)
 
     def ls372_get_pid(self):
         '''
@@ -636,7 +659,7 @@ class LS372TempControl():
         self.serial_com.bs_write(set_pid_command)
         QtWidgets.QApplication.processEvents()
         result = self.serial_com.bs_read()
-
+        return p, i, d
 
     def ls372_get_ramp(self):
         '''
@@ -659,6 +682,8 @@ class LS372TempControl():
         self.serial_com.bs_write(set_ramp_command)
         QtWidgets.QApplication.processEvents()
         result = self.serial_com.bs_read()
+        self.status_bar.showMessage('Set Ramp To "{0}" K/min'.format(ramp))
+        return ramp
 
     def ls372_get_heater_range(self):
         '''
@@ -707,6 +732,7 @@ class LS372TempControl():
         self.status_bar.showMessage('Sending Serial Command "{0}"'.format(temp_set_point_query))
         self.serial_com.bs_write(temp_set_point_query)
         set_point = float(self.serial_com.bs_read())
+        self.signals.temp_ready.emit(set_point)
         return set_point
 
     def ls372_set_temp_set_point(self, set_point):
@@ -717,8 +743,10 @@ class LS372TempControl():
         self.serial_com.bs_write(set_temp_set_point_command)
         QtWidgets.QApplication.processEvents()
         result = self.serial_com.bs_read()
+        self.status_bar.showMessage('Set Temp Set Point To "{0}" K'.format(set_point))
+        return set_point
 
-class LS372Channels():
+class LS372Channels(QObject):
 
     def __init__(self, serial_com, status_bar):
         '''
@@ -826,7 +854,7 @@ class LS372Channels():
         self.serial_com.bs_write(filter_cmd)
         result = self.serial_com.bs_read()
 
-class LS372AnalogOutputs():
+class LS372AnalogOutputs(QObject):
 
     def __init__(self, serial_com, status_bar):
         '''
@@ -916,4 +944,12 @@ class LS372AnalogOutputs():
         QtWidgets.QApplication.processEvents()
         result = self.serial_com.bs_read()
 
+class Signals(QObject):
+    '''
+    '''
+
+    finished = pyqtSignal()
+    pid_ready = pyqtSignal(tuple)
+    value_ready = pyqtSignal(float)
+    temp_ready = pyqtSignal(float)
 
