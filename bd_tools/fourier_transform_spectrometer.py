@@ -1,4 +1,6 @@
 import time
+import simplejson
+import shutil
 import os
 import pylab as pl
 import numpy as np
@@ -26,10 +28,6 @@ class FourierTransformSpectrometer(QtWidgets.QWidget, GuiBuilder):
         grid = QtWidgets.QGridLayout()
         self.setLayout(grid)
         grid_2 = QtWidgets.QGridLayout()
-        self.fts_plot_panel = QtWidgets.QWidget(self)
-        self.layout().addWidget(self.fts_plot_panel, 0, 2, 20, 1)
-        self.fts_plot_panel.setLayout(grid_2)
-        self.fts_plot_panel.setFixedWidth(0.6 * screen_resolution.width())
         self.fts_configure_input_panel()
         self.fts_configure_plot_panel()
         self.today = datetime.now()
@@ -43,7 +41,9 @@ class FourierTransformSpectrometer(QtWidgets.QWidget, GuiBuilder):
         self.y_data = []
         self.y_stds = []
         self.fts_plot(running=True)
+        self.fts_update_samples()
         self.fts_plot_time_stream([0], -1.0, 1.0)
+        self.fts_update_sample_name(0)
 
     #################################################
     # Gui Config
@@ -54,7 +54,6 @@ class FourierTransformSpectrometer(QtWidgets.QWidget, GuiBuilder):
         '''
         with open(os.path.join('bd_settings', 'samples_settings.json'), 'r') as fh:
             self.samples_settings = simplejson.load(fh)
-        #self.rtc_update_sample_name(self.sample_name_combobox.currentIndex())
 
     def fts_update_daq_settings(self, daq_settings):
         '''
@@ -62,11 +61,18 @@ class FourierTransformSpectrometer(QtWidgets.QWidget, GuiBuilder):
         self.daq_settings = daq_settings
         self.fts_update_scan_params()
 
+    def fts_update_sample_name(self, index):
+        '''
+        '''
+        print(index)
+        pprint(self.samples_settings)
+        sample_name = self.samples_settings[str(index + 1)]
+        self.sample_name_lineedit.setText(sample_name)
+
     def fts_configure_input_panel(self):
         '''
         '''
         welcome_header_label = QtWidgets.QLabel('Welcome to FTS', self)
-        welcome_header_label.setFixedWidth(0.3 * self.screen_resolution.width())
         self.layout().addWidget(welcome_header_label, 0, 0, 1, 2)
         # DAQ (Device + Channel) Selection
         device_header_label = QtWidgets.QLabel('Device:', self)
@@ -81,45 +87,44 @@ class FourierTransformSpectrometer(QtWidgets.QWidget, GuiBuilder):
         self.layout().addWidget(self.daq_combobox, 2, 1, 1, 1)
         for channel in sorted([int(x) for x in self.daq_settings[device]]):
             self.daq_combobox.addItem(str(channel))
-        self.daq_settings_label = QtWidgets.QLabel('DAQ Settings', self)
-        self.layout().addWidget(self.daq_settings_label, 3, 1, 1, 1)
+        self.int_time_lineedit = self.gb_make_labeled_lineedit(label_text='Int Time (ms): ')
+        self.int_time_lineedit.setText('500')
+        self.layout().addWidget(self.int_time_lineedit, 3, 0, 1, 1)
+        self.sample_rate_lineedit = self.gb_make_labeled_lineedit(label_text='Sample Rate (Hz): ')
+        self.sample_rate_lineedit.setText('5000')
+        self.layout().addWidget(self.sample_rate_lineedit, 3, 1, 1, 1)
         # Stepper Motor Selection
-        stepper_motor_header_label = QtWidgets.QLabel('Stepper Motor:', self)
-        self.layout().addWidget(stepper_motor_header_label, 4, 0, 1, 1)
+        self.stepper_motor_label = self.gb_make_labeled_label(label_text = 'Stepper Motor:')
         self.stepper_motor_label = QtWidgets.QLabel(self.csm_widget.com_port, self)
-        self.layout().addWidget(self.stepper_motor_label, 4, 1, 1, 1)
-        self.stepper_settings_label = QtWidgets.QLabel('Stepper Settings', self)
-        self.layout().addWidget(self.stepper_settings_label, 5, 1, 1, 1)
+        self.layout().addWidget(self.stepper_motor_label, 4, 0, 1, 1)
+        self.stepper_settings_label = self.gb_make_labeled_label(label_text = 'Stepper Settings:')
+        self.layout().addWidget(self.stepper_settings_label, 5, 0, 1, 1)
         ######
         # Scan Params
         ######
         #Pause Time 
-        pause_time_header_label = QtWidgets.QLabel('Pause Time (ms):', self)
-        self.layout().addWidget(pause_time_header_label, 6, 0, 1, 1)
-        self.pause_time_lineedit = QtWidgets.QLineEdit('100', self)
+        self.pause_time_lineedit = self.gb_make_labeled_lineedit(label_text='Pause Time (ms):')
+        self.pause_time_lineedit.setText('500')
         self.pause_time_lineedit.setValidator(QtGui.QIntValidator(0, 25000, self.pause_time_lineedit))
-        self.layout().addWidget(self.pause_time_lineedit, 6, 1, 1, 1)
+        self.layout().addWidget(self.pause_time_lineedit, 6, 0, 1, 1)
         #Start Scan
-        start_position_header_label = QtWidgets.QLabel('Start Position:', self)
-        self.layout().addWidget(start_position_header_label, 7, 0, 1, 1)
-        self.start_position_lineedit = QtWidgets.QLineEdit('-30000', self)
+        self.start_position_lineedit = self.gb_make_labeled_lineedit(label_text='Start Position:')
+        self.start_position_lineedit.setText('-100000')
         self.start_position_lineedit.setValidator(QtGui.QIntValidator(-500000, 0, self.start_position_lineedit))
         self.start_position_lineedit.textChanged.connect(self.fts_update_scan_params)
-        self.layout().addWidget(self.start_position_lineedit, 7, 1, 1, 1)
+        self.layout().addWidget(self.start_position_lineedit, 7, 0, 1, 1)
         #End Scan
-        end_position_header_label = QtWidgets.QLabel('End Position:', self)
-        self.layout().addWidget(end_position_header_label, 8, 0, 1, 1)
-        self.end_position_lineedit = QtWidgets.QLineEdit('30000', self)
+        self.end_position_lineedit = self.gb_make_labeled_lineedit(label_text='End Position:')
         self.end_position_lineedit.setValidator(QtGui.QIntValidator(0, 300000, self.end_position_lineedit))
+        self.end_position_lineedit.setText('100000')
         self.end_position_lineedit.textChanged.connect(self.fts_update_scan_params)
-        self.layout().addWidget(self.end_position_lineedit, 8, 1, 1, 1)
+        self.layout().addWidget(self.end_position_lineedit, 8, 0, 1, 1)
         #Mirror Interval 
-        mirror_interval_header_label = QtWidgets.QLabel('Mirror Interval (steps):', self)
-        self.layout().addWidget(mirror_interval_header_label, 9, 0, 1, 1)
-        self.mirror_interval_lineedit = QtWidgets.QLineEdit('3000', self)
+        self.mirror_interval_lineedit = self.gb_make_labeled_lineedit(label_text='Mirror Interval (steps):')
+        self.mirror_interval_lineedit.setText('5000')
         self.mirror_interval_lineedit.textChanged.connect(self.fts_update_scan_params)
         self.mirror_interval_lineedit.setValidator(QtGui.QIntValidator(1, 200000, self.mirror_interval_lineedit))
-        self.layout().addWidget(self.mirror_interval_lineedit, 9, 1, 1, 1)
+        self.layout().addWidget(self.mirror_interval_lineedit, 9, 0, 1, 1)
         #Step size (Fixed for Bill's FTS right now)
         distance_per_step_header_label = QtWidgets.QLabel('Distance Per Step (nm):', self)
         self.layout().addWidget(distance_per_step_header_label, 10, 0, 1, 1)
@@ -132,15 +137,17 @@ class FourierTransformSpectrometer(QtWidgets.QWidget, GuiBuilder):
         self.scan_info_label = QtWidgets.QLabel('Scan Info', self)
         self.layout().addWidget(self.scan_info_label, 11, 1, 1, 1)
         self.fts_update_scan_params()
-        sample_name_header_label = QtWidgets.QLabel('Sample Name:', self)
-        self.layout().addWidget(sample_name_header_label, 12, 0, 1, 1)
-        self.sample_name_lineedit = QtWidgets.QLineEdit('', self)
+        self.sample_select_combobox = self.gb_make_labeled_combobox(label_text='Sample Select:')
+        self.layout().addWidget(self.sample_select_combobox, 12, 0, 1, 1)
+        for i in range(6):
+            self.sample_select_combobox.addItem(str(i + 1))
+        self.sample_select_combobox.activated.connect(self.fts_update_sample_name)
+        self.sample_name_lineedit = self.gb_make_labeled_lineedit(label_text='Sample Name:')
         self.layout().addWidget(self.sample_name_lineedit, 12, 1, 1, 1)
         # Zero Lockin
         self.zero_lock_in_checkbox = QtWidgets.QCheckBox('Zero Lock in?', self)
         self.layout().addWidget(self.zero_lock_in_checkbox, 13, 0, 1, 1)
         self.zero_lock_in_checkbox.setChecked(True)
-
         ######
         # Control Buttons 
         ######
@@ -156,25 +163,19 @@ class FourierTransformSpectrometer(QtWidgets.QWidget, GuiBuilder):
     def fts_configure_plot_panel(self):
         '''
         '''
-        self.int_spec_plot_label = QtWidgets.QLabel('', self.fts_plot_panel)
+        self.int_spec_plot_label = QtWidgets.QLabel('', self)
         self.int_spec_plot_label.setAttribute(QtCore.Qt.WA_TranslucentBackground)
-        self.fts_plot_panel.layout().addWidget(self.int_spec_plot_label, 0, 0, 1, 4)
+        self.layout().addWidget(self.int_spec_plot_label, 0, 4, 7, 2)
         # Time stream 
-        self.time_stream_plot_label = QtWidgets.QLabel('', self.fts_plot_panel)
+        self.time_stream_plot_label = QtWidgets.QLabel('', self)
         self.time_stream_plot_label.setAttribute(QtCore.Qt.WA_TranslucentBackground)
-        self.fts_plot_panel.layout().addWidget(self.time_stream_plot_label, 1, 0, 1, 4)
+        self.layout().addWidget(self.time_stream_plot_label, 7, 4, 5, 2)
         # Mean 
-        data_mean_header_label = QtWidgets.QLabel('Data Mean (V):', self.fts_plot_panel)
-        data_mean_header_label.setAlignment(QtCore.Qt.AlignRight)
-        self.fts_plot_panel.layout().addWidget(data_mean_header_label, 2, 0, 1, 1)
-        self.data_mean_label = QtWidgets.QLabel('', self.fts_plot_panel)
-        self.fts_plot_panel.layout().addWidget(self.data_mean_label, 2, 1, 1, 1)
+        self.data_mean_label = QtWidgets.QLabel('Data Mean (V):', self)
+        self.layout().addWidget(self.data_mean_label, 12, 4, 1, 2)
         # STD
-        data_std_header_label = QtWidgets.QLabel('Data STD (V):', self.fts_plot_panel)
-        data_std_header_label.setAlignment(QtCore.Qt.AlignRight)
-        self.fts_plot_panel.layout().addWidget(data_std_header_label, 2, 2, 1, 1)
-        self.data_std_label = QtWidgets.QLabel('', self.fts_plot_panel)
-        self.fts_plot_panel.layout().addWidget(self.data_std_label, 2, 3, 1, 1)
+        self.data_std_label = QtWidgets.QLabel('Data STD (V):', self)
+        self.layout().addWidget(self.data_std_label, 12, 5, 1, 2)
 
     #################################################
     # Scanning
@@ -202,6 +203,10 @@ class FourierTransformSpectrometer(QtWidgets.QWidget, GuiBuilder):
             resolution = ((2.99792458 * 10 ** 8) / total_distance) / (10 ** 9) # GHz
             resolution = '{0:.2f} GHz'.format(resolution)
             max_frequency = '{0:.2f} GHz'.format(max_frequency)
+            info_string = 'N Data Points: {0} ::: '.format(self.n_data_points)
+            info_string += 'Resolution: {0} ::: Max Frequency (GHz): {1}'.format(resolution, max_frequency)
+        else:
+            info_string = ''
         self.scan_settings_dict = {
              'end': end,
              'start': start,
@@ -210,8 +215,6 @@ class FourierTransformSpectrometer(QtWidgets.QWidget, GuiBuilder):
              'pause_time': pause_time,
              'n_data_points': self.n_data_points
             }
-        info_string = 'N Data Points: {0} ::: '.format(self.n_data_points)
-        info_string += 'Resolution: {0} ::: Max Frequency (GHz): {1}'.format(resolution, max_frequency)
         self.scan_info_label.setText(info_string)
         device = self.device_combobox.currentText()
         daq = self.daq_combobox.currentText()
@@ -219,14 +222,6 @@ class FourierTransformSpectrometer(QtWidgets.QWidget, GuiBuilder):
         daq_settings = str(self.daq_settings[device][daq])
         daq_settings_str = ''
         self.scan_settings_dict.update(self.daq_settings[device][daq])
-        for setting, value in self.daq_settings[device][daq].items():
-            daq_settings_str += ' '.join([x.title() for x in setting.split('_')])
-            if setting == 'int_time':
-                daq_settings_str += ' (ms): '
-            if setting == 'sample_rate':
-                daq_settings_str += ' (Hz): '
-            daq_settings_str += '{0} ::: '.format(value)
-        self.daq_settings_label.setText(daq_settings_str)
         self.fts_setup_stepper()
 
     def fts_setup_stepper(self):
@@ -258,17 +253,34 @@ class FourierTransformSpectrometer(QtWidgets.QWidget, GuiBuilder):
     def fts_scan(self):
         '''
         '''
-        pprint(self.scan_settings_dict)
         start = self.scan_settings_dict['start']
         end = self.scan_settings_dict['end']
         mirror_interval = self.scan_settings_dict['mirror_interval']
         pause_time = self.scan_settings_dict['pause_time']
         n_data_points = self.scan_settings_dict['n_data_points']
         device = self.scan_settings_dict['device']
-        int_time = self.scan_settings_dict['int_time']
-        sample_rate = self.scan_settings_dict['sample_rate']
+        int_time = float(self.int_time_lineedit.text())
+        sample_rate = float(self.sample_rate_lineedit.text())
         signal_channel = self.scan_settings_dict['daq']
         scan_positions = range(start, end + mirror_interval, mirror_interval)
+        signal_channels = [signal_channel]
+        daq = BoloDAQ(signal_channels=signal_channels,
+                      int_time=int_time,
+                      sample_rate=sample_rate,
+                      device=device)
+        self.status_bar.showMessage('Moving mirror to starting position!...')
+        QtWidgets.QApplication.processEvents()
+        self.csm_widget.csm_set_position(position=scan_positions[0], verbose=False)
+        position = ''
+        while len(position) == 0:
+            position = self.csm_widget.csm_get_position()
+        velocity = self.csm_widget.csm_get_velocity()
+        velocity = float(self.csm_widget.stepper_settings_dict['velocity'])
+        position_diff = np.abs(int(position) - int(scan_positions[0])) * 1e-5
+        wait = position_diff / velocity
+        time.sleep(wait)
+        self.status_bar.showMessage('Mirror is in position! Starting Scan...')
+        QtWidgets.QApplication.processEvents()
         while self.started:
             t_start = datetime.now()
             self.x_data, self.x_stds = [], []
@@ -276,19 +288,15 @@ class FourierTransformSpectrometer(QtWidgets.QWidget, GuiBuilder):
             for i, scan_position in enumerate(scan_positions):
                 self.csm_widget.csm_set_position(position=scan_position, verbose=False)
                 if i == 0:
-                    self.status_bar.showMessage('Waiting {0}s for mirror to move to start position'.format(self.start_pause))
-                    QtWidgets.QApplication.processEvents()
+                    self.csm_widget.csm_get_position()
                     time.sleep(self.start_pause) # wait for motor to reach starting point
+                time.sleep(pause_time * 1e-3)
                 if self.zero_lock_in_checkbox.isChecked():
                     self.srs_widget.srs_zero_lock_in_phase()
-                time.sleep(pause_time * 1e-3)
                 # Gather Data and Append to Vector then plot
                 self.x_data.append(scan_position)
-                self.x_stds.append(3) # guesstimated < 3 step error in position
-                data_dict = self.daq.get_data(signal_channels=[signal_channel],
-                                              int_time=int_time,
-                                              sample_rate=sample_rate,
-                                              device=device)
+                self.x_stds.append(1) # guesstimated < 1 step error in position
+                data_dict = daq.run()
                 out_ts = data_dict[signal_channel]['ts']
                 out_mean = data_dict[signal_channel]['mean']
                 out_min = data_dict[signal_channel]['min']
@@ -298,8 +306,8 @@ class FourierTransformSpectrometer(QtWidgets.QWidget, GuiBuilder):
                 self.y_stds.append(out_std)
                 self.fts_plot(running=True)
                 self.fts_plot_time_stream(out_ts, out_min, out_max)
-                self.data_mean_label.setText('{0:.6f}'.format(out_mean))
-                self.data_std_label.setText('{0:.6f}'.format(out_std))
+                self.data_mean_label.setText('Data Mean (V): {0:.6f}'.format(out_mean))
+                self.data_std_label.setText('Data STD (V): {0:.6f}'.format(out_std))
                 # Compute and report time diagnostics
                 t_now = datetime.now()
                 t_elapsed = t_now - t_start
@@ -315,6 +323,8 @@ class FourierTransformSpectrometer(QtWidgets.QWidget, GuiBuilder):
                 elif i + 1 == self.n_data_points:
                     self.started = False
                     self.start_pushbutton.setText('Start')
+        self.fts_save()
+        self.csm_widget.csm_set_position(position=start, verbose=False)
 
     #################################################
     # File handling and plotting
@@ -334,27 +344,29 @@ class FourierTransformSpectrometer(QtWidgets.QWidget, GuiBuilder):
         '''
         '''
         if_save_path = self.fts_index_file_name()
-        if_save_path = QtWidgets.QFileDialog.getSaveFileName(self, 'Data Save Location', if_save_path, filter=',*.txt,*.dat')[0]
+        if_save_path = QtWidgets.QFileDialog.getSaveFileName(self, 'Data Save Location', if_save_path)[0]
         fft_save_path = if_save_path.replace('if', 'fft')
         if len(if_save_path) > 0:
             mirror_interval = self.scan_settings_dict['mirror_interval']
-            with open(if_save_path, 'w') as save_handle:
+            with open(if_save_path, 'w') as if_save_handle:
                 for i, x_data in enumerate(self.x_data):
                     line = '{0:.5f}, {1:.5f}, {2:.5f}, {3:.5f}\n'.format(self.x_data[i], self.x_stds[i], self.y_data[i], self.y_stds[i])
-                    save_handle.write(line)
+                    if_save_handle.write(line)
             fft_freq_vector, fft_vector, phase_corrected_fft_vector, position_vector, efficiency_vector = self.fts.convert_IF_to_FFT_data(self.x_data, self.y_data, mirror_interval, data_selector='All')
             normalized_phase_corrected_fft_vector = np.abs(phase_corrected_fft_vector.real)
-            #normalized_phase_corrected_fft_vector = np.abs(phase_corrected_fft_vector.real / np.max(phase_corrected_fft_vector.real))
-            with open(fft_save_path, 'w') as save_handle:
+            with open(fft_save_path, 'w') as fft_save_handle:
                 for i, fft_freq in enumerate(fft_freq_vector):
                     if fft_freq >= 0:
                         line = '{0:.5f}, {1:.5f}, {2:.5f}, {3:.5f}\n'.format(fft_freq_vector[i], normalized_phase_corrected_fft_vector[i], fft_vector[i], phase_corrected_fft_vector[i])
-                        save_handle.write(line)
+                        fft_save_handle.write(line)
+            self.fts_plot()
+            self.fts_plot_int()
+            self.fts_plot_spectra()
+            shutil.copy(os.path.join('temp_files', 'temp_int.png'), fft_save_path.replace('.fft', '_int.png'))
+            shutil.copy(os.path.join('temp_files', 'temp_spectra.png'), fft_save_path.replace('.fft', '_spectra.png'))
+            shutil.copy(os.path.join('temp_files', 'temp_combo.png'), fft_save_path.replace('.fft', '_combo.png'))
         else:
-            self.gb_quick_message('Warning {0} Data Not Written to File!'.format(suffix), msg_type='Warning')
-        self.fts_plot()
-        self.fts_plot_int()
-        self.fts_plot_spectra()
+            self.gb_quick_message('Warning Data Not Written to File!', msg_type='Warning')
 
     def fts_plot_time_stream(self, ts, min_, max_):
         '''
@@ -392,12 +404,14 @@ class FourierTransformSpectrometer(QtWidgets.QWidget, GuiBuilder):
         else:
             ax1.errorbar(self.x_data, self.y_data, yerr=self.y_stds, marker='.', linestyle='-')
         if running:
-            temp_png_path = os.path.join('temp_files', 'temp_int.png')
+            temp_png_path = os.path.join('temp_files', 'temp_combo.png')
             fig.savefig(temp_png_path, transparent=True)
             image_to_display = QtGui.QPixmap(temp_png_path)
             self.int_spec_plot_label.setPixmap(image_to_display)
             os.remove(temp_png_path)
         else:
+            temp_png_path = os.path.join('temp_files', 'temp_combo.png')
+            fig.savefig(temp_png_path, transparent=True)
             pl.show()
 
     def fts_plot_spectra(self):
@@ -415,6 +429,7 @@ class FourierTransformSpectrometer(QtWidgets.QWidget, GuiBuilder):
         normalized_phase_corrected_fft_vector = np.abs(phase_corrected_fft_vector.real)
         normalized_phase_corrected_fft_vector = np.abs(phase_corrected_fft_vector.real / np.max(phase_corrected_fft_vector.real))
         ax.errorbar(fft_freq_vector[selector] * 1e-9, normalized_phase_corrected_fft_vector[selector], marker='.', linestyle='-')
+        fig.savefig(os.path.join('temp_files', 'temp_spectra.png'))
         pl.show()
 
     def fts_plot_int(self):
@@ -427,6 +442,7 @@ class FourierTransformSpectrometer(QtWidgets.QWidget, GuiBuilder):
         title = 'Interferogram for {0}'.format(self.sample_name_lineedit.text())
         ax.set_title(title, fontsize=14)
         ax.errorbar(self.x_data, self.y_data, self.y_stds, marker='.', linestyle='-')
+        fig.savefig(os.path.join('temp_files', 'temp_int.png'))
         pl.show()
 
     def fts_create_blank_fig(self, frac_screen_width=0.5, frac_screen_height=0.8,

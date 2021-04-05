@@ -98,7 +98,16 @@ class BoloDAQGui(QtWidgets.QMainWindow, GuiBuilder):
         self.monitor_dpi = 120.0
         self.today = datetime.now()
         self.today_str = datetime.strftime(self.today, '%Y_%m_%d')
-        self.data_folder = os.path.join('S:', 'Daily_Data', '{0}'.format(self.today_str))
+        print(os.getlogin())
+        if os.getlogin() == 'BoloTester':
+            self.data_folder = os.path.join('Data', '{0}'.format(self.today_str))
+            self.dewar = '576'
+        elif os.getlogin() == 'BlueForsDR1':
+            self.data_folder = os.path.join('S:', 'Daily_Data', '{0}'.format(self.today_str))
+            self.dewar = 'BlueForsDR1'
+        else:
+            self.gb_quick_message('Computer not recgonized', message_type='Warning')
+            os._exit(0)
         if not os.path.exists(self.data_folder):
             os.makedirs(self.data_folder)
         self.bd_setup_status_bar()
@@ -110,13 +119,6 @@ class BoloDAQGui(QtWidgets.QMainWindow, GuiBuilder):
         getattr(self, 'action_Bolo_DAQ_Settings').trigger()
         if not hasattr(self, 'configure_ni_daq_widget'):
             self.configure_ni_daq_widget = ConfigureNIDAQ(self.daq_settings, self.status_bar)
-        if os.getlogin() == 'BoloTester':
-            self.dewar = '576'
-        elif os.getlogin() == 'Bluefors_PC':
-            self.dewar = 'BlueForsDR1'
-        else:
-            self.gb_quick_message('Computer not recgonized', message_type='Warning')
-            os._exit(0)
 
     ##################################################################################
     #### Start up Tasks ##############################################################
@@ -497,6 +499,7 @@ class BoloDAQGui(QtWidgets.QMainWindow, GuiBuilder):
         self.status_bar.showMessage('Configure Stepper Motors')
         QtWidgets.QApplication.processEvents()
         self.showNormal()
+        self.resize(self.sizeHint())
 
     #################################################
     # NOISE ANALYZER 
@@ -515,6 +518,7 @@ class BoloDAQGui(QtWidgets.QMainWindow, GuiBuilder):
         self.central_widget.layout().addWidget(self.noise_analyzer_widget, 0, 0, 1, 1)
         self.status_bar.showMessage('Noise Analyzer')
         QtWidgets.QApplication.processEvents()
+        self.resize(self.sizeHint())
         self.showNormal()
 
     #################################################
@@ -533,6 +537,7 @@ class BoloDAQGui(QtWidgets.QMainWindow, GuiBuilder):
         self.central_widget.layout().addWidget(self.cosmic_ray_widget, 0, 0, 1, 1)
         self.status_bar.showMessage('Cosmic Ray Data')
         QtWidgets.QApplication.processEvents()
+        self.resize(self.sizeHint())
         self.showNormal()
 
     #################################################
@@ -548,6 +553,7 @@ class BoloDAQGui(QtWidgets.QMainWindow, GuiBuilder):
         self.central_widget.layout().addWidget(self.time_constant_widget, 0, 0, 1, 1)
         self.status_bar.showMessage('Bolometer Time Constant')
         QtWidgets.QApplication.processEvents()
+        self.resize(self.sizeHint())
         self.showNormal()
 
     #################################################
@@ -591,12 +597,12 @@ class BoloDAQGui(QtWidgets.QMainWindow, GuiBuilder):
                 }
         if not hasattr(self, 'beam_mapper_widget'):
             self.beam_mapper_widget = BeamMapper(self.daq_settings, self.status_bar, self.screen_resolution, self.monitor_dpi, self.csm_widget_dict, self.srs_sr830dsp_widget)
-        self.bd_get_saved_daq_settings()
+        #self.bd_get_saved_daq_settings()
         self.beam_mapper_widget.bm_update_daq_settings(self.daq_settings)
         self.central_widget.layout().addWidget(self.beam_mapper_widget, 0, 0, 1, 1)
         self.status_bar.showMessage('Beam Mapper')
         QtWidgets.QApplication.processEvents()
-        self.show()
+        #self.resize(self.sizeHint())
         self.showMaximized()
 
     #################################################
@@ -632,13 +638,12 @@ class BoloDAQGui(QtWidgets.QMainWindow, GuiBuilder):
             return None
         if not hasattr(self, 'polarization_efficiency_widget'):
             self.polarization_efficiency_widget = PolarizationEfficiency(self.daq_settings, self.status_bar, self.screen_resolution, self.monitor_dpi, csm_widget, self.srs_sr830dsp_widget)
-        self.bd_get_saved_daq_settings()
         self.polarization_efficiency_widget.pe_update_daq_settings(self.daq_settings)
         self.central_widget.layout().addWidget(self.polarization_efficiency_widget, 0, 0, 1, 1)
         self.status_bar.showMessage('Polarization Efficiency')
         QtWidgets.QApplication.processEvents()
+        self.resize(self.sizeHint())
         self.show()
-        self.showMaximized()
 
     #################################################
     # SINGLE CHANNEL FTS BILLS
@@ -673,14 +678,11 @@ class BoloDAQGui(QtWidgets.QMainWindow, GuiBuilder):
             return None
         if not hasattr(self, 'fts_widget'):
             self.fts_widget = FourierTransformSpectrometer(self.daq_settings, self.status_bar, self.screen_resolution, self.monitor_dpi, csm_widget, self.srs_sr830dsp_widget)
-        else:
-            self.daq_settings = self.bolo_daq.initialize_daqs()
-            self.rtc_widget.rtc_update_samples()
-            self.rtc_widget.rtc_update_daq_settings(self.daq_settings)
+        self.fts_widget.fts_update_samples()
         self.central_widget.layout().addWidget(self.fts_widget, 0, 0, 1, 1)
         self.status_bar.showMessage('FTS')
         QtWidgets.QApplication.processEvents()
-        self.show()
+        self.resize(self.sizeHint())
         self.showMaximized()
 
 

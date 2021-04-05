@@ -50,7 +50,10 @@ class IVCollector(QtWidgets.QWidget, GuiBuilder):
         self.y_stds = []
         self.today = datetime.now()
         self.today_str = datetime.strftime(self.today, '%Y_%m_%d')
-        self.data_folder = os.path.join('S:', 'Daily_Data', '{0}'.format(self.today_str))
+        if os.getlogin() == 'BoloTester':
+            self.data_folder = os.path.join('Data', '{0}'.format(self.today_str))
+        elif os.getlogin() == 'BlueForsDR1':
+            self.data_folder = os.path.join('S:', 'Daily_Data', '{0}'.format(self.today_str))
         self.saving_manager = SavingManager(self, self.data_folder, self.ivc_save, 'IV')
         self.ivc_populate()
         self.ivc_plot_running()
@@ -92,20 +95,6 @@ class IVCollector(QtWidgets.QWidget, GuiBuilder):
         daq = self.ivc_daq_combobox.currentText()
         self.x_channel = self.daq_x_combobox.currentIndex()
         self.y_channel = self.daq_y_combobox.currentIndex()
-        # X
-        self.int_time_x = self.daq_settings[daq][str(self.x_channel)]['int_time']
-        self.int_time = self.int_time_x
-        self.sample_rate_x = self.daq_settings[daq][str(self.x_channel)]['sample_rate']
-        self.sample_rate = self.sample_rate_x
-        daq_settings_x_info = '\nDAQ X: Int Time (ms): {0} ::: '.format(self.int_time_x)
-        daq_settings_x_info += 'Sample Rate (Hz): {0}'.format(str(self.sample_rate_x))
-        self.daq_settings_x_label.setText(daq_settings_x_info)
-        # Y
-        self.int_time_y = self.daq_settings[daq][str(self.y_channel)]['int_time']
-        self.sample_rate_y = self.daq_settings[daq][str(self.y_channel)]['sample_rate']
-        daq_settings_y_info = '\nDAQ Y: Int Time (ms): {0} ::: '.format(self.int_time_y)
-        daq_settings_y_info += 'Sample Rate (Hz): {0}'.format(str(self.sample_rate_y))
-        self.daq_settings_y_label.setText(daq_settings_y_info)
 
     def ivc_daq_panel(self):
         '''
@@ -115,6 +104,7 @@ class IVCollector(QtWidgets.QWidget, GuiBuilder):
         for daq in self.daq_settings:
             self.ivc_daq_combobox.addItem(daq)
         self.layout().addWidget(self.ivc_daq_combobox, 0, 0, 1, 1)
+        self.ivc_daq_combobox.setCurrentIndex(1)
         # DAQ X
         self.daq_x_combobox = self.gb_make_labeled_combobox(label_text='DAQ X Data:', width=self.le_width)
         for daq in range(0, 8):
@@ -136,6 +126,16 @@ class IVCollector(QtWidgets.QWidget, GuiBuilder):
         self.daq_x_combobox.currentIndexChanged.connect(self.ivc_display_daq_settings)
         self.ivc_daq_combobox.currentIndexChanged.connect(self.ivc_display_daq_settings)
         self.ivc_daq_combobox.setCurrentIndex(1)
+        self.int_time_lineedit = self.gb_make_labeled_lineedit(label_text='Int Time')
+        self.int_time_lineedit.setValidator(QtGui.QDoubleValidator(0, 1e5, 2, self.int_time_lineedit))
+        self.layout().addWidget(self.int_time_lineedit, 6, 0, 1, 1)
+        self.int_time_lineedit.setText('100')
+        self.int_time = self.int_time_lineedit.text()
+        self.sample_rate_lineedit = self.gb_make_labeled_lineedit(label_text='Sample Rate (Hz)')
+        self.sample_rate_lineedit.setValidator(QtGui.QDoubleValidator(0, 1e5, 2, self.sample_rate_lineedit))
+        self.layout().addWidget(self.sample_rate_lineedit, 7, 0, 1, 1)
+        self.sample_rate_lineedit.setText('5000')
+        self.sample_rate = self.sample_rate_lineedit.text()
 
     def ivc_iv_config(self):
         '''
@@ -146,37 +146,37 @@ class IVCollector(QtWidgets.QWidget, GuiBuilder):
             print(voltage_factor)
             self.x_correction_combobox.addItem('{0}'.format(voltage_factor))
         self.x_correction_combobox.setCurrentIndex(1)
-        self.layout().addWidget(self.x_correction_combobox, 6, 0, 1, 1)
+        self.layout().addWidget(self.x_correction_combobox, 8, 0, 1, 1)
         # SQUID
         self.squid_calibration_label = QtWidgets.QLabel('', self)
         self.squid_calibration_label.setAlignment(QtCore.Qt.AlignRight)
-        self.layout().addWidget(self.squid_calibration_label, 7, 0, 1, 1)
+        self.layout().addWidget(self.squid_calibration_label, 9, 0, 1, 1)
         self.y_correction_combobox = self.gb_make_labeled_combobox(label_text='Select SQUID')
         for squid, calibration in self.squid_calibration_dict.items():
             self.y_correction_combobox.addItem('{0}'.format(squid))
         self.y_correction_combobox.setCurrentIndex(-1)
         self.y_correction_combobox.currentIndexChanged.connect(self.ivc_update_squid_calibration)
         self.y_correction_combobox.setCurrentIndex(2)
-        self.layout().addWidget(self.y_correction_combobox, 8, 0, 1, 1)
+        self.layout().addWidget(self.y_correction_combobox, 10, 0, 1, 1)
         # Data Clip
         self.data_clip_lo_lineedit = self.gb_make_labeled_lineedit(label_text='Data Clip Lo (uV)', lineedit_text='0.0', width=self.le_width)
-        self.layout().addWidget(self.data_clip_lo_lineedit, 9, 0, 1, 2)
+        self.layout().addWidget(self.data_clip_lo_lineedit, 11, 0, 1, 2)
         self.data_clip_hi_lineedit = self.gb_make_labeled_lineedit(label_text='Data Clip Hi (uV)', lineedit_text='100.0', width=self.le_width)
-        self.layout().addWidget(self.data_clip_hi_lineedit, 10, 0, 1, 2)
+        self.layout().addWidget(self.data_clip_hi_lineedit, 12, 0, 1, 2)
         # Fit Clip
         self.data_fit_lo_lineedit = self.gb_make_labeled_lineedit(label_text='Fit Clip Lo (uV)', lineedit_text='0.0', width=self.le_width)
-        self.layout().addWidget(self.data_fit_lo_lineedit, 11, 0, 1, 1)
+        self.layout().addWidget(self.data_fit_lo_lineedit, 13, 0, 1, 1)
         self.data_fit_hi_lineedit = self.gb_make_labeled_lineedit(label_text='Fit Clip Hi (uV)', lineedit_text='100.0', width=self.le_width)
-        self.layout().addWidget(self.data_fit_hi_lineedit, 12, 0, 1, 1)
+        self.layout().addWidget(self.data_fit_hi_lineedit, 14, 0, 1, 1)
         # Extra information
         self.sample_temp_lineedit = self.gb_make_labeled_lineedit(label_text='Sample Temp (K)', width=self.le_width)
         self.sample_temp_lineedit.setValidator(QtGui.QDoubleValidator(0, 10000, 8, self.sample_temp_lineedit))
-        self.layout().addWidget(self.sample_temp_lineedit, 13, 0, 1, 1)
+        self.layout().addWidget(self.sample_temp_lineedit, 15, 0, 1, 1)
         self.optical_load_lineedit = self.gb_make_labeled_lineedit(label_text='Optical Load (K)', width=self.le_width)
         self.optical_load_lineedit.setValidator(QtGui.QDoubleValidator(0, 500, 8, self.optical_load_lineedit))
-        self.layout().addWidget(self.optical_load_lineedit, 14, 0, 1, 1)
+        self.layout().addWidget(self.optical_load_lineedit, 16, 0, 1, 1)
         self.sample_band_combobox = self.gb_make_labeled_combobox(label_text='Sample Band (GHz)', width=self.le_width)
-        self.layout().addWidget(self.sample_band_combobox, 15, 0, 1, 1)
+        self.layout().addWidget(self.sample_band_combobox, 17, 0, 1, 1)
         for sample_band in ['', 'MF-Sinuous1p5', 'MF-Sinuous0p8', '30', '40', '90', '150', '220', '270']:
             self.sample_band_combobox.addItem(sample_band)
 
@@ -188,16 +188,16 @@ class IVCollector(QtWidgets.QWidget, GuiBuilder):
         for sample in self.samples_settings:
             self.sample_name_combobox.addItem(sample)
         self.sample_name_combobox.currentIndexChanged.connect(self.ivc_update_sample_name)
-        self.layout().addWidget(self.sample_name_combobox, 16, 0, 1, 1)
+        self.layout().addWidget(self.sample_name_combobox, 18, 0, 1, 1)
         self.sample_name_lineedit = self.gb_make_labeled_lineedit(label_text='Sample Name')
-        self.layout().addWidget(self.sample_name_lineedit, 17, 0, 1, 1)
+        self.layout().addWidget(self.sample_name_lineedit, 19, 0, 1, 1)
         # Buttons
         start_pushbutton = QtWidgets.QPushButton('Start', self)
         start_pushbutton.clicked.connect(self.ivc_start_stop)
-        self.layout().addWidget(start_pushbutton, 18, 0, 1, 1)
+        self.layout().addWidget(start_pushbutton, 20, 0, 1, 1)
         save_pushbutton = QtWidgets.QPushButton('Save', self)
         save_pushbutton.clicked.connect(self.ivc_save)
-        self.layout().addWidget(save_pushbutton, 19, 0, 1, 1)
+        self.layout().addWidget(save_pushbutton, 21, 0, 1, 1)
         self.ivc_update_sample_name(0)
 
     def ivc_update_sample_name(self, index):
@@ -268,6 +268,8 @@ class IVCollector(QtWidgets.QWidget, GuiBuilder):
         '''
         '''
         device = self.ivc_daq_combobox.currentText()
+        self.int_time = self.int_time_lineedit.text()
+        self.sample_rate = self.sample_rate_lineedit.text()
         self.x_data, self.x_stds = [], []
         self.y_data, self.y_stds = [], []
         signal_channels = [self.x_channel, self.y_channel]
@@ -299,7 +301,6 @@ class IVCollector(QtWidgets.QWidget, GuiBuilder):
             self.ivc_display_current_data()
             QtWidgets.QApplication.processEvents()
             self.repaint()
-
 
     def ivc_display_current_data(self):
         '''
@@ -403,11 +404,6 @@ class IVCollector(QtWidgets.QWidget, GuiBuilder):
         squid_calibration_factor = float(self.squid_calibration_label.text())
         i_bolo_real = self.ivc_fit_and_remove_squid_offset()
         i_bolo_std = np.asarray(self.y_stds) * squid_calibration_factor
-        print(float(self.x_correction_combobox.currentText()) * 1e6) #uV
-        print(float(self.x_correction_combobox.currentText()) * 1e6) #uV
-        print(float(self.x_correction_combobox.currentText()) * 1e6) #uV
-        print(float(self.x_correction_combobox.currentText()) * 1e6) #uV
-        print(float(self.x_correction_combobox.currentText()) * 1e6) #uV
         v_bias_real = np.asarray(self.x_data) * float(self.x_correction_combobox.currentText()) * 1e6 #uV
         v_bias_std = np.asarray(self.x_stds) * float(self.x_correction_combobox.currentText()) * 1e6 #uV
         #v_bias_real = np.asarray(self.x_data) * float(2e-6) * 1e6 #uV
@@ -427,7 +423,6 @@ class IVCollector(QtWidgets.QWidget, GuiBuilder):
         self.x_stds_real = v_bias_std
         self.y_data_real = i_bolo_real
         self.y_stds_real = i_bolo_std
-        print(self.x_data_real)
         ax.errorbar(v_bias_real[selector], i_bolo_real[selector], xerr=v_bias_std[selector], yerr=i_bolo_std[selector], marker='.', linestyle='-', label=label)
         if running:
             ax.set_xlabel('Bias Voltage ($\mu V$)', fontsize=14)

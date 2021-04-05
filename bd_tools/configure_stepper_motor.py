@@ -101,6 +101,8 @@ class ConfigureStepperMotor(QtWidgets.QWidget, GuiBuilder):
         '''
         self.csm_send_command('SP0')
         self.csm_send_command('SP')
+        self.position_lineedit.setText('0')
+        self.status_bar.showMessage('Reset 0 for stepper motor on {0}'.format(self.com_port))
 
     def csm_get_current(self):
         '''

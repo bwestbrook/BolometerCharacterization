@@ -324,10 +324,14 @@ class StanfordResearchSystemsSR830DSP(QtWidgets.QWidget, GuiBuilder):
     def srs_get_id(self):
         '''
         '''
+        self.status_bar.showMessage('Getting ID')
+        QtWidgets.QApplication.processEvents()
         self.srs_send_command('*CLS ')
         idn = self.srs_query('*IDN? ')
-        message = 'ID {0}'.format(idn)
+        message = 'Found SRS with ID: '
+        message += '{0}'.format(idn)
         self.status_bar.showMessage(message)
+        QtWidgets.QApplication.processEvents()
 
     def srs_zero_lock_in_phase(self):
         '''
@@ -376,6 +380,8 @@ class StanfordResearchSystemsSR830DSP(QtWidgets.QWidget, GuiBuilder):
     def srs_get_current_sensitivity_range(self):
         '''
         '''
+        self.status_bar.showMessage('Getting Sensistiviy Range')
+        QtWidgets.QApplication.processEvents()
         sensitivity_range_index = self.srs_query('SENS?')
         if self.gb_is_float(sensitivity_range_index):
             value = self.sensitivity_range_dict[str(sensitivity_range_index)]['range']
@@ -383,6 +389,8 @@ class StanfordResearchSystemsSR830DSP(QtWidgets.QWidget, GuiBuilder):
             units = self.sensitivity_range_dict[str(sensitivity_range_index)]['units']
             sensitivity_string = 'Current Range: [{0}] {1} ({2})'.format(sensitivity_range_index, value, units)
             self.sensitivity_display_label.setText(sensitivity_string)
+            self.status_bar.showMessage(sensitivity_string)
+            QtWidgets.QApplication.processEvents()
             return int(sensitivity_range_index)
         else:
             return 0
@@ -414,13 +422,17 @@ class StanfordResearchSystemsSR830DSP(QtWidgets.QWidget, GuiBuilder):
     def srs_get_current_time_constant(self):
         '''
         '''
+        self.status_bar.showMessage('Getting Time Constant')
+        QtWidgets.QApplication.processEvents()
         time_constant_index = self.srs_query('OFLT?')
         if self.gb_is_float(time_constant_index):
             value = self.time_constant_dict[str(time_constant_index)]['range']
             value *= self.time_constant_dict[str(time_constant_index)]['multiplier']
             units = self.time_constant_dict[str(time_constant_index)]['units']
-            time_constant_string = 'Current Range: [{0}] {1} ({2})'.format(time_constant_index, value, units)
+            time_constant_string = 'Time Constant: [{0}] {1} ({2})'.format(time_constant_index, value, units)
             self.time_constant_display_label.setText(time_constant_string)
+            self.status_bar.showMessage(time_constant_string)
+            QtWidgets.QApplication.processEvents()
             return int(time_constant_index)
         else:
             return 0
