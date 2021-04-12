@@ -102,7 +102,7 @@ class BoloDAQGui(QtWidgets.QMainWindow, GuiBuilder):
         if os.getlogin() == 'BoloTester':
             self.data_folder = os.path.join('Data', '{0}'.format(self.today_str))
             self.dewar = '576'
-        elif os.getlogin() == 'BlueForsDR1':
+        elif os.getlogin() == 'Bluefors_PC':
             self.data_folder = os.path.join('S:', 'Daily_Data', '{0}'.format(self.today_str))
             self.dewar = 'BlueForsDR1'
         else:
@@ -569,7 +569,7 @@ class BoloDAQGui(QtWidgets.QMainWindow, GuiBuilder):
         dialog = 'Select the comport for the SRS 830'
         #com_port, okPressed = self.gb_quick_static_info_gather(title='', dialog=dialog, items=['COM10'])
         com_port, okPressed = 'COM10', True
-        if not hasattr(self, 'ser_{0}'.format(com_port)) and okPressed:
+        if not hasattr(self, 'ser_{0}'.format(com_port)) and okPressed and False:
             if not hasattr(self, 'srs_sr830dsp_widget'):
                 self.status_bar.showMessage('Connecting to the SRS SR830 DSP')
                 QtWidgets.QApplication.processEvents()
@@ -583,11 +583,12 @@ class BoloDAQGui(QtWidgets.QMainWindow, GuiBuilder):
             #sm_com_port, okPressed = self.gb_quick_static_info_gather(title='', dialog=dialog, items=stepper_motor_ports)
             sm_com_port = stepper_motor_ports[0]
             okPressed = True
-            if not hasattr(self, 'csm_widget_{0}'.format(sm_com_port)) and okPressed:
+            if not hasattr(self, 'csm_widget_{0}'.format(sm_com_port)) and okPressed and False:
                 csm_widget = ConfigureStepperMotor(sm_com_port, self.status_bar)
                 setattr(self, 'csm_widget_{0}'.format(sm_com_port), csm_widget)
             elif okPressed:
-                csm_widget = getattr(self, 'csm_widget_{0}'.format(sm_com_port))
+                #csm_widget = getattr(self, 'csm_widget_{0}'.format(sm_com_port))
+                csm_widget = None
             else:
                 return None
             stepper_motor_ports.pop(stepper_motor_ports.index(sm_com_port))
@@ -595,6 +596,7 @@ class BoloDAQGui(QtWidgets.QMainWindow, GuiBuilder):
                 'widget': csm_widget,
                 'com_port': sm_com_port
                 }
+        self.srs_sr830dsp_widget = None
         if not hasattr(self, 'beam_mapper_widget'):
             self.beam_mapper_widget = BeamMapper(self.daq_settings, self.status_bar, self.screen_resolution, self.monitor_dpi, self.csm_widget_dict, self.srs_sr830dsp_widget)
         #self.bd_get_saved_daq_settings()
