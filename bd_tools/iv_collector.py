@@ -15,7 +15,7 @@ from GuiBuilder.gui_builder import GuiBuilder, GenericClass
 
 class IVCollector(QtWidgets.QWidget, GuiBuilder):
 
-    def __init__(self, daq_settings, status_bar, screen_resolution, monitor_dpi):
+    def __init__(self, daq_settings, status_bar, screen_resolution, monitor_dpi, data_folder):
         '''
         '''
         super(IVCollector, self).__init__()
@@ -50,10 +50,7 @@ class IVCollector(QtWidgets.QWidget, GuiBuilder):
         self.y_stds = []
         self.today = datetime.now()
         self.today_str = datetime.strftime(self.today, '%Y_%m_%d')
-        if os.getlogin() == 'BoloTester':
-            self.data_folder = os.path.join('Data', '{0}'.format(self.today_str))
-        elif os.getlogin() == 'BlueForsDR1':
-            self.data_folder = os.path.join('S:', 'Daily_Data', '{0}'.format(self.today_str))
+        self.data_folder = data_folder
         self.saving_manager = SavingManager(self, self.data_folder, self.ivc_save, 'IV')
         self.ivc_populate()
         self.ivc_plot_running()

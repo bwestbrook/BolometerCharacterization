@@ -422,7 +422,7 @@ class BoloDAQGui(QtWidgets.QMainWindow, GuiBuilder):
         QtWidgets.QApplication.processEvents()
         self.daq_settings = self.bolo_daq.initialize_daqs()
         if not hasattr(self, 'ivc_widget'):
-            self.ivc_widget = IVCollector(self.daq_settings, self.status_bar, self.screen_resolution, self.monitor_dpi)
+            self.ivc_widget = IVCollector(self.daq_settings, self.status_bar, self.screen_resolution, self.monitor_dpi, self.data_folder)
         self.ivc_widget.ivc_update_samples()
         self.ivc_widget.ivc_update_daq_settings(self.daq_settings)
         self.central_widget.layout().addWidget(self.ivc_widget, 0, 0, 1, 1)
@@ -466,7 +466,7 @@ class BoloDAQGui(QtWidgets.QMainWindow, GuiBuilder):
         if not hasattr(self, 'rtc_widget'):
             if self.dewar == 'BlueForsDR1':
                 ls_372_samples_widget = getattr(self, 'ls_372_widget_{0}'.format(com_port))
-            self.rtc_widget = RTCollector(self.daq_settings, self.status_bar, self.screen_resolution, self.monitor_dpi, ls_372_temp_widget, ls_372_samples_widget)
+            self.rtc_widget = RTCollector(self.daq_settings, self.status_bar, self.screen_resolution, self.monitor_dpi, ls_372_temp_widget, ls_372_samples_widget, self.data_folder)
         else:
             self.daq_settings = self.bolo_daq.initialize_daqs()
             self.rtc_widget.rtc_update_samples()
@@ -598,7 +598,7 @@ class BoloDAQGui(QtWidgets.QMainWindow, GuiBuilder):
                 }
         self.srs_sr830dsp_widget = None
         if not hasattr(self, 'beam_mapper_widget'):
-            self.beam_mapper_widget = BeamMapper(self.daq_settings, self.status_bar, self.screen_resolution, self.monitor_dpi, self.csm_widget_dict, self.srs_sr830dsp_widget)
+            self.beam_mapper_widget = BeamMapper(self.daq_settings, self.status_bar, self.screen_resolution, self.monitor_dpi, self.csm_widget_dict, self.srs_sr830dsp_widget, self.data_folder)
         #self.bd_get_saved_daq_settings()
         self.beam_mapper_widget.bm_update_daq_settings(self.daq_settings)
         self.central_widget.layout().addWidget(self.beam_mapper_widget, 0, 0, 1, 1)

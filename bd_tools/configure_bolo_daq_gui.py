@@ -1,4 +1,5 @@
 import time
+import shutil
 import os
 import simplejson
 import pylab as pl
@@ -22,6 +23,8 @@ class ConfigureBoloDAQGui(QtWidgets.QWidget, GuiBuilder):
         self.monitor_dpi = monitor_dpi
         grid = QtWidgets.QGridLayout()
         self.setLayout(grid)
+        self.today = datetime.now()
+        self.today_str = datetime.strftime(self.today, '%Y_%m_%d')
         for i, config in enumerate(['samples', 'squids', 'com']):
             path = os.path.join('bd_settings', '{0}_settings.json'.format(config))
             if os.path.exists(path):
@@ -78,9 +81,22 @@ class ConfigureBoloDAQGui(QtWidgets.QWidget, GuiBuilder):
             remove_pushbutton.setWhatsThis('{0}_remove_pushbutton'.format(config.lower()))
             setattr(self, '{0}_remove_pushbutton'.format(config.lower()), remove_pushbutton)
             self.layout().addWidget(remove_pushbutton, i + 2, 5, 1, 1)
+            # Save
+            save_pushbutton = QtWidgets.QPushButton('Save', self)
+            save_pushbutton.setWhatsThis('{0}_save_pushbutton'.format(config.lower()))
+            setattr(self, '{0}_save_pushbutton'.format(config.lower()), save_pushbutton)
+            self.layout().addWidget(save_pushbutton, i + 2, 6, 1, 1)
+            # Load
+            load_pushbutton = QtWidgets.QPushButton('Load', self)
+            load_pushbutton.setWhatsThis('{0}_load_pushbutton'.format(config.lower()))
+            setattr(self, '{0}_load_pushbutton'.format(config.lower()), save_pushbutton)
+            self.layout().addWidget(load_pushbutton, i + 2, 7, 1, 1)
+            # Connect to slots
             add_pushbutton.clicked.connect(self.cbd_add_item)
             remove_pushbutton.clicked.connect(self.cbd_delete_item)
             modify_pushbutton.clicked.connect(self.cbd_modify_dict)
+            save_pushbutton.clicked.connect(self.cbd_save_dict)
+            load_pushbutton.clicked.connect(self.cbd_load_dict)
             j += 1
         self.cbd_populate_combobox('com')
         self.cbd_populate_combobox('squids')
@@ -106,6 +122,28 @@ class ConfigureBoloDAQGui(QtWidgets.QWidget, GuiBuilder):
         combobox.currentIndexChanged.connect(self.cbd_update_label)
         combobox.setCurrentIndex(-1)
         combobox.setCurrentIndex(0)
+
+    def cbd_load_dict(self):
+        '''
+        '''
+        setting = self.sender().whatsThis().split('_')[0]
+        load_path = QtWidgets.QFileDialog.getOpenFileName(self, 'bd_settings', '')[0]
+
+        with open(load_path, 'r') as file_handle:
+            saved_settings = simplejson.load(file_handle)
+        default_path = os.path.join('bd_settings', '{0}_settings.json'.format(setting))
+        with open(default_path, 'w') as file_handle:
+            simplejson.dump(saved_settings, file_handle)
+
+    def cbd_save_dict(self):
+        '''
+        '''
+        setting = self.sender().whatsThis().split('_')[0]
+        setting_file_name = os.path.join('bd_settings', '{0}_settings_{1}.json'.format(setting, self.today_str))
+        save_path = QtWidgets.QFileDialog.getSaveFileName(self, 'bd_settings\\', setting_file_name, filter='.json')[0]
+        default_path = os.path.join('bd_settings', '{0}_settings.json'.format(setting))
+        print(default_path, save_path)
+        shutil.copy(default_path, save_path)
 
     def cbd_modify_dict(self, index=0):
         '''

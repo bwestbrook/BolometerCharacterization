@@ -18,7 +18,7 @@ from GuiBuilder.gui_builder import GuiBuilder, GenericClass
 
 class RTCollector(QtWidgets.QWidget, GuiBuilder):
 
-    def __init__(self, daq_settings, status_bar, screen_resolution, monitor_dpi, ls372_temp_widget, ls372_samples_widget):
+    def __init__(self, daq_settings, status_bar, screen_resolution, monitor_dpi, ls372_temp_widget, ls372_samples_widget, data_folder):
         '''
         '''
         super(RTCollector, self).__init__()
@@ -53,7 +53,7 @@ class RTCollector(QtWidgets.QWidget, GuiBuilder):
         self.y_stds = []
         self.today = datetime.now()
         self.today_str = datetime.strftime(self.today, '%Y_%m_%d')
-        self.data_folder = os.path.join('S:', 'Daily_Data', '{0}'.format(self.today_str))
+        self.data_folder = data_folder
         self.saving_manager = SavingManager(self, self.data_folder, self.rtc_save, 'RT')
         self.rtc_populate()
         #self.rtc_plot_running()
@@ -419,8 +419,8 @@ class RTCollector(QtWidgets.QWidget, GuiBuilder):
         '''
         # Sample Name
         self.sample_name_combobox = self.gb_make_labeled_combobox(label_text='Select Sample', width=self.le_width)
-        for sample in self.samples_settings:
-            self.sample_name_combobox.addItem(sample)
+        for sample in sorted(self.samples_settings):
+            self.sample_name_combobox.addItem(str(sample))
         self.sample_name_combobox.activated.connect(self.rtc_update_sample_name)
         self.layout().addWidget(self.sample_name_combobox, 9, 0, 1, 3)
         self.sample_name_lineedit = self.gb_make_labeled_lineedit(label_text='Sample Name')
@@ -437,8 +437,8 @@ class RTCollector(QtWidgets.QWidget, GuiBuilder):
     def rtc_update_sample_name(self):
         '''
         '''
-        sample_key = self.sample_name_combobox.currentIndex()
-        sample_name = self.samples_settings[str(sample_key + 1)]
+        sample_key = self.sample_name_combobox.currentText()
+        sample_name = self.samples_settings[sample_key]
         self.sample_name_lineedit.setText(sample_name)
         sample_name = self.sample_name_lineedit.text().replace('-', '').replace(' ', '_').replace('__', '_')
         self.meta_data['Sample Name'] = sample_name

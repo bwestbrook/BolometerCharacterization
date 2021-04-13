@@ -16,7 +16,7 @@ from GuiBuilder.gui_builder import GuiBuilder, GenericClass
 
 class BeamMapper(QtWidgets.QWidget, GuiBuilder):
 
-    def __init__(self, daq_settings, status_bar, screen_resolution, monitor_dpi, csm_widget_dict, srs_widget):
+    def __init__(self, daq_settings, status_bar, screen_resolution, monitor_dpi, csm_widget_dict, srs_widget, data_folder):
         '''
         '''
         super(BeamMapper, self).__init__()
@@ -37,7 +37,7 @@ class BeamMapper(QtWidgets.QWidget, GuiBuilder):
         self.setLayout(grid)
         self.today = datetime.now()
         self.today_str = datetime.strftime(self.today, '%Y_%m_%d')
-        self.data_folder = os.path.join('Data', '{0}'.format(self.today_str))
+        self.data_folder = data_folder
         self.bm_configure_input_panel()
         self.bm_configure_plot_panel()
         self.bm_plot_time_stream([0], -1.0, 1.0)
@@ -305,7 +305,6 @@ class BeamMapper(QtWidgets.QWidget, GuiBuilder):
             self.sender().setText('Start')
             self.started = False
             self.bm_save()
-
     def bm_scan(self):
         '''
         '''
