@@ -151,11 +151,11 @@ class BeamMapper(QtWidgets.QWidget, GuiBuilder):
         # Zero Lock in
         self.zero_lock_in_checkbox = QtWidgets.QCheckBox('Zero Lock In?', self)
         self.zero_lock_in_checkbox.setChecked(True)
-        self.layout().addWidget(self.zero_lock_in_checkbox, 14, 0, 1, 1)
+        self.layout().addWidget(self.zero_lock_in_checkbox, 14, 0, 1, 2)
         # Reverse Scan Lock in
         self.reverse_scan_checkbox = QtWidgets.QCheckBox('Reverse Scan', self)
         self.reverse_scan_checkbox.setChecked(False)
-        self.layout().addWidget(self.reverse_scan_checkbox, 14, 1, 1, 1)
+        self.layout().addWidget(self.reverse_scan_checkbox, 14, 2, 1, 2)
         ######
         # Control Buttons 
         ######
@@ -433,7 +433,10 @@ class BeamMapper(QtWidgets.QWidget, GuiBuilder):
         step_size_x = np.abs(float(self.step_size_x_lineedit.text())) / 1e5
         print(start_x, step_size_x)
         for i in range(1, 1000):
-            file_name = 'Scan_{0:.1f}x{0:.1f}in_Step_{1:.3f}in_{2}_{3}'.format(start_x, step_size_x, self.sample_name_lineedit.text(), str(i).zfill(3)).replace('.', 'p')
+            if self.reverse_scan_checkbox.isChecked():
+                file_name = 'Scan_{0:.1f}x{0:.1f}in_Step_{1:.3f}in_{2}_{3}_Reversed'.format(start_x, step_size_x, self.sample_name_lineedit.text(), str(i).zfill(3)).replace('.', 'p')
+            else:
+                file_name = 'Scan_{0:.1f}x{0:.1f}in_Step_{1:.3f}in_{2}_{3}'.format(start_x, step_size_x, self.sample_name_lineedit.text(), str(i).zfill(3)).replace('.', 'p')
             file_name += '.dat'
             save_path = os.path.join(self.data_folder, file_name)
             if not os.path.exists(save_path):

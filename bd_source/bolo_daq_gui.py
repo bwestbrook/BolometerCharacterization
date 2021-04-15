@@ -643,7 +643,6 @@ class BoloDAQGui(QtWidgets.QMainWindow, GuiBuilder):
         self.status_bar.showMessage('Polarization Efficiency')
         QtWidgets.QApplication.processEvents()
         self.resize(self.sizeHint())
-        self.show()
 
     #################################################
     # SINGLE CHANNEL FTS BILLS
