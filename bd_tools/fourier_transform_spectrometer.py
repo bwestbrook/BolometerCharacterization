@@ -104,7 +104,7 @@ class FourierTransformSpectrometer(QtWidgets.QWidget, GuiBuilder):
         ######
         #Pause Time 
         self.pause_time_lineedit = self.gb_make_labeled_lineedit(label_text='Pause Time (ms):')
-        self.pause_time_lineedit.setText('500')
+        self.pause_time_lineedit.setText('700')
         self.pause_time_lineedit.setValidator(QtGui.QIntValidator(0, 25000, self.pause_time_lineedit))
         self.layout().addWidget(self.pause_time_lineedit, 6, 0, 1, 1)
         #Start Scan
@@ -293,6 +293,7 @@ class FourierTransformSpectrometer(QtWidgets.QWidget, GuiBuilder):
                 time.sleep(pause_time * 1e-3)
                 if self.zero_lock_in_checkbox.isChecked():
                     self.srs_widget.srs_zero_lock_in_phase()
+                    time.sleep(0.3)
                 # Gather Data and Append to Vector then plot
                 self.x_data.append(scan_position)
                 self.x_stds.append(1) # guesstimated < 1 step error in position
