@@ -69,12 +69,12 @@
                 "function": "bd_data_plotter",
                 "icon": "data.png"
             },
-            "08_Noise Analyzer": {
-                "Shortcut": "7",
-                "StatusTip": "Noise Analyzer",
-                "ToolTip": "Noise Analyzer",
-                "function": "bd_noise_analyzer",
-                "icon": "noise_analyzer.png"
+            "08_Difference IVs": {
+                "Shortcut": "8",
+                "StatusTip": "Difference Load Curves",
+                "ToolTip": "Difference Load Curves",
+                "function": "bd_difference_load_curves",
+                "icon": "data.png"
             },
             "09_Fridge Cycle 576": {
                 "Shortcut": "9",
@@ -82,6 +82,13 @@
                 "ToolTip": "Fridge Cycle 576",
                 "function": "bd_fridge_cycle",
                 "icon": "snowflake.png"
+            },
+            "10_Noise Analyzer": {
+                "Shortcut": "7",
+                "StatusTip": "Noise Analyzer",
+                "ToolTip": "Noise Analyzer",
+                "function": "bd_noise_analyzer",
+                "icon": "noise_analyzer.png"
             }
         },
         "03_Edit": {
