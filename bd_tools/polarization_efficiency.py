@@ -12,7 +12,7 @@ from GuiBuilder.gui_builder import GuiBuilder, GenericClass
 
 class PolarizationEfficiency(QtWidgets.QWidget, GuiBuilder):
 
-    def __init__(self, daq_settings, status_bar, screen_resolution, monitor_dpi, csm_widget, srs_widget):
+    def __init__(self, daq_settings, status_bar, screen_resolution, monitor_dpi, csm_widget, srs_widget, data_folder):
         '''
         '''
         super(PolarizationEfficiency, self).__init__()
@@ -34,7 +34,7 @@ class PolarizationEfficiency(QtWidgets.QWidget, GuiBuilder):
         self.pe_configure_plot_panel()
         self.today = datetime.now()
         self.today_str = datetime.strftime(self.today, '%Y_%m_%d')
-        self.data_folder = './Data/{0}'.format(self.today_str)
+        self.data_folder = data_folder
         self.start_pause = 5.0
         self.status_bar.showMessage('Ready')
         self.x_data = []

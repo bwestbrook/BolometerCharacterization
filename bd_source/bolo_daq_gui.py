@@ -30,6 +30,7 @@ from bd_tools.beam_mapper import BeamMapper
 from bd_tools.iv_collector import IVCollector
 from bd_tools.rt_collector import RTCollector
 from bd_tools.fridge_cycle import FridgeCycle
+from bd_tools.difference_load_curves import DifferenceLoadCurves
 from bd_tools.data_plotter import DataPlotter
 from bd_tools.lakeshore_372 import LakeShore372
 from bd_tools.time_constant import TimeConstant
@@ -275,7 +276,7 @@ class BoloDAQGui(QtWidgets.QMainWindow, GuiBuilder):
         self.central_widget.layout().addWidget(self.configure_bolo_daq_gui_widget, 0, 0, 1, 1)
         self.status_bar.showMessage('Bolo DAQ GUI Settings')
         QtWidgets.QApplication.processEvents()
-        self.showNormal()
+        self.resize(self.sizeHint())
 
     #################################################
     #################################################
@@ -306,7 +307,7 @@ class BoloDAQGui(QtWidgets.QMainWindow, GuiBuilder):
             self.central_widget.layout().addWidget(self.srs_sr830dsp_widget, 0, 0, 1, 1)
         self.status_bar.showMessage('SRS SR830 Control')
         QtWidgets.QApplication.processEvents()
-        self.showNormal()
+        self.resize(self.minimumSizeHint())
 
     #################################################
     # Comport Utility
@@ -324,7 +325,7 @@ class BoloDAQGui(QtWidgets.QMainWindow, GuiBuilder):
         self.com_port_utility_widget.cpu_change_status_bar(self.status_bar)
         self.status_bar.showMessage('COM port utility')
         QtWidgets.QApplication.processEvents()
-        self.showNormal()
+        self.resize(self.minimumSizeHint())
 
     #################################################
     # Hewlett Packard 34401A
@@ -373,7 +374,7 @@ class BoloDAQGui(QtWidgets.QMainWindow, GuiBuilder):
             self.central_widget.layout().addWidget(self.agilent_e3634a_widget, 0, 0, 1, 1)
         self.status_bar.showMessage('Agilent E3634A Controller')
         QtWidgets.QApplication.processEvents()
-        self.showNormal()
+        self.resize(self.minimumSizeHint())
 
     #################################################
     # Lakeshore
@@ -401,7 +402,7 @@ class BoloDAQGui(QtWidgets.QMainWindow, GuiBuilder):
             self.central_widget.layout().addWidget(ls_372_widget, 0, 0, 1, 1)
         self.status_bar.showMessage('Lakeshore 372 Controller')
         QtWidgets.QApplication.processEvents()
-        self.showNormal()
+        self.resize(self.minimumSizeHint())
 
     #################################################
     #################################################
@@ -474,7 +475,7 @@ class BoloDAQGui(QtWidgets.QMainWindow, GuiBuilder):
         self.central_widget.layout().addWidget(self.rtc_widget, 0, 0, 1, 1)
         self.status_bar.showMessage('RT Curves')
         QtWidgets.QApplication.processEvents()
-        self.resize(self.minimumSizeHint().width(), self.minimumSizeHint().height())
+        self.resize(self.minimumSizeHint())
 
     #################################################
     # Configure Stepper Motors
@@ -498,8 +499,7 @@ class BoloDAQGui(QtWidgets.QMainWindow, GuiBuilder):
         self.central_widget.layout().addWidget(csm_widget, 0, 0, 1, 1)
         self.status_bar.showMessage('Configure Stepper Motors')
         QtWidgets.QApplication.processEvents()
-        self.showNormal()
-        self.resize(self.sizeHint())
+        self.resize(self.minimumSizeHint())
 
     #################################################
     # NOISE ANALYZER 
@@ -518,8 +518,7 @@ class BoloDAQGui(QtWidgets.QMainWindow, GuiBuilder):
         self.central_widget.layout().addWidget(self.noise_analyzer_widget, 0, 0, 1, 1)
         self.status_bar.showMessage('Noise Analyzer')
         QtWidgets.QApplication.processEvents()
-        self.resize(self.sizeHint())
-        self.showNormal()
+        self.resize(self.minimumSizeHint())
 
     #################################################
     # COSMIC RAYS
@@ -537,8 +536,7 @@ class BoloDAQGui(QtWidgets.QMainWindow, GuiBuilder):
         self.central_widget.layout().addWidget(self.cosmic_ray_widget, 0, 0, 1, 1)
         self.status_bar.showMessage('Cosmic Ray Data')
         QtWidgets.QApplication.processEvents()
-        self.resize(self.sizeHint())
-        self.showNormal()
+        self.resize(self.minimumSizeHint())
 
     #################################################
     # TIME CONSTANT 
@@ -553,8 +551,7 @@ class BoloDAQGui(QtWidgets.QMainWindow, GuiBuilder):
         self.central_widget.layout().addWidget(self.time_constant_widget, 0, 0, 1, 1)
         self.status_bar.showMessage('Bolometer Time Constant')
         QtWidgets.QApplication.processEvents()
-        self.resize(self.sizeHint())
-        self.showNormal()
+        self.resize(self.minimumSizeHint())
 
     #################################################
     # BEAM MAPPER 
@@ -604,8 +601,24 @@ class BoloDAQGui(QtWidgets.QMainWindow, GuiBuilder):
         self.central_widget.layout().addWidget(self.beam_mapper_widget, 0, 0, 1, 1)
         self.status_bar.showMessage('Beam Mapper')
         QtWidgets.QApplication.processEvents()
-        #self.resize(self.sizeHint())
-        self.showMaximized()
+        self.resize(self.minimumSizeHint())
+
+    #################################################
+    # Difference Load Curves 
+    #################################################
+
+    def bd_difference_load_curves(self):
+        '''
+        '''
+        self.gb_initialize_panel('central_widget')
+        self.status_bar.showMessage('Launching Difference Load Curves')
+        QtWidgets.QApplication.processEvents()
+        if not hasattr(self, 'difference_load_curves_widget'):
+            self.difference_load_curves_widget = DifferenceLoadCurves(self.daq_settings, self.status_bar, self.screen_resolution, self.monitor_dpi, self.data_folder)
+        self.central_widget.layout().addWidget(self.difference_load_curves_widget, 0, 0, 1, 1)
+        self.status_bar.showMessage('Difference Load Curves')
+        QtWidgets.QApplication.processEvents()
+        self.resize(self.minimumSizeHint())
 
     #################################################
     # Polarization Efficiency
@@ -639,13 +652,12 @@ class BoloDAQGui(QtWidgets.QMainWindow, GuiBuilder):
         else:
             return None
         if not hasattr(self, 'polarization_efficiency_widget'):
-            self.polarization_efficiency_widget = PolarizationEfficiency(self.daq_settings, self.status_bar, self.screen_resolution, self.monitor_dpi, csm_widget, self.srs_sr830dsp_widget)
+            self.polarization_efficiency_widget = PolarizationEfficiency(self.daq_settings, self.status_bar, self.screen_resolution, self.monitor_dpi, csm_widget, self.srs_sr830dsp_widget, self.data_folder)
         self.polarization_efficiency_widget.pe_update_daq_settings(self.daq_settings)
         self.central_widget.layout().addWidget(self.polarization_efficiency_widget, 0, 0, 1, 1)
         self.status_bar.showMessage('Polarization Efficiency')
         QtWidgets.QApplication.processEvents()
-        self.resize(self.sizeHint())
-        self.show()
+        self.resize(self.minimumSizeHint())
 
     #################################################
     # SINGLE CHANNEL FTS BILLS

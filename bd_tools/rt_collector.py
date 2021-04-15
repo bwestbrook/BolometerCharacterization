@@ -268,7 +268,9 @@ class RTCollector(QtWidgets.QWidget, GuiBuilder):
         '''
         '''
         channel = self.channel_combobox.currentText()
-        self.sample_name_combobox.setCurrentIndex(int(channel) - 1)
+        ls_name = 'LS{0}'.format(channel.zfill(2))
+        ls_idx = self.sample_name_combobox.findText(ls_name)
+        self.sample_name_combobox.setCurrentIndex(ls_idx)
         self.rtc_update_sample_name()
         self.ls372_samples_widget.ls372_edit_channel(clicked=True, index=channel)
         self.ls372_samples_widget.channels.ls372_scan_channel(channel)
@@ -440,7 +442,7 @@ class RTCollector(QtWidgets.QWidget, GuiBuilder):
         sample_key = self.sample_name_combobox.currentText()
         sample_name = self.samples_settings[sample_key]
         self.sample_name_lineedit.setText(sample_name)
-        sample_name = self.sample_name_lineedit.text().replace('-', '').replace(' ', '_').replace('__', '_')
+        sample_name = self.sample_name_lineedit.text().replace(' ', '_').replace('__', '_')
         self.meta_data['Sample Name'] = sample_name
 
     #########################################################
