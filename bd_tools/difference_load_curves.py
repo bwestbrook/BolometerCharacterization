@@ -122,6 +122,9 @@ class DifferenceLoadCurves(QtWidgets.QWidget, GuiBuilder):
         self.iv_1_save_plot_pushbutton = QtWidgets.QPushButton('Save IV 1 Plot')
         self.layout().addWidget(self.iv_1_save_plot_pushbutton, 8, 0, 1, 4)
         self.iv_1_save_plot_pushbutton.clicked.connect(self.dlc_save_iv_1)
+        # High Load
+        self.iv_1_high_load_label = QtWidgets.QLabel('High Load')
+        self.layout().addWidget(self.iv_1_high_load_label, 9, 0, 1, 4)
         #############################################################
         # IV 2
         #############################################################
@@ -181,6 +184,9 @@ class DifferenceLoadCurves(QtWidgets.QWidget, GuiBuilder):
         # IV 2 Saving (in case new fit would liked to be saved)
         self.iv_2_save_plot_pushputton = QtWidgets.QPushButton('Save IV 2 Plot')
         self.layout().addWidget(self.iv_2_save_plot_pushputton, 8, 4, 1, 4)
+        # Low Load
+        self.iv_2_low_load_label = QtWidgets.QLabel('Low Load')
+        self.layout().addWidget(self.iv_2_low_load_label, 9, 4, 1, 4)
         #############################################################
         # Spectra
         #############################################################
@@ -205,7 +211,10 @@ class DifferenceLoadCurves(QtWidgets.QWidget, GuiBuilder):
         self.layout().addWidget(self.spectra_data_clip_hi_lineedit, 3, 10, 1, 2)
         self.spectra_data_clip_hi_lineedit.setText('300')
         self.spectra_data_clip_hi_lineedit.returnPressed.connect(self.dlc_load_spectra)
-
+        self.smoothing_factor_lineedit = self.gb_make_labeled_lineedit(label_text='Smoothing Factor')
+        self.smoothing_factor_lineedit.returnPressed.connect(self.dlc_load_spectra)
+        self.smoothing_factor_lineedit.setText('0.01')
+        self.layout().addWidget(self.smoothing_factor_lineedit, 4, 8, 1, 2)
         self.renormalize_checkbox = QtWidgets.QCheckBox('Renormalize post clip?')
         self.renormalize_checkbox.setChecked(True)
         self.layout().addWidget(self.renormalize_checkbox, 4, 10, 1, 2)
@@ -214,9 +223,12 @@ class DifferenceLoadCurves(QtWidgets.QWidget, GuiBuilder):
         self.layout().addWidget(self.spectra_plot_raw_label, 5, 8, 1, 4)
         self.spectra_plot_calibrated = QtWidgets.QLabel('')
         self.layout().addWidget(self.spectra_plot_calibrated, 6, 8, 1, 4)
-        # IV 2 Saving (in case new fit would liked to be saved)
+        # Spectra Saving (in case new fit would liked to be saved)
         self.save_spectra_pushbutton = QtWidgets.QPushButton('Save Processed Spectra')
-        self.layout().addWidget(self.save_spectra_pushbutton, 7, 8, 1, 4)
+        self.layout().addWidget(self.save_spectra_pushbutton, 8, 8, 1, 4)
+        # Spectra Saving (in case new fit would liked to be saved)
+        self.difference_load_curves_pushbutton = QtWidgets.QPushButton('Difference Load Curves')
+        self.layout().addWidget(self.difference_load_curves_pushbutton, 10, 0, 1, 12)
 
     #################################################################################
     # IV Analysis
@@ -239,6 +251,8 @@ class DifferenceLoadCurves(QtWidgets.QWidget, GuiBuilder):
         fig, ax = self.dlc_create_blank_fig(frac_screen_height=0.2)
         if self.iv_1_path is None:
             iv_1_path = QtWidgets.QFileDialog.getOpenFileName(self, 'Select Data File')[0]
+            if len(iv_1_path) == 0:
+                return None
             self.iv_1_path = iv_1_path
         else:
             iv_1_path = self.iv_1_path
@@ -255,7 +269,7 @@ class DifferenceLoadCurves(QtWidgets.QWidget, GuiBuilder):
         pl.close('all')
         # Calibration with Fit
         fig, ax = self.dlc_create_blank_fig(frac_screen_height=0.2)
-        self.calibrated_bias_voltage, self.calibrated_squid_current, fit_clip_lo, fit_clip_hi = self.dlc_calibrate_raw_data(bias_voltage, squid_voltage, iv=2)
+        self.calibrated_bias_voltage, self.calibrated_squid_current, fit_clip_lo, fit_clip_hi = self.dlc_calibrate_raw_data(bias_voltage, squid_voltage, iv=1)
         selector = np.logical_and(fit_clip_lo < self.calibrated_bias_voltage, self.calibrated_bias_voltage < fit_clip_hi)
         ax.plot(self.calibrated_bias_voltage, self.calibrated_squid_current, label='raw')
         ax.plot(self.calibrated_bias_voltage[selector], self.calibrated_squid_current[selector], color='r', label='Fit')
@@ -293,6 +307,8 @@ class DifferenceLoadCurves(QtWidgets.QWidget, GuiBuilder):
         fig, ax = self.dlc_create_blank_fig(frac_screen_height=0.2)
         if self.iv_2_path is None:
             iv_2_path = QtWidgets.QFileDialog.getOpenFileName(self, 'Select Data File')[0]
+            if len(iv_2_path) == 0:
+                return None
             self.iv_2_path = iv_2_path
         else:
             iv_2_path = self.iv_2_path
@@ -333,6 +349,7 @@ class DifferenceLoadCurves(QtWidgets.QWidget, GuiBuilder):
     def dlc_load_iv_data(self, data_path):
         '''
         '''
+
         bias_voltage = []
         squid_voltage = []
         with open(data_path, 'r') as file_handle:
@@ -376,32 +393,33 @@ class DifferenceLoadCurves(QtWidgets.QWidget, GuiBuilder):
         '''
         data_clip_lo = float(self.spectra_data_clip_lo_lineedit.text()) * 1e9
         data_clip_hi = float(self.spectra_data_clip_hi_lineedit.text()) * 1e9
-        spectra_path = QtWidgets.QFileDialog.getOpenFileName(self, 'Select Data File')[0]
         band = self.band_select_combobox.currentText()
-        print(band)
         if self.spectra_path is None:
+            spectra_path = QtWidgets.QFileDialog.getOpenFileName(self, 'Select Data File')[0]
+            if len(spectra_path) == 0:
+                return None
             self.spectra_path = spectra_path
         else:
             spectra_path = self.spectra_path
-        print(band, self.spectra_path, spectra_path)
         fft_frequency_vector, fft_vector, normalized_fft_vector = self.dlc_load_spectra_data(spectra_path, smoothing_factor=0.0)
-        fig, ax = self.dlc_create_blank_fig(frac_screen_height=0.2)
-        ax.plot(fft_frequency_vector, normalized_fft_vector, label='Raw Data')
         fft_frequency_vector_simulated, fft_vector_simulated = self.dlc_load_simulated_band()
-        print(len(fft_frequency_vector_simulated), len(fft_vector_simulated))
-        ax.plot(fft_frequency_vector_simulated * 1e9, fft_vector_simulated, label='HFSS Data')
-        ax.plot(fft_frequency_vector_simulated * 1e9, fft_vector_simulated, label='HFSS Data')
+        fig, ax = self.dlc_create_blank_fig(frac_screen_width=0.4, frac_screen_height=0.3)
+        ax.plot(fft_frequency_vector * 1e-9, normalized_fft_vector, label='Raw Data')
+        ax.plot(fft_frequency_vector_simulated, fft_vector_simulated, label='HFSS Data')
+        ax.set_xlabel('Frequency (GHz)')
         spectra_png_save_path = os.path.join('temp_files', 'temp_spectra.png')
         pl.legend()
         fig.savefig(spectra_png_save_path)
         image_to_display = QtGui.QPixmap(spectra_png_save_path)
         self.spectra_plot_raw_label.setPixmap(image_to_display)
-        simulated_frequency_vector, simulated_transmission = self.dlc_load_simulated_band()
-        ax.plot(simulated_frequency_vector, simulated_transmission)
         pl.close('all')
-        fig, ax = self.dlc_create_blank_fig(frac_screen_height=0.2)
+        fig, ax = self.dlc_create_blank_fig(frac_screen_width=0.4, frac_screen_height=0.3)
         fft_frequency_vector_processed, fft_vector_processed, normalized_fft_vector_processed = self.dlc_load_spectra_data(spectra_path)
-        ax.plot(fft_frequency_vector_processed, normalized_fft_vector_processed, label='Post Process')
+        delta_power, integrated_bandwidth = self.dlc_compute_delta_power_at_window(fft_frequency_vector_processed, normalized_fft_vector_processed)
+        label='$\Delta(P)$ {0:.2f} pW\nBW {1:.2f} GHz '.format(delta_power * 1e12, integrated_bandwidth * 1e-9)
+        ax.plot(fft_frequency_vector_processed * 1e-9, normalized_fft_vector_processed, label=label)
+        ax.plot(fft_frequency_vector_simulated, fft_vector_simulated, label='HFSS Data')
+        ax.set_xlabel('Frequency (GHz)')
         spectra_png_save_path = os.path.join('temp_files', 'temp_spectra.png')
         pl.legend()
         fig.savefig(spectra_png_save_path)
@@ -409,9 +427,12 @@ class DifferenceLoadCurves(QtWidgets.QWidget, GuiBuilder):
         self.spectra_plot_calibrated.setPixmap(image_to_display)
         pl.close('all')
 
-    def dlc_load_spectra_data(self, data_path, smoothing_factor=0.01, normalize_post_clip=True):
+    def dlc_load_spectra_data(self, data_path, smoothing_factor=None):
         '''
         '''
+        normalize_post_clip = self.renormalize_checkbox.isChecked()
+        if smoothing_factor is None:
+            smoothing_factor = float(self.smoothing_factor_lineedit.text())
         data_clip_lo = float(self.spectra_data_clip_lo_lineedit.text()) * 1e9
         data_clip_hi = float(self.spectra_data_clip_hi_lineedit.text()) * 1e9
         with open(data_path, 'r') as file_handle:
@@ -419,7 +440,6 @@ class DifferenceLoadCurves(QtWidgets.QWidget, GuiBuilder):
             frequency_vector = np.zeros(len(lines))
             transmission_vector = np.zeros(len(lines))
             for i, line in enumerate(lines):
-                print(line)
                 if ',' in line:
                     frequency = line.split(', ')[0]
                     transmission = line.split(', ')[1]
@@ -439,14 +459,9 @@ class DifferenceLoadCurves(QtWidgets.QWidget, GuiBuilder):
                     frequency_value = frequency_vector[i]
                     line = '{0:.4f}\t{1:.4f}\n'.format(frequency_value, transmission_value)
                     smoothed_data_handle.write(line)
-        #if data_clip[0] > 0:
         normalized_transmission_vector = transmission_vector
-        #print('skeip norm')
         if normalize_post_clip:
             normalized_transmission_vector = normalized_transmission_vector / np.max(normalized_transmission_vector)
-        #else:
-            #normalized_transmission_vector = transmission_vector / max(transmission_vector)
-            #print('do norm')
         return frequency_vector, transmission_vector, normalized_transmission_vector
 
     def dlc_load_simulated_band(self):
@@ -472,16 +487,33 @@ class DifferenceLoadCurves(QtWidgets.QWidget, GuiBuilder):
                         else:
                             frequency = line.split('\t')[freq_idx].strip()
                             transmission = line.split('\t')[trans_idx].strip()
-                        if float(data_clip_lo) < float(frequency) < float(data_clip_hi) and self.gb_is_float(transmission):
+                        if float(data_clip_lo) < float(frequency) * 1e9 < float(data_clip_hi) and self.gb_is_float(transmission):
                             frequency_vector = np.append(frequency_vector, float(frequency))
                             transmission_vector = np.append(transmission_vector, float(transmission))
-                            print(len(frequency_vector), len(transmission_vector))
                     except ValueError:
                         pass
         #transmission_vector = np.asarray(transmission_vector) / np.max(np.asarray(transmission_vector))
         #frequency_vector = np.asarray(frequency_vector)
-        print(len(frequency_vector), len(transmission_vector))
         return frequency_vector, transmission_vector
+
+    def dlc_compute_delta_power_at_window(self, frequency_vector, normalized_transmission_vector, show_spectra=False):
+        '''
+        '''
+        t_source_high = float(self.iv_1_t_load_lineedit.text())
+        t_source_low = float(self.iv_2_t_load_lineedit.text())
+        band_edge_low = float(self.spectra_data_clip_lo_lineedit.text()) * 1e9
+        band_edge_high = float(self.spectra_data_clip_hi_lineedit.text()) * 1e9
+        band = self.band_select_combobox.currentText()
+        boltzmann_constant = 1.38e-23
+        print(frequency_vector)
+        selector = np.logical_and(np.where(frequency_vector > band_edge_low, True, False), np.where(frequency_vector < band_edge_high, True, False))
+        integrated_bandwidth = np.trapz(normalized_transmission_vector[selector], frequency_vector[selector])
+        delta_power = boltzmann_constant * (t_source_high - t_source_low) * integrated_bandwidth  # in W
+        if show_spectra:
+            pl.plot(frequency_vector, normalized_transmission_vector)
+            pl.plot(normalized_transmission_vector)
+            pl.show()
+        return delta_power, integrated_bandwidth
 
     def dlc_running_mean(self, vector, smoothing_factor=0.01):
         '''
@@ -549,7 +581,6 @@ class DifferenceLoadCurves(QtWidgets.QWidget, GuiBuilder):
         if pturn and len(bolo_voltage_bias) > 2:
             pt_idx = np.where(bolo_current[plot_selector] == min(bolo_current[plot_selector]))[0][0]
             pl_idx = np.where(bolo_voltage_bias[plot_selector] == min(bolo_voltage_bias[plot_selector]))[0][0]
-            print(pt_idx, pl_idx)
             pturn_pw = bolo_current[plot_selector][pt_idx] * bolo_voltage_bias[plot_selector][pt_idx]
             plast_pw = bolo_current[plot_selector][pl_idx] * bolo_voltage_bias[plot_selector][pl_idx]
             ax1.plot(bolo_voltage_bias[plot_selector][pt_idx], bolo_current[plot_selector][pt_idx],
