@@ -181,8 +181,9 @@ class DifferenceLoadCurves(QtWidgets.QWidget, GuiBuilder):
         self.iv_2_paneled_plot_label = QtWidgets.QLabel('')
         self.layout().addWidget(self.iv_2_paneled_plot_label, 7, 4, 1, 4)
         # IV 2 Saving (in case new fit would liked to be saved)
-        self.iv_2_save_plot_pushputton = QtWidgets.QPushButton('Save IV 2 Plot')
-        self.layout().addWidget(self.iv_2_save_plot_pushputton, 8, 4, 1, 4)
+        self.iv_2_save_plot_pushbutton = QtWidgets.QPushButton('Save IV 2 Plot')
+        self.layout().addWidget(self.iv_2_save_plot_pushbutton, 8, 4, 1, 4)
+        self.iv_2_save_plot_pushbutton.clicked.connect(self.dlc_save_iv_2)
         # Low Load
         self.iv_2_low_load_label = QtWidgets.QLabel('Low Load')
         self.layout().addWidget(self.iv_2_low_load_label, 9, 4, 1, 4)
@@ -252,7 +253,7 @@ class DifferenceLoadCurves(QtWidgets.QWidget, GuiBuilder):
         sample_name = self.sample_name_lineedit.text()
         temp_differenced_load_curve_path = os.path.join('temp_files', 'temp_differenced_load_curves.png')
         suggested_save_path = 'Optical_Efficiency_{0}.png'.format(sample_name)
-        differenced_load_curves_path = QtWidgets.QFileDialog.getSaveFileName(self, 'Select Data File', suggested_save_path, filter=suggested_save_path)[0]
+        differenced_load_curves_path = QtWidgets.QFileDialog.getSaveFileName(self, 'Select Data File', suggested_save_path, filter='.png')[0]
         if len(differenced_load_curves_path) > 0:
             shutil.copy(temp_differenced_load_curve_path, differenced_load_curves_path)
 
@@ -291,8 +292,8 @@ class DifferenceLoadCurves(QtWidgets.QWidget, GuiBuilder):
         text += '{0} Optical Efficiency Data\n'.format(sample_name)
         text += 'QTY                  | Measured Spectra   | Simuated Spectra\n'
         text += '---------------------------------------------------------\n'
-        text += 'Dew Eff          [%] | {0:.2f}            | {0:.2f} \n'.format(1e2 * self.dewar_transmission)
-        text += 'T chop           [K] | {0:.2f}            | {0:.2f}\n'.format(t_chop)
+        text += 'Dew Eff          [%] | {0:.2f}           | {0:.2f} \n'.format(1e2 * self.dewar_transmission)
+        text += 'T chop           [K] | {0:.2f}           | {0:.2f}\n'.format(t_chop)
         text += 'P window        [pW] | {0:.2f}            | {1:.2f}\n'.format(measured_delta_power * 1e12, simulated_delta_power * 1e12)
         text += 'P sensed        [pW] | {0:.2f}            | {0:.2f} \n'.format(p_sensed)
         text += 'Int BW         [GHz] | {0:.2f}            | {1:.2f}\n'.format(measured_integrated_bandwidth * 1e-9, simulated_integrated_bandwidth * 1e-9)
@@ -397,7 +398,7 @@ class DifferenceLoadCurves(QtWidgets.QWidget, GuiBuilder):
         '''
         temp_paneled_iv_1_path = os.path.join('temp_files', 'temp_paneled_iv_1.png')
         suggested_save_path = self.iv_1_path.replace('.txt', '.png').replace('raw', 'paneled')
-        iv_1_path = QtWidgets.QFileDialog.getSaveFileName(self, 'Select Data File', suggested_save_path, filter=suggested_save_path)[0]
+        iv_1_path = QtWidgets.QFileDialog.getSaveFileName(self, 'Select Data File', suggested_save_path, filter='.png')[0]
         if len(iv_1_path) > 0:
             shutil.copy(temp_paneled_iv_1_path, iv_1_path)
 
@@ -455,9 +456,9 @@ class DifferenceLoadCurves(QtWidgets.QWidget, GuiBuilder):
     def dlc_save_iv_2(self):
         '''
         '''
-        temp_paneled_iv_2_path = os.path.join('temp_files', 'temp_paneled_iv_1.png')
+        temp_paneled_iv_2_path = os.path.join('temp_files', 'temp_paneled_iv_2.png')
         suggested_save_path = self.iv_2_path.replace('.txt', '.png').replace('raw', 'paneled')
-        iv_1_path = QtWidgets.QFileDialog.getSaveFileName(self, 'Select Data File', suggested_save_path, filter=suggested_save_path)[0]
+        iv_2_path = QtWidgets.QFileDialog.getSaveFileName(self, 'Select Data File', suggested_save_path, filter='.png')[0]
         if len(iv_2_path) > 0:
             shutil.copy(temp_paneled_iv_2_path, iv_2_path)
 
@@ -558,7 +559,7 @@ class DifferenceLoadCurves(QtWidgets.QWidget, GuiBuilder):
         '''
         temp_spectra_path = os.path.join('temp_files', 'temp_spectra.png')
         suggested_save_path = self.spectra_path.replace('.txt', '.png').replace('.fft', '_processed.fft')
-        spectra_path = QtWidgets.QFileDialog.getSaveFileName(self, 'Select Data File', suggested_save_path, filter=suggested_save_path)[0]
+        spectra_path = QtWidgets.QFileDialog.getSaveFileName(self, 'Select Data File', suggested_save_path, filter='.png')[0]
         if len(spectra_path) > 0:
             shutil.copy(temp_spectra_path, spectra_path)
 
