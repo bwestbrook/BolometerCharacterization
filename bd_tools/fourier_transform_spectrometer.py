@@ -25,6 +25,34 @@ class FourierTransformSpectrometer(QtWidgets.QWidget, GuiBuilder):
         self.screen_resolution = screen_resolution
         self.monitor_dpi = monitor_dpi
         self.daq = BoloDAQ()
+        self.bands = {
+            'SO30': {
+                'Band Center': 30,
+                'Project': 'Simons Observatory',
+                'Freq Column': 0,
+                'Transmission Column': 3,
+                'Header Lines': 2,
+                'Path': os.path.join('bd_lib', 'simulated_bands', 'Nitride_Lumped_Diplexer_030_05_040_08_MoreWider20190226_300GHz.csv')
+                },
+            'SO40': {
+                'Band Center': 40,
+                'Project': 'Simons Observatory',
+                'Freq Column': 0,
+                'Transmission Column': 4,
+                'Header Lines': 2,
+                'Path': os.path.join('bd_lib', 'simulated_bands', 'Nitride_Lumped_Diplexer_030_05_040_08_MoreWider20190226_300GHz.csv')
+                }
+            }
+        self.optical_element_dict = {
+            {'5mil Beam Splitter':
+                'Divide': True
+                'File_path': os.path.join('bd_lib', 'optical_elements', '')
+                },
+            {'10mil Beam Splitter':
+                'Divide': True
+                'File_path': os.path.join('bd_lib', 'optical_elements', '')
+                },
+            }
         grid = QtWidgets.QGridLayout()
         self.setLayout(grid)
         grid_2 = QtWidgets.QGridLayout()
@@ -176,6 +204,10 @@ class FourierTransformSpectrometer(QtWidgets.QWidget, GuiBuilder):
         # STD
         self.data_std_label = QtWidgets.QLabel('Data STD (V):', self)
         self.layout().addWidget(self.data_std_label, 12, 5, 1, 2)
+        self.optical_elements_combobox = self.gb_make_labeled_combobox(label_text='Optical Elements')
+        for optical_element in self.optical_element_dict:
+            self.optical_elements_combobox.addItem(optical_elements_combobox)= self.gb_make_labeled_combobox(label_text='Optical Elements')
+
 
     #################################################
     # Scanning

@@ -671,7 +671,7 @@ class BoloDAQGui(QtWidgets.QMainWindow, GuiBuilder):
         QtWidgets.QApplication.processEvents()
         dialog = 'Select the comport for the SRS 830'
         #com_port, okPressed = self.gb_quick_static_info_gather(title='', dialog=dialog, items=['COM10'])
-        com_port, okPressed = 'COM10', True
+        com_port, okPressed = 'COM10', False
         if not hasattr(self, 'ser_{0}'.format(com_port)) and okPressed:
             if not hasattr(self, 'srs_sr830dsp_widget'):
                 self.status_bar.showMessage('Connecting to the SRS SR830 DSP')
@@ -690,6 +690,7 @@ class BoloDAQGui(QtWidgets.QMainWindow, GuiBuilder):
             csm_widget = getattr(self, 'csm_widget_{0}'.format(sm_com_port))
         else:
             return None
+        self.srs_sr830dsp_widget = None
         if not hasattr(self, 'fts_widget'):
             self.fts_widget = FourierTransformSpectrometer(self.daq_settings, self.status_bar, self.screen_resolution, self.monitor_dpi, csm_widget, self.srs_sr830dsp_widget)
         self.fts_widget.fts_update_samples()
