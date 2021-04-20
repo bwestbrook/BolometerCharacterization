@@ -9,6 +9,7 @@ from pprint import pprint
 from bd_lib.bolo_daq import BoloDAQ
 from PyQt5 import QtCore, QtGui, QtWidgets
 from GuiBuilder.gui_builder import GuiBuilder, GenericClass
+from bd_lib.cosmic_ray_analyzer import CosmicRayAnalyzer
 
 class CosmicRays(QtWidgets.QWidget, GuiBuilder):
 
@@ -16,10 +17,19 @@ class CosmicRays(QtWidgets.QWidget, GuiBuilder):
         '''
         '''
         super(CosmicRays, self).__init__()
+        self.cra = CosmicRayAnalyzer()
         self.status_bar = status_bar
         self.daq_settings = daq_settings
         self.screen_resolution = screen_resolution
         self.monitor_dpi = monitor_dpi
+        self.analysis_options_dict = {
+            'noisefilt': False,
+            'verbose': True,
+            'detrend': True,
+            'inv': False,
+            'pwrcnv': False,
+            'fit': True,
+            }
         self.daq = BoloDAQ()
         grid = QtWidgets.QGridLayout()
         self.setLayout(grid)
@@ -75,6 +85,16 @@ class CosmicRays(QtWidgets.QWidget, GuiBuilder):
         # Plot
         self.running_plot_label = QtWidgets.QLabel('', self)
         self.layout().addWidget(self.running_plot_label, 4, 0, 1, 5)
+        # Analysis
+        #def cra_analyze(self,data, sets, SQs, gain, bias, scantime,
+        self.analysis_options_combobox = self.gb_make_labeled_combobox(label_text='Analysis Options')
+        for option in self.analysis_options_dict:
+            self.analysis_options_combobox.addItem(option)
+        self.analysis_options_combobox.activated.connect(self.cr_update_analysis_option_checkbox)
+        self.layout().addWidget(self.analysis_options_combobox, 6, 6, 1, 2)
+        self.analysis_option_checkbox = QtWidgets.QCheckBox('Active', self)
+        self.layout().addWidget(self.analysis_option_checkbox, 6, 9, 1, 1)
+        self.analysis_option_checkbox.clicked.connect(self.cr_update_analysis_options)
         # Data Panel Ch 1
         self.mean_1_label = QtWidgets.QLabel('Mean 1: ', self)
         self.layout().addWidget(self.mean_1_label, 5, 0, 1, 1)
@@ -97,6 +117,18 @@ class CosmicRays(QtWidgets.QWidget, GuiBuilder):
         save_pushbutton = QtWidgets.QPushButton('Save', self)
         save_pushbutton.clicked.connect(self.cr_save)
         self.layout().addWidget(save_pushbutton, 9, 0, 1, 4)
+
+    def cr_update_analysis_options(self):
+        '''
+        '''
+        option = self.analysis_options_combobox.currentText()
+        self.analysis_options_dict[option] = self.analysis_option_checkbox.isChecked()
+
+    def cr_update_analysis_option_checkbox(self):
+        '''
+        '''
+        option = self.analysis_options_combobox.currentText()
+        self.analysis_option_checkbox.setChecked(self.analysis_options_dict[option])
 
     ###########
     # Running
