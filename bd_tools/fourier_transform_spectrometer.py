@@ -25,7 +25,7 @@ class FourierTransformSpectrometer(QtWidgets.QWidget, GuiBuilder):
         self.screen_resolution = screen_resolution
         self.monitor_dpi = monitor_dpi
         self.daq = BoloDAQ()
-        self.bands = {
+        self.bands_dict = {
             'SO30': {
                 'Band Center': 30,
                 'Project': 'Simons Observatory',
@@ -44,12 +44,12 @@ class FourierTransformSpectrometer(QtWidgets.QWidget, GuiBuilder):
                 }
             }
         self.optical_element_dict = {
-            {'5mil Beam Splitter':
-                'Divide': True
+            '5mil Beam Splitter': {
+                'Divide': True,
                 'File_path': os.path.join('bd_lib', 'optical_elements', '')
                 },
-            {'10mil Beam Splitter':
-                'Divide': True
+            '10mil Beam Splitter': {
+                'Divide': True,
                 'File_path': os.path.join('bd_lib', 'optical_elements', '')
                 },
             }
@@ -200,13 +200,20 @@ class FourierTransformSpectrometer(QtWidgets.QWidget, GuiBuilder):
         self.layout().addWidget(self.time_stream_plot_label, 7, 4, 5, 2)
         # Mean 
         self.data_mean_label = QtWidgets.QLabel('Data Mean (V):', self)
-        self.layout().addWidget(self.data_mean_label, 12, 4, 1, 2)
+        self.layout().addWidget(self.data_mean_label, 12, 4, 1, 1)
         # STD
         self.data_std_label = QtWidgets.QLabel('Data STD (V):', self)
-        self.layout().addWidget(self.data_std_label, 12, 5, 1, 2)
+        self.layout().addWidget(self.data_std_label, 12, 5, 1, 1)
         self.optical_elements_combobox = self.gb_make_labeled_combobox(label_text='Optical Elements')
         for optical_element in self.optical_element_dict:
-            self.optical_elements_combobox.addItem(optical_elements_combobox)= self.gb_make_labeled_combobox(label_text='Optical Elements')
+            self.optical_elements_combobox.addItem(optical_element)
+        self.layout().addWidget(self.optical_elements_combobox, 13, 4, 1, 1)
+        self.optical_elements_combobox.activated.connect(self.fts_plot_spectra)
+        self.bands_combobox = self.gb_make_labeled_combobox(label_text='Detector Band')
+        for band in self.bands_dict:
+            self.bands_combobox.addItem(band)
+        self.layout().addWidget(self.bands_combobox, 13, 5, 1, 1)
+        self.bands_combobox.activated.connect(self.fts_plot_spectra)
 
 
     #################################################

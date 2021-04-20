@@ -51,6 +51,20 @@ class DifferenceLoadCurves(QtWidgets.QWidget, GuiBuilder):
                 'Path': os.path.join('bd_lib', 'simulated_bands', 'Nitride_Lumped_Diplexer_030_05_040_08_MoreWider20190226_300GHz.csv')
                 }
             }
+        self.optical_element_dict = {
+            '5mil Beam Splitter': {
+                'Active': False,
+                'Path': os.path.join('bd_lib', 'optical_elements', '5_mil_beamsplitter_efficiency.dat')
+                },
+            '10mil Beam Splitter': {
+                'Active': True,
+                'Path': os.path.join('bd_lib', 'optical_elements', '10_mil_beamsplitter_efficiency.dat')
+                },
+            '12icm 576 MMF': {
+                'Active': True,
+                'Path': os.path.join('bd_lib', 'optical_elements', '10_mil_beamsplitter_efficiency.dat')
+                },
+            }
         self.dlc_configure_panel()
         self.resize(self.minimumSizeHint())
 
@@ -202,11 +216,16 @@ class DifferenceLoadCurves(QtWidgets.QWidget, GuiBuilder):
             self.band_select_combobox.addItem(band)
         self.band_select_combobox.activated.connect(self.dlc_load_spectra)
         self.layout().addWidget(self.band_select_combobox, 2, 8, 1, 2)
-        self.frac_rn_lineedit = self.gb_make_labeled_lineedit(label_text='Frac Rn:')
-        self.frac_rn_lineedit.returnPressed.connect(self.dlc_load_spectra)
-        self.frac_rn_lineedit.setValidator(QtGui.QDoubleValidator(0, 1200, 2, self.frac_rn_lineedit))
-        self.frac_rn_lineedit.setText('0.7')
-        self.layout().addWidget(self.frac_rn_lineedit, 2, 10, 1, 2)
+        self.optical_elements_combobox = self.gb_make_labeled_combobox(label_text='Optical Elements')
+        for i, optical_element in enumerate(self.optical_element_dict):
+            self.optical_elements_combobox.addItem(optical_element)
+            if i == 0:
+                active = self.optical_element_dict[optical_element]['Active']
+        self.layout().addWidget(self.optical_elements_combobox, 2, 10, 1, 2)
+        self.optical_elements_combobox.activated.connect(self.dlc_show_active_optical_elements)
+        self.optical_element_active_checkbox = QtWidgets.QCheckBox('Active', self)
+        self.layout().addWidget(self.optical_element_active_checkbox, 2, 12, 1, 1)
+        self.optical_element_active_checkbox.clicked.connect(self.dlc_update_active_optical_elements)
 
         self.spectra_data_clip_lo_lineedit = self.gb_make_labeled_lineedit(label_text='Data Clip Lo (GHz):')
         self.spectra_data_clip_lo_lineedit.returnPressed.connect(self.dlc_load_spectra)
@@ -220,6 +239,15 @@ class DifferenceLoadCurves(QtWidgets.QWidget, GuiBuilder):
         self.smoothing_factor_lineedit = self.gb_make_labeled_lineedit(label_text='Smoothing Factor')
         self.smoothing_factor_lineedit.returnPressed.connect(self.dlc_load_spectra)
         self.smoothing_factor_lineedit.setText('0.01')
+
+        self.frac_rn_lineedit = self.gb_make_labeled_lineedit(label_text='Frac Rn:')
+        self.frac_rn_lineedit.returnPressed.connect(self.dlc_load_spectra)
+        self.frac_rn_lineedit.setValidator(QtGui.QDoubleValidator(0, 1200, 2, self.frac_rn_lineedit))
+        self.frac_rn_lineedit.setText('0.7')
+        self.layout().addWidget(self.frac_rn_lineedit, 3, 12, 1, 2)
+
+
+
         self.layout().addWidget(self.smoothing_factor_lineedit, 4, 8, 1, 2)
         self.renormalize_checkbox = QtWidgets.QCheckBox('Renormalize post clip?')
         self.renormalize_checkbox.setChecked(True)
@@ -241,6 +269,46 @@ class DifferenceLoadCurves(QtWidgets.QWidget, GuiBuilder):
         self.difference_load_curves_pushbutton = QtWidgets.QPushButton('Difference Load Curves')
         self.difference_load_curves_pushbutton.clicked.connect(self.dlc_difference_load_curves)
         self.layout().addWidget(self.difference_load_curves_pushbutton, 10, 0, 1, 12)
+
+    def dlc_show_active_optical_elements(self):
+        '''
+        '''
+        optical_element = self.optical_elements_combobox.currentText()
+        active = self.optical_element_dict[optical_element]['Active']
+        self.optical_element_active_checkbox.setChecked(active)
+
+    def dlc_update_active_optical_elements(self):
+        '''
+        '''
+        optical_element = self.optical_elements_combobox.currentText()
+        self.optical_element_dict[optical_element]['Active'] = self.optical_element_active_checkbox.isChecked()
+
+
+    def dlc_divide_out_optical_element_response(self, frequency_vector, normalized_transmission_vector,
+                                                optical_element='mmf', frequency_=350,
+                                                transmission_threshold=0.15,
+                                                bs_thickness=10, quick_plot=False, data_clip=(0, 300)):
+        '''
+        '''
+        optical_element = self.optical_elements_combobox.currentText()
+        path = self.optical_element_dict[optical_element]['Path']
+        element_frequency_vector = []
+        element_transmission_vector = []
+        with open(path, 'r') as bs_file_handle:
+            for line in bs_file_handle.readlines():
+                element_frequency = line.split('\t')[0]
+                element_transmission = line.split('\t')[1].strip('\n')
+                if float(element_transmission) > transmission_threshold:
+                    element_frequency_vector.append(float(element_frequency))
+                    element_transmission_vector.append(float(element_transmission))
+        # Make a copy for before and after comparison
+        corrected_transmission_vector = copy(normalized_transmission_vector)
+        # Interpolate the optical element to the bolo transmission data and then divide it out
+        transmission_vector_to_divide = np.interp(np.asarray(frequency_vector), np.asarray(element_frequency_vector),
+                                                  np.asarray(element_transmission_vector))
+        corrected_transmission_vector = normalized_transmission_vector / transmission_vector_to_divide
+        normalized_corrected_transmission_vector = corrected_transmission_vector / np.max(corrected_transmission_vector)
+        return corrected_transmission_vector, normalized_corrected_transmission_vector
 
     #################################################################################
     # Differencing 
