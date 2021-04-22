@@ -332,7 +332,9 @@ class DifferenceLoadCurves(QtWidgets.QWidget, GuiBuilder):
         differenced_load_curves_path = os.path.join('temp_files', 'temp_differenced_load_curves.png')
         fig.savefig(differenced_load_curves_path)
         image_to_display = QtGui.QPixmap(differenced_load_curves_path)
+        image_to_display = image_to_display.scaled(self.spectra_size.width(), int(1.2 * self.spectra_size.height()))
         self.differenced_load_curve_label.setPixmap(image_to_display)
+        pl.close('all')
 
     def dlc_plot_differenced_load_curves(self, frac_screen_width=0.5, frac_screen_height=0.3):
         '''
@@ -356,21 +358,21 @@ class DifferenceLoadCurves(QtWidgets.QWidget, GuiBuilder):
         #pix_efficiency = efficiency / self.dewar_transmission # Dewar transmission
         #simulated_pix_efficiency = efficiency / self.dewar_transmission # Dewar transmission
         pw_per_K_efficiency = p_sensed / (t_source_high - t_source_low)
-        text = '---------------------------------------------------------\n'
+        text = '----------------------------------------------\n'
         text += '{0} Optical Efficiency Data\n'.format(sample_name)
-        text += 'QTY                  | Measured Spectra   | Simuated Spectra\n'
-        text += '---------------------------------------------------------\n'
-        text += 'Dew Eff          [%] | {0:.2f}           | {0:.2f} \n'.format(1e2 * self.dewar_transmission)
-        text += 'T chop           [K] | {0:.2f}           | {0:.2f}\n'.format(t_chop)
-        text += 'P window        [pW] | {0:.2f}            | {1:.2f}\n'.format(measured_delta_power * 1e12, simulated_delta_power * 1e12)
-        text += 'P sensed        [pW] | {0:.2f}            | {0:.2f} \n'.format(p_sensed)
-        text += 'Int BW         [GHz] | {0:.2f}            | {1:.2f}\n'.format(measured_integrated_bandwidth * 1e-9, simulated_integrated_bandwidth * 1e-9)
-        text += 'Rel Eff (e2e)  [GHz] | {0:.2f}            | {1:.2f}\n'.format(efficiency, simulated_efficiency)
-        text += 'Rel Eff (pix)    [%] | {0:.2f}            | *{1:.2f}*\n'.format(efficiency / self.dewar_transmission, simulated_efficiency / self.dewar_transmission)
+        text += 'QTY                  | Measured    | Simuated\n'
+        text += '---------------------------------------------\n'
+        text += 'Dew Eff          [%] | {0:.2f}     | {0:.2f} \n'.format(1e2 * self.dewar_transmission)
+        text += 'T chop           [K] | {0:.2f}     | {0:.2f}\n'.format(t_chop)
+        text += 'P window        [pW] | {0:.2f}     | {1:.2f}\n'.format(measured_delta_power * 1e12, simulated_delta_power * 1e12)
+        text += 'P sensed        [pW] | {0:.2f}     | {0:.2f} \n'.format(p_sensed)
+        text += 'Int BW         [GHz] | {0:.2f}     | {1:.2f}\n'.format(measured_integrated_bandwidth * 1e-9, simulated_integrated_bandwidth * 1e-9)
+        text += 'Rel Eff (e2e)  [GHz] | {0:.2f}     | {1:.2f}\n'.format(efficiency, simulated_efficiency)
+        text += 'Rel Eff (pix)    [%] | {0:.2f}     | *{1:.2f}*\n'.format(efficiency / self.dewar_transmission, simulated_efficiency / self.dewar_transmission)
         text += 'Abs Eff       [pW/K]: ***{0:.3f}***'.format(pw_per_K_efficiency)
         print(text)
         ax4 = fig.get_axes()[3]
-        ax4.annotate(text, xy=(0, 0), xytext=(0, -0.1), fontfamily='monospace', fontsize=10)
+        ax4.annotate(text, xy=(0, 0), xytext=(-0.125, -0.3), fontfamily='monospace', fontsize=9)
         text = '\n\n\n\n$\eta_{dewar}$\n'
         text += '$T_{chop}$\n'
         text += '$P_{window}$\n'
@@ -443,18 +445,19 @@ class DifferenceLoadCurves(QtWidgets.QWidget, GuiBuilder):
         '''
         width = (frac_screen_width * self.screen_resolution.width()) / self.monitor_dpi
         height = (frac_screen_height * self.screen_resolution.height()) / self.monitor_dpi
-        fig = pl.figure(figsize=(width, height))
+        #fig = pl.figure(figsize=(width, height))
+        fig = pl.figure(figsize=(9,4))
         ax1 = fig.add_subplot(221)
         ax2 = fig.add_subplot(222)
         ax3 = fig.add_subplot(223)
         ax4 = fig.add_subplot(224)
         ax4.set_axis_off()
-        fig.subplots_adjust(right=0.98, left=0.07, bottom=0.11, top=0.93, wspace=0.12, hspace=0.21)
-        ax1.set_ylabel('Current ($\mu$A)', fontsize=14)
-        ax2.set_xlabel('Frequency(GHz)', fontsize=14)
-        ax2.set_ylabel('Transmission', fontsize=14)
-        ax3.set_xlabel('$V_{bias}$ ($\mu V$) / Normalized Resistance', fontsize=14)
-        ax3.set_ylabel('Power ($\mu$V)', fontsize=14)
+        fig.subplots_adjust(right=0.98, left=0.1, bottom=0.15, top=0.93, wspace=0.22, hspace=0.41)
+        ax1.set_ylabel('Current ($\mu$A)', fontsize=11)
+        ax2.set_xlabel('Frequency(GHz)', fontsize=11)
+        ax2.set_ylabel('Transmission', fontsize=11)
+        ax3.set_xlabel('$V_{bias}$ ($\mu V$) / Normalized Resistance', fontsize=11)
+        ax3.set_ylabel('Power ($\mu$V)', fontsize=11)
         return fig, (ax1, ax2, ax3, ax4)
 
     #################################################################################
@@ -509,6 +512,7 @@ class DifferenceLoadCurves(QtWidgets.QWidget, GuiBuilder):
         temp_calibrated_iv_1_path = os.path.join('temp_files', 'temp_calibrated_iv_1.png')
         fig.savefig(temp_calibrated_iv_1_path)
         image_to_display = QtGui.QPixmap(temp_calibrated_iv_1_path)
+        self.size = image_to_display.size()
         self.iv_1_calibrated_plot_label.setPixmap(image_to_display)
         pl.close('all')
         fig = self.dlc_plot_all_curves(self.calibrated_bias_voltage, self.calibrated_squid_current, iv=1, stds=None, label='', fit_clip=(fit_clip_lo, fit_clip_hi),
@@ -516,6 +520,7 @@ class DifferenceLoadCurves(QtWidgets.QWidget, GuiBuilder):
         temp_paneled_iv_1_path = os.path.join('temp_files', 'temp_paneled_iv_1.png')
         fig.savefig(temp_paneled_iv_1_path)
         image_to_display = QtGui.QPixmap(temp_paneled_iv_1_path)
+        image_to_display = image_to_display.scaled(self.size.width(), int(1.2 * self.size.height()))
         self.iv_1_paneled_plot_label.setPixmap(image_to_display)
         pl.close('all')
         if self.spectra_path is not None and self.iv_2_path is not None:
@@ -568,6 +573,7 @@ class DifferenceLoadCurves(QtWidgets.QWidget, GuiBuilder):
         temp_calibrated_iv_2_path = os.path.join('temp_files', 'temp_calibrated_iv_2.png')
         fig.savefig(temp_calibrated_iv_2_path)
         image_to_display = QtGui.QPixmap(temp_calibrated_iv_2_path)
+        self.size = image_to_display.size()
         self.iv_2_calibrated_plot_label.setPixmap(image_to_display)
         pl.close('all')
         fig = self.dlc_plot_all_curves(self.calibrated_bias_voltage, self.calibrated_squid_current, iv=2, stds=None, label='', fit_clip=(fit_clip_lo, fit_clip_hi),
@@ -575,6 +581,7 @@ class DifferenceLoadCurves(QtWidgets.QWidget, GuiBuilder):
         temp_paneled_iv_2_path = os.path.join('temp_files', 'temp_paneled_iv_2.png')
         fig.savefig(temp_paneled_iv_2_path)
         image_to_display = QtGui.QPixmap(temp_paneled_iv_2_path)
+        image_to_display = image_to_display.scaled(self.size.width(), int(1.2 * self.size.height()))
         self.iv_2_paneled_plot_label.setPixmap(image_to_display)
         pl.close('all')
         if self.spectra_path is not None and self.iv_1_path is not None:
@@ -669,6 +676,7 @@ class DifferenceLoadCurves(QtWidgets.QWidget, GuiBuilder):
         pl.legend()
         fig.savefig(spectra_png_save_path)
         image_to_display = QtGui.QPixmap(spectra_png_save_path)
+        self.spectra_size = image_to_display.size()
         self.spectra_plot_calibrated.setPixmap(image_to_display)
         pl.close('all')
         if self.spectra_path is not None and self.iv_1_path is not None and self.iv_2_path is not None:
@@ -784,7 +792,7 @@ class DifferenceLoadCurves(QtWidgets.QWidget, GuiBuilder):
 
     def dlc_plot_all_curves(self, bolo_voltage_bias, bolo_current, iv=1, stds=None, label='', fit_clip=None, plot_clip=None,
                             show_plot=False, title='', pturn=True, frac_screen_width=0.3, frac_screen_height=0.35,
-                            left=0.15, right=0.98, top=0.9, bottom=0.23, multiple_axes=False):
+                            left=0.1, right=0.98, top=0.9, bottom=0.13, multiple_axes=False):
         '''
         This function creates an x-y scatter plot with v_bolo on the x-axis and
         bolo curent on the y-axis.  The resistance value is reported as text annotation
@@ -792,11 +800,10 @@ class DifferenceLoadCurves(QtWidgets.QWidget, GuiBuilder):
             bolo_votlage_bias: bolo_voltage in Volts
             bolo_current: bolo_current in Amps
         '''
-        fig = pl.figure(figsize=(10, 5))
         width = (frac_screen_width * self.screen_resolution.width()) / self.monitor_dpi
         height = (frac_screen_height * self.screen_resolution.height()) / self.monitor_dpi
-        fig = pl.figure(figsize=(width, height))
-        fig.subplots_adjust(left=left, right=right, bottom=bottom, hspace=0.76)
+        fig = pl.figure(figsize=(9, 4))
+        fig.subplots_adjust(left=left, right=right, bottom=bottom, hspace=0.8)
         ax1 = fig.add_subplot(221)
         # Make Title from sample name T_bath and T_load
         t_bath = getattr(self, 'iv_1_t_bath_lineedit'.format(iv)).text()
