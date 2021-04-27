@@ -84,9 +84,9 @@ class IVCollector(QtWidgets.QWidget, GuiBuilder, IVCurveLib):
         self.ivc_add_common_widgets()
         self.ivc_display_daq_settings()
         self.ivc_plot_running()
-        self.ivc_daq_combobox.setCurrentIndex(0)
+        self.ivc_daq_combobox.setCurrentIndex(1)
         self.daq_x_combobox.setCurrentIndex(0)
-        self.daq_y_combobox.setCurrentIndex(2)
+        self.daq_y_combobox.setCurrentIndex(1)
 
     def ivc_display_daq_settings(self):
         '''
@@ -215,9 +215,12 @@ class IVCollector(QtWidgets.QWidget, GuiBuilder, IVCurveLib):
         sample_key = self.sample_name_combobox.currentText()
         sample_name = self.samples_settings[sample_key]
         self.sample_name_lineedit.setText(sample_name)
-        index = int(sample_key) - 1
-        if hasattr(self, 'y_correction_combobox'):
-            self.y_correction_combobox.setCurrentIndex(index)
+        #if 'SQ' in sample_key:
+            #index = int(sample_key[-1]) - 1
+        ##else:
+            #index = int(sample_key) - 1
+        #if hasattr(self, 'y_correction_combobox'):
+            #self.y_correction_combobox.setCurrentIndex(index)
 
     def ivc_update_squid_calibration(self, index):
         '''
@@ -225,9 +228,9 @@ class IVCollector(QtWidgets.QWidget, GuiBuilder, IVCurveLib):
         squid_key = self.y_correction_combobox.currentText()
         calibration_value = self.squid_calibration_dict[squid_key]
         self.squid_calibration_label.setText(calibration_value)
-        index = int(squid_key.split()[-1]) - 1
-        if hasattr(self, 'sample_name_combobox'):
-            self.sample_name_combobox.setCurrentIndex(index)
+        #index = int(squid_key.split()[-1]) - 1
+        #if hasattr(self, 'sample_name_combobox'):
+            #self.sample_name_combobox.setCurrentIndex(index)
 
     def ivc_update_ls_372_widget(self, ls_372_widget):
         '''
@@ -374,7 +377,7 @@ class IVCollector(QtWidgets.QWidget, GuiBuilder, IVCurveLib):
         '''
         self.ivc_plot_x()
         self.ivc_plot_y()
-        self.ivc_plot_xy(running=True)
+        self.ivc_plot_xy()
 
     def ivc_plot_x(self):
         '''
@@ -406,15 +409,12 @@ class IVCollector(QtWidgets.QWidget, GuiBuilder, IVCurveLib):
         self.y_time_stream_label.setPixmap(image_to_display)
         os.remove('temp_y.png')
 
-    def ivc_plot_xy(self, running=False, file_name=''):
+    def ivc_plot_xy(self, file_name=''):
         '''
         '''
         if len(self.x_data) == 0:
             return None
-        if running:
-            fig, ax = self.ivc_create_blank_fig(frac_screen_width=0.8, frac_screen_height=0.4, left=0.1, top=0.9)
-        else:
-            fig, ax = self.ivc_create_blank_fig(frac_screen_width=0.6, frac_screen_height=0.5, left=0.1, top=0.9)
+        fig, ax = self.ivc_create_blank_fig(frac_screen_width=0.8, frac_screen_height=0.4, left=0.1, top=0.9)
         sample_name = self.sample_name_lineedit.text()
         t_bath = self.t_bath_lineedit.text()
         t_load = self.t_load_lineedit.text()
@@ -424,6 +424,7 @@ class IVCollector(QtWidgets.QWidget, GuiBuilder, IVCurveLib):
         fit_clip_hi = float(self.fit_clip_hi_lineedit.text())
         squid_calibration_factor = float(self.squid_calibration_label.text())
         i_bolo_real = self.ivc_fit_and_remove_squid_offset()
+        print(i_bolo_real)
         i_bolo_std = np.asarray(self.y_stds) * squid_calibration_factor
         v_bias_real = np.asarray(self.x_data) * float(self.x_correction_combobox.currentText()) * 1e6 #uV
         v_bias_std = np.asarray(self.x_stds) * float(self.x_correction_combobox.currentText()) * 1e6 #uV
@@ -445,27 +446,19 @@ class IVCollector(QtWidgets.QWidget, GuiBuilder, IVCurveLib):
         self.y_data_real = i_bolo_real
         self.y_stds_real = i_bolo_std
         #ax.errorbar(v_bias_real[selector], i_bolo_real[selector], xerr=v_bias_std[selector], yerr=i_bolo_std[selector], marker='.', linestyle='-', label=label)
-
+        print(fit_clip_lo, fit_clip_hi)
+        print(v_bias_real)
         fig = self.ivlib_plot_all_curves(v_bias_real, i_bolo_real, bolo_current_stds=i_bolo_std,
                                          fit_clip=(fit_clip_lo, fit_clip_hi), plot_clip=(data_clip_lo, data_clip_hi),
                                          sample_name=sample_name, t_bath=t_bath, t_load=t_load)
-        if running:
-            ax.set_xlabel('Bias Voltage ($\mu V$)', fontsize=14)
-            ax.set_ylabel('TES Current ($\mu A$)', fontsize=14)
-            ax.set_title(title, fontsize=14)
-            pl.legend(loc='best', fontsize=14)
-            fig.savefig('temp_iv_all.png', transparent=False)
-            pl.close('all')
-            image_to_display = QtGui.QPixmap('temp_iv_all.png')
-            self.xy_scatter_label.setPixmap(image_to_display)
-        else:
-            ax.set_xlabel('Bias Voltage ($\mu V$)', fontsize=16)
-            ax.set_ylabel('TES Current ($\mu A$)', fontsize=16)
-            ax.set_title(title, fontsize=16)
-            pl.legend(loc='best', fontsize=14)
-            ax.tick_params(axis='x', labelsize=16)
-            ax.tick_params(axis='y', labelsize=16)
-            fig.savefig(file_name, transparent=False)
+        ax.set_xlabel('Bias Voltage ($\mu V$)', fontsize=14)
+        ax.set_ylabel('TES Current ($\mu A$)', fontsize=14)
+        ax.set_title(title, fontsize=14)
+        pl.legend(loc='best', fontsize=14)
+        fig.savefig('temp_iv_all.png', transparent=False)
+        pl.close('all')
+        image_to_display = QtGui.QPixmap('temp_iv_all.png')
+        self.xy_scatter_label.setPixmap(image_to_display)
 
     def ivc_adjust_x_data(self):
         '''
@@ -495,9 +488,9 @@ class IVCollector(QtWidgets.QWidget, GuiBuilder, IVCurveLib):
         scaled_x_vector = np.asarray(copy(self.x_data))
         scaled_x_vector *= float(self.x_correction_combobox.currentText())
         scaled_x_vector *= 1e6 # This is now in uV
-        data_clip_lo = float(self.data_clip_lo_lineedit.text())
-        data_clip_hi = float(self.data_clip_hi_lineedit.text())
-        selector = np.logical_and(data_clip_lo < scaled_x_vector, scaled_x_vector < data_clip_hi)
+        fit_clip_lo = float(self.fit_clip_lo_lineedit.text())
+        fit_clip_hi = float(self.fit_clip_hi_lineedit.text())
+        selector = np.logical_and(fit_clip_lo < scaled_x_vector, scaled_x_vector < fit_clip_hi)
         if len(scaled_x_vector[selector]) > 2:
             fit_vals = np.polyfit(scaled_x_vector[selector], y_vector[selector], polyfit_n)
             new_y_vector = y_vector - fit_vals[1]
