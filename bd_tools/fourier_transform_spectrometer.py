@@ -111,7 +111,7 @@ class FourierTransformSpectrometer(QtWidgets.QWidget, GuiBuilder, FourierTransfo
         #Start Scan
         self.start_position_lineedit = self.gb_make_labeled_lineedit(label_text='Start Position:')
         self.start_position_lineedit.setText('-100000')
-        self.start_position_lineedit.setValidator(QtGui.QIntValidator(-500000, 0, self.start_position_lineedit))
+        self.start_position_lineedit.setValidator(QtGui.QIntValidator(-600000, 0, self.start_position_lineedit))
         self.start_position_lineedit.textChanged.connect(self.fts_update_scan_params)
         self.layout().addWidget(self.start_position_lineedit, 7, 0, 1, 1)
         #End Scan
@@ -196,7 +196,7 @@ class FourierTransformSpectrometer(QtWidgets.QWidget, GuiBuilder, FourierTransfo
         self.data_clip_hi_lineedit.returnPressed.connect(self.fts_plot)
         self.data_clip_hi_lineedit.setText('600.0')
         self.layout().addWidget(self.data_clip_hi_lineedit, 14, 5, 1, 1)
-        self.bands_combobox.activated.connect(self.fts_plot_spectra)
+        self.bands_combobox.activated.connect(self.fts_plot)
 
 
     #################################################
@@ -408,8 +408,8 @@ class FourierTransformSpectrometer(QtWidgets.QWidget, GuiBuilder, FourierTransfo
         '''
         '''
         pl.close('all')
-        data_clip_lo = float(self.data_clip_lo_lineedit.text())
-        data_clip_hi = float(self.data_clip_hi_lineedit.text())
+        data_clip_lo = float(self.data_clip_lo_lineedit.text()) * 1e9
+        data_clip_hi = float(self.data_clip_hi_lineedit.text()) * 1e9
         band = self.bands_combobox.currentText()
         fft_frequency_vector_simulated, fft_vector_simulated = self.ftsy_load_simulated_band(data_clip_lo, data_clip_hi, band)
         mirror_interval = self.scan_settings_dict['mirror_interval']
@@ -425,7 +425,7 @@ class FourierTransformSpectrometer(QtWidgets.QWidget, GuiBuilder, FourierTransfo
         if len(self.x_data) > 10:
             fft_freq_vector, fft_vector, phase_corrected_fft_vector, position_vector, efficiency_vector = self.ftsy_convert_IF_to_FFT_data(self.x_data, self.y_data, mirror_interval, data_selector='All')
             ax1.errorbar(self.x_data, self.y_data, yerr=self.y_stds, marker='.', linestyle='-')
-            selector = np.where(fft_freq_vector > 0)
+            selector = np.logical_and(0 < fft_freq_vector, fft_freq_vector < data_clip_hi)
             normalized_phase_corrected_fft_vector = np.abs(phase_corrected_fft_vector.real)
             normalized_phase_corrected_fft_vector = np.abs(phase_corrected_fft_vector.real / np.max(phase_corrected_fft_vector.real))
             ax2.errorbar(fft_freq_vector[selector] * 1e-9, normalized_phase_corrected_fft_vector[selector], marker='.', linestyle='-', label='FFT')
@@ -436,21 +436,24 @@ class FourierTransformSpectrometer(QtWidgets.QWidget, GuiBuilder, FourierTransfo
 
             ax2.errorbar(max_freq * 1e-9, normalized_phase_corrected_fft_vector[max_idx], marker='*', markersize=3, label=label)
         ax1.errorbar(self.x_data, self.y_data, yerr=self.y_stds, marker='.', linestyle='-')
-        ax2.plot(fft_frequency_vector_simulated, fft_vector_simulated, label='HFSS')
+        selector = fft_frequency_vector_simulated < data_clip_hi * 1e-9
+        integrated_bandwidth = np.trapz(fft_vector_simulated[selector], fft_vector_simulated[selector] * 1e9)
+        label = 'HFSS BW {0:.2f} GHz '.format(integrated_bandwidth)
+        label = 'HFSS'
+        ax2.plot(fft_frequency_vector_simulated, fft_vector_simulated, label=label)
         pl.legend()
         temp_png_path = os.path.join('temp_files', 'temp_combo.png')
         fig.savefig(temp_png_path, transparent=True)
         image_to_display = QtGui.QPixmap(temp_png_path)
         self.int_spec_plot_label.setPixmap(image_to_display)
-        os.remove(temp_png_path)
 
     def fts_plot_spectra(self):
         '''
         '''
         pl.close('all')
         mirror_interval = self.scan_settings_dict['mirror_interval']
-        data_clip_lo = float(self.data_clip_lo_lineedit.text())
-        data_clip_hi = float(self.data_clip_hi_lineedit.text())
+        data_clip_lo = float(self.data_clip_lo_lineedit.text()) * 1e9
+        data_clip_hi = float(self.data_clip_hi_lineedit.text()) * 1e9
         band = self.bands_combobox.currentText()
         fig, ax = self.fts_create_blank_fig(n_axes=1)
         ax.set_xlabel('Frequency (GHz)', fontsize=14)
@@ -459,7 +462,7 @@ class FourierTransformSpectrometer(QtWidgets.QWidget, GuiBuilder, FourierTransfo
         ax.set_title(title, fontsize=14)
         if len(self.x_data) > 0:
             fft_freq_vector, fft_vector, phase_corrected_fft_vector, position_vector, efficiency_vector = self.ftsy_convert_IF_to_FFT_data(self.x_data, self.y_data, mirror_interval)
-            selector = np.where(fft_freq_vector > 0)
+            selector = np.logical_and(0 < fft_freq_vector, fft_freq_vector < data_clip_hi)
             normalized_phase_corrected_fft_vector = np.abs(phase_corrected_fft_vector.real)
             normalized_phase_corrected_fft_vector = np.abs(phase_corrected_fft_vector.real / np.max(phase_corrected_fft_vector.real))
             ax.errorbar(fft_freq_vector[selector] * 1e-9, normalized_phase_corrected_fft_vector[selector], marker='.', linestyle='-')

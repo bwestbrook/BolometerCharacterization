@@ -456,6 +456,7 @@ class FourierTransformSpectroscopy():
                         else:
                             frequency = line.split('\t')[freq_idx].strip()
                             transmission = line.split('\t')[trans_idx].strip()
+                        print(data_clip_lo, frequency)
                         if float(data_clip_lo) < float(frequency) * 1e9 < float(data_clip_hi) and self.gb_is_float(transmission):
                             frequency_vector = np.append(frequency_vector, float(frequency))
                             transmission_vector = np.append(transmission_vector, float(transmission))
@@ -463,7 +464,9 @@ class FourierTransformSpectroscopy():
                         pass
         #transmission_vector = np.asarray(transmission_vector) / np.max(np.asarray(transmission_vector))
         #frequency_vector = np.asarray(frequency_vector)
+        print(frequency_vector, transmission_vector)
         return frequency_vector, transmission_vector
+
     def _ask_user_if_they_want_to_quit(self):
         '''
         A simple method to stop the code without setting a trace with the option of quittting
