@@ -48,7 +48,7 @@ from bd_tools.stanford_research_systems_sr830_dsp import StanfordResearchSystems
 from bd_lib.fourier_transform_spectroscopy import FourierTransformSpectroscopy
 from bd_lib.bolo_daq import BoloDAQ
 from bd_lib.bolo_serial import BoloSerial
-from bd_lib.iv_curves import IVCurves
+#from bd_lib.iv_curves import IVCurveLib
 
 # Gui Biulder
 from GuiBuilder.gui_builder import GuiBuilder
@@ -671,7 +671,7 @@ class BoloDAQGui(QtWidgets.QMainWindow, GuiBuilder):
         QtWidgets.QApplication.processEvents()
         dialog = 'Select the comport for the SRS 830'
         #com_port, okPressed = self.gb_quick_static_info_gather(title='', dialog=dialog, items=['COM10'])
-        com_port, okPressed = 'COM10', False
+        com_port, okPressed = 'COM10', True
         if not hasattr(self, 'ser_{0}'.format(com_port)) and okPressed:
             if not hasattr(self, 'srs_sr830dsp_widget'):
                 self.status_bar.showMessage('Connecting to the SRS SR830 DSP')
@@ -690,15 +690,14 @@ class BoloDAQGui(QtWidgets.QMainWindow, GuiBuilder):
             csm_widget = getattr(self, 'csm_widget_{0}'.format(sm_com_port))
         else:
             return None
-        self.srs_sr830dsp_widget = None
+        #self.srs_sr830dsp_widget = None
         if not hasattr(self, 'fts_widget'):
             self.fts_widget = FourierTransformSpectrometer(self.daq_settings, self.status_bar, self.screen_resolution, self.monitor_dpi, csm_widget, self.srs_sr830dsp_widget)
         self.fts_widget.fts_update_samples()
         self.central_widget.layout().addWidget(self.fts_widget, 0, 0, 1, 1)
         self.status_bar.showMessage('FTS')
         QtWidgets.QApplication.processEvents()
-        self.resize(self.sizeHint())
-        self.showMaximized()
+        self.resize(self.minimumSizeHint())
 
 
 if __name__ == '__main__':

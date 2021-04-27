@@ -16,9 +16,77 @@ class FourierTransformSpectroscopy():
         '''
         self.mesg = 'hey'
 
-    def convert_IF_to_FFT_data(self, position_vector, efficiency_vector, mirror_interval,
-                               distance_per_step=250.39e9, data_selector='Right',
-                               apodization_type='BOXCAR', quick_plot=False):
+    def ftsy_get_bands(self):
+        '''
+        '''
+        self.bands = {
+            'SO30': {
+                'Band Center': 30,
+                'Project': 'Simons Observatory',
+                'Freq Column': 0,
+                'Transmission Column': 3,
+                'Header Lines': 2,
+                'Path': os.path.join('bd_lib', 'simulated_bands', 'Nitride_Lumped_Diplexer_030_05_040_08_MoreWider20190226_300GHz.csv')
+                },
+            'SO40': {
+                'Band Center': 40,
+                'Project': 'Simons Observatory',
+                'Freq Column': 0,
+                'Transmission Column': 4,
+                'Header Lines': 2,
+                'Path': os.path.join('bd_lib', 'simulated_bands', 'Nitride_Lumped_Diplexer_030_05_040_08_MoreWider20190226_300GHz.csv')
+                }
+            }
+        return self.bands
+
+    def ftsy_get_optical_elements(self):
+        '''
+        '''
+        self.optical_elements = {
+            '5mil Beam Splitter': {
+                'Active': False,
+                'Path': os.path.join('bd_lib', 'optical_elements', '5_mil_beamsplitter_efficiency.dat')
+                },
+            '10mil Beam Splitter': {
+                'Active': True,
+                'Path': os.path.join('bd_lib', 'optical_elements', '10_mil_beamsplitter_efficiency.dat')
+                },
+            '12icm 576 MMF': {
+                'Active': True,
+                'Path': os.path.join('bd_lib', 'optical_elements', '10_mil_beamsplitter_efficiency.dat')
+                },
+            }
+        return self.optical_elements
+
+    def ftsy_divide_out_optical_element_response(self, frequency_vector, normalized_transmission_vector,
+                                                 optical_element=None, path=None, quick_plot=False):
+        '''
+        '''
+        if path is None or optical_element is None:
+            return None, None
+        element_frequency_vector = []
+        element_transmission_vector = []
+        with open(path, 'r') as bs_file_handle:
+            for line in bs_file_handle.readlines():
+                element_frequency = line.split('\t')[0]
+                element_transmission = line.split('\t')[1].strip('\n')
+                if float(element_transmission) > 0.02:
+                    element_frequency_vector.append(float(element_frequency))
+                    element_transmission_vector.append(float(element_transmission))
+                    print(element_frequency_vector)
+                    print(frequency_vector)
+        # Make a copy for before and after comparison
+        corrected_transmission_vector = copy(normalized_transmission_vector)
+        # Interpolate the optical element to the bolo transmission data and then divide it out
+        transmission_vector_to_divide = np.interp(np.asarray(frequency_vector), np.asarray(element_frequency_vector),
+                                                  np.asarray(element_transmission_vector))
+        corrected_transmission_vector = normalized_transmission_vector / transmission_vector_to_divide
+        normalized_corrected_transmission_vector = corrected_transmission_vector / np.max(corrected_transmission_vector)
+        return corrected_transmission_vector, normalized_corrected_transmission_vector
+
+    def ftsy_convert_IF_to_FFT_data(self, position_vector, efficiency_vector, mirror_interval,
+                                    distance_per_step=250.39e9, data_selector='Right',
+                                    apodization_type='BOXCAR', quick_plot=False):
         '''
         Returns a frequency and efficiency vector from the inteferogram data and the input
         params of the FTS setup being used
@@ -64,6 +132,8 @@ class FourierTransformSpectroscopy():
         return fft_freq_vector, fft_vector, phase_corrected_fft_vector, position_vector, efficiency_vector
 
     def split_data_into_left_right_points(self, position_vector, efficiency_vector):
+        '''
+        '''
         efficiency_left_data = efficiency_vector[position_vector < 0]
         efficiency_right_data = efficiency_vector[position_vector >= 0]
         position_left_data = position_vector[position_vector < 0]
@@ -71,6 +141,8 @@ class FourierTransformSpectroscopy():
         return efficiency_left_data, efficiency_right_data, position_left_data, position_right_data
 
     def make_data_symmetric(self, data, is_right=True, position=False):
+        '''
+        '''
         if is_right:
             left_data = data[::-1]
             right_data = data
@@ -364,7 +436,34 @@ class FourierTransformSpectroscopy():
         fig.show()
         self._ask_user_if_they_want_to_quit()
 
-
+    def ftsy_load_simulated_band(self, data_clip_lo, data_clip_hi, band):
+        '''
+        '''
+        data_path = self.bands[band]['Path']
+        freq_idx = self.bands[band]['Freq Column']
+        trans_idx = self.bands[band]['Transmission Column']
+        header_lines = self.bands[band]['Header Lines']
+        with open(data_path, 'r') as file_handle:
+            lines = file_handle.readlines()
+            frequency_vector = np.zeros([])
+            transmission_vector = np.zeros([])
+            for i, line in enumerate(lines):
+                if i > header_lines:
+                    try:
+                        if ',' in line:
+                            frequency = line.split(',')[freq_idx].strip()
+                            transmission = line.split(',')[trans_idx].strip()
+                        else:
+                            frequency = line.split('\t')[freq_idx].strip()
+                            transmission = line.split('\t')[trans_idx].strip()
+                        if float(data_clip_lo) < float(frequency) * 1e9 < float(data_clip_hi) and self.gb_is_float(transmission):
+                            frequency_vector = np.append(frequency_vector, float(frequency))
+                            transmission_vector = np.append(transmission_vector, float(transmission))
+                    except ValueError:
+                        pass
+        #transmission_vector = np.asarray(transmission_vector) / np.max(np.asarray(transmission_vector))
+        #frequency_vector = np.asarray(frequency_vector)
+        return frequency_vector, transmission_vector
     def _ask_user_if_they_want_to_quit(self):
         '''
         A simple method to stop the code without setting a trace with the option of quittting

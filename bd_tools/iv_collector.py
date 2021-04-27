@@ -1,4 +1,5 @@
 import time
+import shutil
 import os
 import simplejson
 import pylab as pl
@@ -8,12 +9,12 @@ from copy import copy
 from datetime import datetime
 from pprint import pprint
 from bd_lib.bolo_daq import BoloDAQ
-from bd_lib.iv_curves import IVCurves
+from bd_lib.iv_curve_lib import IVCurveLib
 from bd_lib.saving_manager import SavingManager
 from PyQt5 import QtCore, QtGui, QtWidgets
 from GuiBuilder.gui_builder import GuiBuilder, GenericClass
 
-class IVCollector(QtWidgets.QWidget, GuiBuilder):
+class IVCollector(QtWidgets.QWidget, GuiBuilder, IVCurveLib):
 
     def __init__(self, daq_settings, status_bar, screen_resolution, monitor_dpi, data_folder):
         '''
@@ -40,7 +41,6 @@ class IVCollector(QtWidgets.QWidget, GuiBuilder):
             }
         grid = QtWidgets.QGridLayout()
         self.setLayout(grid)
-        self.ivc = IVCurves()
         self.ivc_plot_panel = QtWidgets.QWidget(self)
         grid_2 = QtWidgets.QGridLayout()
         self.ivc_plot_panel.setLayout(grid_2)
@@ -54,7 +54,6 @@ class IVCollector(QtWidgets.QWidget, GuiBuilder):
         self.saving_manager = SavingManager(self, self.data_folder, self.ivc_save, 'IV')
         self.ivc_populate()
         self.ivc_plot_running()
-        self.ivc = IVCurves()
         self.qthreadpool = QtCore.QThreadPool()
 
     #########################################################
@@ -85,6 +84,9 @@ class IVCollector(QtWidgets.QWidget, GuiBuilder):
         self.ivc_add_common_widgets()
         self.ivc_display_daq_settings()
         self.ivc_plot_running()
+        self.ivc_daq_combobox.setCurrentIndex(0)
+        self.daq_x_combobox.setCurrentIndex(0)
+        self.daq_y_combobox.setCurrentIndex(2)
 
     def ivc_display_daq_settings(self):
         '''
@@ -101,7 +103,6 @@ class IVCollector(QtWidgets.QWidget, GuiBuilder):
         for daq in self.daq_settings:
             self.ivc_daq_combobox.addItem(daq)
         self.layout().addWidget(self.ivc_daq_combobox, 0, 0, 1, 1)
-        self.ivc_daq_combobox.setCurrentIndex(1)
         # DAQ X
         self.daq_x_combobox = self.gb_make_labeled_combobox(label_text='DAQ X Data:', width=self.le_width)
         for daq in range(0, 8):
@@ -140,9 +141,8 @@ class IVCollector(QtWidgets.QWidget, GuiBuilder):
         # X Voltage Factor
         self.x_correction_combobox = self.gb_make_labeled_combobox(label_text='Bias Voltage Correction Factor:', width=self.le_width)
         for index, voltage_factor in self.voltage_reduction_factor_dict.items():
-            print(voltage_factor)
             self.x_correction_combobox.addItem('{0}'.format(voltage_factor))
-        self.x_correction_combobox.setCurrentIndex(1)
+        self.x_correction_combobox.setCurrentIndex(4)
         self.layout().addWidget(self.x_correction_combobox, 8, 0, 1, 1)
         # SQUID
         self.squid_calibration_label = QtWidgets.QLabel('', self)
@@ -151,27 +151,39 @@ class IVCollector(QtWidgets.QWidget, GuiBuilder):
         self.y_correction_combobox = self.gb_make_labeled_combobox(label_text='Select SQUID')
         for squid, calibration in self.squid_calibration_dict.items():
             self.y_correction_combobox.addItem('{0}'.format(squid))
-        self.y_correction_combobox.setCurrentIndex(-1)
+        self.y_correction_combobox.setCurrentIndex(1)
         self.y_correction_combobox.currentIndexChanged.connect(self.ivc_update_squid_calibration)
-        self.y_correction_combobox.setCurrentIndex(2)
+        self.y_correction_combobox.setCurrentIndex(0)
         self.layout().addWidget(self.y_correction_combobox, 10, 0, 1, 1)
         # Data Clip
         self.data_clip_lo_lineedit = self.gb_make_labeled_lineedit(label_text='Data Clip Lo (uV)', lineedit_text='0.0', width=self.le_width)
+        self.data_clip_lo_lineedit.returnPressed.connect(self.ivc_plot_running)
+        self.data_clip_lo_lineedit.setValidator(QtGui.QDoubleValidator(0, 1e5, 2, self.data_clip_lo_lineedit))
         self.layout().addWidget(self.data_clip_lo_lineedit, 11, 0, 1, 2)
         self.data_clip_hi_lineedit = self.gb_make_labeled_lineedit(label_text='Data Clip Hi (uV)', lineedit_text='100.0', width=self.le_width)
+        self.data_clip_hi_lineedit.returnPressed.connect(self.ivc_plot_running)
+        self.data_clip_hi_lineedit.setValidator(QtGui.QDoubleValidator(0, 1e5, 2, self.data_clip_hi_lineedit))
         self.layout().addWidget(self.data_clip_hi_lineedit, 12, 0, 1, 2)
         # Fit Clip
-        self.data_fit_lo_lineedit = self.gb_make_labeled_lineedit(label_text='Fit Clip Lo (uV)', lineedit_text='0.0', width=self.le_width)
-        self.layout().addWidget(self.data_fit_lo_lineedit, 13, 0, 1, 1)
-        self.data_fit_hi_lineedit = self.gb_make_labeled_lineedit(label_text='Fit Clip Hi (uV)', lineedit_text='100.0', width=self.le_width)
-        self.layout().addWidget(self.data_fit_hi_lineedit, 14, 0, 1, 1)
+        self.fit_clip_lo_lineedit = self.gb_make_labeled_lineedit(label_text='Fit Clip Lo (uV)', lineedit_text='0.0', width=self.le_width)
+        self.fit_clip_lo_lineedit.returnPressed.connect(self.ivc_plot_running)
+        self.layout().addWidget(self.fit_clip_lo_lineedit, 13, 0, 1, 1)
+        self.fit_clip_lo_lineedit.setValidator(QtGui.QDoubleValidator(0, 1e5, 2, self.fit_clip_lo_lineedit))
+        self.fit_clip_hi_lineedit = self.gb_make_labeled_lineedit(label_text='Fit Clip Hi (uV)', lineedit_text='100.0', width=self.le_width)
+        self.fit_clip_hi_lineedit.setValidator(QtGui.QDoubleValidator(0, 1e5, 2, self.fit_clip_hi_lineedit))
+        self.fit_clip_hi_lineedit.returnPressed.connect(self.ivc_plot_running)
+        self.layout().addWidget(self.fit_clip_hi_lineedit, 14, 0, 1, 1)
         # Extra information
-        self.sample_temp_lineedit = self.gb_make_labeled_lineedit(label_text='Sample Temp (K)', width=self.le_width)
-        self.sample_temp_lineedit.setValidator(QtGui.QDoubleValidator(0, 10000, 8, self.sample_temp_lineedit))
-        self.layout().addWidget(self.sample_temp_lineedit, 15, 0, 1, 1)
-        self.optical_load_lineedit = self.gb_make_labeled_lineedit(label_text='Optical Load (K)', width=self.le_width)
-        self.optical_load_lineedit.setValidator(QtGui.QDoubleValidator(0, 500, 8, self.optical_load_lineedit))
-        self.layout().addWidget(self.optical_load_lineedit, 16, 0, 1, 1)
+        self.t_bath_lineedit = self.gb_make_labeled_lineedit(label_text='T Bath (mK)', width=self.le_width)
+        self.t_bath_lineedit.setText('275')
+        self.t_bath_lineedit.returnPressed.connect(self.ivc_plot_running)
+        self.t_bath_lineedit.setValidator(QtGui.QDoubleValidator(0, 10000, 8, self.t_bath_lineedit))
+        self.layout().addWidget(self.t_bath_lineedit, 15, 0, 1, 1)
+        self.t_load_lineedit = self.gb_make_labeled_lineedit(label_text='T Load (K)', width=self.le_width)
+        self.t_load_lineedit.setText('300')
+        self.t_load_lineedit.returnPressed.connect(self.ivc_plot_running)
+        self.t_load_lineedit.setValidator(QtGui.QDoubleValidator(0, 500, 8, self.t_load_lineedit))
+        self.layout().addWidget(self.t_load_lineedit, 16, 0, 1, 1)
         self.sample_band_combobox = self.gb_make_labeled_combobox(label_text='Sample Band (GHz)', width=self.le_width)
         self.layout().addWidget(self.sample_band_combobox, 17, 0, 1, 1)
         for sample_band in ['', 'MF-Sinuous1p5', 'MF-Sinuous0p8', '30', '40', '90', '150', '220', '270']:
@@ -203,6 +215,9 @@ class IVCollector(QtWidgets.QWidget, GuiBuilder):
         sample_key = self.sample_name_combobox.currentText()
         sample_name = self.samples_settings[sample_key]
         self.sample_name_lineedit.setText(sample_name)
+        index = int(sample_key) - 1
+        if hasattr(self, 'y_correction_combobox'):
+            self.y_correction_combobox.setCurrentIndex(index)
 
     def ivc_update_squid_calibration(self, index):
         '''
@@ -210,6 +225,9 @@ class IVCollector(QtWidgets.QWidget, GuiBuilder):
         squid_key = self.y_correction_combobox.currentText()
         calibration_value = self.squid_calibration_dict[squid_key]
         self.squid_calibration_label.setText(calibration_value)
+        index = int(squid_key.split()[-1]) - 1
+        if hasattr(self, 'sample_name_combobox'):
+            self.sample_name_combobox.setCurrentIndex(index)
 
     def ivc_update_ls_372_widget(self, ls_372_widget):
         '''
@@ -251,6 +269,7 @@ class IVCollector(QtWidgets.QWidget, GuiBuilder):
         '''
         '''
         if 'Start' in self.sender().text():
+            self.data_clip_lo_lineedit.setText('0')
             self.sender().setText('Stop DAQ')
             self.started = True
             self.ivc_collecter()
@@ -286,6 +305,11 @@ class IVCollector(QtWidgets.QWidget, GuiBuilder):
             y_min = data_dict[self.y_channel]['min']
             y_max = data_dict[self.y_channel]['max']
             y_std = data_dict[self.y_channel]['std']
+            if x_mean < 0:
+                x_mean *= -1
+                x_std *= -1
+                x_min *= -1
+                x_max *= -1
             self.x_data.append(x_mean)
             self.x_stds.append(x_std)
             self.y_data.append(y_mean)
@@ -326,24 +350,21 @@ class IVCollector(QtWidgets.QWidget, GuiBuilder):
     def ivc_save(self, save_path=None):
         '''
         '''
-        if save_path is None:
+        if save_path is None or type(save_path) is bool:
             save_path = self.ivc_index_file_name()
             save_path = QtWidgets.QFileDialog.getSaveFileName(self, 'Data Save Location', save_path, filter='*.txt,*.dat')[0]
         if len(save_path) > 0:
-            if 'txt' in save_path:
-                calibrated_save_path = save_path.replace('.txt', '_calibrated.txt')
-            elif 'dat' in save_path:
-                calibrated_save_path = save_path.replace('.dat', '_calibrated.dat')
+            calibrated_save_path = save_path.replace('.txt', '_calibrated.txt')
             with open(save_path, 'w') as save_handle:
                 for i, x_data in enumerate(self.x_data):
-                    print(i, 'raw')
                     line = '{0:.5f}, {1:.5f}, {2:.5f}, {3:.5f}\n'.format(self.x_data[i], self.x_stds[i], self.y_data[i], self.y_stds[i])
                     save_handle.write(line)
             with open(calibrated_save_path, 'w') as save_handle:
                 for i, x_data in enumerate(self.x_data_real):
-                    print(i, 'real')
                     line = '{0:.5f}, {1:.5f}, {2:.5f}, {3:.5f}\n'.format(self.x_data_real[i], self.x_stds_real[i], self.y_data_real[i], self.y_stds_real[i])
                     save_handle.write(line)
+            png_save_path = save_path.replace('.txt', '.png')
+            shutil.copy('temp_iv_all.png', png_save_path)
         else:
             self.gb_quick_message('Warning Data Not Written to File!', msg_type='Warning')
         self.ivc_plot_xy()
@@ -394,10 +415,13 @@ class IVCollector(QtWidgets.QWidget, GuiBuilder):
             fig, ax = self.ivc_create_blank_fig(frac_screen_width=0.8, frac_screen_height=0.4, left=0.1, top=0.9)
         else:
             fig, ax = self.ivc_create_blank_fig(frac_screen_width=0.6, frac_screen_height=0.5, left=0.1, top=0.9)
+        sample_name = self.sample_name_lineedit.text()
+        t_bath = self.t_bath_lineedit.text()
+        t_load = self.t_load_lineedit.text()
         data_clip_lo = float(self.data_clip_lo_lineedit.text())
         data_clip_hi = float(self.data_clip_hi_lineedit.text())
-        data_fit_lo = float(self.data_fit_lo_lineedit.text())
-        data_fit_hi = float(self.data_fit_hi_lineedit.text())
+        fit_clip_lo = float(self.fit_clip_lo_lineedit.text())
+        fit_clip_hi = float(self.fit_clip_hi_lineedit.text())
         squid_calibration_factor = float(self.squid_calibration_label.text())
         i_bolo_real = self.ivc_fit_and_remove_squid_offset()
         i_bolo_std = np.asarray(self.y_stds) * squid_calibration_factor
@@ -405,7 +429,7 @@ class IVCollector(QtWidgets.QWidget, GuiBuilder):
         v_bias_std = np.asarray(self.x_stds) * float(self.x_correction_combobox.currentText()) * 1e6 #uV
         #v_bias_real = np.asarray(self.x_data) * float(2e-6) * 1e6 #uV
         #v_bias_std = np.asarray(self.x_stds) * float(2e-6) * 1e6
-        fit_selector = np.where(np.logical_and(data_fit_lo < v_bias_real, v_bias_real < data_fit_hi))
+        fit_selector = np.where(np.logical_and(fit_clip_lo < v_bias_real, v_bias_real < fit_clip_hi))
         try:
             fit_vals = np.polyfit(v_bias_real[fit_selector], i_bolo_real[fit_selector], 1)
             resistance = 1.0 / fit_vals[0]
@@ -420,18 +444,20 @@ class IVCollector(QtWidgets.QWidget, GuiBuilder):
         self.x_stds_real = v_bias_std
         self.y_data_real = i_bolo_real
         self.y_stds_real = i_bolo_std
-        ax.errorbar(v_bias_real[selector], i_bolo_real[selector], xerr=v_bias_std[selector], yerr=i_bolo_std[selector], marker='.', linestyle='-', label=label)
+        #ax.errorbar(v_bias_real[selector], i_bolo_real[selector], xerr=v_bias_std[selector], yerr=i_bolo_std[selector], marker='.', linestyle='-', label=label)
+
+        fig = self.ivlib_plot_all_curves(v_bias_real, i_bolo_real, bolo_current_stds=i_bolo_std,
+                                         fit_clip=(fit_clip_lo, fit_clip_hi), plot_clip=(data_clip_lo, data_clip_hi),
+                                         sample_name=sample_name, t_bath=t_bath, t_load=t_load)
         if running:
             ax.set_xlabel('Bias Voltage ($\mu V$)', fontsize=14)
             ax.set_ylabel('TES Current ($\mu A$)', fontsize=14)
             ax.set_title(title, fontsize=14)
             pl.legend(loc='best', fontsize=14)
-            fig.savefig('temp_xy.png', transparent=True)
-            fig.savefig('temp_xy.png', transparent=False)
+            fig.savefig('temp_iv_all.png', transparent=False)
             pl.close('all')
-            image_to_display = QtGui.QPixmap('temp_xy.png')
+            image_to_display = QtGui.QPixmap('temp_iv_all.png')
             self.xy_scatter_label.setPixmap(image_to_display)
-            os.remove('temp_xy.png')
         else:
             ax.set_xlabel('Bias Voltage ($\mu V$)', fontsize=16)
             ax.set_ylabel('TES Current ($\mu A$)', fontsize=16)

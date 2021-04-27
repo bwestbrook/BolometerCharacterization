@@ -11,16 +11,20 @@ from copy import copy
 from datetime import datetime
 from pprint import pprint
 from bd_lib.bolo_daq import BoloDAQ
+from bd_lib.iv_curve_lib import IVCurveLib
+from bd_lib.fourier_transform_spectroscopy import FourierTransformSpectroscopy
 from PyQt5 import QtCore, QtGui, QtWidgets
 from GuiBuilder.gui_builder import GuiBuilder, GenericClass
 
-class DifferenceLoadCurves(QtWidgets.QWidget, GuiBuilder):
+class DifferenceLoadCurves(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTransformSpectroscopy):
 
     def __init__(self, daq_settings, status_bar, screen_resolution, monitor_dpi,  data_folder):
         '''
         '''
         super(DifferenceLoadCurves, self).__init__()
-        self.dewar_transmission = 1.0
+        self.bands = self.ftsy_get_bands()
+        self.optical_element_dict = self.ftsy_get_optical_elements()
+        #self.dewar_transmission = 1.0
         self.status_bar = status_bar
         self.daq_settings = daq_settings
         self.screen_resolution = screen_resolution
@@ -33,38 +37,6 @@ class DifferenceLoadCurves(QtWidgets.QWidget, GuiBuilder):
         self.iv_1_path = None
         self.iv_2_path = None
         self.spectra_path = None
-        self.bands = {
-            'SO30': {
-                'Band Center': 30,
-                'Project': 'Simons Observatory',
-                'Freq Column': 0,
-                'Transmission Column': 3,
-                'Header Lines': 2,
-                'Path': os.path.join('bd_lib', 'simulated_bands', 'Nitride_Lumped_Diplexer_030_05_040_08_MoreWider20190226_300GHz.csv')
-                },
-            'SO40': {
-                'Band Center': 40,
-                'Project': 'Simons Observatory',
-                'Freq Column': 0,
-                'Transmission Column': 4,
-                'Header Lines': 2,
-                'Path': os.path.join('bd_lib', 'simulated_bands', 'Nitride_Lumped_Diplexer_030_05_040_08_MoreWider20190226_300GHz.csv')
-                }
-            }
-        self.optical_element_dict = {
-            '5mil Beam Splitter': {
-                'Active': False,
-                'Path': os.path.join('bd_lib', 'optical_elements', '5_mil_beamsplitter_efficiency.dat')
-                },
-            '10mil Beam Splitter': {
-                'Active': True,
-                'Path': os.path.join('bd_lib', 'optical_elements', '10_mil_beamsplitter_efficiency.dat')
-                },
-            '12icm 576 MMF': {
-                'Active': True,
-                'Path': os.path.join('bd_lib', 'optical_elements', '10_mil_beamsplitter_efficiency.dat')
-                },
-            }
         self.dlc_configure_panel()
         self.resize(self.minimumSizeHint())
 
@@ -247,8 +219,6 @@ class DifferenceLoadCurves(QtWidgets.QWidget, GuiBuilder):
         self.frac_rn_lineedit.setText('0.7')
         self.layout().addWidget(self.frac_rn_lineedit, 3, 12, 1, 2)
 
-
-
         self.layout().addWidget(self.smoothing_factor_lineedit, 4, 8, 1, 2)
         self.renormalize_checkbox = QtWidgets.QCheckBox('Renormalize post clip?')
         self.renormalize_checkbox.setChecked(True)
@@ -283,33 +253,9 @@ class DifferenceLoadCurves(QtWidgets.QWidget, GuiBuilder):
         '''
         optical_element = self.optical_elements_combobox.currentText()
         self.optical_element_dict[optical_element]['Active'] = self.optical_element_active_checkbox.isChecked()
+        if self.optical_element_dict[optical_element]['Active']:
+            print(optical_element)
 
-
-    def dlc_divide_out_optical_element_response(self, frequency_vector, normalized_transmission_vector,
-                                                optical_element='mmf', frequency_=350,
-                                                transmission_threshold=0.15,
-                                                bs_thickness=10, quick_plot=False, data_clip=(0, 300)):
-        '''
-        '''
-        optical_element = self.optical_elements_combobox.currentText()
-        path = self.optical_element_dict[optical_element]['Path']
-        element_frequency_vector = []
-        element_transmission_vector = []
-        with open(path, 'r') as bs_file_handle:
-            for line in bs_file_handle.readlines():
-                element_frequency = line.split('\t')[0]
-                element_transmission = line.split('\t')[1].strip('\n')
-                if float(element_transmission) > transmission_threshold:
-                    element_frequency_vector.append(float(element_frequency))
-                    element_transmission_vector.append(float(element_transmission))
-        # Make a copy for before and after comparison
-        corrected_transmission_vector = copy(normalized_transmission_vector)
-        # Interpolate the optical element to the bolo transmission data and then divide it out
-        transmission_vector_to_divide = np.interp(np.asarray(frequency_vector), np.asarray(element_frequency_vector),
-                                                  np.asarray(element_transmission_vector))
-        corrected_transmission_vector = normalized_transmission_vector / transmission_vector_to_divide
-        normalized_corrected_transmission_vector = corrected_transmission_vector / np.max(corrected_transmission_vector)
-        return corrected_transmission_vector, normalized_corrected_transmission_vector
 
     #################################################################################
     # Differencing 
@@ -403,7 +349,10 @@ class DifferenceLoadCurves(QtWidgets.QWidget, GuiBuilder):
         fft_frequency_vector_processed, fft_vector_processed, normalized_fft_vector_processed = self.dlc_load_spectra_data(self.spectra_path)
         measured_delta_power, measured_integrated_bandwidth = self.dlc_compute_delta_power_at_window(fft_frequency_vector_processed, normalized_fft_vector_processed)
         ax2.plot(fft_frequency_vector_processed * 1e-9, normalized_fft_vector_processed, label='Measured Spectra')
-        fft_frequency_vector_simulated, fft_vector_simulated = self.dlc_load_simulated_band()
+        data_clip_lo = float(self.spectra_data_clip_lo_lineedit.text()) * 1e9
+        data_clip_hi = float(self.spectra_data_clip_hi_lineedit.text()) * 1e9
+        band = self.band_select_combobox.currentText()
+        fft_frequency_vector_simulated, fft_vector_simulated = self.ftsy_load_simulated_band(data_clip_lo, data_clip_hi, band)
         ax2.plot(fft_frequency_vector_simulated, fft_vector_simulated, label='Simulated Spectra')
         simulated_delta_power, simulated_integrated_bandwidth = self.dlc_compute_delta_power_at_window(fft_frequency_vector_simulated * 1e9, fft_vector_simulated)
         return fig, measured_delta_power, measured_integrated_bandwidth, simulated_delta_power, simulated_integrated_bandwidth
@@ -515,8 +464,12 @@ class DifferenceLoadCurves(QtWidgets.QWidget, GuiBuilder):
         self.size = image_to_display.size()
         self.iv_1_calibrated_plot_label.setPixmap(image_to_display)
         pl.close('all')
-        fig = self.dlc_plot_all_curves(self.calibrated_bias_voltage, self.calibrated_squid_current, iv=1, stds=None, label='', fit_clip=(fit_clip_lo, fit_clip_hi),
-                                       plot_clip=(data_clip_lo, data_clip_hi), frac_screen_height=0.3, frac_screen_width=0.3)
+        sample_name = self.sample_name_lineedit.text()
+        t_bath = self.iv_1_t_bath_lineedit.text()
+        t_load = self.iv_1_t_load_lineedit.text()
+        fig = self.ivlib_plot_all_curves(self.calibrated_bias_voltage, self.calibrated_squid_current, bolo_current_stds=None,
+                                         fit_clip=(fit_clip_lo, fit_clip_hi), plot_clip=(data_clip_lo, data_clip_hi),
+                                         sample_name=sample_name, t_bath=t_bath, t_load=t_load)
         temp_paneled_iv_1_path = os.path.join('temp_files', 'temp_paneled_iv_1.png')
         fig.savefig(temp_paneled_iv_1_path)
         image_to_display = QtGui.QPixmap(temp_paneled_iv_1_path)
@@ -576,8 +529,12 @@ class DifferenceLoadCurves(QtWidgets.QWidget, GuiBuilder):
         self.size = image_to_display.size()
         self.iv_2_calibrated_plot_label.setPixmap(image_to_display)
         pl.close('all')
-        fig = self.dlc_plot_all_curves(self.calibrated_bias_voltage, self.calibrated_squid_current, iv=2, stds=None, label='', fit_clip=(fit_clip_lo, fit_clip_hi),
-                                       plot_clip=(data_clip_lo, data_clip_hi), frac_screen_height=0.3, frac_screen_width=0.3)
+        sample_name = self.sample_name_lineedit.text()
+        t_bath = self.iv_2_t_bath_lineedit.text()
+        t_load = self.iv_2_t_load_lineedit.text()
+        fig = self.ivlib_plot_all_curves(self.calibrated_bias_voltage, self.calibrated_squid_current, bolo_current_stds=None,
+                                         fit_clip=(fit_clip_lo, fit_clip_hi), plot_clip=(data_clip_lo, data_clip_hi),
+                                         sample_name=sample_name, t_bath=t_bath, t_load=t_load)
         temp_paneled_iv_2_path = os.path.join('temp_files', 'temp_paneled_iv_2.png')
         fig.savefig(temp_paneled_iv_2_path)
         image_to_display = QtGui.QPixmap(temp_paneled_iv_2_path)
@@ -652,7 +609,7 @@ class DifferenceLoadCurves(QtWidgets.QWidget, GuiBuilder):
         else:
             spectra_path = self.spectra_path
         fft_frequency_vector, fft_vector, normalized_fft_vector = self.dlc_load_spectra_data(spectra_path, smoothing_factor=0.0)
-        fft_frequency_vector_simulated, fft_vector_simulated = self.dlc_load_simulated_band()
+        fft_frequency_vector_simulated, fft_vector_simulated = self.ftsy_load_simulated_band(data_clip_lo, data_clip_hi, band)
         fig, ax = self.dlc_create_blank_fig(left=0.1, frac_screen_width=0.5, frac_screen_height=0.2)
         ax.plot(fft_frequency_vector * 1e-9, normalized_fft_vector, label='Raw Data')
         ax.plot(fft_frequency_vector_simulated, fft_vector_simulated, label='HFSS Data')
@@ -666,6 +623,7 @@ class DifferenceLoadCurves(QtWidgets.QWidget, GuiBuilder):
         pl.close('all')
         fig, ax = self.dlc_create_blank_fig(left=0.1, frac_screen_width=0.5, frac_screen_height=0.2)
         fft_frequency_vector_processed, fft_vector_processed, normalized_fft_vector_processed = self.dlc_load_spectra_data(spectra_path)
+        fft_frequency_vector_processed, normalized_fft_vector_processed = self.dlc_divide_out_active_optical_elements(fft_frequency_vector_processed, normalized_fft_vector_processed)
         delta_power, integrated_bandwidth = self.dlc_compute_delta_power_at_window(fft_frequency_vector_processed, normalized_fft_vector_processed)
         label='$\Delta(P)$ {0:.2f} pW\nBW {1:.2f} GHz '.format(delta_power * 1e12, integrated_bandwidth * 1e-9)
         ax.plot(fft_frequency_vector_processed * 1e-9, normalized_fft_vector_processed, label=label)
@@ -719,37 +677,19 @@ class DifferenceLoadCurves(QtWidgets.QWidget, GuiBuilder):
             normalized_transmission_vector = normalized_transmission_vector / np.max(normalized_transmission_vector)
         return frequency_vector, transmission_vector, normalized_transmission_vector
 
-    def dlc_load_simulated_band(self):
+    def dlc_divide_out_active_optical_elements(self, frequency_vector, normalized_transmission_vector):
         '''
         '''
-        data_clip_lo = float(self.spectra_data_clip_lo_lineedit.text()) * 1e9
-        data_clip_hi = float(self.spectra_data_clip_hi_lineedit.text()) * 1e9
-        band = self.band_select_combobox.currentText()
-        data_path = self.bands[band]['Path']
-        freq_idx = self.bands[band]['Freq Column']
-        trans_idx = self.bands[band]['Transmission Column']
-        header_lines = self.bands[band]['Header Lines']
-        with open(data_path, 'r') as file_handle:
-            lines = file_handle.readlines()
-            frequency_vector = np.zeros([])
-            transmission_vector = np.zeros([])
-            for i, line in enumerate(lines):
-                if i > header_lines:
-                    try:
-                        if ',' in line:
-                            frequency = line.split(',')[freq_idx].strip()
-                            transmission = line.split(',')[trans_idx].strip()
-                        else:
-                            frequency = line.split('\t')[freq_idx].strip()
-                            transmission = line.split('\t')[trans_idx].strip()
-                        if float(data_clip_lo) < float(frequency) * 1e9 < float(data_clip_hi) and self.gb_is_float(transmission):
-                            frequency_vector = np.append(frequency_vector, float(frequency))
-                            transmission_vector = np.append(transmission_vector, float(transmission))
-                    except ValueError:
-                        pass
-        #transmission_vector = np.asarray(transmission_vector) / np.max(np.asarray(transmission_vector))
-        #frequency_vector = np.asarray(frequency_vector)
-        return frequency_vector, transmission_vector
+        optical_element = self.optical_elements_combobox.currentText()
+        self.optical_element_dict[optical_element]['Active'] = self.optical_element_active_checkbox.isChecked()
+        if self.optical_element_dict[optical_element]['Active']:
+            path = self.optical_element_dict[optical_element]['Path']
+            print(path)
+            print(optical_element)
+            frequency_vector, normalized_transmission_vector = self.ftsy_divide_out_optical_element_response(frequency_vector, normalized_transmission_vector,
+                                                                                                             optical_element=optical_element, path=path)
+        return frequency_vector, normalized_transmission_vector
+
 
     def dlc_compute_delta_power_at_window(self, frequency_vector, normalized_transmission_vector, show_spectra=False):
         '''
@@ -790,7 +730,7 @@ class DifferenceLoadCurves(QtWidgets.QWidget, GuiBuilder):
     # Plotting
     ####################
 
-    def dlc_plot_all_curves(self, bolo_voltage_bias, bolo_current, iv=1, stds=None, label='', fit_clip=None, plot_clip=None,
+    def dlc_plot_all_curves2(self, bolo_voltage_bias, bolo_current, iv=1, stds=None, label='', fit_clip=None, plot_clip=None,
                             show_plot=False, title='', pturn=True, frac_screen_width=0.3, frac_screen_height=0.35,
                             left=0.1, right=0.98, top=0.9, bottom=0.13, multiple_axes=False):
         '''
