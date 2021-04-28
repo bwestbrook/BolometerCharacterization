@@ -14,7 +14,7 @@ from bd_tools.configure_stepper_motor import ConfigureStepperMotor
 
 class FourierTransformSpectrometer(QtWidgets.QWidget, GuiBuilder, FourierTransformSpectroscopy):
 
-    def __init__(self, daq_settings, status_bar, screen_resolution, monitor_dpi, csm_widget, srs_widget):
+    def __init__(self, daq_settings, status_bar, screen_resolution, monitor_dpi, csm_widget, srs_widget, data_folder):
         '''
         '''
         super(FourierTransformSpectrometer, self).__init__()
@@ -32,9 +32,7 @@ class FourierTransformSpectrometer(QtWidgets.QWidget, GuiBuilder, FourierTransfo
         grid_2 = QtWidgets.QGridLayout()
         self.fts_configure_input_panel()
         self.fts_configure_plot_panel()
-        self.today = datetime.now()
-        self.today_str = datetime.strftime(self.today, '%Y_%m_%d')
-        self.data_folder = os.path.join('Data', '{0}'.format(self.today_str))
+        self.data_folder = data_folder
         self.start_pause = 5.0
         self.status_bar.showMessage('Ready')
         self.x_data = []
@@ -65,8 +63,6 @@ class FourierTransformSpectrometer(QtWidgets.QWidget, GuiBuilder, FourierTransfo
     def fts_update_sample_name(self, index):
         '''
         '''
-        print(index)
-        pprint(self.samples_settings)
         sample_name = self.samples_settings[str(index + 1)]
         self.sample_name_lineedit.setText(sample_name)
 
@@ -181,23 +177,42 @@ class FourierTransformSpectrometer(QtWidgets.QWidget, GuiBuilder, FourierTransfo
         for optical_element in self.optical_elements:
             self.optical_elements_combobox.addItem(optical_element)
         self.layout().addWidget(self.optical_elements_combobox, 13, 4, 1, 1)
-        self.optical_elements_combobox.activated.connect(self.fts_plot_spectra)
+        self.optical_elements_combobox.activated.connect(self.fts_show_active_optical_elements)
+        self.optical_element_active_checkbox = QtWidgets.QCheckBox('Active', self)
+        self.optical_element_active_checkbox.clicked.connect(self.fts_update_active_optical_elements)
+        self.layout().addWidget(self.optical_element_active_checkbox, 13, 5, 1, 1)
         self.bands_combobox = self.gb_make_labeled_combobox(label_text='Detector Band')
         for band in self.bands:
             self.bands_combobox.addItem(band)
-        self.layout().addWidget(self.bands_combobox, 13, 5, 1, 1)
+        self.layout().addWidget(self.bands_combobox, 14, 4, 1, 1)
         self.data_clip_lo_lineedit = self.gb_make_labeled_lineedit(label_text='Data Clip Lo (GHz):')
         self.data_clip_lo_lineedit.setValidator(QtGui.QIntValidator(0, 25000, self.data_clip_lo_lineedit))
         self.data_clip_lo_lineedit.returnPressed.connect(self.fts_plot)
         self.data_clip_lo_lineedit.setText('0.0')
-        self.layout().addWidget(self.data_clip_lo_lineedit, 14, 4, 1, 1)
+        self.layout().addWidget(self.data_clip_lo_lineedit, 15, 4, 1, 1)
         self.data_clip_hi_lineedit = self.gb_make_labeled_lineedit(label_text='Data Clip Hi (GHz):')
         self.data_clip_hi_lineedit.setValidator(QtGui.QIntValidator(0, 25000, self.data_clip_hi_lineedit))
         self.data_clip_hi_lineedit.returnPressed.connect(self.fts_plot)
         self.data_clip_hi_lineedit.setText('600.0')
-        self.layout().addWidget(self.data_clip_hi_lineedit, 14, 5, 1, 1)
+        self.layout().addWidget(self.data_clip_hi_lineedit, 15, 5, 1, 1)
         self.bands_combobox.activated.connect(self.fts_plot)
 
+    def fts_show_active_optical_elements(self):
+        '''
+        '''
+        optical_element = self.optical_elements_combobox.currentText()
+        active = self.optical_elements_dict[optical_element]['Active']
+        self.optical_element_active_checkbox.setChecked(active)
+        self.fts_plot()
+
+    def fts_update_active_optical_elements(self):
+        '''
+        '''
+        optical_element = self.optical_elements_combobox.currentText()
+        self.optical_elements_dict[optical_element]['Active'] = self.optical_element_active_checkbox.isChecked()
+        if self.optical_elements_dict[optical_element]['Active']:
+            self.showMessage('{0} is Active'.format(optical_element))
+        self.fts_plot()
 
     #################################################
     # Scanning
@@ -296,6 +311,8 @@ class FourierTransformSpectrometer(QtWidgets.QWidget, GuiBuilder, FourierTransfo
         position = ''
         while len(position) == 0:
             position = self.csm_widget.csm_get_position()
+            if '\r' in position:
+                position = position.split('\r')[0]
         velocity = self.csm_widget.csm_get_velocity()
         velocity = float(self.csm_widget.stepper_settings_dict['velocity'])
         position_diff = np.abs(int(position) - int(scan_positions[0])) * 1e-5

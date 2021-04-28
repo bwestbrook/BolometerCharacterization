@@ -692,7 +692,7 @@ class BoloDAQGui(QtWidgets.QMainWindow, GuiBuilder):
             return None
         #self.srs_sr830dsp_widget = None
         if not hasattr(self, 'fts_widget'):
-            self.fts_widget = FourierTransformSpectrometer(self.daq_settings, self.status_bar, self.screen_resolution, self.monitor_dpi, csm_widget, self.srs_sr830dsp_widget)
+            self.fts_widget = FourierTransformSpectrometer(self.daq_settings, self.status_bar, self.screen_resolution, self.monitor_dpi, csm_widget, self.srs_sr830dsp_widget, self.data_folder)
         self.fts_widget.fts_update_samples()
         self.central_widget.layout().addWidget(self.fts_widget, 0, 0, 1, 1)
         self.status_bar.showMessage('FTS')

@@ -23,7 +23,7 @@ class DifferenceLoadCurves(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTra
         '''
         super(DifferenceLoadCurves, self).__init__()
         self.bands = self.ftsy_get_bands()
-        self.optical_element_dict = self.ftsy_get_optical_elements()
+        self.optical_elements_dict = self.ftsy_get_optical_elements()
         #self.dewar_transmission = 1.0
         self.status_bar = status_bar
         self.daq_settings = daq_settings
@@ -190,10 +190,10 @@ class DifferenceLoadCurves(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTra
         self.band_select_combobox.activated.connect(self.dlc_load_spectra)
         self.layout().addWidget(self.band_select_combobox, 2, 8, 1, 2)
         self.optical_elements_combobox = self.gb_make_labeled_combobox(label_text='Optical Elements')
-        for i, optical_element in enumerate(self.optical_element_dict):
+        for i, optical_element in enumerate(self.optical_elements_dict):
             self.optical_elements_combobox.addItem(optical_element)
             if i == 0:
-                active = self.optical_element_dict[optical_element]['Active']
+                active = self.optical_elements_dict[optical_element]['Active']
         self.layout().addWidget(self.optical_elements_combobox, 2, 10, 1, 2)
         self.optical_elements_combobox.activated.connect(self.dlc_show_active_optical_elements)
         self.optical_element_active_checkbox = QtWidgets.QCheckBox('Active', self)
@@ -245,17 +245,16 @@ class DifferenceLoadCurves(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTra
         '''
         '''
         optical_element = self.optical_elements_combobox.currentText()
-        active = self.optical_element_dict[optical_element]['Active']
+        active = self.optical_elements_dict[optical_element]['Active']
         self.optical_element_active_checkbox.setChecked(active)
 
     def dlc_update_active_optical_elements(self):
         '''
         '''
         optical_element = self.optical_elements_combobox.currentText()
-        self.optical_element_dict[optical_element]['Active'] = self.optical_element_active_checkbox.isChecked()
-        if self.optical_element_dict[optical_element]['Active']:
+        self.optical_elements_dict[optical_element]['Active'] = self.optical_element_active_checkbox.isChecked()
+        if self.optical_elements_dict[optical_element]['Active']:
             print(optical_element)
-
 
     #################################################################################
     # Differencing 
@@ -343,18 +342,26 @@ class DifferenceLoadCurves(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTra
     def dlc_plot_differenced_spectra_data(self, fig):
         '''
         '''
+
+        band = self.band_select_combobox.currentText()
+        t_source_high = float(self.iv_1_t_load_lineedit.text())
+        t_source_low = float(self.iv_2_t_load_lineedit.text())
         data_clip_lo = float(self.spectra_data_clip_lo_lineedit.text())
         data_clip_hi = float(self.spectra_data_clip_hi_lineedit.text())
         ax2 = fig.get_axes()[1] # Spectra
         fft_frequency_vector_processed, fft_vector_processed, normalized_fft_vector_processed = self.dlc_load_spectra_data(self.spectra_path)
-        measured_delta_power, measured_integrated_bandwidth = self.dlc_compute_delta_power_at_window(fft_frequency_vector_processed, normalized_fft_vector_processed)
+        measured_delta_power, measured_integrated_bandwidth = self.ftsy_compute_delta_power_and_bandwidth_at_window(fft_frequency_vector_processed, normalized_fft_vector_processed,
+                                                                                                                    data_clip_lo=data_clip_lo, data_clip_hi=data_clip_hi,
+                                                                                                                    t_source_low=t_source_low, t_source_high=t_source_high)
         ax2.plot(fft_frequency_vector_processed * 1e-9, normalized_fft_vector_processed, label='Measured Spectra')
         data_clip_lo = float(self.spectra_data_clip_lo_lineedit.text()) * 1e9
         data_clip_hi = float(self.spectra_data_clip_hi_lineedit.text()) * 1e9
         band = self.band_select_combobox.currentText()
         fft_frequency_vector_simulated, fft_vector_simulated = self.ftsy_load_simulated_band(data_clip_lo, data_clip_hi, band)
         ax2.plot(fft_frequency_vector_simulated, fft_vector_simulated, label='Simulated Spectra')
-        simulated_delta_power, simulated_integrated_bandwidth = self.dlc_compute_delta_power_at_window(fft_frequency_vector_simulated * 1e9, fft_vector_simulated)
+        simulated_delta_power, simulated_integrated_bandwidth = self.ftsy_compute_delta_power_and_bandwidth_at_window(fft_frequency_vector_simulated * 1e9, fft_vector_simulated,
+                                                                                                                      data_clip_lo=data_clip_lo, data_clip_hi=data_clip_hi,
+                                                                                                                      t_source_low=t_source_low, t_source_high=t_source_high)
         return fig, measured_delta_power, measured_integrated_bandwidth, simulated_delta_power, simulated_integrated_bandwidth
 
     def dlc_plot_differenced_iv_data(self, v_bolo, i_bolo, fig, iv=1):
@@ -598,6 +605,8 @@ class DifferenceLoadCurves(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTra
     def dlc_load_spectra(self):
         '''
         '''
+        t_source_high = float(self.iv_1_t_load_lineedit.text())
+        t_source_low = float(self.iv_2_t_load_lineedit.text())
         data_clip_lo = float(self.spectra_data_clip_lo_lineedit.text()) * 1e9
         data_clip_hi = float(self.spectra_data_clip_hi_lineedit.text()) * 1e9
         band = self.band_select_combobox.currentText()
@@ -608,7 +617,7 @@ class DifferenceLoadCurves(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTra
             self.spectra_path = spectra_path
         else:
             spectra_path = self.spectra_path
-        fft_frequency_vector, fft_vector, normalized_fft_vector = self.dlc_load_spectra_data(spectra_path, smoothing_factor=0.0)
+        fft_frequency_vector, fft_vector, normalized_fft_vector = self.dlc_load_spectra_data(spectra_path, smoothing_factor=0.0, divide_optical_elements=False)
         fft_frequency_vector_simulated, fft_vector_simulated = self.ftsy_load_simulated_band(data_clip_lo, data_clip_hi, band)
         fig, ax = self.dlc_create_blank_fig(left=0.1, frac_screen_width=0.5, frac_screen_height=0.2)
         ax.plot(fft_frequency_vector * 1e-9, normalized_fft_vector, label='Raw Data')
@@ -623,13 +632,18 @@ class DifferenceLoadCurves(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTra
         pl.close('all')
         fig, ax = self.dlc_create_blank_fig(left=0.1, frac_screen_width=0.5, frac_screen_height=0.2)
         fft_frequency_vector_processed, fft_vector_processed, normalized_fft_vector_processed = self.dlc_load_spectra_data(spectra_path)
-        fft_frequency_vector_processed, normalized_fft_vector_processed = self.dlc_divide_out_active_optical_elements(fft_frequency_vector_processed, normalized_fft_vector_processed)
-        delta_power, integrated_bandwidth = self.dlc_compute_delta_power_at_window(fft_frequency_vector_processed, normalized_fft_vector_processed)
-        label='$\Delta(P)$ {0:.2f} pW\nBW {1:.2f} GHz '.format(delta_power * 1e12, integrated_bandwidth * 1e-9)
+        delta_power, integrated_bandwidth = self.ftsy_compute_delta_power_and_bandwidth_at_window(fft_frequency_vector_processed, normalized_fft_vector_processed,
+                                                                                                  data_clip_lo=data_clip_lo, data_clip_hi=data_clip_hi,
+                                                                                                  t_source_low=t_source_low, t_source_high=t_source_high)
+        label=None
+        if self.iv_1_path is not None and self.iv_2_path is not None:
+            label='$\Delta(P)$ {0:.2f} pW\nBW {1:.2f} GHz '.format(delta_power * 1e12, integrated_bandwidth * 1e-9)
         ax.plot(fft_frequency_vector_processed * 1e-9, normalized_fft_vector_processed, label=label)
         ax.plot(fft_frequency_vector_simulated, fft_vector_simulated, label='HFSS Data')
+        ax = self.dlc_plot_optical_elements(ax)
         ax.set_xlabel('Frequency (GHz)')
         ax.set_ylabel('Normalized\nTransmission')
+        #ax.set_xlim((data_clip_lo, data_clip_hi))
         spectra_png_save_path = os.path.join('temp_files', 'temp_spectra.png')
         pl.legend()
         fig.savefig(spectra_png_save_path)
@@ -640,7 +654,22 @@ class DifferenceLoadCurves(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTra
         if self.spectra_path is not None and self.iv_1_path is not None and self.iv_2_path is not None:
             self.dlc_difference_load_curves()
 
-    def dlc_load_spectra_data(self, data_path, smoothing_factor=None):
+    def dlc_plot_optical_elements(self, ax):
+        '''
+        '''
+        data_clip_lo = float(self.spectra_data_clip_lo_lineedit.text()) * 1e9
+        data_clip_hi = float(self.spectra_data_clip_hi_lineedit.text()) * 1e9
+        for optical_element in self.optical_elements_dict:
+            active = self.optical_elements_dict[optical_element]['Active']
+            path = self.optical_elements_dict[optical_element]['Path']
+            if active:
+                element_frequency_vector, element_transmission_vector = self.ftsy_load_optical_element_response(path)
+                selector = np.logical_and(data_clip_lo < np.asarray(element_frequency_vector), np.asarray(element_frequency_vector) < data_clip_hi)
+                ax.plot(np.asarray(element_frequency_vector)[selector] * 1e-9, np.asarray(element_transmission_vector)[selector], label=optical_element)
+        return ax
+
+
+    def dlc_load_spectra_data(self, data_path, smoothing_factor=0.0, divide_optical_elements=True):
         '''
         '''
         normalize_post_clip = self.renormalize_checkbox.isChecked()
@@ -665,74 +694,36 @@ class DifferenceLoadCurves(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTra
         transmission_vector = transmission_vector[frequency_vector > 0.0]
         frequency_vector = frequency_vector[frequency_vector > 0.0]
         if smoothing_factor > 0.0:
-            transmission_vector = self.dlc_running_mean(transmission_vector, smoothing_factor=smoothing_factor)
+            transmission_vector = self.ftsy_running_mean(transmission_vector, smoothing_factor=smoothing_factor)
             normalized_transmission_vector = transmission_vector / max(transmission_vector)
             with open(data_path.replace('.fft', '_smoothed.fft'), 'w') as smoothed_data_handle:
                 for i, transmission_value in enumerate(normalized_transmission_vector):
                     frequency_value = frequency_vector[i]
                     line = '{0:.4f}\t{1:.4f}\n'.format(frequency_value, transmission_value)
                     smoothed_data_handle.write(line)
-        normalized_transmission_vector = transmission_vector
-        if normalize_post_clip:
-            normalized_transmission_vector = normalized_transmission_vector / np.max(normalized_transmission_vector)
+        normalized_transmission_vector = transmission_vector / np.max(transmission_vector)
+        if divide_optical_elements:
+            corrected_transmission_vector, normalized_transmission_vector = self.dlc_divide_out_active_optical_elements(frequency_vector, normalized_transmission_vector)
         return frequency_vector, transmission_vector, normalized_transmission_vector
 
     def dlc_divide_out_active_optical_elements(self, frequency_vector, normalized_transmission_vector):
         '''
         '''
-        optical_element = self.optical_elements_combobox.currentText()
-        self.optical_element_dict[optical_element]['Active'] = self.optical_element_active_checkbox.isChecked()
-        if self.optical_element_dict[optical_element]['Active']:
-            path = self.optical_element_dict[optical_element]['Path']
-            print(path)
-            print(optical_element)
-            frequency_vector, normalized_transmission_vector = self.ftsy_divide_out_optical_element_response(frequency_vector, normalized_transmission_vector,
-                                                                                                             optical_element=optical_element, path=path)
+        for optical_element in self.optical_elements_dict:
+            active = self.optical_elements_dict[optical_element]['Active']
+            path = self.optical_elements_dict[optical_element]['Path']
+            if active:
+                frequency_vector, normalized_transmission_vector = self.ftsy_divide_out_optical_element_response(frequency_vector, normalized_transmission_vector,
+                                                                                                                 optical_element=optical_element, path=path)
         return frequency_vector, normalized_transmission_vector
-
-
-    def dlc_compute_delta_power_at_window(self, frequency_vector, normalized_transmission_vector, show_spectra=False):
-        '''
-        '''
-        t_source_high = float(self.iv_1_t_load_lineedit.text())
-        t_source_low = float(self.iv_2_t_load_lineedit.text())
-        band_edge_low = float(self.spectra_data_clip_lo_lineedit.text()) * 1e9
-        band_edge_high = float(self.spectra_data_clip_hi_lineedit.text()) * 1e9
-        band = self.band_select_combobox.currentText()
-        boltzmann_constant = 1.38e-23
-        selector = np.logical_and(np.where(frequency_vector > band_edge_low, True, False), np.where(frequency_vector < band_edge_high, True, False))
-        integrated_bandwidth = np.trapz(normalized_transmission_vector[selector], frequency_vector[selector])
-        delta_power = boltzmann_constant * (t_source_high - t_source_low) * integrated_bandwidth  # in W
-        if show_spectra:
-            pl.plot(frequency_vector, normalized_transmission_vector)
-            pl.plot(normalized_transmission_vector)
-            pl.show()
-        return delta_power, integrated_bandwidth
-
-    def dlc_running_mean(self, vector, smoothing_factor=0.01):
-        '''
-        '''
-        N = int(smoothing_factor * len(vector))
-        averaged_vector = np.zeros(len(vector))
-        for i, value in enumerate(vector):
-            low_index = i
-            hi_index = i + N
-            if hi_index > len(vector) - 1:
-                hi_index = len(vector) - 1
-            averaged_value = np.mean(vector[low_index:hi_index])
-            if np.isnan(averaged_value):
-                np.put(averaged_vector, i, 0.0)
-            else:
-                np.put(averaged_vector, i, averaged_value)
-        return averaged_vector
 
     ####################
     # Plotting
     ####################
 
     def dlc_plot_all_curves2(self, bolo_voltage_bias, bolo_current, iv=1, stds=None, label='', fit_clip=None, plot_clip=None,
-                            show_plot=False, title='', pturn=True, frac_screen_width=0.3, frac_screen_height=0.35,
-                            left=0.1, right=0.98, top=0.9, bottom=0.13, multiple_axes=False):
+                             show_plot=False, title='', pturn=True, frac_screen_width=0.3, frac_screen_height=0.35,
+                             left=0.1, right=0.98, top=0.9, bottom=0.13, multiple_axes=False):
         '''
         This function creates an x-y scatter plot with v_bolo on the x-axis and
         bolo curent on the y-axis.  The resistance value is reported as text annotation

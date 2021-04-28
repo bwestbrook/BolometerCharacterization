@@ -14,7 +14,9 @@ class FourierTransformSpectroscopy():
         '''
         init for the Fourier class
         '''
-        self.mesg = 'hey'
+        super(FourierTransformSpectroscopy, self).__init__()
+        self.bands = self.ftsy_get_bands()
+        self.optical_elements = self.ftsy_get_optical_elements()
 
     def ftsy_get_bands(self):
         '''
@@ -52,17 +54,56 @@ class FourierTransformSpectroscopy():
                 'Path': os.path.join('bd_lib', 'optical_elements', '10_mil_beamsplitter_efficiency.dat')
                 },
             '12icm 576 MMF': {
-                'Active': True,
+                'Active': False,
                 'Path': os.path.join('bd_lib', 'optical_elements', '10_mil_beamsplitter_efficiency.dat')
                 },
             }
         return self.optical_elements
 
-    def ftsy_divide_out_optical_element_response(self, frequency_vector, normalized_transmission_vector,
-                                                 optical_element=None, path=None, quick_plot=False):
+    def ftsy_load_simulated_band(self, data_clip_lo, data_clip_hi, band):
         '''
         '''
-        if path is None or optical_element is None:
+        data_path = self.bands[band]['Path']
+        freq_idx = self.bands[band]['Freq Column']
+        trans_idx = self.bands[band]['Transmission Column']
+        header_lines = self.bands[band]['Header Lines']
+        if 'bd_lib' in data_path:
+            data_path.replace('bd_lib', '.')
+        print(data_path)
+        with open(data_path, 'r') as file_handle:
+            lines = file_handle.readlines()
+            frequency_vector = np.zeros([])
+            transmission_vector = np.zeros([])
+            for i, line in enumerate(lines):
+                print(line)
+                if i > header_lines:
+                    try:
+                        if ',' in line:
+                            frequency = line.split(',')[freq_idx].strip()
+                            transmission = line.split(',')[trans_idx].strip()
+                        else:
+                            frequency = line.split('\t')[freq_idx].strip()
+                            transmission = line.split('\t')[trans_idx].strip()
+                        if float(data_clip_lo) < float(frequency) * 1e9 < float(data_clip_hi) and self.ftsy_is_float(transmission):
+                            frequency_vector = np.append(frequency_vector, float(frequency))
+                            transmission_vector = np.append(transmission_vector, float(transmission))
+                    except ValueError:
+                        pass
+        return frequency_vector, transmission_vector
+
+    def ftsy_is_float(self, value):
+        '''
+        '''
+        try:
+            float(value)
+            return True
+        except ValueError:
+            return False
+
+    def ftsy_load_optical_element_response(self, path):
+        '''
+        '''
+        if path is None:
             return None, None
         element_frequency_vector = []
         element_transmission_vector = []
@@ -70,14 +111,19 @@ class FourierTransformSpectroscopy():
             for line in bs_file_handle.readlines():
                 element_frequency = line.split('\t')[0]
                 element_transmission = line.split('\t')[1].strip('\n')
-                if float(element_transmission) > 0.02:
-                    element_frequency_vector.append(float(element_frequency))
+                if float(element_transmission) > 0.03:
+                    element_frequency_vector.append(float(element_frequency) * 1e9) # GHz
                     element_transmission_vector.append(float(element_transmission))
-                    print(element_frequency_vector)
-                    print(frequency_vector)
+        element_transmission_vector = np.asarray(element_transmission_vector) / np.max(element_transmission_vector)
+        return np.asarray(element_frequency_vector), element_transmission_vector
+
+    def ftsy_divide_out_optical_element_response(self, frequency_vector, normalized_transmission_vector,
+                                                 optical_element=None, path=None, quick_plot=False):
+        '''
+        '''
+        element_frequency_vector, element_transmission_vector = self.ftsy_load_optical_element_response(path)
         # Make a copy for before and after comparison
         corrected_transmission_vector = copy(normalized_transmission_vector)
-        # Interpolate the optical element to the bolo transmission data and then divide it out
         transmission_vector_to_divide = np.interp(np.asarray(frequency_vector), np.asarray(element_frequency_vector),
                                                   np.asarray(element_transmission_vector))
         corrected_transmission_vector = normalized_transmission_vector / transmission_vector_to_divide
@@ -103,26 +149,26 @@ class FourierTransformSpectroscopy():
         position_vector = np.asarray(position_vector)
         efficiency_vector = np.asarray(efficiency_vector)
         efficiency_left_data, efficiency_right_data, position_left_data, position_right_data =\
-            self.split_data_into_left_right_points(position_vector, efficiency_vector)
+            self.ftsy_split_data_into_left_right_points(position_vector, efficiency_vector)
         if data_selector == 'All':
             efficiency_vector = efficiency_vector
             position_vector = position_vector
         elif data_selector == 'Right':
             efficiency_vector = efficiency_right_data
             position_vector = position_right_data
-            efficiency_vector = self.make_data_symmetric(efficiency_vector, is_right=True)
-            position_vector = self.make_data_symmetric(position_vector, is_right=True, position=True)
+            efficiency_vector = self.ftsy_make_data_symmetric(efficiency_vector, is_right=True)
+            position_vector = self.ftsy_make_data_symmetric(position_vector, is_right=True, position=True)
         elif data_selector == 'Left':
             efficiency_vector = efficiency_left_data
             position_vector = position_left_data
-            efficiency_vector = self.make_data_symmetric(efficiency_vector, is_right=False)
-            position_vector = self.make_data_symmetric(position_vector, is_right=False, position=True)
-        efficiency_vector, position_vector = self.prepare_data_for_fft(efficiency_vector, position_vector,
-                                                                       remove_polynomial=5, apodization_type=apodization_type,
-                                                                       zero_fill=True, quick_plot=False)
-        fft_freq_vector, fft_vector, fft_psd_vector = self.manual_fourier_transform(efficiency_vector, mirror_interval, quick_plot=quick_plot)
+            efficiency_vector = self.ftsy_make_data_symmetric(efficiency_vector, is_right=False)
+            position_vector = self.ftsy_make_data_symmetric(position_vector, is_right=False, position=True)
+        efficiency_vector, position_vector = self.ftsy_prepare_data_for_fft(efficiency_vector, position_vector,
+                                                                            remove_polynomial=5, apodization_type=apodization_type,
+                                                                            zero_fill=True, quick_plot=False)
+        fft_freq_vector, fft_vector, fft_psd_vector = self.ftsy_manual_fourier_transform(efficiency_vector, mirror_interval, quick_plot=quick_plot)
         phase_corrected_fft_vector = fft_vector
-        #self.phase_correct_data(efficiency_vector, fft_vector, quick_plot=False)
+        #self.ftsy_phase_correct_data(efficiency_vector, fft_vector, quick_plot=False)
         quick_plot = False
         if quick_plot:
             pl.plot(fft_vector, label='unphase corrected')
@@ -131,7 +177,42 @@ class FourierTransformSpectroscopy():
             pl.show()
         return fft_freq_vector, fft_vector, phase_corrected_fft_vector, position_vector, efficiency_vector
 
-    def split_data_into_left_right_points(self, position_vector, efficiency_vector):
+    def ftsy_compute_delta_power_and_bandwidth_at_window(self, frequency_vector, normalized_transmission_vector,
+                                                         data_clip_lo=0, data_clip_hi=600,
+                                                         t_source_low=77, t_source_high=300,
+                                                         boltzmann_constant=1.38e-23):
+        '''
+        '''
+        integrated_bandwidth = self.ftsy_integrate_spectra_bandwidth(frequency_vector, normalized_transmission_vector,
+                                                                     data_clip_lo=data_clip_lo, data_clip_hi=data_clip_hi)
+        delta_power = boltzmann_constant * (t_source_high - t_source_low) * integrated_bandwidth  # in W
+        return delta_power, integrated_bandwidth
+
+    def ftsy_integrate_spectra_bandwidth(self, frequency_vector, normalized_transmission_vector, data_clip_lo=0, data_clip_hi=600):
+        '''
+        '''
+        selector = np.logical_and(np.where(frequency_vector > data_clip_lo, True, False), np.where(frequency_vector < data_clip_hi, True, False))
+        integrated_bandwidth = np.trapz(normalized_transmission_vector[selector], frequency_vector[selector])
+        return integrated_bandwidth
+
+    def ftsy_running_mean(self, vector, smoothing_factor=0.01):
+        '''
+        '''
+        N = int(smoothing_factor * len(vector))
+        averaged_vector = np.zeros(len(vector))
+        for i, value in enumerate(vector):
+            low_index = i
+            hi_index = i + N
+            if hi_index > len(vector) - 1:
+                hi_index = len(vector) - 1
+            averaged_value = np.mean(vector[low_index:hi_index])
+            if np.isnan(averaged_value):
+                np.put(averaged_vector, i, 0.0)
+            else:
+                np.put(averaged_vector, i, averaged_value)
+        return averaged_vector
+
+    def ftsy_split_data_into_left_right_points(self, position_vector, efficiency_vector):
         '''
         '''
         efficiency_left_data = efficiency_vector[position_vector < 0]
@@ -140,7 +221,7 @@ class FourierTransformSpectroscopy():
         position_right_data = position_vector[position_vector >= 0]
         return efficiency_left_data, efficiency_right_data, position_left_data, position_right_data
 
-    def make_data_symmetric(self, data, is_right=True, position=False):
+    def ftsy_make_data_symmetric(self, data, is_right=True, position=False):
         '''
         '''
         if is_right:
@@ -154,7 +235,7 @@ class FourierTransformSpectroscopy():
         full_array = np.append(left_data, right_data)
         return full_array
 
-    def remove_polynomial(self, data, n=1, return_fit=False):
+    def ftsy_remove_polynomial(self, data, n=1, return_fit=False):
         '''
         Removes an nth order poly nomial
         Inputs:
@@ -170,7 +251,7 @@ class FourierTransformSpectroscopy():
         poly_subtracted = data - poly_fit
         return poly_subtracted
 
-    def phase_correct_data(self, efficiency_data, fft_vector, quick_plot=False):
+    def ftsy_phase_correct_data(self, efficiency_data, fft_vector, quick_plot=False):
         '''
         https://github.com/larsyunker/FTIR-python-tools/blob/master/FTIR.py
         '''
@@ -198,9 +279,9 @@ class FourierTransformSpectroscopy():
             pl.show()
         return phase_corrected_fft_vector
 
-    def zero_fill_position_vector(self, position_vector, next_power_of_two=None):
+    def ftsy_zero_fill_position_vector(self, position_vector, next_power_of_two=None):
         if next_power_of_two is None:
-            next_power_of_two = self.next_power_of_two(len(position_vector))
+            next_power_of_two = self.ftsy_next_power_of_two(len(position_vector))
         zeros_to_pad = int(next_power_of_two - len(position_vector) / 2)
         #import ipdb;ipdb.set_trace()
         interval = position_vector[1] - position_vector[0]
@@ -218,9 +299,9 @@ class FourierTransformSpectroscopy():
             pl.show()
         return zero_filled_position_vector
 
-    def zero_fill(self, apodized_efficiency_vector, next_power_of_two=None):
+    def ftsy_zero_fill(self, apodized_efficiency_vector, next_power_of_two=None):
         if next_power_of_two is None:
-            next_power_of_two = self.next_power_of_two(len(apodized_efficiency_vector))
+            next_power_of_two = self.ftsy_next_power_of_two(len(apodized_efficiency_vector))
         dog = copy(apodized_efficiency_vector)
         #print(len(apodized_efficiency_vector))
         zeros_to_pad = int(next_power_of_two - len(apodized_efficiency_vector) / 2)
@@ -235,7 +316,7 @@ class FourierTransformSpectroscopy():
             pl.show()
         return apodized_efficiency_vector
 
-    def extract_center_burst(self, apodized_efficiency_vector, symmetric=True, quick_plot=False):
+    def ftsy_extract_center_burst(self, apodized_efficiency_vector, symmetric=True, quick_plot=False):
         '''
         Takes data between the last data point to be 0.3 max signal
         '''
@@ -261,7 +342,7 @@ class FourierTransformSpectroscopy():
             pl.show()
         return center_burst
 
-    def rotate_if_data(self, apodized_efficiency_vector, quick_plot=False):
+    def ftsy_rotate_if_data(self, apodized_efficiency_vector, quick_plot=False):
         '''
         put the right half at begining of array and left half at end of the array
         '''
@@ -275,9 +356,9 @@ class FourierTransformSpectroscopy():
             pl.show()
         return rotated_array
 
-    def prepare_data_for_fft(self, efficiency_vector, position_vector,
-                             remove_polynomial=1, apodization_type='TRIANGULAR',
-                             zero_fill=True, quick_plot=False):
+    def ftsy_prepare_data_for_fft(self, efficiency_vector, position_vector,
+                                  remove_polynomial=1, apodization_type='TRIANGULAR',
+                                  zero_fill=True, quick_plot=False):
         '''
         This function will apply a window function to the data
         Inputs:
@@ -287,7 +368,7 @@ class FourierTransformSpectroscopy():
         '''
         # Subtract polynomial First
         if remove_polynomial is not None:
-            apodized_efficiency_vector = self.remove_polynomial(efficiency_vector, n=remove_polynomial)
+            apodized_efficiency_vector = self.ftsy_remove_polynomial(efficiency_vector, n=remove_polynomial)
         # Apply the window function
         if apodization_type is not None:
             N = apodized_efficiency_vector.size
@@ -301,8 +382,8 @@ class FourierTransformSpectroscopy():
             apodized_efficiency_vector = np.max(efficiency_vector) * window_function * apodized_efficiency_vector
         # Zero-fill the FFT to the nearest next largest power of 2
         if zero_fill:
-            apodized_efficiency_vector = self.zero_fill(apodized_efficiency_vector)
-            position_vector = self.zero_fill_position_vector(position_vector)
+            apodized_efficiency_vector = self.ftsy_zero_fill(apodized_efficiency_vector)
+            position_vector = self.ftsy_zero_fill_position_vector(position_vector)
         quick_plot= False
         if quick_plot:
             pl.plot(position_vector, apodized_efficiency_vector, label='after')
@@ -310,10 +391,14 @@ class FourierTransformSpectroscopy():
             pl.show()
         return apodized_efficiency_vector, position_vector
 
-    def next_power_of_two(self, length):
+    def ftsy_next_power_of_two(self, length):
+        '''
+        '''
         return 1 if length == 0 else 2**(length - 1).bit_length()
 
-    def compute_fourier_transform_new(self, position_vector, efficiency_data, distance_per_step, mirror_interval, quick_plot=False):
+    def ftsy_compute_fourier_transform_new(self, position_vector, efficiency_data, distance_per_step, mirror_interval, quick_plot=False):
+        '''
+        '''
         print()
         print()
         print('position_vector')
@@ -328,8 +413,10 @@ class FourierTransformSpectroscopy():
         print()
         return position_vector, efficiency_data
 
-    def manual_fourier_transform(self, efficiency_vector, mirror_interval,
-                                 distance_per_point=250.39, speed_of_light=2.998e8, quick_plot=False):
+    def ftsy_manual_fourier_transform(self, efficiency_vector, mirror_interval,
+                                      distance_per_point=250.39, speed_of_light=2.998e8, quick_plot=False):
+        '''
+        '''
         fft_vector = np.fft.fft(efficiency_vector)
         fft_psd_vector = np.abs(fft_vector) ** 2
         # convert to m then divide by speed of light to get lambda, 2 is nyquist sampling
@@ -343,7 +430,9 @@ class FourierTransformSpectroscopy():
             pl.show()
         return fft_freq_vector, fft_vector, fft_psd_vector
 
-    def compute_fourier_transform(self, position_vector, efficiency_vector, distance_per_step, mirror_interval, quick_plot=False):
+    def ftsy_compute_fourier_transform(self, position_vector, efficiency_vector, distance_per_step, mirror_interval, quick_plot=False):
+        '''
+        '''
         N = efficiency_vector.size
         total_steps = int(np.max(position_vector) - np.min(position_vector))
         total_distance = total_steps * distance_per_step
@@ -376,7 +465,7 @@ class FourierTransformSpectroscopy():
         return fft_freq_vector, fft_vector
 
 
-    def top_hat(self, t, x_l=0000000, x_h=20000000):
+    def ftys_top_hat(self, t, x_l=0000000, x_h=20000000):
         t
         s = []
         for pos in t:
@@ -386,7 +475,7 @@ class FourierTransformSpectroscopy():
                 s.append(0)
         return np.asarray(s)
 
-    def simulated_if(self):
+    def ftys_simulated_if(self):
         if_vector = []
         with open('sample_if.if', 'r') as fh:
             for line in fh.readlines():
@@ -395,14 +484,14 @@ class FourierTransformSpectroscopy():
         if_vector = np.asarray(if_vector)
         return if_vector
 
-    def actual_if_data(self):
+    def ftys_actual_if_data(self):
         with open('./Data/2019_04_26/SQ6_13-35-Wit-S3-150B_MedRes_16.if', 'r') as fh:
             for line in fh.readlines():
                 val = line.replace('\n','')
                 if_vector.append(val)
         return if_vector
 
-    def run_test(self, data_points=700, mirror_interval=500, spacing=10.39):
+    def ftys_run_test(self, data_points=700, mirror_interval=500, spacing=10.39):
         '''
         Special Notes: For real number inputs is n the complex conjugate of N - n.
         '''
@@ -436,50 +525,13 @@ class FourierTransformSpectroscopy():
         fig.show()
         self._ask_user_if_they_want_to_quit()
 
-    def ftsy_load_simulated_band(self, data_clip_lo, data_clip_hi, band):
-        '''
-        '''
-        data_path = self.bands[band]['Path']
-        freq_idx = self.bands[band]['Freq Column']
-        trans_idx = self.bands[band]['Transmission Column']
-        header_lines = self.bands[band]['Header Lines']
-        with open(data_path, 'r') as file_handle:
-            lines = file_handle.readlines()
-            frequency_vector = np.zeros([])
-            transmission_vector = np.zeros([])
-            for i, line in enumerate(lines):
-                if i > header_lines:
-                    try:
-                        if ',' in line:
-                            frequency = line.split(',')[freq_idx].strip()
-                            transmission = line.split(',')[trans_idx].strip()
-                        else:
-                            frequency = line.split('\t')[freq_idx].strip()
-                            transmission = line.split('\t')[trans_idx].strip()
-                        print(data_clip_lo, frequency)
-                        if float(data_clip_lo) < float(frequency) * 1e9 < float(data_clip_hi) and self.gb_is_float(transmission):
-                            frequency_vector = np.append(frequency_vector, float(frequency))
-                            transmission_vector = np.append(transmission_vector, float(transmission))
-                    except ValueError:
-                        pass
-        #transmission_vector = np.asarray(transmission_vector) / np.max(np.asarray(transmission_vector))
-        #frequency_vector = np.asarray(frequency_vector)
-        print(frequency_vector, transmission_vector)
-        return frequency_vector, transmission_vector
 
-    def _ask_user_if_they_want_to_quit(self):
-        '''
-        A simple method to stop the code without setting a trace with the option of quittting
-        '''
-        quit_boolean = input('Press q to q(uit), any other key to continue:\n')
-        if quit_boolean == 'q':
-            exit()
 
 class BeamSplitter():
 
     def __init__(self):
         self.msg = 'dog are cool'
-
+        self.fts = FourierTransformSpectroscopy()
 
     def load_example(self, example_path):
         example_frequency_vector = []
@@ -519,13 +571,12 @@ class BeamSplitter():
         return frequency_vector, efficiency_vector
 
     def plot_beam_splitter_efficiency(self, frequency_vector, efficiency_vector, thickness):
-        pl.plot(frequency_vector, efficiency_vector, '-r', label='{0} mil'.format(thickness))
+        pl.plot(frequency_vector, efficiency_vector, '-', label='{0} mil'.format(thickness))
         pl.xlabel('Frequency [GHz]')
         pl.ylabel('Efficiency')
         pl.title('BeamSplitter')
-        pl.legend(loc='best')
-        pl.xlim
-        pl.show()
+        #pl.xlim
+        #pl.show()
 
     def save_beam_splitter_efficiency(self, frequency_vector, efficiency_vector, thickness):
         '''
@@ -536,11 +587,11 @@ class BeamSplitter():
         Outputs:
             None
         '''
-        save_path = './Output/Beam_Splitter_Efficiency/{0}_mil_beamsplitter_efficiency.dat'.format(thickness)
+        save_path = os.path.join('bd_lib', 'optical_elements', '{0}_mil_beamsplitter_efficiency.dat'.format(thickness))
         with open(save_path, 'w') as file_handle:
             for i, frequency in enumerate(frequency_vector):
                 efficiency = efficiency_vector[i]
-                line = '{0}\t{1}\n'.format(float(frequency), float(efficiency))
+                line = '{0},{1}\n'.format(float(frequency), float(efficiency))
                 file_handle.write(line)
         return None
 
@@ -548,22 +599,27 @@ class BeamSplitter():
         '''
         A simple run/test option
         '''
-        thickness = 10  # mils
-        save_path = './Output/temp.dat'
-        if plot_example:
-            example_path = './Simulations/BeamSplitter10mil.dat'
-            example_frequency_vector, example_efficiency_vector = self.load_example(example_path)
-            self.plot_beam_splitter_efficiency(example_frequency_vector, example_efficiency_vector, 10)
-        frequency_vector, efficiency_vector = self.create_beam_splitter_response(save_path, thickness)
-        if save_data:
-            print('saving')
-            self.save_beam_splitter_efficiency(frequency_vector / 1e9, efficiency_vector, thickness)
-        if plot_data:
-            self.plot_beam_splitter_efficiency(frequency_vector / 1e9, efficiency_vector, thickness)
-
+        thicknesses = [5, 10, 45, 55, 65]
+        for thickness in thicknesses:
+            save_path = os.path.join('bd_lib', 'optical_elements', '{0}_mil_beamsplitter_efficiency.dat'.format(thickness))
+            frequency_vector, efficiency_vector = self.create_beam_splitter_response(save_path, thickness)
+            if save_data:
+                print('saving')
+                self.save_beam_splitter_efficiency(frequency_vector / 1e9, efficiency_vector, thickness)
+            if plot_data:
+                self.plot_beam_splitter_efficiency(frequency_vector / 1e9, efficiency_vector, thickness)
+        freq, band = self.fts.ftsy_load_simulated_band(0, 100e9, 'SO30')
+        print(freq, band)
+        pl.plot(freq, band, label='SO40')
+        freq, band = self.fts.ftsy_load_simulated_band(0, 100e9, 'SO40')
+        print(freq, band)
+        pl.plot(freq, band, label='SO40')
+        pl.xlim((0, 100))
+        pl.legend(loc='best')
+        pl.show()
 
 if __name__ == '__main__':
-    #bs = BeamSplitter()
-    #bs.run()
-    fourier = Fourier()
-    fourier.run_test()
+    bs = BeamSplitter()
+    bs.run()
+    #fourier = Fourier()
+    #fourier.run_test()

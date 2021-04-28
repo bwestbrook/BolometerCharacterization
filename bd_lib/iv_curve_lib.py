@@ -51,6 +51,8 @@ class IVCurveLib():
             ax1.errorbar(bolo_voltage_bias[plot_selector], bolo_current[plot_selector], yerr=bolo_current_stds[plot_selector],
                          label='error', marker='.', linestyle='None', alpha=0.25)
         if pturn and len(bolo_voltage_bias) > 2 and len(bolo_current[plot_selector]) > 0:
+            print(len(bolo_current[plot_selector]))
+            print(len(bolo_current))
             pt_idx = np.where(bolo_current[plot_selector] == min(bolo_current[plot_selector]))[0][0]
             pl_idx = np.where(bolo_voltage_bias[plot_selector] == min(bolo_voltage_bias[plot_selector]))[0][0]
             pturn_pw = bolo_current[plot_selector][pt_idx] * bolo_voltage_bias[plot_selector][pt_idx]
