@@ -415,7 +415,6 @@ class FourierTransformSpectrometer(QtWidgets.QWidget, GuiBuilder, FourierTransfo
         screen = QtWidgets.QApplication.primaryScreen()
         screenshot = screen.grabWindow(self.winId())
         screenshot.save(ss_save_path, 'png')
-        print(ss_save_path)
         if len(if_save_path) > 0:
             mirror_interval = self.scan_settings_dict['mirror_interval']
             with open(if_save_path, 'w') as if_save_handle:
