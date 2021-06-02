@@ -40,6 +40,7 @@ class FourierTransformSpectrometer(QtWidgets.QWidget, GuiBuilder, FourierTransfo
         self.y_data = []
         self.y_stds = []
         self.fts_plot()
+        self.started = False
         self.fts_update_samples()
         self.fts_plot_time_stream([0], -1.0, 1.0)
         self.fts_update_sample_name(0)
@@ -106,19 +107,19 @@ class FourierTransformSpectrometer(QtWidgets.QWidget, GuiBuilder, FourierTransfo
         self.layout().addWidget(self.pause_time_lineedit, 6, 0, 1, 1)
         #Start Scan
         self.start_position_lineedit = self.gb_make_labeled_lineedit(label_text='Start Position:')
-        self.start_position_lineedit.setText('-100000')
+        self.start_position_lineedit.setText('-300000')
         self.start_position_lineedit.setValidator(QtGui.QIntValidator(-600000, 0, self.start_position_lineedit))
         self.start_position_lineedit.textChanged.connect(self.fts_update_scan_params)
         self.layout().addWidget(self.start_position_lineedit, 7, 0, 1, 1)
         #End Scan
         self.end_position_lineedit = self.gb_make_labeled_lineedit(label_text='End Position:')
         self.end_position_lineedit.setValidator(QtGui.QIntValidator(0, 300000, self.end_position_lineedit))
-        self.end_position_lineedit.setText('100000')
+        self.end_position_lineedit.setText('300000')
         self.end_position_lineedit.textChanged.connect(self.fts_update_scan_params)
         self.layout().addWidget(self.end_position_lineedit, 8, 0, 1, 1)
         #Mirror Interval 
         self.mirror_interval_lineedit = self.gb_make_labeled_lineedit(label_text='Mirror Interval (steps):')
-        self.mirror_interval_lineedit.setText('5000')
+        self.mirror_interval_lineedit.setText('500')
         self.mirror_interval_lineedit.textChanged.connect(self.fts_update_scan_params)
         self.mirror_interval_lineedit.setValidator(QtGui.QIntValidator(1, 200000, self.mirror_interval_lineedit))
         self.layout().addWidget(self.mirror_interval_lineedit, 9, 0, 1, 1)
@@ -151,11 +152,15 @@ class FourierTransformSpectrometer(QtWidgets.QWidget, GuiBuilder, FourierTransfo
         self.start_pushbutton = QtWidgets.QPushButton('Start', self)
         self.layout().addWidget(self.start_pushbutton, 14, 0, 1, 2)
         self.start_pushbutton.clicked.connect(self.fts_start_stop_scan)
-        save_pushbutton = QtWidgets.QPushButton('Save', self)
-        self.layout().addWidget(save_pushbutton, 15, 0, 1, 2)
-        save_pushbutton.clicked.connect(self.fts_save)
-        spacer_label = QtWidgets.QLabel(' ', self)
-        self.layout().addWidget(spacer_label, 16, 0, 8, 2)
+        self.save_pushbutton = QtWidgets.QPushButton('Save', self)
+        self.layout().addWidget(self.save_pushbutton, 15, 0, 1, 2)
+        self.save_pushbutton.clicked.connect(self.fts_save)
+        self.load_pushbutton = QtWidgets.QPushButton('Load', self)
+        self.load_pushbutton.clicked.connect(self.fts_load)
+        self.layout().addWidget(self.load_pushbutton, 16, 0, 1, 2)
+        self.replot_pushbutton = QtWidgets.QPushButton('Replot', self)
+        self.layout().addWidget(self.replot_pushbutton, 17, 0, 1, 2)
+        self.replot_pushbutton.clicked.connect(self.fts_plot)
 
     def fts_configure_plot_panel(self):
         '''
@@ -182,9 +187,14 @@ class FourierTransformSpectrometer(QtWidgets.QWidget, GuiBuilder, FourierTransfo
         self.optical_element_active_checkbox.clicked.connect(self.fts_update_active_optical_elements)
         self.layout().addWidget(self.optical_element_active_checkbox, 13, 5, 1, 1)
         self.bands_combobox = self.gb_make_labeled_combobox(label_text='Detector Band')
+        self.smoothing_factor_lineedit = self.gb_make_labeled_lineedit(label_text='Smoothing Factor:')
+        self.smoothing_factor_lineedit.setText('0.01')
+        self.smoothing_factor_lineedit.returnPressed.connect(self.fts_plot)
+        self.layout().addWidget(self.smoothing_factor_lineedit, 14, 5, 1, 1)
         for band in self.bands:
             self.bands_combobox.addItem(band)
         self.layout().addWidget(self.bands_combobox, 14, 4, 1, 1)
+        self.bands_combobox.activated.connect(self.fts_plot)
         self.data_clip_lo_lineedit = self.gb_make_labeled_lineedit(label_text='Data Clip Lo (GHz):')
         self.data_clip_lo_lineedit.setValidator(QtGui.QIntValidator(0, 25000, self.data_clip_lo_lineedit))
         self.data_clip_lo_lineedit.returnPressed.connect(self.fts_plot)
@@ -195,13 +205,18 @@ class FourierTransformSpectrometer(QtWidgets.QWidget, GuiBuilder, FourierTransfo
         self.data_clip_hi_lineedit.returnPressed.connect(self.fts_plot)
         self.data_clip_hi_lineedit.setText('600.0')
         self.layout().addWidget(self.data_clip_hi_lineedit, 15, 5, 1, 1)
-        self.bands_combobox.activated.connect(self.fts_plot)
+        self.voltage_bias_lineedit = self.gb_make_labeled_lineedit(label_text='Bias Voltage (uV):')
+        self.voltage_bias_lineedit.setValidator(QtGui.QDoubleValidator(0, 25000, 3, self.voltage_bias_lineedit))
+        self.layout().addWidget(self.voltage_bias_lineedit, 16, 4, 1, 1)
+        self.heater_voltage_lineedit = self.gb_make_labeled_lineedit(label_text='Heater Voltage (V):')
+        self.heater_voltage_lineedit.setValidator(QtGui.QDoubleValidator(0, 150, 2, self.heater_voltage_lineedit))
+        self.layout().addWidget(self.heater_voltage_lineedit, 16, 5, 1, 1)
 
     def fts_show_active_optical_elements(self):
         '''
         '''
         optical_element = self.optical_elements_combobox.currentText()
-        active = self.optical_elements_dict[optical_element]['Active']
+        active = self.optical_elements[optical_element]['Active']
         self.optical_element_active_checkbox.setChecked(active)
         self.fts_plot()
 
@@ -209,9 +224,9 @@ class FourierTransformSpectrometer(QtWidgets.QWidget, GuiBuilder, FourierTransfo
         '''
         '''
         optical_element = self.optical_elements_combobox.currentText()
-        self.optical_elements_dict[optical_element]['Active'] = self.optical_element_active_checkbox.isChecked()
-        if self.optical_elements_dict[optical_element]['Active']:
-            self.showMessage('{0} is Active'.format(optical_element))
+        self.optical_elements[optical_element]['Active'] = self.optical_element_active_checkbox.isChecked()
+        if self.optical_elements[optical_element]['Active']:
+            self.status_bar.showMessage('{0} is Active'.format(optical_element))
         self.fts_plot()
 
     #################################################
@@ -269,7 +284,7 @@ class FourierTransformSpectrometer(QtWidgets.QWidget, GuiBuilder, FourierTransfo
         self.status_bar.showMessage('Setting up serial connection to stepper motor on {0}'.format(sm_com_port))
         QtWidgets.QApplication.processEvents()
         sm_settings_str = ''
-        self.scan_settings_dict.update(self.csm_widget.stepper_settings_dict)
+        #self.scan_settings_dict.update(self.csm_widget.stepper_settings_dict)
         for setting, value in self.csm_widget.stepper_settings_dict.items():
             sm_settings_str += ' '.join([x.title() for x in setting.split('_')])
             sm_settings_str += ' {0} ::: '.format(value)
@@ -282,9 +297,15 @@ class FourierTransformSpectrometer(QtWidgets.QWidget, GuiBuilder, FourierTransfo
             self.fts_update_scan_params()
             self.sender().setText('Stop')
             self.started = True
+            self.bands_combobox.setDisabled(True)
+            self.optical_element_active_checkbox.setDisabled(True)
+            self.optical_elements_combobox.setDisabled(True)
             self.fts_scan()
         else:
             self.sender().setText('Start')
+            self.bands_combobox.setDisabled(False)
+            self.optical_element_active_checkbox.setDisabled(False)
+            self.optical_elements_combobox.setDisabled(False)
             self.started = False
 
     def fts_scan(self):
@@ -364,6 +385,9 @@ class FourierTransformSpectrometer(QtWidgets.QWidget, GuiBuilder, FourierTransfo
                 elif i + 1 == self.n_data_points:
                     self.started = False
                     self.start_pushbutton.setText('Start')
+        self.bands_combobox.setDisabled(False)
+        self.optical_element_active_checkbox.setDisabled(False)
+        self.optical_elements_combobox.setDisabled(False)
         self.fts_save()
         self.csm_widget.csm_set_position(position=start, verbose=False)
 
@@ -387,6 +411,11 @@ class FourierTransformSpectrometer(QtWidgets.QWidget, GuiBuilder, FourierTransfo
         if_save_path = self.fts_index_file_name()
         if_save_path = QtWidgets.QFileDialog.getSaveFileName(self, 'Data Save Location', if_save_path)[0]
         fft_save_path = if_save_path.replace('if', 'fft')
+        ss_save_path = if_save_path.replace('.if', '_meta.png')
+        screen = QtWidgets.QApplication.primaryScreen()
+        screenshot = screen.grabWindow(self.winId())
+        screenshot.save(ss_save_path, 'png')
+        print(ss_save_path)
         if len(if_save_path) > 0:
             mirror_interval = self.scan_settings_dict['mirror_interval']
             with open(if_save_path, 'w') as if_save_handle:
@@ -409,13 +438,31 @@ class FourierTransformSpectrometer(QtWidgets.QWidget, GuiBuilder, FourierTransfo
         else:
             self.gb_quick_message('Warning Data Not Written to File!', msg_type='Warning')
 
+    def fts_load(self):
+        '''
+        '''
+        if_save_path = QtWidgets.QFileDialog.getOpenFileName(self, 'Select IF data', '.if')[0]
+        self.x_data, self.x_stds, self.y_data, self.y_stds = [], [], [], []
+        with open(if_save_path, 'r') as fh:
+            lines = fh.readlines()
+            for line in lines:
+                x_data = float(line.split(', ')[0].strip())
+                x_std = float(line.split(', ')[1].strip())
+                y_data = float(line.split(', ')[2].strip())
+                y_std = float(line.split(', ')[3].strip())
+                self.x_data.append(x_data)
+                self.x_stds.append(x_std)
+                self.y_data.append(y_data)
+                self.y_stds.append(y_std)
+        self.fts_plot()
+
     def fts_plot_time_stream(self, ts, min_, max_):
         '''
         '''
-        fig, ax = self.fts_create_blank_fig(frac_screen_width=0.5, frac_screen_height=0.25, top=0.9, bottom=0.23, n_axes=1, left=0.15)
+        fig, ax = self.fts_create_blank_fig(frac_screen_width=0.5, frac_screen_height=0.2, top=0.9, bottom=0.23, n_axes=1, left=0.15)
         ax.plot(ts)
-        ax.set_xlabel('Samples', fontsize=14)
-        ax.set_ylabel('($V$)', fontsize=14)
+        ax.set_xlabel('Samples', fontsize=12)
+        ax.set_ylabel('($V$)', fontsize=12)
         fig.savefig('temp_files/temp_ts.png', transparent=True)
         image = QtGui.QPixmap('temp_files/temp_ts.png')
         self.time_stream_plot_label.setPixmap(image)
@@ -427,24 +474,34 @@ class FourierTransformSpectrometer(QtWidgets.QWidget, GuiBuilder, FourierTransfo
         pl.close('all')
         data_clip_lo = float(self.data_clip_lo_lineedit.text()) * 1e9
         data_clip_hi = float(self.data_clip_hi_lineedit.text()) * 1e9
+        smoothing_factor = float(self.smoothing_factor_lineedit.text())
         band = self.bands_combobox.currentText()
-        fft_frequency_vector_simulated, fft_vector_simulated = self.ftsy_load_simulated_band(data_clip_lo, data_clip_hi, band)
+        if len(band) > 0:
+            fft_frequency_vector_simulated, fft_vector_simulated = self.ftsy_load_simulated_band(data_clip_lo, data_clip_hi, band)
         mirror_interval = self.scan_settings_dict['mirror_interval']
-        fig, ax1, ax2 = self.fts_create_blank_fig(frac_screen_width=0.5, frac_screen_height=0.5, hspace=0.35, bottom=0.15, left=0.15)
-        ax1.set_xlabel('Mirror Position (Steps)', fontsize=14)
-        ax1.set_ylabel('Response (V)', fontsize=14)
-        ax2.set_xlabel('Frequency (GHz)', fontsize=14)
-        ax2.set_ylabel('Norm Spectral Amp', fontsize=14)
+        fig, ax1, ax2 = self.fts_create_blank_fig(frac_screen_width=0.5, frac_screen_height=0.4, hspace=0.35, bottom=0.18, left=0.15)
+        ax1.set_xlabel('Mirror Position (Steps)', fontsize=12)
+        ax1.set_ylabel('Response (V)', fontsize=12)
+        ax2.set_xlabel('Frequency (GHz)', fontsize=12)
+        ax2.set_ylabel('Norm Spectral Amp', fontsize=12)
         title = 'Inteferogram and Spectra'
         if len(self.sample_name_lineedit.text()) > 0:
             title += ': {0}'.format(self.sample_name_lineedit.text())
-        ax1.set_title(title, fontsize=14)
+        ax1.set_title(title, fontsize=12)
         if len(self.x_data) > 10:
             fft_freq_vector, fft_vector, phase_corrected_fft_vector, position_vector, efficiency_vector = self.ftsy_convert_IF_to_FFT_data(self.x_data, self.y_data, mirror_interval, data_selector='All')
             ax1.errorbar(self.x_data, self.y_data, yerr=self.y_stds, marker='.', linestyle='-')
             selector = np.logical_and(0 < fft_freq_vector, fft_freq_vector < data_clip_hi)
             normalized_phase_corrected_fft_vector = np.abs(phase_corrected_fft_vector.real)
             normalized_phase_corrected_fft_vector = np.abs(phase_corrected_fft_vector.real / np.max(phase_corrected_fft_vector.real))
+            normalized_phase_corrected_fft_vector = self.ftsy_running_mean(normalized_phase_corrected_fft_vector, smoothing_factor=smoothing_factor)
+            if len(band) > 0:
+                selector = fft_frequency_vector_simulated < data_clip_hi * 1e-9
+                integrated_bandwidth = np.trapz(fft_vector_simulated[selector], fft_vector_simulated[selector] * 1e9)
+                label = 'HFSS BW {0:.2f} GHz '.format(integrated_bandwidth)
+                ax2.plot(fft_frequency_vector_simulated, fft_vector_simulated, label=label)
+            ax2, fft_freq_vector, normalized_phase_corrected_fft_vector = self.fts_plot_optical_elements(ax2, fft_freq_vector, normalized_phase_corrected_fft_vector)
+            selector = np.logical_and(0 < fft_freq_vector, fft_freq_vector < data_clip_hi)
             ax2.errorbar(fft_freq_vector[selector] * 1e-9, normalized_phase_corrected_fft_vector[selector], marker='.', linestyle='-', label='FFT')
             max_idx = np.argmax(normalized_phase_corrected_fft_vector[selector]) + 1
             max_freq = fft_freq_vector[max_idx]
@@ -453,16 +510,26 @@ class FourierTransformSpectrometer(QtWidgets.QWidget, GuiBuilder, FourierTransfo
 
             ax2.errorbar(max_freq * 1e-9, normalized_phase_corrected_fft_vector[max_idx], marker='*', markersize=3, label=label)
         ax1.errorbar(self.x_data, self.y_data, yerr=self.y_stds, marker='.', linestyle='-')
-        selector = fft_frequency_vector_simulated < data_clip_hi * 1e-9
-        integrated_bandwidth = np.trapz(fft_vector_simulated[selector], fft_vector_simulated[selector] * 1e9)
-        label = 'HFSS BW {0:.2f} GHz '.format(integrated_bandwidth)
-        label = 'HFSS'
-        ax2.plot(fft_frequency_vector_simulated, fft_vector_simulated, label=label)
         pl.legend()
         temp_png_path = os.path.join('temp_files', 'temp_combo.png')
         fig.savefig(temp_png_path, transparent=True)
         image_to_display = QtGui.QPixmap(temp_png_path)
         self.int_spec_plot_label.setPixmap(image_to_display)
+
+    def fts_plot_optical_elements(self, ax, frequency_vector, normalized_transmission_vector):
+        '''
+        '''
+        data_clip_lo = float(self.data_clip_lo_lineedit.text()) * 1e9
+        data_clip_hi = float(self.data_clip_hi_lineedit.text()) * 1e9
+        for optical_element in self.optical_elements:
+            active = self.optical_elements[optical_element]['Active']
+            path = self.optical_elements[optical_element]['Path']
+            if active and not self.started:
+                element_frequency_vector, element_transmission_vector = self.ftsy_load_optical_element_response(path)
+                frequency_vector, normalized_transmission_vector = self.ftsy_divide_out_optical_element_response(frequency_vector, normalized_transmission_vector, optical_element, path)
+                selector = np.logical_and(data_clip_lo < np.asarray(element_frequency_vector), np.asarray(element_frequency_vector) < data_clip_hi)
+                ax.plot(np.asarray(element_frequency_vector)[selector] * 1e-9, np.asarray(element_transmission_vector)[selector], label=optical_element)
+        return ax, frequency_vector, normalized_transmission_vector
 
     def fts_plot_spectra(self):
         '''
@@ -477,16 +544,17 @@ class FourierTransformSpectrometer(QtWidgets.QWidget, GuiBuilder, FourierTransfo
         ax.set_ylabel('Bolometer Response (Au)', fontsize=14)
         title = 'Spectra for {0}'.format(self.sample_name_lineedit.text())
         ax.set_title(title, fontsize=14)
-        if len(self.x_data) > 0:
-            fft_freq_vector, fft_vector, phase_corrected_fft_vector, position_vector, efficiency_vector = self.ftsy_convert_IF_to_FFT_data(self.x_data, self.y_data, mirror_interval)
+        data_selector = 'All'
+        if len(self.x_data) > 10:
+            fft_freq_vector, fft_vector, phase_corrected_fft_vector, position_vector, efficiency_vector = self.ftsy_convert_IF_to_FFT_data(self.x_data, self.y_data, mirror_interval, data_selector=data_selector)
             selector = np.logical_and(0 < fft_freq_vector, fft_freq_vector < data_clip_hi)
             normalized_phase_corrected_fft_vector = np.abs(phase_corrected_fft_vector.real)
             normalized_phase_corrected_fft_vector = np.abs(phase_corrected_fft_vector.real / np.max(phase_corrected_fft_vector.real))
             ax.errorbar(fft_freq_vector[selector] * 1e-9, normalized_phase_corrected_fft_vector[selector], marker='.', linestyle='-')
-        fft_frequency_vector_simulated, fft_vector_simulated = self.ftsy_load_simulated_band(data_clip_lo, data_clip_hi, band)
-        ax.plot(fft_frequency_vector_simulated, fft_vector_simulated, label='HFSS')
+        if len(band) > 0:
+            fft_frequency_vector_simulated, fft_vector_simulated = self.ftsy_load_simulated_band(data_clip_lo, data_clip_hi, band)
+            ax.plot(fft_frequency_vector_simulated, fft_vector_simulated, label='HFSS')
         fig.savefig(os.path.join('temp_files', 'temp_spectra.png'))
-        pl.show()
 
     def fts_plot_int(self):
         '''
@@ -499,7 +567,6 @@ class FourierTransformSpectrometer(QtWidgets.QWidget, GuiBuilder, FourierTransfo
         ax.set_title(title, fontsize=14)
         ax.errorbar(self.x_data, self.y_data, self.y_stds, marker='.', linestyle='-')
         fig.savefig(os.path.join('temp_files', 'temp_int.png'))
-        pl.show()
 
     def fts_create_blank_fig(self, frac_screen_width=0.5, frac_screen_height=0.8,
                              left=0.08, right=0.98, top=0.95, bottom=0.08,

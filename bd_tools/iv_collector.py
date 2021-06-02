@@ -424,7 +424,6 @@ class IVCollector(QtWidgets.QWidget, GuiBuilder, IVCurveLib):
         fit_clip_hi = float(self.fit_clip_hi_lineedit.text())
         squid_calibration_factor = float(self.squid_calibration_label.text())
         i_bolo_real = self.ivc_fit_and_remove_squid_offset()
-        print(i_bolo_real)
         i_bolo_std = np.asarray(self.y_stds) * squid_calibration_factor
         v_bias_real = np.asarray(self.x_data) * float(self.x_correction_combobox.currentText()) * 1e6 #uV
         v_bias_std = np.asarray(self.x_stds) * float(self.x_correction_combobox.currentText()) * 1e6 #uV
@@ -446,8 +445,6 @@ class IVCollector(QtWidgets.QWidget, GuiBuilder, IVCurveLib):
         self.y_data_real = i_bolo_real
         self.y_stds_real = i_bolo_std
         #ax.errorbar(v_bias_real[selector], i_bolo_real[selector], xerr=v_bias_std[selector], yerr=i_bolo_std[selector], marker='.', linestyle='-', label=label)
-        print(fit_clip_lo, fit_clip_hi)
-        print(v_bias_real)
         fig = self.ivlib_plot_all_curves(v_bias_real, i_bolo_real, bolo_current_stds=i_bolo_std,
                                          fit_clip=(fit_clip_lo, fit_clip_hi), plot_clip=(data_clip_lo, data_clip_hi),
                                          sample_name=sample_name, t_bath=t_bath, t_load=t_load)

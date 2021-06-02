@@ -22,6 +22,14 @@ class FourierTransformSpectroscopy():
         '''
         '''
         self.bands = {
+            '': {
+                'Band Center': '',
+                'Project': '',
+                'Freq Column': 'NA',
+                'Transmission Column': 'NA',
+                'Header Lines': 'NA',
+                'Path': 'NA',
+                },
             'SO30': {
                 'Band Center': 30,
                 'Project': 'Simons Observatory',
@@ -50,8 +58,16 @@ class FourierTransformSpectroscopy():
                 'Path': os.path.join('bd_lib', 'optical_elements', '5_mil_beamsplitter_efficiency.dat')
                 },
             '10mil Beam Splitter': {
-                'Active': True,
+                'Active': False,
                 'Path': os.path.join('bd_lib', 'optical_elements', '10_mil_beamsplitter_efficiency.dat')
+                },
+            '40mil Beam Splitter': {
+                'Active': False,
+                'Path': os.path.join('bd_lib', 'optical_elements', '40_mil_beamsplitter_efficiency.dat')
+                },
+            '60mil Beam Splitter': {
+                'Active': False,
+                'Path': os.path.join('bd_lib', 'optical_elements', '46_mil_beamsplitter_efficiency.dat')
                 },
             '12icm 576 MMF': {
                 'Active': False,
@@ -69,13 +85,11 @@ class FourierTransformSpectroscopy():
         header_lines = self.bands[band]['Header Lines']
         if 'bd_lib' in data_path:
             data_path.replace('bd_lib', '.')
-        print(data_path)
         with open(data_path, 'r') as file_handle:
             lines = file_handle.readlines()
             frequency_vector = np.zeros([])
             transmission_vector = np.zeros([])
             for i, line in enumerate(lines):
-                print(line)
                 if i > header_lines:
                     try:
                         if ',' in line:
@@ -109,8 +123,8 @@ class FourierTransformSpectroscopy():
         element_transmission_vector = []
         with open(path, 'r') as bs_file_handle:
             for line in bs_file_handle.readlines():
-                element_frequency = line.split('\t')[0]
-                element_transmission = line.split('\t')[1].strip('\n')
+                element_frequency = line.split(',')[0]
+                element_transmission = line.split(',')[1].strip('\n')
                 if float(element_transmission) > 0.03:
                     element_frequency_vector.append(float(element_frequency) * 1e9) # GHz
                     element_transmission_vector.append(float(element_transmission))
@@ -118,20 +132,26 @@ class FourierTransformSpectroscopy():
         return np.asarray(element_frequency_vector), element_transmission_vector
 
     def ftsy_divide_out_optical_element_response(self, frequency_vector, normalized_transmission_vector,
-                                                 optical_element=None, path=None, quick_plot=False):
+                                                 optical_element=None, path=None, quick_plot=False, units='GHz'):
         '''
         '''
         element_frequency_vector, element_transmission_vector = self.ftsy_load_optical_element_response(path)
+        print('element', element_frequency_vector, np.max(element_frequency_vector))
+        #if np.max(frequency_vector) > 1e6:
+            #frequency_vector *= 1e-12
         # Make a copy for before and after comparison
         corrected_transmission_vector = copy(normalized_transmission_vector)
-        transmission_vector_to_divide = np.interp(np.asarray(frequency_vector), np.asarray(element_frequency_vector),
-                                                  np.asarray(element_transmission_vector))
-        corrected_transmission_vector = normalized_transmission_vector / transmission_vector_to_divide
+        print(frequency_vector, element_frequency_vector)
+        selector = np.where(frequency_vector > 0)
+        transmission_vector_to_divide = np.interp(np.asarray(frequency_vector)[selector], np.asarray(element_frequency_vector)[selector],
+                                                  np.asarray(element_transmission_vector)[selector])
+        corrected_transmission_vector = normalized_transmission_vector[selector] / transmission_vector_to_divide
         normalized_corrected_transmission_vector = corrected_transmission_vector / np.max(corrected_transmission_vector)
-        return corrected_transmission_vector, normalized_corrected_transmission_vector
+        frequency_vector = frequency_vector[selector]
+        return frequency_vector, normalized_corrected_transmission_vector
 
     def ftsy_convert_IF_to_FFT_data(self, position_vector, efficiency_vector, mirror_interval,
-                                    distance_per_step=250.39e9, data_selector='Right',
+                                    distance_per_step=250.39e9, data_selector='All',
                                     apodization_type='BOXCAR', quick_plot=False):
         '''
         Returns a frequency and efficiency vector from the inteferogram data and the input
@@ -183,6 +203,7 @@ class FourierTransformSpectroscopy():
                                                          boltzmann_constant=1.38e-23):
         '''
         '''
+        print(frequency_vector)
         integrated_bandwidth = self.ftsy_integrate_spectra_bandwidth(frequency_vector, normalized_transmission_vector,
                                                                      data_clip_lo=data_clip_lo, data_clip_hi=data_clip_hi)
         delta_power = boltzmann_constant * (t_source_high - t_source_low) * integrated_bandwidth  # in W
@@ -191,6 +212,7 @@ class FourierTransformSpectroscopy():
     def ftsy_integrate_spectra_bandwidth(self, frequency_vector, normalized_transmission_vector, data_clip_lo=0, data_clip_hi=600):
         '''
         '''
+        print(data_clip_lo, data_clip_hi)
         selector = np.logical_and(np.where(frequency_vector > data_clip_lo, True, False), np.where(frequency_vector < data_clip_hi, True, False))
         integrated_bandwidth = np.trapz(normalized_transmission_vector[selector], frequency_vector[selector])
         return integrated_bandwidth
@@ -245,6 +267,8 @@ class FourierTransformSpectroscopy():
         Outputs:
             data_with_first_order_poly_removed
         '''
+        print('fitting poly')
+        print(data)
         x_vector = np.arange(data.size)
         fit_vals = np.polyfit(x_vector, data, n)
         poly_fit = np.polyval(fit_vals, x_vector)
@@ -587,7 +611,10 @@ class BeamSplitter():
         Outputs:
             None
         '''
-        save_path = os.path.join('bd_lib', 'optical_elements', '{0}_mil_beamsplitter_efficiency.dat'.format(thickness))
+        if 'bd_lib' in os.listdir('.'):
+            save_path = os.path.join('bd_lib', 'optical_elements', '{0}_mil_beamsplitter_efficiency.dat'.format(thickness))
+        else:
+            save_path = os.path.join('optical_elements', '{0}_mil_beamsplitter_efficiency.dat'.format(thickness))
         with open(save_path, 'w') as file_handle:
             for i, frequency in enumerate(frequency_vector):
                 efficiency = efficiency_vector[i]
@@ -600,8 +627,12 @@ class BeamSplitter():
         A simple run/test option
         '''
         thicknesses = [5, 10, 45, 55, 65]
+        thicknesses = range(5, 100, 1)
         for thickness in thicknesses:
-            save_path = os.path.join('bd_lib', 'optical_elements', '{0}_mil_beamsplitter_efficiency.dat'.format(thickness))
+            if 'bd_lib' in os.listdir('.'):
+                save_path = os.path.join('bd_lib', 'optical_elements', '{0}_mil_beamsplitter_efficiency.dat'.format(thickness))
+            else:
+                save_path = os.path.join('optical_elements', '{0}_mil_beamsplitter_efficiency.dat'.format(thickness))
             frequency_vector, efficiency_vector = self.create_beam_splitter_response(save_path, thickness)
             if save_data:
                 print('saving')
