@@ -29,6 +29,10 @@ class IVCollector(QtWidgets.QWidget, GuiBuilder, IVCurveLib):
             self.squid_calibration_dict = simplejson.load(fh)
         with open(os.path.join('bd_settings', 'samples_settings.json'), 'r') as fh:
             self.samples_settings = simplejson.load(fh)
+        self.cold_bias_resistor_dict  = {
+            '1': 20e-3, # 20mOhm
+            '2': 250e-6, # 250microOhm
+            }
         self.voltage_reduction_factor_dict  = {
             '1': 9.09e-8,
             '2': 4.28e-7,
@@ -135,15 +139,34 @@ class IVCollector(QtWidgets.QWidget, GuiBuilder, IVCurveLib):
         self.sample_rate_lineedit.setText('5000')
         self.sample_rate = self.sample_rate_lineedit.text()
 
+    def ivc_calc_x_correction(self):
+        '''
+        '''
+        if len(self.warm_bias_resistor_lineedit.text()) == 0:
+            return None
+        warm_bias_r = float(self.warm_bias_resistor_lineedit.text())
+        cold_bias_r = float(self.cold_bias_resistor_combobox.currentText())
+        x_correction_factor = cold_bias_r / warm_bias_r
+        self.x_correction_label.setText('{0:.8f}'.format(x_correction_factor))
+
+
     def ivc_iv_config(self):
         '''
         '''
+        self.x_correction_label = QtWidgets.QLabel(self)
         # X Voltage Factor
-        self.x_correction_combobox = self.gb_make_labeled_combobox(label_text='Bias Voltage Correction Factor:', width=self.le_width)
-        for index, voltage_factor in self.voltage_reduction_factor_dict.items():
-            self.x_correction_combobox.addItem('{0}'.format(voltage_factor))
-        self.x_correction_combobox.setCurrentIndex(4)
-        self.layout().addWidget(self.x_correction_combobox, 8, 0, 1, 1)
+        self.layout().addWidget(self.x_correction_label, 8, 2, 1, 1)
+        self.cold_bias_resistor_combobox = self.gb_make_labeled_combobox(label_text='Cold Bias Resistor:', width=self.le_width)
+        for index, cold_bias_resistance in self.cold_bias_resistor_dict.items():
+            self.cold_bias_resistor_combobox.addItem('{0}'.format(cold_bias_resistance))
+        self.cold_bias_resistor_combobox.activated.connect(self.ivc_calc_x_correction)
+        self.cold_bias_resistor_combobox.setCurrentIndex(0)
+        self.layout().addWidget(self.cold_bias_resistor_combobox, 8, 0, 1, 1)
+        self.warm_bias_resistor_lineedit = self.gb_make_labeled_lineedit(label_text='Warm Bias Resistor:', width=self.le_width)
+        self.warm_bias_resistor_lineedit.textChanged.connect(self.ivc_calc_x_correction)
+        self.warm_bias_resistor_lineedit.setText('20000')
+        self.warm_bias_resistor_lineedit.setValidator(QtGui.QDoubleValidator(0, 1e12, 2, self.warm_bias_resistor_lineedit))
+        self.layout().addWidget(self.warm_bias_resistor_lineedit, 8, 1, 1, 1)
         # SQUID
         self.squid_calibration_label = QtWidgets.QLabel('', self)
         self.squid_calibration_label.setAlignment(QtCore.Qt.AlignRight)
@@ -426,8 +449,9 @@ class IVCollector(QtWidgets.QWidget, GuiBuilder, IVCurveLib):
         i_bolo_real = self.ivc_fit_and_remove_squid_offset()
         print(i_bolo_real)
         i_bolo_std = np.asarray(self.y_stds) * squid_calibration_factor
-        v_bias_real = np.asarray(self.x_data) * float(self.x_correction_combobox.currentText()) * 1e6 #uV
-        v_bias_std = np.asarray(self.x_stds) * float(self.x_correction_combobox.currentText()) * 1e6 #uV
+
+        v_bias_real = np.asarray(self.x_data) * float(self.x_correction_label.text()) * 1e6 #uV
+        v_bias_std = np.asarray(self.x_stds) * float(self.x_correction_label.text()) * 1e6 #uV
         #v_bias_real = np.asarray(self.x_data) * float(2e-6) * 1e6 #uV
         #v_bias_std = np.asarray(self.x_stds) * float(2e-6) * 1e6
         fit_selector = np.where(np.logical_and(fit_clip_lo < v_bias_real, v_bias_real < fit_clip_hi))
@@ -465,7 +489,7 @@ class IVCollector(QtWidgets.QWidget, GuiBuilder, IVCurveLib):
         '''
         x_data = []
         x_stds = []
-        voltage_reduction_factor = float(self.x_correction_combobox.currentText())
+        voltage_reduction_factor = float(self.x_correction_label.text())
         x_data = np.asarray(self.x_data) * voltage_reduction_factor * 1e6 #uV
         x_stds = np.asarray(self.x_stds) * voltage_reduction_factor * 1e6 #uV
         return x_data, x_stds
@@ -486,7 +510,7 @@ class IVCollector(QtWidgets.QWidget, GuiBuilder, IVCurveLib):
         calibration_factor = float(self.squid_calibration_label.text())
         y_vector = np.asarray(copy(self.y_data)) * calibration_factor# calibrated to uA from V
         scaled_x_vector = np.asarray(copy(self.x_data))
-        scaled_x_vector *= float(self.x_correction_combobox.currentText())
+        scaled_x_vector *= float(self.x_correction_label.text())
         scaled_x_vector *= 1e6 # This is now in uV
         fit_clip_lo = float(self.fit_clip_lo_lineedit.text())
         fit_clip_hi = float(self.fit_clip_hi_lineedit.text())
