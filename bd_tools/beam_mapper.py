@@ -91,7 +91,7 @@ class BeamMapper(QtWidgets.QWidget, GuiBuilder):
         #Sample rate 
         self.sample_rate_lineedit = self.gb_make_labeled_lineedit(label_text='Sample Rate (Hz): ')
         self.sample_rate_lineedit.setText('5000')
-        self.int_time_lineedit.setValidator(QtGui.QIntValidator(0, 25000, self.sample_rate_lineedit))
+        self.sample_rate_lineedit.setValidator(QtGui.QIntValidator(0, 25000, self.sample_rate_lineedit))
         self.layout().addWidget(self.sample_rate_lineedit, 4, 3, 1, 1)
         # Stepper Motor Selection
         ######
@@ -103,7 +103,6 @@ class BeamMapper(QtWidgets.QWidget, GuiBuilder):
         self.start_position_x_lineedit.setValidator(QtGui.QIntValidator(-300000, 300000, self.start_position_x_lineedit))
         self.start_position_x_lineedit.textChanged.connect(self.bm_update_scan_params)
         self.layout().addWidget(self.start_position_x_lineedit, 7, 0, 1, 2)
-        start_position_y_header_label = QtWidgets.QLabel('Start Position Y:', self)
         self.start_position_y_lineedit = self.gb_make_labeled_lineedit(label_text='Start Position Y:')
         self.start_position_y_lineedit.setText('-250000')
         self.start_position_y_lineedit.setValidator(QtGui.QIntValidator(-300000, 300000, self.start_position_y_lineedit))
@@ -134,12 +133,38 @@ class BeamMapper(QtWidgets.QWidget, GuiBuilder):
         self.step_size_y_lineedit.setValidator(QtGui.QIntValidator(1, 200000, self.step_size_y_lineedit))
         self.layout().addWidget(self.step_size_y_lineedit, 9, 2, 1, 2)
         #Scan Info size
+        self.aperture_size_lineedit = self.gb_make_labeled_lineedit(label_text='Aperture Size (in)')
+        self.layout().addWidget(self.aperture_size_lineedit, 10, 0, 1, 2)
+        self.aperture_size_lineedit.setValidator(QtGui.QDoubleValidator(0, 3, 3, self.aperture_size_lineedit))
+        self.aperture_size_lineedit.textChanged.connect(self.bm_update_aperture_size)
+        self.aperture_size_label = self.gb_make_labeled_label(label_text='Aperture Size (steps)')
+        self.layout().addWidget(self.aperture_size_label, 10, 2, 1, 2)
+        #Source Information 
+        self.source_type_combobox = self.gb_make_labeled_combobox(label_text='Source Type')
+        self.source_type_combobox.activated.connect(self.bm_update_source_type)
+        for source_type in ['Analyzer', 'LN2', 'Heater']:
+            self.source_type_combobox.addItem(source_type)
+        self.layout().addWidget(self.source_type_combobox, 11, 0, 1, 2)
+        self.source_temp_lineedit = self.gb_make_labeled_lineedit(label_text='Source Temp (K):')
+        self.source_temp_lineedit.setValidator(QtGui.QDoubleValidator(0, 300, 3, self.source_temp_lineedit))
+        self.layout().addWidget(self.source_temp_lineedit, 11, 2, 1, 2)
+        self.source_frequency_lineedit = self.gb_make_labeled_lineedit(label_text='Source Frequency (GHz):')
+        self.source_frequency_lineedit.setValidator(QtGui.QDoubleValidator(0, 1000, 3, self.source_frequency_lineedit))
+        self.layout().addWidget(self.source_frequency_lineedit, 12, 0, 1, 1)
+        self.source_power_lineedit = self.gb_make_labeled_lineedit(label_text='Source Power (dBm):')
+        self.source_power_lineedit.setValidator(QtGui.QDoubleValidator(-1e3, 1e3, 5, self.source_power_lineedit))
+        self.layout().addWidget(self.source_power_lineedit, 12, 1, 1, 1)
+
+        self.source_angle_lineedit = self.gb_make_labeled_lineedit(label_text='Source Angle (degrees):')
+        self.source_angle_lineedit.setValidator(QtGui.QDoubleValidator(0, 360, 2, self.source_angle_lineedit))
+        self.layout().addWidget(self.source_angle_lineedit, 12, 2, 1, 1)
+
         # Time Stream and data label
         self.time_stream_plot_label = QtWidgets.QLabel('', self)
         self.time_stream_plot_label.setAttribute(QtCore.Qt.WA_TranslucentBackground)
-        self.layout().addWidget(self.time_stream_plot_label, 10, 0, 1, 4)
+        self.layout().addWidget(self.time_stream_plot_label, 13, 0, 1, 4)
         self.data_string_label = QtWidgets.QLabel('', self)
-        self.layout().addWidget(self.data_string_label, 11, 0, 1, 4)
+        self.layout().addWidget(self.data_string_label, 14, 0, 1, 4)
         self.bm_update_scan_params()
         #Sample Name
         self.sample_name_combobox = self.gb_make_labeled_combobox(label_text='Sample Name Select:')
@@ -147,30 +172,58 @@ class BeamMapper(QtWidgets.QWidget, GuiBuilder):
             self.sample_name_combobox.addItem(sample)
         self.sample_name_combobox.activated.connect(self.bm_update_sample_name)
         self.sample_name_combobox.setCurrentIndex(0)
-        self.layout().addWidget(self.sample_name_combobox, 12, 0, 1, 2)
+        self.layout().addWidget(self.sample_name_combobox, 15, 0, 1, 2)
         self.sample_name_lineedit = self.gb_make_labeled_lineedit(label_text='Sample Name:')
-        self.layout().addWidget(self.sample_name_lineedit, 13, 0, 1, 2)
+        self.layout().addWidget(self.sample_name_lineedit, 16, 0, 1, 2)
         self.bm_update_sample_name()
         # Zero Lock in
         self.zero_lock_in_checkbox = QtWidgets.QCheckBox('Zero Lock In?', self)
         self.zero_lock_in_checkbox.setChecked(True)
-        self.layout().addWidget(self.zero_lock_in_checkbox, 12, 3, 1, 1)
+        self.layout().addWidget(self.zero_lock_in_checkbox, 14, 3, 1, 1)
         # Reverse Scan Lock in
         self.reverse_scan_checkbox = QtWidgets.QCheckBox('Reverse Scan', self)
         self.reverse_scan_checkbox.setChecked(False)
-        self.layout().addWidget(self.reverse_scan_checkbox, 13, 3, 1, 1)
+        self.layout().addWidget(self.reverse_scan_checkbox, 15, 3, 1, 1)
         ######
         # Control Buttons 
         ######
         self.start_pushbutton = QtWidgets.QPushButton('Start', self)
-        self.layout().addWidget(self.start_pushbutton, 14, 0, 1, 4)
+        self.layout().addWidget(self.start_pushbutton, 16, 0, 1, 4)
         self.start_pushbutton.clicked.connect(self.bm_start_stop_scan)
         self.pause_pushbutton = QtWidgets.QPushButton('Pause', self)
-        self.layout().addWidget(self.pause_pushbutton, 15, 0, 1, 4)
+        self.layout().addWidget(self.pause_pushbutton, 17, 0, 1, 4)
         self.pause_pushbutton.clicked.connect(self.bm_pause)
         save_pushbutton = QtWidgets.QPushButton('Save', self)
-        self.layout().addWidget(save_pushbutton, 16, 0, 1, 4)
+        self.layout().addWidget(save_pushbutton, 18, 0, 1, 4)
         save_pushbutton.clicked.connect(self.bm_save)
+        load_pushbutton = QtWidgets.QPushButton('Load', self)
+        self.layout().addWidget(load_pushbutton, 19, 0, 1, 4)
+        load_pushbutton.clicked.connect(self.bm_load)
+
+    def bm_update_aperture_size(self):
+        '''
+        '''
+        aperture_size = float(self.aperture_size_lineedit.text())
+        aperture_size_in_steps = int(1e5 * aperture_size)
+        self.aperture_size_label = '{0} steps'.format(aperture_size_in_steps)
+
+    def bm_update_source_type(self):
+        '''
+        '''
+        source_type = self.source_type_combobox.currentText()
+        if source_type in ['LN2', 'Heater']:
+            self.source_frequency_lineedit.setDisabled(True)
+            self.source_power_lineedit.setDisabled(True)
+            self.source_angle_lineedit.setDisabled(True)
+            self.source_temp_lineedit.setDisabled(False)
+            if source_type == 'LN2':
+                self.source_temp_lineedit.setText('77')
+        else:
+            self.source_frequency_lineedit.setDisabled(False)
+            self.source_power_lineedit.setDisabled(False)
+            self.source_angle_lineedit.setDisabled(False)
+            self.source_temp_lineedit.setDisabled(True)
+            self.source_temp_lineedit.setText('')
 
     def bm_configure_plot_panel(self):
         '''
@@ -188,7 +241,7 @@ class BeamMapper(QtWidgets.QWidget, GuiBuilder):
         self.layout().addWidget(self.x_cut_plot_label, 12, 4, 6, 4)
         self.x_cut_select_combobox = self.gb_make_labeled_combobox(label_text='X Slice')
         self.x_cut_select_combobox.activated.connect(self.bm_plot_beam_map)
-        self.layout().addWidget(self.x_cut_select_combobox, 16, 4, 1, 4)
+        self.layout().addWidget(self.x_cut_select_combobox, 17, 4, 1, 4)
         for x_tick in self.x_ticks:
             self.x_cut_select_combobox.addItem(x_tick)
         # Y
@@ -197,7 +250,7 @@ class BeamMapper(QtWidgets.QWidget, GuiBuilder):
         self.device_combobox.setCurrentIndex(0)
         self.y_cut_select_combobox = self.gb_make_labeled_combobox(label_text='Y Slice')
         self.y_cut_select_combobox.activated.connect(self.bm_plot_beam_map)
-        self.layout().addWidget(self.y_cut_select_combobox, 16, 8, 1, 4)
+        self.layout().addWidget(self.y_cut_select_combobox, 17, 8, 1, 4)
         for y_tick in self.y_ticks:
             self.y_cut_select_combobox.addItem(y_tick)
 
@@ -218,6 +271,8 @@ class BeamMapper(QtWidgets.QWidget, GuiBuilder):
         if len(self.start_position_x_lineedit.text()) == 0 or len(self.end_position_x_lineedit.text()) == 0:
             return None
         if len(self.start_position_y_lineedit.text()) == 0 or len(self.end_position_y_lineedit.text()) == 0:
+            return None
+        if int(self.step_size_x_lineedit.text()) == 0 or int(self.step_size_y_lineedit.text()) == 0:
             return None
         if self.start_position_x_lineedit.text() == '-' or self.start_position_y_lineedit.text() == '-':
             return None
@@ -297,6 +352,8 @@ class BeamMapper(QtWidgets.QWidget, GuiBuilder):
     def bm_scan(self):
         '''
         '''
+        if self.csm_widget_x is None:
+            return None
         if os.path.exists('temp_beam_files'):
             for file_name in os.listdir('temp_beam_files'):
                 os.remove(os.path.join('temp_beam_files', file_name))
@@ -396,6 +453,7 @@ class BeamMapper(QtWidgets.QWidget, GuiBuilder):
                 act_y_pos = y_pos
                 time.sleep(pause_time * 1e-3)
                 if self.zero_lock_in_checkbox.isChecked():
+                    print('adfadfdas')
                     self.srs_widget.srs_zero_lock_in_phase()
                 time.sleep(0.300) # Post Zero lock-in wait 3 or 1 time constants at 100 or 300 ms
                 data_dict = daq.run()
@@ -519,6 +577,10 @@ class BeamMapper(QtWidgets.QWidget, GuiBuilder):
                     return False, False
         return save_folder, folder_name
 
+    def bm_load(self):
+        '''
+        '''
+
     def bm_save(self):
         '''
         '''
@@ -527,6 +589,10 @@ class BeamMapper(QtWidgets.QWidget, GuiBuilder):
         if save_folder:
             save_path = os.path.join(save_folder, '{0}.dat'.format(folder_name))
             print(save_path)
+            ss_save_path = save_path.replace('.dat', '_meta.png')
+            screen = QtWidgets.QApplication.primaryScreen()
+            screenshot = screen.grabWindow(self.winId())
+            screenshot.save(ss_save_path, 'png')
             with open(save_path, 'w') as save_handle:
                 for i, x_data in enumerate(self.x_posns):
                     line = '{0:.5f}, {1:.5f}, {2:.5f}, {3:.5f}\n'.format(self.x_posns[i], self.y_posns[i], self.Z_data[i], self.Z_stds[i])

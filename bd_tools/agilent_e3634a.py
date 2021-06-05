@@ -44,7 +44,10 @@ class AgilentE3634A(QtWidgets.QWidget, GuiBuilder):
         return response
 
     def ae_apply_voltage(self, volts):
-        self.ae_send_command('APPL {0}, 0.2\r\n'.format(volts))
+        print()
+        print()
+        print()
+        self.ae_send_command('APPL {0:.2f}, 0.2\r\n'.format(volts))
         self.ae_send_command('OUTP ON\r\n'.format(volts))
         self.serial_com.bs_read()
         return self.ae_get_voltage()

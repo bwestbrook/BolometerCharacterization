@@ -12,8 +12,9 @@ from GuiBuilder.gui_builder import GuiBuilder, GenericClass
 
 class TimeConstant(QtWidgets.QWidget, GuiBuilder):
 
-    def __init__(self, daq_settings, status_bar, screen_resolution, monitor_dpi):
+    def __init__(self, daq_settings, status_bar, screen_resolution, monitor_dpi, srs_widget):
         super(TimeConstant, self).__init__()
+        self.srs_widget = srs_widget
         self.status_bar = status_bar
         self.daq_settings = daq_settings
         self.screen_resolution = screen_resolution
@@ -21,30 +22,122 @@ class TimeConstant(QtWidgets.QWidget, GuiBuilder):
         self.daq = BoloDAQ()
         grid = QtWidgets.QGridLayout()
         self.setLayout(grid)
-        self.tc_add_common_widgets()
+        self.tc_input_panel()
 
-    def tc_add_common_widgets(self):
+    def tc_input_panel(self):
         '''
         '''
-        # Sample Name
-        sample_name_header_label = QtWidgets.QLabel('Sample Name:', self)
-        self.layout().addWidget(sample_name_header_label, 8, 0, 1, 1)
-        self.sample_name_lineedit = QtWidgets.QLineEdit('', self)
-        self.layout().addWidget(self.sample_name_lineedit, 8, 1, 1, 3)
-        # Buttons
-        start_pushbutton = QtWidgets.QPushButton('Start', self)
-        #start_pushbutton.clicked.connect(self.xyc_start_stop)
-        self.layout().addWidget(start_pushbutton, 12, 0, 1, 4)
-        save_pushbutton = QtWidgets.QPushButton('Save', self)
-        #save_pushbutton.clicked.connect(self.xyc_save)
-        self.layout().addWidget(save_pushbutton, 13, 0, 1, 4)
+        self.welcome_header_label = QtWidgets.QLabel('Welcome to Time Constant', self)
+        self.layout().addWidget(self.welcome_header_label, 0, 0, 1, 4)
+        # DAQ (Device + Channel) Selection
+        device_header_label = QtWidgets.QLabel('Device:', self)
+        self.layout().addWidget(device_header_label, 1, 0, 1, 1)
+        self.device_combobox = QtWidgets.QComboBox(self)
+        self.layout().addWidget(self.device_combobox, 1, 1, 1, 1)
+        for device in self.daq_settings:
+            self.device_combobox.addItem(device)
+        self.device_combobox.setCurrentIndex(1)
+        daq_header_label = QtWidgets.QLabel('DAQ:', self)
+        self.layout().addWidget(daq_header_label, 2, 0, 1, 1)
+        self.daq_combobox = QtWidgets.QComboBox(self)
+        self.layout().addWidget(self.daq_combobox, 2, 1, 1, 1)
+        for channel in sorted([int(x) for x in self.daq_settings[device]]):
+            self.daq_combobox.addItem(str(channel))
+        #Pause Time 
+        self.pause_time_lineedit = self.gb_make_labeled_lineedit(label_text='Pause Time (ms):')
+        self.pause_time_lineedit.setText('2500')
+        self.pause_time_lineedit.setValidator(QtGui.QIntValidator(0, 25000, self.pause_time_lineedit))
+        self.layout().addWidget(self.pause_time_lineedit, 4, 0, 1, 1)
+        #Int Time 
+        self.int_time_lineedit = self.gb_make_labeled_lineedit(label_text='Int Time (ms): ')
+        self.int_time_lineedit.setText('250')
+        self.int_time_lineedit.setValidator(QtGui.QIntValidator(0, 25000, self.int_time_lineedit))
+        self.layout().addWidget(self.int_time_lineedit, 4, 1, 1, 1)
+        #Sample rate 
+        self.sample_rate_lineedit = self.gb_make_labeled_lineedit(label_text='Sample Rate (Hz): ')
+        self.sample_rate_lineedit.setText('5000')
+        self.sample_rate_lineedit.setValidator(QtGui.QIntValidator(0, 25000, self.sample_rate_lineedit))
+        self.layout().addWidget(self.sample_rate_lineedit, 4, 2, 1, 1)
+        #Frequency Range
+        self.spacing_type_combobox = self.gb_make_labeled_combobox(label_text='Frequency Spacing Type:')
+        for spacing_type in ['Log', 'Linear']:
+            self.spacing_type_combobox.addItem(spacing_type)
+        self.layout().addWidget(self.spacing_type_combobox, 5, 0, 1, 1)
+        self.start_frequency_lineedit = self.gb_make_labeled_lineedit(label_text='Start Frequency (Hz):')
+        self.start_frequency_lineedit.setValidator(QtGui.QDoubleValidator(0, 1e4, 3, self.start_frequency_lineedit))
+        self.start_frequency_lineedit.setText('2')
+        self.layout().addWidget(self.start_frequency_lineedit, 5, 1, 1, 1)
+        self.end_frequency_lineedit = self.gb_make_labeled_lineedit(label_text='End Frequency (Hz):')
+        self.end_frequency_lineedit.setValidator(QtGui.QDoubleValidator(0, 1e4, 3, self.end_frequency_lineedit))
+        self.end_frequency_lineedit.setText('256')
+        self.layout().addWidget(self.end_frequency_lineedit, 5, 2, 1, 1)
+        self.n_points_lineedit = self.gb_make_labeled_lineedit(label_text='N Points:')
+        self.n_points_lineedit.setValidator(QtGui.QIntValidator(0, 100, self.n_points_lineedit))
+        self.n_points_lineedit.setText('15')
+        self.layout().addWidget(self.n_points_lineedit, 5, 3, 1, 1)
+        self.n_points_lineedit.textChanged.connect(self.tc_update_frequencies)
+        self.start_frequency_lineedit.textChanged.connect(self.tc_update_frequencies)
+        self.end_frequency_lineedit.textChanged.connect(self.tc_update_frequencies)
+        self.spacing_type_combobox.activated.connect(self.tc_update_frequencies)
+        # Control Buttons
+        self.start_pushbutton = QtWidgets.QPushButton('Start', self)
+        self.start_pushbutton.clicked.connect(self.tc_start)
+        self.layout().addWidget(self.start_pushbutton, 12, 0, 1, 4)
+        self.save_pushbutton = QtWidgets.QPushButton('Save', self)
+        self.save_pushbutton.clicked.connect(self.tc_save)
+        self.layout().addWidget(self.save_pushbutton, 13, 0, 1, 4)
+        self.load_pushbutton = QtWidgets.QPushButton('Load', self)
+        self.load_pushbutton.clicked.connect(self.tc_load)
+        self.layout().addWidget(self.load_pushbutton, 14, 0, 1, 4)
 
     #######################
     # Data Taking 
     ######################
 
+    def tc_update_frequencies(self):
+        '''
+        '''
+        spacing_type = self.spacing_type_combobox.currentText()
+        start_frequency = float(self.start_frequency_lineedit.text())
+        end_frequency = float(self.end_frequency_lineedit.text())
+        n_points = int(self.n_points_lineedit.text())
+        if spacing_type == 'Linear':
+            frequency_vector = np.linspace(start_frequency, end_frequency, n_points)
+            self.start_frequency_lineedit.setLabelText('Start Frequency (Hz)')
+            self.end_frequency_lineedit.setLabelText('End Frequency (Hz)')
+            self.n_points_lineedit.setText('15')
+        else:
+            self.start_frequency_lineedit.setLabelText('Lowest Power of 2:')
+            self.start_frequency_lineedit.setText('0')
+            self.end_frequency_lineedit.setLabelText('Highest Power of 2:')
+            self.start_frequency_lineedit.setText('8')
+            self.n_points_lineedit.setText('8')
+            frequency_vector = np.logspace(start_frequency, end_frequency, num=n_points, base=2)
+        print(frequency_vector)
+        return frequency_vector
+
+    def tc_get_scan_range(self):
+        '''
+        '''
+
+    def tc_save(self):
+        '''
+        '''
+        print('save')
+
+    def tc_start(self):
+        '''
+        '''
+        print('start')
+
+    def tc_load(self):
+        '''
+        '''
+        print('load')
 
     def tc_plot_tau_data_point(self, ydata):
+        '''
+        '''
         integration_time = int(float(str(getattr(self, '_time_constant_popup_daq_integration_time_combobox').currentText())))
         sample_rate = int(float(str(getattr(self, '_time_constant_popup_daq_sample_rate_combobox').currentText())))
         fig, ax = self.bd_create_blank_fig()
@@ -55,7 +148,6 @@ class TimeConstant(QtWidgets.QWidget, GuiBuilder):
         fig.savefig(temp_tau_save_path)
         image_to_display = QtGui.QPixmap(temp_tau_save_path)
         getattr(self, '_time_constant_popup_data_point_monitor_label').setPixmap(image_to_display)
-
 
     def tc_delete_last_point(self):
         if not hasattr(self, 'raw_data_path'):

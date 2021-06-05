@@ -75,6 +75,8 @@ class PolarizationEfficiency(QtWidgets.QWidget, GuiBuilder):
     def pe_configure_input_panel(self):
         '''
         '''
+        if self.csm_widget is None:
+            return None
         welcome_header_label = QtWidgets.QLabel('Welcome to Polarization Efficiency', self)
         welcome_header_label.setFixedWidth(0.3 * self.screen_resolution.width())
         self.layout().addWidget(welcome_header_label, 0, 0, 1, 2)
@@ -212,6 +214,8 @@ class PolarizationEfficiency(QtWidgets.QWidget, GuiBuilder):
     def pe_update_scan_params(self):
         '''
         '''
+        if self.csm_widget is None:
+            return None
         end = int(self.end_position_lineedit.text())
         start = int(self.start_position_lineedit.text())
         grid_angle_interval = int(self.grid_angle_interval_lineedit.text())
@@ -270,6 +274,8 @@ class PolarizationEfficiency(QtWidgets.QWidget, GuiBuilder):
     def pe_scan(self):
         '''
         '''
+        if self.csm_widget is None:
+            return None
         pprint(self.scan_settings_dict)
         start = self.scan_settings_dict['start']
         end = self.scan_settings_dict['end']
@@ -402,6 +408,8 @@ class PolarizationEfficiency(QtWidgets.QWidget, GuiBuilder):
     def pe_plot(self, running=False, pol_eff_str=None):
         '''
         '''
+        if self.csm_widget is None:
+            return None
         pl.close('all')
         fig, ax = self.pe_create_blank_fig(frac_screen_width=0.7, frac_screen_height=0.6, n_axes=1)
         ax.set_xlabel('Steps', fontsize=10)

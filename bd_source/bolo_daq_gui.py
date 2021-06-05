@@ -53,16 +53,6 @@ from bd_lib.bolo_serial import BoloSerial
 # Gui Biulder
 from GuiBuilder.gui_builder import GuiBuilder
 
-#from RT_Curves.plot_rt_curves import RTCurve
-#from FTS_Curves.plot_fts_curves import FTSCurve
-#from Beam_Maps.beam_mapper_tools import BeamMapperTools
-#from POL_Curves.plot_pol_curves import PolCurve
-#from TAU_Curves.plot_tau_curves import TAUCurve
-#from FTS_DAQ.fts_daq import FTSDAQ
-#from FTS_DAQ.analyzeFTS import FTSanalyzer
-#from LockIn.lock_in import LockIn
-#from PowerSupply.power_supply import PowerSupply
-#from FridgeCycle.fridge_cycle import FridgeCycle
 
 class BoloDAQGui(QtWidgets.QMainWindow, GuiBuilder):
 
@@ -478,6 +468,23 @@ class BoloDAQGui(QtWidgets.QMainWindow, GuiBuilder):
         QtWidgets.QApplication.processEvents()
         self.resize(self.minimumSizeHint())
 
+
+    #################################################
+    # Difference Load Curves 
+    #################################################
+
+    def bd_difference_load_curves(self):
+        '''
+        '''
+        self.gb_initialize_panel('central_widget')
+        self.status_bar.showMessage('Launching Difference Load Curves')
+        QtWidgets.QApplication.processEvents()
+        if not hasattr(self, 'difference_load_curves_widget'):
+            self.difference_load_curves_widget = DifferenceLoadCurves(self.daq_settings, self.status_bar, self.screen_resolution, self.monitor_dpi, self.data_folder)
+        self.central_widget.layout().addWidget(self.difference_load_curves_widget, 0, 0, 1, 1)
+        self.status_bar.showMessage('Difference Load Curves')
+        QtWidgets.QApplication.processEvents()
+        self.resize(self.minimumSizeHint())
     #################################################
     # Configure Stepper Motors
     #################################################
@@ -547,23 +554,6 @@ class BoloDAQGui(QtWidgets.QMainWindow, GuiBuilder):
         '''
         '''
         self.gb_initialize_panel('central_widget')
-        if not hasattr(self, 'time_constant_widget'):
-            self.time_constant_widget = TimeConstant(self.daq_settings, self.status_bar, self.screen_resolution, self.monitor_dpi)
-        self.central_widget.layout().addWidget(self.time_constant_widget, 0, 0, 1, 1)
-        self.status_bar.showMessage('Bolometer Time Constant')
-        QtWidgets.QApplication.processEvents()
-        self.resize(self.minimumSizeHint())
-
-    #################################################
-    # BEAM MAPPER 
-    #################################################
-
-    def bd_beam_mapper(self):
-        '''
-        '''
-        self.gb_initialize_panel('central_widget')
-        self.status_bar.showMessage('Launching Beam Mapper')
-        QtWidgets.QApplication.processEvents()
         dialog = 'Select the comport for the SRS 830'
         #com_port, okPressed = self.gb_quick_static_info_gather(title='', dialog=dialog, items=['COM10'])
         com_port, okPressed = 'COM10', True
@@ -571,54 +561,26 @@ class BoloDAQGui(QtWidgets.QMainWindow, GuiBuilder):
             if not hasattr(self, 'srs_sr830dsp_widget'):
                 self.status_bar.showMessage('Connecting to the SRS SR830 DSP')
                 QtWidgets.QApplication.processEvents()
-                serial_com = BoloSerial(com_port, device='SRS_SR830_DSP', splash_screen=self.status_bar)
+                try:
+                    serial_com = BoloSerial(com_port, device='SRS_SR830_DSP', splash_screen=self.status_bar)
+                except:
+                    response = self.gb_quick_message('Com port in use... Launch in data analysis mode?', add_yes=True, add_no=True)
+                    if response == QtWidgets.QMessageBox.Yes:
+                        serial_com = None
+                    else:
+                        return None
                 setattr(self, 'ser_{0}'.format(com_port), serial_com)
-                self.srs_sr830dsp_widget = StanfordResearchSystemsSR830DSP(serial_com, com_port, self.status_bar, self.screen_resolution, self.monitor_dpi)
-        stepper_motor_ports = ['COM13', 'COM14']
-        self.csm_widget_dict = {}
-        for i, dim in enumerate(('X', 'Y')):
-            dialog = 'Select the comport for the {0} stepper motor you wish to configure'.format(dim)
-            #sm_com_port, okPressed = self.gb_quick_static_info_gather(title='', dialog=dialog, items=stepper_motor_ports)
-            sm_com_port = stepper_motor_ports[0]
-            okPressed = True
-            if not hasattr(self, 'csm_widget_{0}'.format(sm_com_port)) and okPressed:
-                csm_widget = ConfigureStepperMotor(sm_com_port, self.status_bar)
-                setattr(self, 'csm_widget_{0}'.format(sm_com_port), csm_widget)
-            elif okPressed:
-                #csm_widget = getattr(self, 'csm_widget_{0}'.format(sm_com_port))
-                csm_widget = None
-            else:
-                return None
-            stepper_motor_ports.pop(stepper_motor_ports.index(sm_com_port))
-            self.csm_widget_dict[dim] = {
-                'widget': csm_widget,
-                'com_port': sm_com_port
-                }
-        if not hasattr(self, 'beam_mapper_widget'):
-            self.beam_mapper_widget = BeamMapper(self.daq_settings, self.status_bar, self.screen_resolution, self.monitor_dpi, self.csm_widget_dict, self.srs_sr830dsp_widget, self.data_folder)
-        #self.bd_get_saved_daq_settings()
-        self.beam_mapper_widget.bm_update_daq_settings(self.daq_settings)
-        self.central_widget.layout().addWidget(self.beam_mapper_widget, 0, 0, 1, 1)
-        self.status_bar.showMessage('Beam Mapper')
+                if serial_com is not None:
+                    self.srs_sr830dsp_widget = StanfordResearchSystemsSR830DSP(serial_com, com_port, self.status_bar, self.screen_resolution, self.monitor_dpi)
+                else:
+                    self.srs_sr830dsp_widget = None
+        if not hasattr(self, 'time_constant_widget'):
+            self.time_constant_widget = TimeConstant(self.daq_settings, self.status_bar, self.screen_resolution, self.monitor_dpi, self.srs_sr830dsp_widget)
+        self.central_widget.layout().addWidget(self.time_constant_widget, 0, 0, 1, 1)
+        self.status_bar.showMessage('Bolometer Time Constant')
         QtWidgets.QApplication.processEvents()
         self.resize(self.minimumSizeHint())
 
-    #################################################
-    # Difference Load Curves 
-    #################################################
-
-    def bd_difference_load_curves(self):
-        '''
-        '''
-        self.gb_initialize_panel('central_widget')
-        self.status_bar.showMessage('Launching Difference Load Curves')
-        QtWidgets.QApplication.processEvents()
-        if not hasattr(self, 'difference_load_curves_widget'):
-            self.difference_load_curves_widget = DifferenceLoadCurves(self.daq_settings, self.status_bar, self.screen_resolution, self.monitor_dpi, self.data_folder)
-        self.central_widget.layout().addWidget(self.difference_load_curves_widget, 0, 0, 1, 1)
-        self.status_bar.showMessage('Difference Load Curves')
-        QtWidgets.QApplication.processEvents()
-        self.resize(self.minimumSizeHint())
 
     #################################################
     # Polarization Efficiency
@@ -637,15 +599,28 @@ class BoloDAQGui(QtWidgets.QMainWindow, GuiBuilder):
             if not hasattr(self, 'srs_sr830dsp_widget'):
                 self.status_bar.showMessage('Connecting to the SRS SR830 DSP')
                 QtWidgets.QApplication.processEvents()
-                serial_com = BoloSerial(com_port, device='SRS_SR830_DSP', splash_screen=self.status_bar)
+                try:
+                    serial_com = BoloSerial(com_port, device='SRS_SR830_DSP', splash_screen=self.status_bar)
+                except:
+                    response = self.gb_quick_message('Com port in use... Launch in data analysis mode?', add_yes=True, add_no=True)
+                    if response == QtWidgets.QMessageBox.Yes:
+                        serial_com = None
+                    else:
+                        return None
                 setattr(self, 'ser_{0}'.format(com_port), serial_com)
-                self.srs_sr830dsp_widget = StanfordResearchSystemsSR830DSP(serial_com, com_port, self.status_bar, self.screen_resolution, self.monitor_dpi)
+                if serial_com is not None:
+                    self.srs_sr830dsp_widget = StanfordResearchSystemsSR830DSP(serial_com, com_port, self.status_bar, self.screen_resolution, self.monitor_dpi)
+                else:
+                    self.srs_sr830dsp_widget = None
         dialog = 'Select the comport for the stepper motor you wish to configure'
         stepper_motor_ports = ['COM12']
         #sm_com_port, okPressed = self.gb_quick_static_info_gather(title='', dialog=dialog, items=stepper_motor_ports)
         sm_com_port, okPressed = 'COM12', True
         if not hasattr(self, 'csm_widget_{0}'.format(sm_com_port)) and okPressed:
-            csm_widget = ConfigureStepperMotor(sm_com_port, self.status_bar)
+            if getattr(self, 'ser_{0}'.format(com_port)) is None:
+                csm_widget = None
+            else:
+                csm_widget = ConfigureStepperMotor(sm_com_port, self.status_bar)
             setattr(self, 'csm_widget_{0}'.format(sm_com_port), csm_widget)
         elif okPressed:
             csm_widget = getattr(self, 'csm_widget_{0}'.format(sm_com_port))
@@ -676,15 +651,29 @@ class BoloDAQGui(QtWidgets.QMainWindow, GuiBuilder):
             if not hasattr(self, 'srs_sr830dsp_widget'):
                 self.status_bar.showMessage('Connecting to the SRS SR830 DSP')
                 QtWidgets.QApplication.processEvents()
-                serial_com = BoloSerial(com_port, device='SRS_SR830_DSP', splash_screen=self.status_bar)
+                try:
+                    serial_com = BoloSerial(com_port, device='SRS_SR830_DSP', splash_screen=self.status_bar)
+                except:
+                    response = self.gb_quick_message('Com port in use... Launch in data analysis mode?', add_yes=True, add_no=True)
+                    if response == QtWidgets.QMessageBox.Yes:
+                        serial_com = None
+                    else:
+                        return None
                 setattr(self, 'ser_{0}'.format(com_port), serial_com)
-                self.srs_sr830dsp_widget = StanfordResearchSystemsSR830DSP(serial_com, com_port, self.status_bar, self.screen_resolution, self.monitor_dpi)
+                if serial_com is not None:
+                    self.srs_sr830dsp_widget = StanfordResearchSystemsSR830DSP(serial_com, com_port, self.status_bar, self.screen_resolution, self.monitor_dpi)
+                else:
+                    self.srs_sr830dsp_widget = None
         dialog = 'Select the comport for the stepper motor you wish to configure'
         stepper_motor_ports = ['COM12']
         #sm_com_port, okPressed = self.gb_quick_static_info_gather(title='', dialog=dialog, items=stepper_motor_ports)
         sm_com_port, okPressed = 'COM12', True
         if not hasattr(self, 'csm_widget_{0}'.format(sm_com_port)) and okPressed:
-            csm_widget = ConfigureStepperMotor(sm_com_port, self.status_bar)
+            if getattr(self, 'ser_{0}'.format(com_port)) is None:
+                setattr(self, 'csm_widget_{0}'.format(sm_com_port), None)
+                csm_widget = None
+            else:
+                csm_widget = ConfigureStepperMotor(sm_com_port, self.status_bar)
             setattr(self, 'csm_widget_{0}'.format(sm_com_port), csm_widget)
         elif okPressed:
             csm_widget = getattr(self, 'csm_widget_{0}'.format(sm_com_port))
@@ -699,6 +688,66 @@ class BoloDAQGui(QtWidgets.QMainWindow, GuiBuilder):
         QtWidgets.QApplication.processEvents()
         self.resize(self.minimumSizeHint())
 
+    #################################################
+    # BEAM MAPPER 
+    #################################################
+
+    def bd_beam_mapper(self):
+        '''
+        '''
+        self.gb_initialize_panel('central_widget')
+        self.status_bar.showMessage('Launching Beam Mapper')
+        QtWidgets.QApplication.processEvents()
+        dialog = 'Select the comport for the SRS 830'
+        #com_port, okPressed = self.gb_quick_static_info_gather(title='', dialog=dialog, items=['COM10'])
+        com_port, okPressed = 'COM10', True
+        if not hasattr(self, 'ser_{0}'.format(com_port)) and okPressed:
+            if not hasattr(self, 'srs_sr830dsp_widget'):
+                self.status_bar.showMessage('Connecting to the SRS SR830 DSP')
+                QtWidgets.QApplication.processEvents()
+                try:
+                    serial_com = BoloSerial(com_port, device='SRS_SR830_DSP', splash_screen=self.status_bar)
+                except:
+                    response = self.gb_quick_message('Com port in use... Launch in data analysis mode?', add_yes=True, add_no=True)
+                    if response == QtWidgets.QMessageBox.Yes:
+                        serial_com = None
+                    else:
+                        return None
+                setattr(self, 'ser_{0}'.format(com_port), serial_com)
+            if serial_com is not None:
+                self.srs_sr830dsp_widget = StanfordResearchSystemsSR830DSP(serial_com, com_port, self.status_bar, self.screen_resolution, self.monitor_dpi)
+            else:
+                self.srs_sr830dsp_widget = None
+        stepper_motor_ports = ['COM13', 'COM14']
+        self.csm_widget_dict = {}
+        for i, dim in enumerate(('X', 'Y')):
+            dialog = 'Select the comport for the {0} stepper motor you wish to configure'.format(dim)
+            #sm_com_port, okPressed = self.gb_quick_static_info_gather(title='', dialog=dialog, items=stepper_motor_ports)
+            sm_com_port = stepper_motor_ports[0]
+            okPressed = True
+            if not hasattr(self, 'csm_widget_{0}'.format(sm_com_port)) and okPressed:
+                if getattr(self, 'ser_{0}'.format(com_port)) is None:
+                    csm_widget = None
+                else:
+                    csm_widget = ConfigureStepperMotor(sm_com_port, self.status_bar)
+                setattr(self, 'csm_widget_{0}'.format(sm_com_port), csm_widget)
+            elif okPressed:
+                #csm_widget = getattr(self, 'csm_widget_{0}'.format(sm_com_port))
+                csm_widget = None
+            else:
+                return None
+            stepper_motor_ports.pop(stepper_motor_ports.index(sm_com_port))
+            self.csm_widget_dict[dim] = {
+                'widget': csm_widget,
+                'com_port': sm_com_port
+                }
+        if not hasattr(self, 'beam_mapper_widget'):
+            self.beam_mapper_widget = BeamMapper(self.daq_settings, self.status_bar, self.screen_resolution, self.monitor_dpi, self.csm_widget_dict, self.srs_sr830dsp_widget, self.data_folder)
+        self.beam_mapper_widget.bm_update_daq_settings(self.daq_settings)
+        self.central_widget.layout().addWidget(self.beam_mapper_widget, 0, 0, 1, 1)
+        self.status_bar.showMessage('Beam Mapper')
+        QtWidgets.QApplication.processEvents()
+        self.resize(self.minimumSizeHint())
 
 if __name__ == '__main__':
     qt_app = QtWidgets.QApplication(sys.argv)

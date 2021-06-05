@@ -67,7 +67,7 @@ class FourierTransformSpectroscopy():
                 },
             '60mil Beam Splitter': {
                 'Active': False,
-                'Path': os.path.join('bd_lib', 'optical_elements', '46_mil_beamsplitter_efficiency.dat')
+                'Path': os.path.join('bd_lib', 'optical_elements', '60_mil_beamsplitter_efficiency.dat')
                 },
             '12icm 576 MMF': {
                 'Active': False,
@@ -114,7 +114,7 @@ class FourierTransformSpectroscopy():
         except ValueError:
             return False
 
-    def ftsy_load_optical_element_response(self, path):
+    def ftsy_load_optical_element_response(self, path, threshhold=0.1):
         '''
         '''
         if path is None:
@@ -125,29 +125,31 @@ class FourierTransformSpectroscopy():
             for line in bs_file_handle.readlines():
                 element_frequency = line.split(',')[0]
                 element_transmission = line.split(',')[1].strip('\n')
-                if float(element_transmission) > 0.03:
-                    element_frequency_vector.append(float(element_frequency) * 1e9) # GHz
+                element_frequency_vector.append(float(element_frequency) * 1e9) # GHz
+                if float(element_transmission) > threshhold:
                     element_transmission_vector.append(float(element_transmission))
-        element_transmission_vector = np.asarray(element_transmission_vector) / np.max(element_transmission_vector)
+                else:
+                    element_transmission_vector.append(threshhold)
+        element_transmission_vector = np.asarray(element_transmission_vector)
+        #/ np.max(element_transmission_vector)
         return np.asarray(element_frequency_vector), element_transmission_vector
 
     def ftsy_divide_out_optical_element_response(self, frequency_vector, normalized_transmission_vector,
-                                                 optical_element=None, path=None, quick_plot=False, units='GHz'):
+                                                 optical_element=None, path=None, threshhold=0.1):
         '''
         '''
-        element_frequency_vector, element_transmission_vector = self.ftsy_load_optical_element_response(path)
-        print('element', element_frequency_vector, np.max(element_frequency_vector))
+        element_frequency_vector, element_transmission_vector = self.ftsy_load_optical_element_response(path, threshhold)
         #if np.max(frequency_vector) > 1e6:
             #frequency_vector *= 1e-12
         # Make a copy for before and after comparison
         corrected_transmission_vector = copy(normalized_transmission_vector)
-        print(frequency_vector, element_frequency_vector)
-        selector = np.where(frequency_vector > 0)
-        transmission_vector_to_divide = np.interp(np.asarray(frequency_vector)[selector], np.asarray(element_frequency_vector)[selector],
-                                                  np.asarray(element_transmission_vector)[selector])
-        corrected_transmission_vector = normalized_transmission_vector[selector] / transmission_vector_to_divide
+        freq_selector = np.where(frequency_vector > 0)
+        element_freq_selector = np.where(element_frequency_vector < np.max(frequency_vector))
+        #import ipdb;ipdb.set_trace()
+        transmission_vector_to_divide = np.interp(frequency_vector[freq_selector], element_frequency_vector[element_freq_selector], element_transmission_vector[element_freq_selector])
+        corrected_transmission_vector = normalized_transmission_vector[freq_selector] / transmission_vector_to_divide
         normalized_corrected_transmission_vector = corrected_transmission_vector / np.max(corrected_transmission_vector)
-        frequency_vector = frequency_vector[selector]
+        frequency_vector = frequency_vector[freq_selector]
         return frequency_vector, normalized_corrected_transmission_vector
 
     def ftsy_convert_IF_to_FFT_data(self, position_vector, efficiency_vector, mirror_interval,
@@ -203,7 +205,6 @@ class FourierTransformSpectroscopy():
                                                          boltzmann_constant=1.38e-23):
         '''
         '''
-        print(frequency_vector)
         integrated_bandwidth = self.ftsy_integrate_spectra_bandwidth(frequency_vector, normalized_transmission_vector,
                                                                      data_clip_lo=data_clip_lo, data_clip_hi=data_clip_hi)
         delta_power = boltzmann_constant * (t_source_high - t_source_low) * integrated_bandwidth  # in W
@@ -212,7 +213,6 @@ class FourierTransformSpectroscopy():
     def ftsy_integrate_spectra_bandwidth(self, frequency_vector, normalized_transmission_vector, data_clip_lo=0, data_clip_hi=600):
         '''
         '''
-        print(data_clip_lo, data_clip_hi)
         selector = np.logical_and(np.where(frequency_vector > data_clip_lo, True, False), np.where(frequency_vector < data_clip_hi, True, False))
         integrated_bandwidth = np.trapz(normalized_transmission_vector[selector], frequency_vector[selector])
         return integrated_bandwidth
@@ -220,6 +220,8 @@ class FourierTransformSpectroscopy():
     def ftsy_running_mean(self, vector, smoothing_factor=0.01):
         '''
         '''
+        if smoothing_factor == 0.0:
+            return vector
         N = int(smoothing_factor * len(vector))
         averaged_vector = np.zeros(len(vector))
         for i, value in enumerate(vector):
@@ -267,8 +269,6 @@ class FourierTransformSpectroscopy():
         Outputs:
             data_with_first_order_poly_removed
         '''
-        print('fitting poly')
-        print(data)
         x_vector = np.arange(data.size)
         fit_vals = np.polyfit(x_vector, data, n)
         poly_fit = np.polyval(fit_vals, x_vector)
@@ -579,7 +579,7 @@ class BeamSplitter():
         Outputs:
             beam_splitter_response vector: the response of a beam splitter with thickness=thickness
         '''
-        frequency_vector = np.arange(0, 1.5e12, 100e6)
+        frequency_vector = np.arange(0, 1.5e12, 10e6)
         thickness = 2.54e-5 * thickness  # from mils to m
         print('Mylar beam splitter (n={0}) thickness {1} in meters'.format(index, thickness))
         reflectivity = ((index - 1) / (index + 1)) ** 2
@@ -639,15 +639,15 @@ class BeamSplitter():
                 self.save_beam_splitter_efficiency(frequency_vector / 1e9, efficiency_vector, thickness)
             if plot_data:
                 self.plot_beam_splitter_efficiency(frequency_vector / 1e9, efficiency_vector, thickness)
-        freq, band = self.fts.ftsy_load_simulated_band(0, 100e9, 'SO30')
+        #freq, band = self.fts.ftsy_load_simulated_band(0, 100e9, 'SO30')
+        #print(freq, band)
+        #pl.plot(freq, band, label='SO40')
+        #freq, band = self.fts.ftsy_load_simulated_band(0, 100e9, 'SO40')
         print(freq, band)
-        pl.plot(freq, band, label='SO40')
-        freq, band = self.fts.ftsy_load_simulated_band(0, 100e9, 'SO40')
-        print(freq, band)
-        pl.plot(freq, band, label='SO40')
-        pl.xlim((0, 100))
-        pl.legend(loc='best')
-        pl.show()
+        #pl.plot(freq, band, label='SO40')
+        #pl.xlim((0, 100))
+        #pl.legend(loc='best')
+        ##pl.show()
 
 if __name__ == '__main__':
     bs = BeamSplitter()

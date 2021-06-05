@@ -318,6 +318,7 @@ class StanfordResearchSystemsSR830DSP(QtWidgets.QWidget, GuiBuilder):
         '''
         '''
         self.srs_send_command(query)
+        time.sleep(1)
         response = self.serial_com.bs_read()
         return response
 
@@ -331,6 +332,7 @@ class StanfordResearchSystemsSR830DSP(QtWidgets.QWidget, GuiBuilder):
         message = 'Found SRS with ID: '
         message += '{0}'.format(idn)
         self.status_bar.showMessage(message)
+        print(message)
         QtWidgets.QApplication.processEvents()
 
     def srs_zero_lock_in_phase(self):
@@ -346,11 +348,6 @@ class StanfordResearchSystemsSR830DSP(QtWidgets.QWidget, GuiBuilder):
         self.srs_change_lock_in_time_constant(setting=9)
         self.srs_change_lock_in_sensitivity_range(setting=16)
 
-    def srs_change_lock_in_sensitivity_range(self):
-        '''
-        '''
-        direction = self.sender().text().split(' ')[-1]
-        current_value = self.srs_get_current_sensitivity_range()
 
     def srs_change_lock_in_sensitivity_range(self, clicked=True, direction=None, setting=None):
         '''
@@ -374,6 +371,7 @@ class StanfordResearchSystemsSR830DSP(QtWidgets.QWidget, GuiBuilder):
                 new_value = 26
             if new_value < 0:
                 new_value = 0
+            print('SENS {0}'.format(new_value))
             self.srs_send_command('SENS {0}'.format(new_value))
         self.srs_get_current_sensitivity_range()
 
@@ -383,6 +381,8 @@ class StanfordResearchSystemsSR830DSP(QtWidgets.QWidget, GuiBuilder):
         self.status_bar.showMessage('Getting Sensistiviy Range')
         QtWidgets.QApplication.processEvents()
         sensitivity_range_index = self.srs_query('SENS?')
+        print(sensitivity_range_index)
+
         if self.gb_is_float(sensitivity_range_index):
             value = self.sensitivity_range_dict[str(sensitivity_range_index)]['range']
             value *= self.sensitivity_range_dict[str(sensitivity_range_index)]['multiplier']

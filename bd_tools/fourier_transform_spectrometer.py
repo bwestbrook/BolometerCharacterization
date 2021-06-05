@@ -1,4 +1,5 @@
 import time
+import shutil
 import simplejson
 import shutil
 import os
@@ -20,6 +21,7 @@ class FourierTransformSpectrometer(QtWidgets.QWidget, GuiBuilder, FourierTransfo
         super(FourierTransformSpectrometer, self).__init__()
         self.bands = self.ftsy_get_bands()
         self.optical_elements = self.ftsy_get_optical_elements()
+        self.fts_update_samples()
         self.status_bar = status_bar
         self.srs_widget = srs_widget
         self.csm_widget = csm_widget
@@ -41,7 +43,6 @@ class FourierTransformSpectrometer(QtWidgets.QWidget, GuiBuilder, FourierTransfo
         self.y_stds = []
         self.fts_plot()
         self.started = False
-        self.fts_update_samples()
         self.fts_plot_time_stream([0], -1.0, 1.0)
         self.fts_update_sample_name(0)
 
@@ -64,7 +65,8 @@ class FourierTransformSpectrometer(QtWidgets.QWidget, GuiBuilder, FourierTransfo
     def fts_update_sample_name(self, index):
         '''
         '''
-        sample_name = self.samples_settings[str(index + 1)]
+        sample_key = self.sample_select_combobox.currentText()
+        sample_name = self.samples_settings[sample_key]
         self.sample_name_lineedit.setText(sample_name)
 
     def fts_configure_input_panel(self):
@@ -73,79 +75,79 @@ class FourierTransformSpectrometer(QtWidgets.QWidget, GuiBuilder, FourierTransfo
         welcome_header_label = QtWidgets.QLabel('Welcome to FTS', self)
         self.layout().addWidget(welcome_header_label, 0, 0, 1, 2)
         # DAQ (Device + Channel) Selection
-        device_header_label = QtWidgets.QLabel('Device:', self)
-        self.layout().addWidget(device_header_label, 1, 0, 1, 1)
-        self.device_combobox = QtWidgets.QComboBox(self)
-        self.layout().addWidget(self.device_combobox, 1, 1, 1, 1)
+        self.device_combobox = self.gb_make_labeled_combobox(label_text='Device:')
+        self.layout().addWidget(self.device_combobox, 1, 0, 1, 1)
         for device in self.daq_settings:
             self.device_combobox.addItem(device)
-        daq_header_label = QtWidgets.QLabel('DAQ:', self)
-        self.layout().addWidget(daq_header_label, 2, 0, 1, 1)
-        self.daq_combobox = QtWidgets.QComboBox(self)
-        self.layout().addWidget(self.daq_combobox, 2, 1, 1, 1)
+        self.daq_combobox = self.gb_make_labeled_combobox(label_text='DAQ:')
+        self.layout().addWidget(self.daq_combobox, 1, 1, 1, 1)
         for channel in sorted([int(x) for x in self.daq_settings[device]]):
             self.daq_combobox.addItem(str(channel))
-        self.int_time_lineedit = self.gb_make_labeled_lineedit(label_text='Int Time (ms): ')
-        self.int_time_lineedit.setText('500')
-        self.layout().addWidget(self.int_time_lineedit, 3, 0, 1, 1)
-        self.sample_rate_lineedit = self.gb_make_labeled_lineedit(label_text='Sample Rate (Hz): ')
-        self.sample_rate_lineedit.setText('5000')
-        self.layout().addWidget(self.sample_rate_lineedit, 3, 1, 1, 1)
+        #Step size (Fixed for Bill's FTS right now)
+        self.distance_per_step_combobox = self.gb_make_labeled_combobox(label_text='Distance Per Step (nm):')
+        for distance_per_step in ['250.39']:
+            self.distance_per_step_combobox.addItem(distance_per_step)
+        self.distance_per_step_combobox.activated.connect(self.fts_update_scan_params)
+        self.layout().addWidget(self.distance_per_step_combobox, 2, 0, 1, 1)
         # Stepper Motor Selection
-        self.stepper_motor_label = self.gb_make_labeled_label(label_text = 'Stepper Motor:')
-        self.stepper_motor_label = QtWidgets.QLabel(self.csm_widget.com_port, self)
-        self.layout().addWidget(self.stepper_motor_label, 4, 0, 1, 1)
+        if hasattr(self.csm_widget, 'com_port'):
+            self.stepper_motor_label = QtWidgets.QLabel(self.csm_widget.com_port, self)
+        else:
+            self.stepper_motor_label = QtWidgets.QLabel('None', self)
+        self.layout().addWidget(self.stepper_motor_label, 3, 0, 1, 1)
         self.stepper_settings_label = self.gb_make_labeled_label(label_text = 'Stepper Settings:')
-        self.layout().addWidget(self.stepper_settings_label, 5, 0, 1, 1)
+        self.layout().addWidget(self.stepper_settings_label, 3, 1, 1, 1)
         ######
         # Scan Params
         ######
-        #Pause Time 
-        self.pause_time_lineedit = self.gb_make_labeled_lineedit(label_text='Pause Time (ms):')
-        self.pause_time_lineedit.setText('700')
-        self.pause_time_lineedit.setValidator(QtGui.QIntValidator(0, 25000, self.pause_time_lineedit))
-        self.layout().addWidget(self.pause_time_lineedit, 6, 0, 1, 1)
         #Start Scan
         self.start_position_lineedit = self.gb_make_labeled_lineedit(label_text='Start Position:')
         self.start_position_lineedit.setText('-300000')
         self.start_position_lineedit.setValidator(QtGui.QIntValidator(-600000, 0, self.start_position_lineedit))
         self.start_position_lineedit.textChanged.connect(self.fts_update_scan_params)
-        self.layout().addWidget(self.start_position_lineedit, 7, 0, 1, 1)
+        self.layout().addWidget(self.start_position_lineedit, 5, 0, 1, 1)
         #End Scan
         self.end_position_lineedit = self.gb_make_labeled_lineedit(label_text='End Position:')
         self.end_position_lineedit.setValidator(QtGui.QIntValidator(0, 300000, self.end_position_lineedit))
         self.end_position_lineedit.setText('300000')
         self.end_position_lineedit.textChanged.connect(self.fts_update_scan_params)
-        self.layout().addWidget(self.end_position_lineedit, 8, 0, 1, 1)
+        self.layout().addWidget(self.end_position_lineedit, 5, 1, 1, 1)
         #Mirror Interval 
         self.mirror_interval_lineedit = self.gb_make_labeled_lineedit(label_text='Mirror Interval (steps):')
         self.mirror_interval_lineedit.setText('500')
         self.mirror_interval_lineedit.textChanged.connect(self.fts_update_scan_params)
         self.mirror_interval_lineedit.setValidator(QtGui.QIntValidator(1, 200000, self.mirror_interval_lineedit))
-        self.layout().addWidget(self.mirror_interval_lineedit, 9, 0, 1, 1)
-        #Step size (Fixed for Bill's FTS right now)
-        distance_per_step_header_label = QtWidgets.QLabel('Distance Per Step (nm):', self)
-        self.layout().addWidget(distance_per_step_header_label, 10, 0, 1, 1)
-        self.distance_per_step_combobox = QtWidgets.QComboBox(self)
-        for distance_per_step in ['250.39']:
-            self.distance_per_step_combobox.addItem(distance_per_step)
-        self.distance_per_step_combobox.activated.connect(self.fts_update_scan_params)
-        self.layout().addWidget(self.distance_per_step_combobox, 10, 1, 1, 1)
+        self.layout().addWidget(self.mirror_interval_lineedit, 6, 0, 1, 1)
+        #Pause Time 
+        self.pause_time_lineedit = self.gb_make_labeled_lineedit(label_text='Pause Time (ms):')
+        self.pause_time_lineedit.setText('700')
+        self.pause_time_lineedit.setValidator(QtGui.QIntValidator(0, 25000, self.pause_time_lineedit))
+        self.layout().addWidget(self.pause_time_lineedit, 6, 1, 1, 1)
+        #Int Time 
+        self.int_time_lineedit = self.gb_make_labeled_lineedit(label_text='Int Time (ms): ')
+        self.int_time_lineedit.setText('500')
+        self.layout().addWidget(self.int_time_lineedit, 7, 0, 1, 1)
+        #Sample Rate 
+        self.sample_rate_lineedit = self.gb_make_labeled_lineedit(label_text='Sample Rate (Hz): ')
+        self.sample_rate_lineedit.setText('5000')
+        self.layout().addWidget(self.sample_rate_lineedit, 7, 1, 1, 1)
+        # Zero Lockin
+        self.zero_lock_in_checkbox = QtWidgets.QCheckBox('Zero Lock in?', self)
+        self.layout().addWidget(self.zero_lock_in_checkbox, 8, 0, 1, 1)
+        self.zero_lock_in_checkbox.setChecked(True)
         #Scan Info size
         self.scan_info_label = QtWidgets.QLabel('Scan Info', self)
-        self.layout().addWidget(self.scan_info_label, 11, 1, 1, 1)
+        self.layout().addWidget(self.scan_info_label, 11, 0, 1, 2)
         self.fts_update_scan_params()
         self.sample_select_combobox = self.gb_make_labeled_combobox(label_text='Sample Select:')
         self.layout().addWidget(self.sample_select_combobox, 12, 0, 1, 1)
-        for i in range(6):
-            self.sample_select_combobox.addItem(str(i + 1))
+        for sample in self.samples_settings:
+            self.sample_select_combobox.addItem(sample)
         self.sample_select_combobox.activated.connect(self.fts_update_sample_name)
         self.sample_name_lineedit = self.gb_make_labeled_lineedit(label_text='Sample Name:')
         self.layout().addWidget(self.sample_name_lineedit, 12, 1, 1, 1)
-        # Zero Lockin
-        self.zero_lock_in_checkbox = QtWidgets.QCheckBox('Zero Lock in?', self)
-        self.layout().addWidget(self.zero_lock_in_checkbox, 13, 0, 1, 1)
-        self.zero_lock_in_checkbox.setChecked(True)
+        self.notes_lineedit = self.gb_make_labeled_lineedit(label_text='Notes:')
+        self.layout().addWidget(self.notes_lineedit, 13, 0, 1, 2)
         ######
         # Control Buttons 
         ######
@@ -167,11 +169,11 @@ class FourierTransformSpectrometer(QtWidgets.QWidget, GuiBuilder, FourierTransfo
         '''
         self.int_spec_plot_label = QtWidgets.QLabel('', self)
         self.int_spec_plot_label.setAttribute(QtCore.Qt.WA_TranslucentBackground)
-        self.layout().addWidget(self.int_spec_plot_label, 0, 4, 7, 2)
+        self.layout().addWidget(self.int_spec_plot_label, 0, 4, 7, 3)
         # Time stream 
         self.time_stream_plot_label = QtWidgets.QLabel('', self)
         self.time_stream_plot_label.setAttribute(QtCore.Qt.WA_TranslucentBackground)
-        self.layout().addWidget(self.time_stream_plot_label, 7, 4, 5, 2)
+        self.layout().addWidget(self.time_stream_plot_label, 7, 4, 5, 3)
         # Mean 
         self.data_mean_label = QtWidgets.QLabel('Data Mean (V):', self)
         self.layout().addWidget(self.data_mean_label, 12, 4, 1, 1)
@@ -187,10 +189,21 @@ class FourierTransformSpectrometer(QtWidgets.QWidget, GuiBuilder, FourierTransfo
         self.optical_element_active_checkbox.clicked.connect(self.fts_update_active_optical_elements)
         self.layout().addWidget(self.optical_element_active_checkbox, 13, 5, 1, 1)
         self.bands_combobox = self.gb_make_labeled_combobox(label_text='Detector Band')
+        self.divide_elements_checkbox = QtWidgets.QCheckBox('Divide Optical Elements?')
+        self.layout().addWidget(self.divide_elements_checkbox, 14, 5, 1, 1)
+        self.divide_elements_checkbox.clicked.connect(self.fts_plot)
+        # Smoothing Factor
         self.smoothing_factor_lineedit = self.gb_make_labeled_lineedit(label_text='Smoothing Factor:')
         self.smoothing_factor_lineedit.setText('0.01')
+        self.smoothing_factor_lineedit.setValidator(QtGui.QDoubleValidator(0, 1, 3, self.smoothing_factor_lineedit))
         self.smoothing_factor_lineedit.returnPressed.connect(self.fts_plot)
-        self.layout().addWidget(self.smoothing_factor_lineedit, 14, 5, 1, 1)
+        self.layout().addWidget(self.smoothing_factor_lineedit, 15, 4, 1, 1)
+        # Element Division Threshold 
+        self.element_division_threshhold_lineedit = self.gb_make_labeled_lineedit(label_text='Element Division Threshhold:')
+        self.element_division_threshhold_lineedit.setText('0.1')
+        self.element_division_threshhold_lineedit.setValidator(QtGui.QDoubleValidator(0, 1, 3, self.element_division_threshhold_lineedit))
+        self.element_division_threshhold_lineedit.returnPressed.connect(self.fts_plot)
+        self.layout().addWidget(self.element_division_threshhold_lineedit, 15, 5, 1, 1)
         for band in self.bands:
             self.bands_combobox.addItem(band)
         self.layout().addWidget(self.bands_combobox, 14, 4, 1, 1)
@@ -199,19 +212,48 @@ class FourierTransformSpectrometer(QtWidgets.QWidget, GuiBuilder, FourierTransfo
         self.data_clip_lo_lineedit.setValidator(QtGui.QIntValidator(0, 25000, self.data_clip_lo_lineedit))
         self.data_clip_lo_lineedit.returnPressed.connect(self.fts_plot)
         self.data_clip_lo_lineedit.setText('0.0')
-        self.layout().addWidget(self.data_clip_lo_lineedit, 15, 4, 1, 1)
+        self.layout().addWidget(self.data_clip_lo_lineedit, 16, 4, 1, 1)
         self.data_clip_hi_lineedit = self.gb_make_labeled_lineedit(label_text='Data Clip Hi (GHz):')
         self.data_clip_hi_lineedit.setValidator(QtGui.QIntValidator(0, 25000, self.data_clip_hi_lineedit))
         self.data_clip_hi_lineedit.returnPressed.connect(self.fts_plot)
         self.data_clip_hi_lineedit.setText('600.0')
-        self.layout().addWidget(self.data_clip_hi_lineedit, 15, 5, 1, 1)
-        self.voltage_bias_lineedit = self.gb_make_labeled_lineedit(label_text='Bias Voltage (uV):')
+        self.layout().addWidget(self.data_clip_hi_lineedit, 16, 5, 1, 1)
+        self.voltage_bias_lineedit = self.gb_make_labeled_lineedit(label_text='TES Bias Voltage (uV):')
         self.voltage_bias_lineedit.setValidator(QtGui.QDoubleValidator(0, 25000, 3, self.voltage_bias_lineedit))
-        self.layout().addWidget(self.voltage_bias_lineedit, 16, 4, 1, 1)
+        self.layout().addWidget(self.voltage_bias_lineedit, 17, 4, 1, 1)
+        # Source Type
+        self.source_type_combobox = self.gb_make_labeled_combobox(label_text='Soure Type')
+        for source in ['NA', 'Heater']:
+            self.source_type_combobox.addItem(source)
+        self.layout().addWidget(self.source_type_combobox, 13, 6, 1, 1)
+        self.source_type_combobox.activated.connect(self.fts_update_heater_type)
+        self.source_type_combobox.setCurrentIndex(-1)
+        self.source_type_combobox.setCurrentIndex(0)
+        # Heater Voltage 
         self.heater_voltage_lineedit = self.gb_make_labeled_lineedit(label_text='Heater Voltage (V):')
         self.heater_voltage_lineedit.setValidator(QtGui.QDoubleValidator(0, 150, 2, self.heater_voltage_lineedit))
-        self.layout().addWidget(self.heater_voltage_lineedit, 16, 5, 1, 1)
+        self.layout().addWidget(self.heater_voltage_lineedit, 14, 6, 1, 1)
+        # Source Power Voltage 
+        self.source_power_lineedit = self.gb_make_labeled_lineedit(label_text='Source Power (dBm):')
+        self.source_power_lineedit.setValidator(QtGui.QDoubleValidator(-1e6, 1e3, 2, self.source_power_lineedit))
+        self.layout().addWidget(self.source_power_lineedit, 15, 6, 1, 1)
+        # Source Frequency 
+        self.source_frequency_lineedit = self.gb_make_labeled_lineedit(label_text='Source Frequency (GHz):')
+        #self.source_frequency_lineedit.setValidator(QtGui.QDoubleValidator(0, 1500, 2, self.source_frequency_lineedit))
+        self.layout().addWidget(self.source_frequency_lineedit, 16, 6, 1, 1)
 
+    def fts_update_heater_type(self):
+        '''
+        '''
+        source_type = self.source_type_combobox.currentText()
+        if source_type == 'Heater':
+            self.heater_voltage_lineedit.setDisabled(False)
+            self.source_power_lineedit.setDisabled(True)
+            self.source_frequency_lineedit.setDisabled(True)
+        else:
+            self.heater_voltage_lineedit.setDisabled(True)
+            self.source_power_lineedit.setDisabled(False)
+            self.source_frequency_lineedit.setDisabled(False)
     def fts_show_active_optical_elements(self):
         '''
         '''
@@ -285,10 +327,11 @@ class FourierTransformSpectrometer(QtWidgets.QWidget, GuiBuilder, FourierTransfo
         QtWidgets.QApplication.processEvents()
         sm_settings_str = ''
         #self.scan_settings_dict.update(self.csm_widget.stepper_settings_dict)
-        for setting, value in self.csm_widget.stepper_settings_dict.items():
-            sm_settings_str += ' '.join([x.title() for x in setting.split('_')])
-            sm_settings_str += ' {0} ::: '.format(value)
-        self.stepper_settings_label.setText(sm_settings_str)
+        if hasattr(self.csm_widget, 'stepper_settings_dict'):
+            for setting, value in self.csm_widget.stepper_settings_dict.items():
+                sm_settings_str += ' '.join([x.title() for x in setting.split('_')])
+                sm_settings_str += ' {0} ::: '.format(value)
+            self.stepper_settings_label.setText(sm_settings_str)
 
     def fts_start_stop_scan(self):
         '''
@@ -311,6 +354,8 @@ class FourierTransformSpectrometer(QtWidgets.QWidget, GuiBuilder, FourierTransfo
     def fts_scan(self):
         '''
         '''
+        if self.csm_widget is None:
+            return None
         start = self.scan_settings_dict['start']
         end = self.scan_settings_dict['end']
         mirror_interval = self.scan_settings_dict['mirror_interval']
@@ -410,12 +455,10 @@ class FourierTransformSpectrometer(QtWidgets.QWidget, GuiBuilder, FourierTransfo
         '''
         if_save_path = self.fts_index_file_name()
         if_save_path = QtWidgets.QFileDialog.getSaveFileName(self, 'Data Save Location', if_save_path)[0]
-        fft_save_path = if_save_path.replace('if', 'fft')
-        ss_save_path = if_save_path.replace('.if', '_meta.png')
-        screen = QtWidgets.QApplication.primaryScreen()
-        screenshot = screen.grabWindow(self.winId())
-        screenshot.save(ss_save_path, 'png')
         if len(if_save_path) > 0:
+            self.gb_save_meta_data(if_save_path, 'if')
+            fft_save_path = if_save_path.replace('if', 'fft')
+            ss_save_path = if_save_path.replace('.if', '_meta.png')
             mirror_interval = self.scan_settings_dict['mirror_interval']
             with open(if_save_path, 'w') as if_save_handle:
                 for i, x_data in enumerate(self.x_data):
@@ -441,6 +484,7 @@ class FourierTransformSpectrometer(QtWidgets.QWidget, GuiBuilder, FourierTransfo
         '''
         '''
         if_save_path = QtWidgets.QFileDialog.getOpenFileName(self, 'Select IF data', '.if')[0]
+        self.gb_load_meta_data(if_save_path, 'if')
         self.x_data, self.x_stds, self.y_data, self.y_stds = [], [], [], []
         with open(if_save_path, 'r') as fh:
             lines = fh.readlines()
@@ -487,45 +531,48 @@ class FourierTransformSpectrometer(QtWidgets.QWidget, GuiBuilder, FourierTransfo
         if len(self.sample_name_lineedit.text()) > 0:
             title += ': {0}'.format(self.sample_name_lineedit.text())
         ax1.set_title(title, fontsize=12)
+        label = None
         if len(self.x_data) > 10:
             fft_freq_vector, fft_vector, phase_corrected_fft_vector, position_vector, efficiency_vector = self.ftsy_convert_IF_to_FFT_data(self.x_data, self.y_data, mirror_interval, data_selector='All')
             ax1.errorbar(self.x_data, self.y_data, yerr=self.y_stds, marker='.', linestyle='-')
-            selector = np.logical_and(0 < fft_freq_vector, fft_freq_vector < data_clip_hi)
             normalized_phase_corrected_fft_vector = np.abs(phase_corrected_fft_vector.real)
             normalized_phase_corrected_fft_vector = np.abs(phase_corrected_fft_vector.real / np.max(phase_corrected_fft_vector.real))
             normalized_phase_corrected_fft_vector = self.ftsy_running_mean(normalized_phase_corrected_fft_vector, smoothing_factor=smoothing_factor)
             if len(band) > 0:
-                selector = fft_frequency_vector_simulated < data_clip_hi * 1e-9
-                integrated_bandwidth = np.trapz(fft_vector_simulated[selector], fft_vector_simulated[selector] * 1e9)
+                sim_selector = np.where(fft_frequency_vector_simulated < data_clip_hi * 1e-9)
+                integrated_bandwidth = np.trapz(fft_vector_simulated[sim_selector], fft_vector_simulated[sim_selector] * 1e9)
                 label = 'HFSS BW {0:.2f} GHz '.format(integrated_bandwidth)
-                ax2.plot(fft_frequency_vector_simulated, fft_vector_simulated, label=label)
-            ax2, fft_freq_vector, normalized_phase_corrected_fft_vector = self.fts_plot_optical_elements(ax2, fft_freq_vector, normalized_phase_corrected_fft_vector)
-            selector = np.logical_and(0 < fft_freq_vector, fft_freq_vector < data_clip_hi)
-            ax2.errorbar(fft_freq_vector[selector] * 1e-9, normalized_phase_corrected_fft_vector[selector], marker='.', linestyle='-', label='FFT')
-            max_idx = np.argmax(normalized_phase_corrected_fft_vector[selector]) + 1
+                ax2.plot(fft_frequency_vector_simulated[sim_selector], fft_vector_simulated[sim_selector], label=label)
+            data_selector = np.logical_and(data_clip_lo < fft_freq_vector, fft_freq_vector < data_clip_hi)
+            ax2, fft_freq_vector, normalized_phase_corrected_fft_vector = self.fts_plot_and_divide_optical_elements(ax2, fft_freq_vector[data_selector], normalized_phase_corrected_fft_vector[data_selector])
+            ax2.errorbar(fft_freq_vector * 1e-9, normalized_phase_corrected_fft_vector , marker='.', linestyle='-', label='FFT')
+            max_idx = np.argmax(normalized_phase_corrected_fft_vector)
             max_freq = fft_freq_vector[max_idx]
-            integrated_bandwidth = np.trapz(normalized_phase_corrected_fft_vector[selector], fft_freq_vector[selector])
+            integrated_bandwidth = np.trapz(normalized_phase_corrected_fft_vector, fft_freq_vector)
             label = 'Peak/BW {0:.2f}/{1:.2f} GHz'.format(max_freq * 1e-9, integrated_bandwidth * 1e-9)
-
             ax2.errorbar(max_freq * 1e-9, normalized_phase_corrected_fft_vector[max_idx], marker='*', markersize=3, label=label)
-        ax1.errorbar(self.x_data, self.y_data, yerr=self.y_stds, marker='.', linestyle='-')
-        pl.legend()
+        ax1.errorbar(self.x_data, self.y_data, yerr=self.y_stds, marker='.', linestyle='-', label=label)
+        #[:pl.legend()
         temp_png_path = os.path.join('temp_files', 'temp_combo.png')
         fig.savefig(temp_png_path, transparent=True)
         image_to_display = QtGui.QPixmap(temp_png_path)
         self.int_spec_plot_label.setPixmap(image_to_display)
 
-    def fts_plot_optical_elements(self, ax, frequency_vector, normalized_transmission_vector):
+    def fts_plot_and_divide_optical_elements(self, ax, frequency_vector, normalized_transmission_vector):
         '''
         '''
         data_clip_lo = float(self.data_clip_lo_lineedit.text()) * 1e9
         data_clip_hi = float(self.data_clip_hi_lineedit.text()) * 1e9
+        threshhold = float(self.element_division_threshhold_lineedit.text())
+        divide_elements = self.divide_elements_checkbox.isChecked()
         for optical_element in self.optical_elements:
             active = self.optical_elements[optical_element]['Active']
             path = self.optical_elements[optical_element]['Path']
             if active and not self.started:
                 element_frequency_vector, element_transmission_vector = self.ftsy_load_optical_element_response(path)
-                frequency_vector, normalized_transmission_vector = self.ftsy_divide_out_optical_element_response(frequency_vector, normalized_transmission_vector, optical_element, path)
+                if divide_elements:
+                    frequency_vector, normalized_transmission_vector = self.ftsy_divide_out_optical_element_response(frequency_vector, normalized_transmission_vector,
+                                                                                                                     optical_element, path, threshhold=threshhold)
                 selector = np.logical_and(data_clip_lo < np.asarray(element_frequency_vector), np.asarray(element_frequency_vector) < data_clip_hi)
                 ax.plot(np.asarray(element_frequency_vector)[selector] * 1e-9, np.asarray(element_transmission_vector)[selector], label=optical_element)
         return ax, frequency_vector, normalized_transmission_vector
