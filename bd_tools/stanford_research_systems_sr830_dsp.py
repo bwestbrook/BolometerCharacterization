@@ -340,6 +340,17 @@ class StanfordResearchSystemsSR830DSP(QtWidgets.QWidget, GuiBuilder):
         '''
         self.srs_send_command('APHS')
 
+    def srs_get_ttl_frequency(self):
+        '''
+        '''
+        ttl_freq = self.srs_query('FREQ?')
+        return ttl_freq
+
+    def srs_set_ttl_frequency(self, frequency=15.0):
+        '''
+        '''
+        self.srs_send_command('FREQ {0:.2f}'.format(frequency))
+
     def srs_set_bolo_daq_defaults(self):
         '''
         This sets the sensitivtiy to be fairly high and the time constnat to be 300ms
@@ -347,7 +358,6 @@ class StanfordResearchSystemsSR830DSP(QtWidgets.QWidget, GuiBuilder):
 
         self.srs_change_lock_in_time_constant(setting=9)
         self.srs_change_lock_in_sensitivity_range(setting=16)
-
 
     def srs_change_lock_in_sensitivity_range(self, clicked=True, direction=None, setting=None):
         '''

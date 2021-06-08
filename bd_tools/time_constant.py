@@ -8,12 +8,14 @@ from datetime import datetime
 from pprint import pprint
 from bd_lib.bolo_daq import BoloDAQ
 from PyQt5 import QtCore, QtGui, QtWidgets
+from bd_lib.time_constant_lib import TimeConstantLib
 from GuiBuilder.gui_builder import GuiBuilder, GenericClass
 
 class TimeConstant(QtWidgets.QWidget, GuiBuilder):
 
     def __init__(self, daq_settings, status_bar, screen_resolution, monitor_dpi, srs_widget):
         super(TimeConstant, self).__init__()
+        self.tcl = TimeConstantLib()
         self.srs_widget = srs_widget
         self.status_bar = status_bar
         self.daq_settings = daq_settings
@@ -23,6 +25,11 @@ class TimeConstant(QtWidgets.QWidget, GuiBuilder):
         grid = QtWidgets.QGridLayout()
         self.setLayout(grid)
         self.tc_input_panel()
+        self.tc_update_frequencies()
+        self.y_data = np.zeros(len(self.frequency_vector))
+        self.y_err = np.zeros(len(self.frequency_vector))
+        self.tc_plot()
+        QtWidgets.QApplication.processEvents()
 
     def tc_input_panel(self):
         '''
@@ -60,7 +67,7 @@ class TimeConstant(QtWidgets.QWidget, GuiBuilder):
         self.layout().addWidget(self.sample_rate_lineedit, 4, 2, 1, 1)
         #Frequency Range
         self.spacing_type_combobox = self.gb_make_labeled_combobox(label_text='Frequency Spacing Type:')
-        for spacing_type in ['Log', 'Linear']:
+        for spacing_type in ['Linear', 'Log']:
             self.spacing_type_combobox.addItem(spacing_type)
         self.layout().addWidget(self.spacing_type_combobox, 5, 0, 1, 1)
         self.start_frequency_lineedit = self.gb_make_labeled_lineedit(label_text='Start Frequency (Hz):')
@@ -73,7 +80,7 @@ class TimeConstant(QtWidgets.QWidget, GuiBuilder):
         self.layout().addWidget(self.end_frequency_lineedit, 5, 2, 1, 1)
         self.n_points_lineedit = self.gb_make_labeled_lineedit(label_text='N Points:')
         self.n_points_lineedit.setValidator(QtGui.QIntValidator(0, 100, self.n_points_lineedit))
-        self.n_points_lineedit.setText('15')
+        self.n_points_lineedit.setText('8')
         self.layout().addWidget(self.n_points_lineedit, 5, 3, 1, 1)
         self.n_points_lineedit.textChanged.connect(self.tc_update_frequencies)
         self.start_frequency_lineedit.textChanged.connect(self.tc_update_frequencies)
@@ -82,13 +89,17 @@ class TimeConstant(QtWidgets.QWidget, GuiBuilder):
         # Control Buttons
         self.start_pushbutton = QtWidgets.QPushButton('Start', self)
         self.start_pushbutton.clicked.connect(self.tc_start)
-        self.layout().addWidget(self.start_pushbutton, 12, 0, 1, 4)
+        self.layout().addWidget(self.start_pushbutton, 6, 0, 1, 4)
         self.save_pushbutton = QtWidgets.QPushButton('Save', self)
         self.save_pushbutton.clicked.connect(self.tc_save)
-        self.layout().addWidget(self.save_pushbutton, 13, 0, 1, 4)
+        self.layout().addWidget(self.save_pushbutton, 7, 0, 1, 4)
         self.load_pushbutton = QtWidgets.QPushButton('Load', self)
         self.load_pushbutton.clicked.connect(self.tc_load)
-        self.layout().addWidget(self.load_pushbutton, 14, 0, 1, 4)
+        self.layout().addWidget(self.load_pushbutton, 8, 0, 1, 4)
+        # Plotting 
+        self.plot_data_label = QtWidgets.QLabel('', self)
+        self.layout().addWidget(self.plot_data_label, 0, 4, 8, 1)
+        self.device_combobox.setCurrentIndex(0)
 
     #######################
     # Data Taking 
@@ -103,82 +114,63 @@ class TimeConstant(QtWidgets.QWidget, GuiBuilder):
         n_points = int(self.n_points_lineedit.text())
         if spacing_type == 'Linear':
             frequency_vector = np.linspace(start_frequency, end_frequency, n_points)
-            self.start_frequency_lineedit.setLabelText('Start Frequency (Hz)')
-            self.end_frequency_lineedit.setLabelText('End Frequency (Hz)')
-            self.n_points_lineedit.setText('15')
+            self.start_frequency_lineedit.setDisabled(False)
+            self.end_frequency_lineedit.setDisabled(False)
         else:
-            self.start_frequency_lineedit.setLabelText('Lowest Power of 2:')
-            self.start_frequency_lineedit.setText('0')
-            self.end_frequency_lineedit.setLabelText('Highest Power of 2:')
-            self.start_frequency_lineedit.setText('8')
-            self.n_points_lineedit.setText('8')
-            frequency_vector = np.logspace(start_frequency, end_frequency, num=n_points, base=2)
-        print(frequency_vector)
+            self.start_frequency_lineedit.setDisabled(True)
+            self.end_frequency_lineedit.setDisabled(True)
+            frequency_vector = np.zeros(n_points)
+            for i in range(n_points):
+                frequency_vector[i] = 2 ** i
+        self.frequency_vector = frequency_vector
         return frequency_vector
 
     def tc_get_scan_range(self):
         '''
         '''
 
-    def tc_save(self):
-        '''
-        '''
-        print('save')
 
     def tc_start(self):
         '''
         '''
-        print('start')
+        int_time = float(self.int_time_lineedit.text())
+        pause_time = float(self.pause_time_lineedit.text())
+        int_time = float(self.int_time_lineedit.text())
+        sample_rate = float(self.sample_rate_lineedit.text())
+        device = self.device_combobox.currentText()
+        signal_channel = self.daq_combobox.currentText()
+        signal_channels = [signal_channel]
+        daq = BoloDAQ(signal_channels=signal_channels,
+                      int_time=int_time,
+                      sample_rate=sample_rate,
+                      device=device)
+        self.tc_update_frequencies()
+        self.y_data = np.zeros(len(self.frequency_vector))
+        self.y_err = np.zeros(len(self.frequency_vector))
+        for i, frequency in enumerate(self.frequency_vector):
+            self.srs_widget.srs_set_ttl_frequency(frequency)
+            act_frequency = self.srs_widget.srs_get_ttl_frequency()
+            self.srs_widget.srs_zero_lock_in_phase()
+            time.sleep(pause_time * 1e-3) # in s
+            data_dict = daq.run()
+            self.y_data[i] = data_dict[signal_channel]['mean']
+            self.y_err[i] = data_dict[signal_channel]['std']
+            self.tc_plot()
+            QtWidgets.QApplication.processEvents()
 
-    def tc_load(self):
+    def tc_plot(self):
         '''
         '''
-        print('load')
-
-    def tc_plot_tau_data_point(self, ydata):
-        '''
-        '''
-        integration_time = int(float(str(getattr(self, '_time_constant_popup_daq_integration_time_combobox').currentText())))
-        sample_rate = int(float(str(getattr(self, '_time_constant_popup_daq_sample_rate_combobox').currentText())))
-        fig, ax = self.bd_create_blank_fig()
-        ax.plot(ydata)
-        ax.set_ylabel('Channel Voltage Output (V)')
-        ax.set_xlabel('Time (ms)')
-        temp_tau_save_path = './temp_files/temp_tau_data_point.png'
-        fig.savefig(temp_tau_save_path)
-        image_to_display = QtGui.QPixmap(temp_tau_save_path)
-        getattr(self, '_time_constant_popup_data_point_monitor_label').setPixmap(image_to_display)
-
-    def tc_delete_last_point(self):
-        if not hasattr(self, 'raw_data_path'):
-            self.gb_quick_message(msg='Please set a data Path First')
-        else:
-            if os.path.exists(self.raw_data_path[0]):
-                with open(self.raw_data_path[0], 'r') as data_handle:
-                    existing_lines = data_handle.readlines()
-            if len(existing_lines) == 0:
-                self.gb_quick_message(msg='You must take at least one data point to delete the last one!')
-            else:
-                with open(self.raw_data_path[0], 'w') as data_handle:
-                    for line in existing_lines[:-1]:
-                        data_handle.write(line)
-                self.plot_time_constant()
-
-    def tc_clear_time_constant_data(self):
-        self.plot_tau_data_point([])
-        self.plot_time_constant(real_data=False)
-        delattr(self, 'raw_data_path')
-
-    def tc_get_params_from_time_constant(self):
-        squid = str(getattr(self, '_time_constant_popup_squid_select_combobox').currentText())
-        label = str(getattr(self, '_time_constant_popup_sample_name_lineedit').text())
-        signal_voltage = str(getattr(self, '_time_constant_popup_signal_voltage_lineedit').text())
-        voltage_bias = str(getattr(self, '_time_constant_popup_voltage_bias_lineedit').text())
-        frequency = str(getattr(self, '_time_constant_popup_frequency_select_combobox').currentText())
-        return {'squid': squid, 'voltage_bias': voltage_bias,
-                'signal_voltage': signal_voltage, 'label': label,
-                'frequency': frequency}
-
+        fig, ax = self.tc_create_blank_fig(left=0.2)
+        ax.errorbar(self.frequency_vector, self.y_data, yerr=self.y_err, ms=3, label='TES response')
+        ax.plot(0, 0, '-', label='Fit')
+        ax.set_xlabel('Frequency (Hz)',fontsize=14)
+        ax.set_ylabel('TES Response',fontsize=14)
+        pl.legend()
+        temp_png_path = 'temp_tc.png'
+        fig.savefig(temp_png_path)
+        image_to_display = QtGui.QPixmap(temp_png_path)
+        self.plot_data_label.setPixmap(image_to_display)
 
     def tc_take_time_constant_data_point(self):
         if hasattr(self, 'raw_data_path') and self.raw_data_path is not None:
@@ -214,7 +206,33 @@ class TimeConstant(QtWidgets.QWidget, GuiBuilder):
             self.plot_time_constant()
 
     #######################
-    # Saving and Plotting
+    # Loading and Saving
+    ######################
+
+    def tc_load(self, path):
+        '''
+        '''
+        with open(path, 'r') as fh:
+            freq_vector, amp_vector, error_vector = [],[],[]
+            for line in fh.readlines():
+                split_line = line.split('\t')
+                freq = float(split_line[0])
+                amp = float(split_line[1])
+                error = float(split_line[2].replace('\n', ''))
+                print(freq, amp, error)
+                freq_vector.append(freq)
+                amp_vector.append(amp)
+                error_vector.append(error)
+        return freq_vector, amp_vector, error_vector
+
+    def tc_save(self):
+        '''
+        '''
+        print('save')
+
+
+    #######################
+    # Plotting
     ######################
 
     def tc_save(self):
@@ -265,4 +283,22 @@ class TimeConstant(QtWidgets.QWidget, GuiBuilder):
             ax.plot(0.0, 0.0, color=color, alpha=0.7, label=label)
             fig.savefig('./blank_fig.png')
             image_to_display = QtGui.QPixmap('./blank_fig.png')
+
+    def tc_create_blank_fig(self, frac_screen_width=0.5, frac_screen_height=0.8,
+                            left=0.08, right=0.98, top=0.95, bottom=0.08,
+                            hspace=0.1, wspace=0.02, n_axes=1, aspect=None):
+        if frac_screen_width is None and frac_screen_height is None:
+            fig = pl.figure()
+        else:
+            width = (frac_screen_width * self.screen_resolution.width()) / self.monitor_dpi
+            height = (frac_screen_height * self.screen_resolution.height()) / self.monitor_dpi
+            fig = pl.figure(figsize=(width, height))
+        fig.subplots_adjust(left=left, right=right, top=top, bottom=bottom, hspace=hspace, wspace=wspace)
+        if n_axes == 2:
+            ax1 = fig.add_subplot(211, label='int')
+            ax2 = fig.add_subplot(212, label='spec')
+            return fig, ax1, ax2
+        else:
+            ax = fig.add_subplot(111)
+            return fig, ax
             getattr(self, '_time_constant_popup_all_data_monitor_label').setPixmap(image_to_display)
