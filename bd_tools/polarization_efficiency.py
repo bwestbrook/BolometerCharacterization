@@ -69,14 +69,10 @@ class PolarizationEfficiency(QtWidgets.QWidget, GuiBuilder):
         '''
         '''
         sample_key = self.sample_name_combobox.currentText()
-        sample_name = self.samples_settings[sample_key]
-        self.sample_name_lineedit.setText(sample_name)
 
     def pe_configure_input_panel(self):
         '''
         '''
-        if self.csm_widget is None:
-            return None
         welcome_header_label = QtWidgets.QLabel('Welcome to Polarization Efficiency', self)
         welcome_header_label.setFixedWidth(0.3 * self.screen_resolution.width())
         self.layout().addWidget(welcome_header_label, 0, 0, 1, 2)
@@ -102,12 +98,13 @@ class PolarizationEfficiency(QtWidgets.QWidget, GuiBuilder):
         self.sample_rate_lineedit.setText('5000')
         self.sample_rate_lineedit.setValidator(QtGui.QIntValidator(0, 25000, self.sample_rate_lineedit))
         # Stepper Motor Selection
-        stepper_motor_header_label = QtWidgets.QLabel('Stepper Motor:', self)
-        self.layout().addWidget(stepper_motor_header_label, 4, 0, 1, 1)
-        self.stepper_motor_label = QtWidgets.QLabel(self.csm_widget.com_port, self)
-        self.layout().addWidget(self.stepper_motor_label, 4, 1, 1, 1)
-        self.stepper_settings_label = QtWidgets.QLabel('Stepper Settings', self)
-        self.layout().addWidget(self.stepper_settings_label, 5, 1, 1, 1)
+        if self.csm_widget is not None:
+            stepper_motor_header_label = QtWidgets.QLabel('Stepper Motor:', self)
+            self.layout().addWidget(stepper_motor_header_label, 4, 0, 1, 1)
+            self.stepper_motor_label = QtWidgets.QLabel(self.csm_widget.com_port, self)
+            self.layout().addWidget(self.stepper_motor_label, 4, 1, 1, 1)
+            self.stepper_settings_label = QtWidgets.QLabel('Stepper Settings', self)
+            self.layout().addWidget(self.stepper_settings_label, 5, 1, 1, 1)
         ######
         # Scan Params
         ######
@@ -172,11 +169,17 @@ class PolarizationEfficiency(QtWidgets.QWidget, GuiBuilder):
         self.start_pushbutton = QtWidgets.QPushButton('Start', self)
         self.layout().addWidget(self.start_pushbutton, 14, 0, 1, 2)
         self.start_pushbutton.clicked.connect(self.pe_start_stop_scan)
-        save_pushbutton = QtWidgets.QPushButton('Save', self)
-        self.layout().addWidget(save_pushbutton, 15, 0, 1, 2)
-        save_pushbutton.clicked.connect(self.pe_save)
-        spacer_label = QtWidgets.QLabel(' ', self)
-        self.layout().addWidget(spacer_label, 15, 0, 8, 2)
+
+        self.load_pushbutton = QtWidgets.QPushButton('Load', self)
+        self.layout().addWidget(self.load_pushbutton, 15, 0, 1, 2)
+        self.load_pushbutton.clicked.connect(self.pe_load)
+
+        self.save_pushbutton = QtWidgets.QPushButton('Save', self)
+        self.layout().addWidget(self.save_pushbutton, 16, 0, 1, 2)
+        self.save_pushbutton.clicked.connect(self.pe_save)
+
+        if self.csm_widget is None:
+            self.start_pushbutton.setDisabled(True)
 
     def pe_configure_plot_panel(self):
         '''
@@ -250,11 +253,12 @@ class PolarizationEfficiency(QtWidgets.QWidget, GuiBuilder):
         self.status_bar.showMessage('Setting up serial connection to stepper motor on {0}'.format(sm_com_port))
         QtWidgets.QApplication.processEvents()
         sm_settings_str = ''
-        self.scan_settings_dict.update(self.csm_widget.stepper_settings_dict)
-        for setting, value in self.csm_widget.stepper_settings_dict.items():
-            sm_settings_str += ' '.join([x.title() for x in setting.split('_')])
-            sm_settings_str += ' {0} ::: '.format(value)
-        self.stepper_settings_label.setText(sm_settings_str)
+        if self.csm_widget is not None:
+            self.scan_settings_dict.update(self.csm_widget.stepper_settings_dict)
+            for setting, value in self.csm_widget.stepper_settings_dict.items():
+                sm_settings_str += ' '.join([x.title() for x in setting.split('_')])
+                sm_settings_str += ' {0} ::: '.format(value)
+            self.stepper_settings_label.setText(sm_settings_str)
 
     def pe_start_stop_scan(self):
         '''
@@ -274,8 +278,6 @@ class PolarizationEfficiency(QtWidgets.QWidget, GuiBuilder):
     def pe_scan(self):
         '''
         '''
-        if self.csm_widget is None:
-            return None
         pprint(self.scan_settings_dict)
         start = self.scan_settings_dict['start']
         end = self.scan_settings_dict['end']
@@ -322,7 +324,7 @@ class PolarizationEfficiency(QtWidgets.QWidget, GuiBuilder):
                 pol_eff_str = None
                 if np.abs(scan_position - start_position) > 30000:
                     normalized_amplitude = self.y_data / np.max(self.y_data)
-                    degsperpoint = 5.0
+                    degsperpoint = 30.0
                     initial_fit_params = self.pe_moments(self.x_data, np.asarray(self.y_data), degsperpoint)
                     fit_params = self.pe_fit_sine(self.x_data, np.asarray(self.y_data), initial_fit_params)
                     self.y_fit = []
@@ -375,11 +377,30 @@ class PolarizationEfficiency(QtWidgets.QWidget, GuiBuilder):
                 break
         return save_path
 
+    def pe_load(self):
+        '''
+        '''
+        save_path = QtWidgets.QFileDialog.getOpenFileName(self, 'Select Pol data', '.txt')[0]
+        self.x_data, self.x_stds, self.y_data, self.y_stds = [], [], [], []
+        with open(save_path, 'r') as fh:
+            lines = fh.readlines()
+            for line in lines:
+                x_data = float(line.split(', ')[0].strip())
+                x_std = float(line.split(', ')[1].strip())
+                y_data = float(line.split(', ')[2].strip())
+                y_std = float(line.split(', ')[3].strip())
+                self.x_data.append(x_data)
+                self.x_stds.append(x_std)
+                self.y_data.append(y_data)
+                self.y_stds.append(y_std)
+        print(self.x_data)
+        self.pe_plot()
+
     def pe_save(self):
         '''
         '''
         save_path = self.pe_index_file_name()
-        save_path = QtWidgets.QFileDialog.getSaveFileName(self, 'Data Save Location', save_path, filter='*.txt,*.dat')[0]
+        save_path = QtWidgets.QFileDialog.getSaveFileName(self, 'Data Save Location', save_path, filter='*.txt')[0]
         if len(save_path) > 0:
             with open(save_path, 'w') as save_handle:
                 for i, x_data in enumerate(self.x_data):
@@ -408,8 +429,6 @@ class PolarizationEfficiency(QtWidgets.QWidget, GuiBuilder):
     def pe_plot(self, running=False, pol_eff_str=None):
         '''
         '''
-        if self.csm_widget is None:
-            return None
         pl.close('all')
         fig, ax = self.pe_create_blank_fig(frac_screen_width=0.7, frac_screen_height=0.6, n_axes=1)
         ax.set_xlabel('Steps', fontsize=10)
@@ -425,12 +444,24 @@ class PolarizationEfficiency(QtWidgets.QWidget, GuiBuilder):
             else:
                 ax.plot(self.x_fit, self.y_fit, color='r', linestyle='-', label='fit')
         pl.legend()
-        if running:
-            fig.savefig(os.path.join('temp_files', 'temp_pol.png'), transparent=True)
-            image = QtGui.QPixmap(os.path.join('temp_files', 'temp_pol.png'))
-            self.pe_plot_label.setPixmap(image)
-        else:
-            pl.show()
+        fig.savefig(os.path.join('temp_files', 'temp_pol.png'), transparent=True)
+        image = QtGui.QPixmap(os.path.join('temp_files', 'temp_pol.png'))
+        self.pe_plot_label.setPixmap(image)
+        if not running and False:
+            degsperpoint = 30
+            initial_fit_params = self.pe_moments(self.x_data, np.asarray(self.y_data), degsperpoint)
+            fit_params = self.pe_fit_sine(self.x_data, np.asarray(self.y_data), initial_fit_params)
+            self.y_fit = []
+            self.x_fit = []
+            for x_val in np.arange(0, 360, 2):
+                print(fit_params)
+                fit_val = self.pe_test_sine(x_val, fit_params[0], fit_params[1], fit_params[2], fit_params[3])
+                angle_ = (x_val /fit_params[1]) * 2 * np.pi
+                self.y_fit.append(fit_val)
+                self.x_fit.append(x_val)
+            pol_eff_fit = np.min(self.y_fit) / np.max(self.y_fit) * 1e2 # is a pct
+            pol_eff_data = np.min(self.y_data) / np.max(self.y_data) * 1e2 # is a pct
+            pol_eff_str = 'Pol Eff: {0:.2f}% (Fit) Pol Eff: {1:.2f}% (Data)'.format(pol_eff_fit, pol_eff_data)
 
     def pe_create_blank_fig(self, frac_screen_width=0.5, frac_screen_height=0.8,
                              left=0.08, right=0.98, top=0.95, bottom=0.08, n_axes=2,
@@ -459,7 +490,9 @@ class PolarizationEfficiency(QtWidgets.QWidget, GuiBuilder):
             return value
         return arb_sine
 
-    def pe_test_sine(self, x_val, amplitude, period, phase, y_offset):
+    def pe_test_sine(self, x_val, amplitude, period, phase, y_offset=0.0):
+        if period is None:
+            return np.nan
         print(x_val)
         period = float(period)
         y_offset = float(y_offset)
@@ -468,7 +501,14 @@ class PolarizationEfficiency(QtWidgets.QWidget, GuiBuilder):
         return value
 
     def pe_moments(self, raw_angle, data, degsperstep):
-        amplitude = (np.max(data) - np.min(data)) / 2.0
+        print(raw_angle)
+        print(data)
+        if len(data) == 0:
+            return None, None, None
+        try:
+            amplitude = (np.max(data) - np.min(data)) / 2.0
+        except ValueError:
+            import ipdb;ipdb.set_trace()
         y_offset = np.min(data) + amplitude
         radsperstep = degsperstep * (np.pi / 180.0)
         period_in_stepper_steps = 2 * np.abs(raw_angle[data.argmax()] - raw_angle[data.argmin()])

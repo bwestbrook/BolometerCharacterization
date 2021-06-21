@@ -7,53 +7,76 @@ from GuiBuilder.gui_builder import GuiBuilder, GenericClass
 
 class FridgeCycle(QtWidgets.QWidget, GuiBuilder):
 
-    def __init__(self, status_bar):
+    def __init__(self, status_bar, agilent_widget, hp_widget):
+        '''
+        '''
         super(FridgeCycle, self).__init__()
         grid = QtWidgets.QGridLayout()
         self.setLayout(grid)
+        self.agilent_widget = agilent_widget
+        self.hp_widget = hp_widget
         self.fc_setup_input()
 
 
     def fc_setup_input(self):
         '''
         '''
-        cycle_voltage_header_label = QtWidgets.QLabel('Cycle Voltage', self)
-        self.layout().addWidget(cycle_voltage_header_label, 0, 0, 1, 1)
-        cycle_voltage_lineedit = QtWidgets.QLineEdit('', self)
-        self.layout().addWidget(cycle_voltage_lineedit, 0, 1, 1, 1)
+        self.welcome_label = QtWidgets.QLabel('Welcome to Fridge Cycle!')
+        self.layout().addWidget(self.welcome_label, 0, 0, 1, 1)
+        self.cycle_voltage_lineedit = self.gb_make_labeled_lineedit(label_text='Cycle Voltage (V)', lineedit_text='25')
+        self.layout().addWidget(self.cycle_voltage_lineedit, 1, 0, 1, 1)
+        self.set_voltage_pushbutton = QtWidgets.QPushButton('Set Voltage')
+        self.set_voltage_pushbutton.clicked.connect(self.fc_set_ps_voltage)
+        self.layout().addWidget(self.set_voltage_pushbutton, 1, 1, 1, 1)
+        # Resistance Thresholds
+        self.cycle_start_resistance_lineedit = self.gb_make_labeled_lineedit(label_text='Cycle Start Res (Ohm):', lineedit_text='500e3')
+        self.layout().addWidget(self.cycle_start_resistance_lineedit, 2, 0, 1, 1)
+        self.cycle_end_resistance_lineedit = self.gb_make_labeled_lineedit(label_text='Cycle End Res (Ohm):', lineedit_text='3.5e3')
+        self.layout().addWidget(self.cycle_end_resistance_lineedit, 2, 1, 1, 1)
+        self.current_resistance_label = self.gb_make_labeled_label(label_text='Current Resistance (Ohm):')
+        self.layout().addWidget(self.current_resistance_label, 3, 0, 1, 1)
+        self.get_current_resistance_pushbutton = QtWidgets.QPushButton('Get Resistance')
+        self.get_current_resistance_pushbutton.clicked.connect(self.fc_get_abr_resistance)
+        self.layout().addWidget(self.get_current_resistance_pushbutton, 3, 1, 1, 1)
+        # Start
+        self.start_cycle_pushbutton = QtWidgets.QPushButton('Start Cycle')
+        self.start_cycle_pushbutton.clicked.connect(self.fc_start_cycle)
+        self.layout().addWidget(self.start_cycle_pushbutton, 5, 0, 1, 2)
+
+    def fc_get_abr_resistance(self, clicked=True, voltage=0):
+        '''
+        '''
+        resistance = float(self.hp_widget.hp_get_resistance().strip())
+        self.current_resistance_label.setText('{0:.4f}'.format(flaresistance))
+
+    def fc_set_ps_voltage(self, clicked=True, voltage=0):
+        '''
+        '''
+        voltage = float(self.cycle_voltage_lineedit.text())
+        applied_voltage = self.agilent_widget.ae_apply_voltage(voltage)
+        return applied_voltage
+
+    def fc_start_cycle(self, clicked=True, voltage=0):
+        '''
+        '''
+        # Wait to start
+        cycle_wait = True
+        cycle_start_resistance = float(self.cycle_start_resistance_lineedit.text())
+        while cycle_wait:
+            resistance = self.hp_widget.get_resistance()
+            if resistance < cycle_start_resistance:
+                wait(3)
+            else:
+                cycle_wait = False
+        # Apply Voltage to start
+        cycle_voltage = float(self.cycle_voltage.text())
+        self.agilent_widget.apply_volage
 
     def bd_close_fridge_cycle(self):
+        '''
+        '''
         self.fridge_cycle_popup.close()
 
-    def bd_fridge_cycle2(self):
-        if not hasattr(self, 'fc'):
-            self.fc = FridgeCycle()
-        if not hasattr(self, 'fridge_cycle_popup'):
-            self.gb_create_popup_window('fridge_cycle_popup')
-        else:
-            self.gb_initialize_panel('fridge_cycle_popup')
-        self.gb_build_panel(settings.fridge_cycle_popup_build_dict)
-        for combobox_widget, entry_list in self.fridge_cycle_combobox_entry_dict.items():
-            self.gb_populate_combobox(combobox_widget, entry_list)
-        getattr(self, '_fridge_cycle_popup_grt_daq_channel_combobox').setCurrentIndex(0)
-        getattr(self, '_fridge_cycle_popup_grt_serial_combobox').setCurrentIndex(2)
-        getattr(self, '_fridge_cycle_popup_grt_range_combobox').setCurrentIndex(3)
-        getattr(self, '_fridge_cycle_popup_cycle_voltage_combobox').setCurrentIndex(1)
-        getattr(self, '_fridge_cycle_popup_cycle_end_temperature_combobox').setCurrentIndex(2)
-        self.fc_time_stamp_vector, self.ps_voltage_vector, self.abr_resistance_vector, self.abr_temperature_vector, self.grt_temperature_vector = [], [], [], [], []
-        self.fridge_cycle_popup.showMaximized()
-        fc_params = self.get_params_from_fride_cycle()
-        # Update with measured values
-        grt_temperature, grt_temperature_str = self.get_grt_temp(fc_params)
-        getattr(self, '_fridge_cycle_popup_grt_temperature_value_label').setText(grt_temperature_str)
-        abr_resistance, abr_resistance_str = self.fc.get_resistance()
-        getattr(self, '_fridge_cycle_popup_abr_resistance_value_label').setText(abr_resistance_str)
-        abr_temperature, abr_temperature_str = self.fc.abr_resistance_to_kelvin(abr_resistance)
-        getattr(self, '_fridge_cycle_popup_abr_temperature_value_label').setText(abr_temperature_str)
-        applied_voltage, applied_voltage_str = self.fc.get_voltage()
-        getattr(self, '_fridge_cycle_popup_ps_voltage_value_label').setText(applied_voltage_str)
-        self.update_fridge_cycle()
-        self.repaint()
 
     def bd_get_fridge_cycle_save_path(self):
         date = datetime.now()
@@ -86,10 +109,6 @@ class FridgeCycle(QtWidgets.QWidget, GuiBuilder):
             temperature_str = 'NaN'
         return temperature, temperature_str
 
-    def bd_set_ps_voltage_fc(self):
-        voltage = float(str(getattr(self, '_fridge_cycle_popup_man_set_voltage_lineedit').text()))
-        applied_voltage = self.fc.apply_voltage(voltage)
-        return applied_voltage
 
     def bd_start_fridge_cycle(self, sleep_time=1.0):
         # Config globals

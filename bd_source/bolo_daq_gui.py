@@ -84,7 +84,7 @@ class BoloDAQGui(QtWidgets.QMainWindow, GuiBuilder):
         self.setCentralWidget(self.central_widget)
         self.tool_and_menu_bar_json_path = os.path.join('bd_settings', 'tool_and_menu_bars.json')
         print(self.tool_and_menu_bar_json_path)
-        self.gb_setup_menu_and_tool_bars(self.tool_and_menu_bar_json_path, icon_size=45)
+        self.gb_setup_menu_and_tool_bars(self.tool_and_menu_bar_json_path, icon_size=35)
         self.selected_files = []
         self.user_desktop_path = os.path.expanduser('~')
         self.monitor_dpi = 120.0
@@ -207,15 +207,30 @@ class BoloDAQGui(QtWidgets.QMainWindow, GuiBuilder):
     def bd_fridge_cycle(self):
         '''
         '''
+
+        dialog = 'Select the comport for the Agilent E3634A'
+        com_port, okPressed = self.gb_quick_static_info_gather(title='', dialog=dialog, items=['COM19'])
+        if not hasattr(self, 'ser_{0}'.format(com_port)) and okPressed:
+            serial_com = BoloSerial(com_port, device='Agilent E3634A', splash_screen=self.status_bar)
+            setattr(self, 'ser_{0}'.format(com_port), serial_com)
+            if not hasattr(self, 'agilent_e3634a_widget'):
+                self.agilent_e3634a_widget = AgilentE3634A(serial_com, self.status_bar, self.screen_resolution, self.monitor_dpi)
+        dialog = 'Select the comport for the HP 34401A'
+        com_port, okPressed = self.gb_quick_static_info_gather(title='', dialog=dialog, items=['COM3'])
+        if not hasattr(self, 'ser_{0}'.format(com_port)) and okPressed:
+            serial_com = BoloSerial(com_port, device='HP 34401A', splash_screen=self.status_bar)
+            setattr(self, 'ser_{0}'.format(com_port), serial_com)
+            if not hasattr(self, 'hp_34401a_widget'):
+                self.hp_34401a_widget = HewlettPackard34401A(serial_com, com_port, self.status_bar, self.screen_resolution, self.monitor_dpi)
         self.gb_initialize_panel('central_widget')
         self.status_bar.showMessage('Launching Fridge Cycle')
         QtWidgets.QApplication.processEvents()
         if not hasattr(self, 'fridge_cycle_widget'):
-            self.fridge_cycle_widget = FridgeCycle(self.status_bar)
+            self.fridge_cycle_widget = FridgeCycle(self.status_bar, self.agilent_e3634a_widget, self.hp_34401a_widget)
         self.central_widget.layout().addWidget(self.fridge_cycle_widget, 0, 0, 1, 1)
         self.status_bar.showMessage('Fridge Cycle')
         QtWidgets.QApplication.processEvents()
-        self.showNormal()
+        self.resize(self.minimumSizeHint())
 
     #################################################
     # Configure DAQ
@@ -285,7 +300,7 @@ class BoloDAQGui(QtWidgets.QMainWindow, GuiBuilder):
         self.gb_initialize_panel('central_widget')
         self.status_bar.showMessage('Launching SRS SR830 Control')
         QtWidgets.QApplication.processEvents()
-        dialog = 'Select the comport for the Lakeshore'
+        dialog = 'Select the comport for the SRS SR830'
         com_port, okPressed = self.gb_quick_static_info_gather(title='', dialog=dialog, items=['COM10'])
         if not hasattr(self, 'ser_{0}'.format(com_port)) and okPressed:
             serial_com = BoloSerial(com_port, device='SRS_SR830_DSP', splash_screen=self.status_bar)
@@ -333,15 +348,15 @@ class BoloDAQGui(QtWidgets.QMainWindow, GuiBuilder):
         if not hasattr(self, 'ser_{0}'.format(com_port)) and okPressed:
             serial_com = BoloSerial(com_port, device='HP_34401A', splash_screen=self.status_bar)
             setattr(self, 'ser_{0}'.format(com_port), serial_com)
-            if not hasattr(self, 'hewlett_packard_34401a_widget'):
-                self.hewlett_packard_34401a_widget = HewlettPackard34401A(serial_com, com_port, self.status_bar, self.screen_resolution, self.monitor_dpi)
-            self.central_widget.layout().addWidget(self.hewlett_packard_34401a_widget, 0, 0, 1, 1)
+            if not hasattr(self, 'hp_34401a_widget'):
+                self.hp_34401a_widget = HewlettPackard34401A(serial_com, com_port, self.status_bar, self.screen_resolution, self.monitor_dpi)
+            self.central_widget.layout().addWidget(self.hp_34401a_widget, 0, 0, 1, 1)
         elif okPressed:
-            self.hewlett_packard_34401a_widget.ae_update_serial_com(serial_com)
-            self.central_widget.layout().addWidget(self.hewlett_packard_34401a_widget, 0, 0, 1, 1)
+            self.hp_34401a_widget.ae_update_serial_com(serial_com)
+            self.central_widget.layout().addWidget(self.hp_34401a_widget, 0, 0, 1, 1)
         self.status_bar.showMessage('Hewlett Packard 34401A Controller')
         QtWidgets.QApplication.processEvents()
-        self.showNormal()
+        self.resize(self.minimumSizeHint())
 
     #################################################
     # Power Supply Agilent E3634A

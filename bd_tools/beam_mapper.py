@@ -80,12 +80,12 @@ class BeamMapper(QtWidgets.QWidget, GuiBuilder):
             self.daq_combobox.addItem(str(channel))
         #Pause Time 
         self.pause_time_lineedit = self.gb_make_labeled_lineedit(label_text='Pause Time (ms):')
-        self.pause_time_lineedit.setText('750')
+        self.pause_time_lineedit.setText('1250')
         self.pause_time_lineedit.setValidator(QtGui.QIntValidator(0, 25000, self.pause_time_lineedit))
         self.layout().addWidget(self.pause_time_lineedit, 4, 0, 1, 1)
         #Int Time 
         self.int_time_lineedit = self.gb_make_labeled_lineedit(label_text='Int Time (ms): ')
-        self.int_time_lineedit.setText('250')
+        self.int_time_lineedit.setText('500')
         self.int_time_lineedit.setValidator(QtGui.QIntValidator(0, 25000, self.int_time_lineedit))
         self.layout().addWidget(self.int_time_lineedit, 4, 1, 1, 1)
         #Sample rate 
@@ -133,17 +133,13 @@ class BeamMapper(QtWidgets.QWidget, GuiBuilder):
         self.step_size_y_lineedit.setValidator(QtGui.QIntValidator(1, 200000, self.step_size_y_lineedit))
         self.layout().addWidget(self.step_size_y_lineedit, 9, 2, 1, 2)
         #Scan Info size
-        self.aperture_size_lineedit = self.gb_make_labeled_lineedit(label_text='Aperture Size (in)')
-        self.layout().addWidget(self.aperture_size_lineedit, 10, 0, 1, 2)
-        self.aperture_size_lineedit.setValidator(QtGui.QDoubleValidator(0, 3, 3, self.aperture_size_lineedit))
-        self.aperture_size_lineedit.textChanged.connect(self.bm_update_aperture_size)
-        self.aperture_size_label = self.gb_make_labeled_label(label_text='Aperture Size (steps)')
-        self.layout().addWidget(self.aperture_size_label, 10, 2, 1, 2)
+        self.aperture_description_lineedit = self.gb_make_labeled_lineedit(label_text='Aperture Description')
+        self.layout().addWidget(self.aperture_description_lineedit, 10, 0, 1, 2)
         #Source Information 
         self.source_type_combobox = self.gb_make_labeled_combobox(label_text='Source Type')
-        self.source_type_combobox.activated.connect(self.bm_update_source_type)
         for source_type in ['Analyzer', 'LN2', 'Heater']:
             self.source_type_combobox.addItem(source_type)
+        self.source_type_combobox.currentIndexChanged.connect(self.bm_update_source_type)
         self.layout().addWidget(self.source_type_combobox, 11, 0, 1, 2)
         self.source_temp_lineedit = self.gb_make_labeled_lineedit(label_text='Source Temp (K):')
         self.source_temp_lineedit.setValidator(QtGui.QDoubleValidator(0, 300, 3, self.source_temp_lineedit))
@@ -162,50 +158,49 @@ class BeamMapper(QtWidgets.QWidget, GuiBuilder):
         # Time Stream and data label
         self.time_stream_plot_label = QtWidgets.QLabel('', self)
         self.time_stream_plot_label.setAttribute(QtCore.Qt.WA_TranslucentBackground)
-        self.layout().addWidget(self.time_stream_plot_label, 13, 0, 1, 4)
+        self.layout().addWidget(self.time_stream_plot_label, 13, 0, 1, 3)
         self.data_string_label = QtWidgets.QLabel('', self)
-        self.layout().addWidget(self.data_string_label, 14, 0, 1, 4)
+        self.layout().addWidget(self.data_string_label, 13, 3, 1, 1)
         self.bm_update_scan_params()
-        #Sample Name
+        #Sample Name and Notes
         self.sample_name_combobox = self.gb_make_labeled_combobox(label_text='Sample Name Select:')
         for sample in self.samples_settings:
             self.sample_name_combobox.addItem(sample)
         self.sample_name_combobox.activated.connect(self.bm_update_sample_name)
         self.sample_name_combobox.setCurrentIndex(0)
-        self.layout().addWidget(self.sample_name_combobox, 15, 0, 1, 2)
+        self.layout().addWidget(self.sample_name_combobox, 14, 0, 1, 1)
         self.sample_name_lineedit = self.gb_make_labeled_lineedit(label_text='Sample Name:')
-        self.layout().addWidget(self.sample_name_lineedit, 16, 0, 1, 2)
+        self.layout().addWidget(self.sample_name_lineedit, 14, 1, 1, 3)
         self.bm_update_sample_name()
+        self.notes_lineedit = self.gb_make_labeled_lineedit(label_text='Notes/Comments:')
+        self.layout().addWidget(self.notes_lineedit, 15, 0, 1, 4)
         # Zero Lock in
         self.zero_lock_in_checkbox = QtWidgets.QCheckBox('Zero Lock In?', self)
         self.zero_lock_in_checkbox.setChecked(True)
-        self.layout().addWidget(self.zero_lock_in_checkbox, 14, 3, 1, 1)
+        self.layout().addWidget(self.zero_lock_in_checkbox, 16, 0, 1, 1)
         # Reverse Scan Lock in
         self.reverse_scan_checkbox = QtWidgets.QCheckBox('Reverse Scan', self)
         self.reverse_scan_checkbox.setChecked(False)
-        self.layout().addWidget(self.reverse_scan_checkbox, 15, 3, 1, 1)
+        self.layout().addWidget(self.reverse_scan_checkbox, 16, 1, 1, 1)
         ######
         # Control Buttons 
         ######
         self.start_pushbutton = QtWidgets.QPushButton('Start', self)
-        self.layout().addWidget(self.start_pushbutton, 16, 0, 1, 4)
+        self.layout().addWidget(self.start_pushbutton, 17, 0, 1, 2)
         self.start_pushbutton.clicked.connect(self.bm_start_stop_scan)
         self.pause_pushbutton = QtWidgets.QPushButton('Pause', self)
-        self.layout().addWidget(self.pause_pushbutton, 17, 0, 1, 4)
+        self.layout().addWidget(self.pause_pushbutton, 17, 2, 1, 2)
         self.pause_pushbutton.clicked.connect(self.bm_pause)
         save_pushbutton = QtWidgets.QPushButton('Save', self)
-        self.layout().addWidget(save_pushbutton, 18, 0, 1, 4)
+        self.layout().addWidget(save_pushbutton, 18, 0, 1, 2)
         save_pushbutton.clicked.connect(self.bm_save)
         load_pushbutton = QtWidgets.QPushButton('Load', self)
-        self.layout().addWidget(load_pushbutton, 19, 0, 1, 4)
+        self.layout().addWidget(load_pushbutton, 18, 2, 1, 2)
         load_pushbutton.clicked.connect(self.bm_load)
 
-    def bm_update_aperture_size(self):
-        '''
-        '''
-        aperture_size = float(self.aperture_size_lineedit.text())
-        aperture_size_in_steps = int(1e5 * aperture_size)
-        self.aperture_size_label = '{0} steps'.format(aperture_size_in_steps)
+        #Call the the source type
+        self.source_type_combobox.setCurrentIndex(1)
+        self.source_type_combobox.setCurrentIndex(0)
 
     def bm_update_source_type(self):
         '''
@@ -231,26 +226,26 @@ class BeamMapper(QtWidgets.QWidget, GuiBuilder):
         # BEAM MAP
         self.beam_map_plot_label = QtWidgets.QLabel('', self)
         self.beam_map_plot_label.setAttribute(QtCore.Qt.WA_TranslucentBackground)
-        self.layout().addWidget(self.beam_map_plot_label, 0, 4, 12, 4)
+        self.layout().addWidget(self.beam_map_plot_label, 0, 4, 10, 2)
         # BEAM MAP
         self.residual_beam_map_plot_label = QtWidgets.QLabel('', self)
         self.residual_beam_map_plot_label.setAttribute(QtCore.Qt.WA_TranslucentBackground)
-        self.layout().addWidget(self.residual_beam_map_plot_label, 0, 8, 12, 4)
+        self.layout().addWidget(self.residual_beam_map_plot_label, 0, 6, 10, 2)
         # X
         self.x_cut_plot_label = QtWidgets.QLabel('', self)
-        self.layout().addWidget(self.x_cut_plot_label, 12, 4, 6, 4)
+        self.layout().addWidget(self.x_cut_plot_label, 10, 4, 4, 2)
         self.x_cut_select_combobox = self.gb_make_labeled_combobox(label_text='X Slice')
         self.x_cut_select_combobox.activated.connect(self.bm_plot_beam_map)
-        self.layout().addWidget(self.x_cut_select_combobox, 17, 4, 1, 4)
+        self.layout().addWidget(self.x_cut_select_combobox, 14, 4, 1, 1)
         for x_tick in self.x_ticks:
             self.x_cut_select_combobox.addItem(x_tick)
         # Y
         self.y_cut_plot_label = QtWidgets.QLabel('', self)
-        self.layout().addWidget(self.y_cut_plot_label, 12, 8, 6, 4)
+        self.layout().addWidget(self.y_cut_plot_label, 10, 6, 4, 2)
         self.device_combobox.setCurrentIndex(0)
         self.y_cut_select_combobox = self.gb_make_labeled_combobox(label_text='Y Slice')
         self.y_cut_select_combobox.activated.connect(self.bm_plot_beam_map)
-        self.layout().addWidget(self.y_cut_select_combobox, 17, 8, 1, 4)
+        self.layout().addWidget(self.y_cut_select_combobox, 14, 6, 1, 1)
         for y_tick in self.y_ticks:
             self.y_cut_select_combobox.addItem(y_tick)
 
@@ -272,7 +267,7 @@ class BeamMapper(QtWidgets.QWidget, GuiBuilder):
             return None
         if len(self.start_position_y_lineedit.text()) == 0 or len(self.end_position_y_lineedit.text()) == 0:
             return None
-        if int(self.step_size_x_lineedit.text()) == 0 or int(self.step_size_y_lineedit.text()) == 0:
+        if len(self.step_size_x_lineedit.text()) == 0 or len(self.step_size_y_lineedit.text()) == 0:
             return None
         if self.start_position_x_lineedit.text() == '-' or self.start_position_y_lineedit.text() == '-':
             return None
@@ -627,7 +622,7 @@ class BeamMapper(QtWidgets.QWidget, GuiBuilder):
         if len(x_ticks) > 0 and Z_data.size > 8:
             amps = Z_data.transpose()[x_cut_pos]
             fig, ax = self.bm_create_blank_fig(left=0.12, bottom=0.26, right=0.98, top=0.83,
-                                               frac_screen_width=0.35, frac_screen_height=0.3)
+                                               frac_screen_width=0.25, frac_screen_height=0.3)
             ax.plot(x_ticks, amps, label='data')
             try:
                 fit_amps, fit_params = self.bm_fit_1d_data(x_ticks, amps)
@@ -663,7 +658,7 @@ class BeamMapper(QtWidgets.QWidget, GuiBuilder):
                 print(y_cut_pos)
                 import ipdb;ipdb.set_trace()
             fig, ax = self.bm_create_blank_fig(left=0.12, bottom=0.26, right=0.98, top=0.83,
-                                               frac_screen_width=0.35, frac_screen_height=0.3)
+                                               frac_screen_width=0.25, frac_screen_height=0.3)
             ax.plot(y_ticks, amps, label='data')
             try:
                 fit_amps, fit_params = self.bm_fit_1d_data(y_ticks, amps)
@@ -687,8 +682,8 @@ class BeamMapper(QtWidgets.QWidget, GuiBuilder):
     def bm_plot_time_stream(self, ts, min_, max_):
         '''
         '''
-        fig, ax = self.bm_create_blank_fig(left=0.1, bottom=0.26, right=0.98, top=0.85,
-                                           frac_screen_width=0.3, frac_screen_height=0.2,
+        fig, ax = self.bm_create_blank_fig(left=0.15, bottom=0.26, right=0.98, top=0.85,
+                                           frac_screen_width=0.4, frac_screen_height=0.2,
                                            font_label_size=10)
         ax.plot(ts)
         ax.set_xlabel('Samples', fontsize=8)
@@ -702,7 +697,7 @@ class BeamMapper(QtWidgets.QWidget, GuiBuilder):
         '''
         '''
         fig, ax = self.bm_create_blank_fig(left=0.05, bottom=0.11, right=0.98, top=0.9,
-                                           frac_screen_width=0.4, frac_screen_height=0.4,
+                                           frac_screen_width=0.3, frac_screen_height=0.4,
                                            aspect='equal')
         if len(x_ticks) > 0:
             if self.reverse_scan_checkbox.isChecked():
@@ -733,7 +728,7 @@ class BeamMapper(QtWidgets.QWidget, GuiBuilder):
         '''
         '''
         fig, ax = self.bm_create_blank_fig(left=0.05, bottom=0.11, right=0.98, top=0.9,
-                                           frac_screen_width=0.4, frac_screen_height=0.4,
+                                           frac_screen_width=0.3, frac_screen_height=0.4,
                                            aspect='equal')
         if type(x_ticks) == int:
             x_tick_index = x_ticks

@@ -35,13 +35,16 @@ class HewlettPackard34401A(QtWidgets.QWidget, GuiBuilder):
         self.layout().addWidget(get_id_pushbutton, 4, 0, 1, 4)
         get_id_pushbutton.clicked.connect(self.hp_get_id)
 
-
     def hp_get_id(self):
         '''
         '''
         self.hp_send_command('*CLS ')
         idn = self.hp_query('*IDN? ')
         message = 'ID {0}'.format(idn)
+        print('id')
+        print('id')
+        print('id')
+        print('id')
         print(idn)
         self.status_bar.showMessage(message)
 
@@ -54,5 +57,17 @@ class HewlettPackard34401A(QtWidgets.QWidget, GuiBuilder):
         '''
         '''
         self.hp_send_command(query)
+        time.sleep(1)
         response = self.serial_com.bs_read()
         return response
+
+    def hp_get_resistance(self):
+        '''
+        '''
+        query = ":MEAS:RES?\r\n"
+        resistance = self.hp_query(query)
+        print(resistance)
+        return resistance
+
+
+
