@@ -23,6 +23,7 @@ class FourierTransformSpectroscopy():
         '''
         self.bands = {
             '': {
+                'Active': False,
                 'Band Center': '',
                 'Project': '',
                 'Freq Column': 'NA',
@@ -31,6 +32,7 @@ class FourierTransformSpectroscopy():
                 'Path': 'NA',
                 },
             'SO30': {
+                'Active': False,
                 'Band Center': 30,
                 'Project': 'Simons Observatory',
                 'Freq Column': 0,
@@ -39,6 +41,7 @@ class FourierTransformSpectroscopy():
                 'Path': os.path.join('bd_lib', 'simulated_bands', 'Nitride_Lumped_Diplexer_030_05_040_08_MoreWider20190226_300GHz.csv')
                 },
             'SO40': {
+                'Active': False,
                 'Band Center': 40,
                 'Project': 'Simons Observatory',
                 'Freq Column': 0,

@@ -33,7 +33,7 @@ class FourierTransformSpectrometer(QtWidgets.QWidget, GuiBuilder, FourierTransfo
         self.setLayout(grid)
         grid_2 = QtWidgets.QGridLayout()
         self.fts_configure_input_panel()
-        self.fts_configure_plot_panel()
+        self.fts_configure_analysis_panel()
         self.data_folder = data_folder
         self.start_pause = 5.0
         self.status_bar.showMessage('Ready')
@@ -73,31 +73,31 @@ class FourierTransformSpectrometer(QtWidgets.QWidget, GuiBuilder, FourierTransfo
     def fts_configure_input_panel(self):
         '''
         '''
-        welcome_header_label = QtWidgets.QLabel('Welcome to FTS', self)
-        self.layout().addWidget(welcome_header_label, 0, 0, 1, 2)
         # DAQ (Device + Channel) Selection
         self.device_combobox = self.gb_make_labeled_combobox(label_text='Device:')
-        self.layout().addWidget(self.device_combobox, 1, 0, 1, 1)
+        self.layout().addWidget(self.device_combobox, 0, 0, 1, 1)
         for device in self.daq_settings:
             self.device_combobox.addItem(device)
         self.daq_combobox = self.gb_make_labeled_combobox(label_text='DAQ:')
-        self.layout().addWidget(self.daq_combobox, 1, 1, 1, 1)
+        self.layout().addWidget(self.daq_combobox, 0, 1, 1, 1)
         for channel in sorted([int(x) for x in self.daq_settings[device]]):
             self.daq_combobox.addItem(str(channel))
-        #Step size (Fixed for Bill's FTS right now)
-        self.distance_per_step_combobox = self.gb_make_labeled_combobox(label_text='Distance Per Step (nm):')
-        for distance_per_step in ['250.39']:
-            self.distance_per_step_combobox.addItem(distance_per_step)
-        self.distance_per_step_combobox.activated.connect(self.fts_update_scan_params)
-        self.layout().addWidget(self.distance_per_step_combobox, 2, 0, 1, 1)
         # Stepper Motor Selection
         if hasattr(self.csm_widget, 'com_port'):
             self.stepper_motor_label = QtWidgets.QLabel(self.csm_widget.com_port, self)
         else:
             self.stepper_motor_label = QtWidgets.QLabel('None', self)
-        self.layout().addWidget(self.stepper_motor_label, 3, 0, 1, 1)
-        self.stepper_settings_label = self.gb_make_labeled_label(label_text = 'Stepper Settings:')
-        self.layout().addWidget(self.stepper_settings_label, 3, 1, 1, 1)
+        self.layout().addWidget(self.stepper_motor_label, 1, 0, 1, 1)
+        self.stepper_settings_label = QtWidgets.QLabel('Steppper Settings:')
+        self.layout().addWidget(self.stepper_settings_label, 1, 1, 1, 1)
+        # Basic stepper control
+        self.set_position_lineedit = self.gb_make_labeled_lineedit(label_text='Set to Position')
+        self.set_position_lineedit.setValidator(QtGui.QIntValidator(-600000, 300000, self.set_position_lineedit))
+        self.layout().addWidget(self.set_position_lineedit, 2, 0, 1, 1)
+        self.set_position_pushbutton = QtWidgets.QPushButton('Set Position')
+        self.layout().addWidget(self.set_position_pushbutton, 2, 1, 1, 1)
+        self.reset_zero_pushbutton = QtWidgets.QPushButton('Reset Zero')
+        self.layout().addWidget(self.reset_zero_pushbutton, 3, 0, 1, 2)
         ######
         # Scan Params
         ######
@@ -127,75 +127,94 @@ class FourierTransformSpectrometer(QtWidgets.QWidget, GuiBuilder, FourierTransfo
         #Int Time 
         self.int_time_lineedit = self.gb_make_labeled_lineedit(label_text='Int Time (ms): ')
         self.int_time_lineedit.setText('500')
+        self.int_time_lineedit.setValidator(QtGui.QIntValidator(10, 1000000, self.int_time_lineedit))
         self.layout().addWidget(self.int_time_lineedit, 7, 0, 1, 1)
         #Sample Rate 
         self.sample_rate_lineedit = self.gb_make_labeled_lineedit(label_text='Sample Rate (Hz): ')
         self.sample_rate_lineedit.setText('5000')
+        self.sample_rate_lineedit.setValidator(QtGui.QIntValidator(100, 5000, self.sample_rate_lineedit))
         self.layout().addWidget(self.sample_rate_lineedit, 7, 1, 1, 1)
+        # Source Type
+        self.source_type_combobox = self.gb_make_labeled_combobox(label_text='Soure Type')
+        for source in ['NA', 'Heater']:
+            self.source_type_combobox.addItem(source)
+        self.layout().addWidget(self.source_type_combobox, 8, 0, 1, 1)
+        self.source_type_combobox.currentIndexChanged.connect(self.fts_update_heater_type)
+        # Source Modulation Frequency 
+        self.modulation_frequency_lineedit = self.gb_make_labeled_lineedit(label_text='Mod Frequency (Hz):')
+        self.modulation_frequency_lineedit.setValidator(QtGui.QDoubleValidator(0, 2e5, 2, self.modulation_frequency_lineedit))
+        self.layout().addWidget(self.modulation_frequency_lineedit, 8, 1, 1, 1)
+        self.modulation_frequency_lineedit.setText('12')
+        # Heater Voltage 
+        self.heater_voltage_lineedit = self.gb_make_labeled_lineedit(label_text='Heater Voltage (V):')
+        self.heater_voltage_lineedit.setValidator(QtGui.QDoubleValidator(0, 150, 2, self.heater_voltage_lineedit))
+        self.layout().addWidget(self.heater_voltage_lineedit, 9, 0, 1, 1)
+        # Voltage Bias 
+        self.voltage_bias_lineedit = self.gb_make_labeled_lineedit(label_text='TES Bias Voltage (uV):')
+        self.voltage_bias_lineedit.setValidator(QtGui.QDoubleValidator(0, 25000, 3, self.voltage_bias_lineedit))
+        self.layout().addWidget(self.voltage_bias_lineedit, 9, 1, 1, 1)
+        # Source Power dBm
+        self.source_power_lineedit = self.gb_make_labeled_lineedit(label_text='Source Power (dBm):')
+        self.source_power_lineedit.setValidator(QtGui.QDoubleValidator(-1e6, 1e3, 2, self.source_power_lineedit))
+        self.layout().addWidget(self.source_power_lineedit, 10, 0, 1, 1)
+        # Source Frequency 
+        self.source_frequency_lineedit = self.gb_make_labeled_lineedit(label_text='Source Frequency (GHz):')
+        self.source_frequency_lineedit.setValidator(QtGui.QDoubleValidator(0, 1500, 3, self.source_frequency_lineedit))
+        self.layout().addWidget(self.source_frequency_lineedit, 10, 1, 1, 1)
+        self.source_type_combobox.setCurrentIndex(-1)
+        #Step size (Fixed for Bill's FTS right now)
+        self.distance_per_step_combobox = self.gb_make_labeled_combobox(label_text='Distance Per Step (nm):')
+        for distance_per_step in ['250.39']:
+            self.distance_per_step_combobox.addItem(distance_per_step)
+        self.distance_per_step_combobox.activated.connect(self.fts_update_scan_params)
+        self.layout().addWidget(self.distance_per_step_combobox, 11, 1, 1, 1)
         # Zero Lockin
         self.zero_lock_in_checkbox = QtWidgets.QCheckBox('Zero Lock-in', self)
-        self.layout().addWidget(self.zero_lock_in_checkbox, 8, 0, 1, 1)
+        self.layout().addWidget(self.zero_lock_in_checkbox, 11, 0, 1, 1)
         self.zero_lock_in_checkbox.setChecked(True)
         self.reverse_scan_checkbox = QtWidgets.QCheckBox('Reverse Scan', self)
-        self.layout().addWidget(self.reverse_scan_checkbox, 8, 1, 1, 1)
+        self.layout().addWidget(self.reverse_scan_checkbox, 12, 0, 1, 1)
         self.reverse_scan_checkbox.setChecked(False)
-        #Scan Info size
+        #Scan Info 
         self.scan_info_label = QtWidgets.QLabel('Scan Info', self)
-        self.layout().addWidget(self.scan_info_label, 9, 0, 1, 2)
+        self.layout().addWidget(self.scan_info_label, 12, 1, 1, 2)
         self.fts_update_scan_params()
+        #Sample Name and Info 
         self.sample_select_combobox = self.gb_make_labeled_combobox(label_text='Sample Select:')
-        self.layout().addWidget(self.sample_select_combobox, 10, 0, 1, 1)
+        self.layout().addWidget(self.sample_select_combobox, 13, 0, 1, 2)
         for sample in self.samples_settings:
             self.sample_select_combobox.addItem(sample)
         self.sample_select_combobox.activated.connect(self.fts_update_sample_name)
         self.sample_name_lineedit = self.gb_make_labeled_lineedit(label_text='Sample Name:')
-        self.layout().addWidget(self.sample_name_lineedit, 10, 1, 1, 1)
-        self.transmission_sample_lineedit = self.gb_make_labeled_lineedit(label_text='Transmission Sample:')
-        self.layout().addWidget(self.transmission_sample_lineedit, 12, 0, 1, 2)
+        self.layout().addWidget(self.sample_name_lineedit, 14, 0, 1, 2)
+        # Transmission Sample
+        self.transmission_sample_lineedit = self.gb_make_labeled_lineedit(label_text='Transmission Sample:', lineedit_text='None')
+        self.layout().addWidget(self.transmission_sample_lineedit, 15, 0, 1, 2)
+        # Notes
         self.notes_lineedit = self.gb_make_labeled_lineedit(label_text='Notes:')
-        self.layout().addWidget(self.notes_lineedit, 13, 0, 1, 2)
+        self.layout().addWidget(self.notes_lineedit, 16, 0, 1, 2)
         ######
         # Control Buttons 
         ######
         self.start_pushbutton = QtWidgets.QPushButton('Start', self)
-        self.layout().addWidget(self.start_pushbutton, 14, 0, 1, 2)
+        self.layout().addWidget(self.start_pushbutton, 17, 0, 1, 2)
         self.start_pushbutton.clicked.connect(self.fts_start_stop_scan)
         self.save_pushbutton = QtWidgets.QPushButton('Save', self)
-        self.layout().addWidget(self.save_pushbutton, 15, 0, 1, 2)
+        self.layout().addWidget(self.save_pushbutton, 18, 0, 1, 2)
         self.save_pushbutton.clicked.connect(self.fts_save)
-        self.load_pushbutton = QtWidgets.QPushButton('Load', self)
-        self.load_pushbutton.clicked.connect(self.fts_load)
-        self.layout().addWidget(self.load_pushbutton, 16, 0, 1, 2)
-        self.loaded_files_combobox = self.gb_make_labeled_combobox(label_text='Loaded Files')
-        self.layout().addWidget(self.loaded_files_combobox, 17, 1, 1, 1)
-        self.loaded_files_combobox.activated.connect(self.fts_plot_all)
-        self.remove_file_pushbutton = QtWidgets.QPushButton('Remove File')
-        self.remove_file_pushbutton.clicked.connect(self.fts_remove_file)
-        self.layout().addWidget(self.remove_file_pushbutton, 17, 0, 1, 1)
-        self.co_plot_checkbox = QtWidgets.QCheckBox('Co Plot?')
-        self.layout().addWidget(self.co_plot_checkbox, 18, 0, 1, 1)
-        self.co_plot_checkbox.clicked.connect(self.fts_plot_all)
-        self.divide_checkbox = QtWidgets.QCheckBox('Divide Spectra')
-        self.layout().addWidget(self.divide_checkbox, 18, 1, 1, 1)
-        self.divide_checkbox.clicked.connect(self.fts_plot_all)
+        self.reset_zero_pushbutton.clicked.connect(self.fts_reset_zero)
+        self.set_position_pushbutton.clicked.connect(self.fts_set_position)
 
-    def fts_remove_file(self):
-        '''
-        '''
-        idx = self.loaded_files_combobox.currentIndex()
-        self.loaded_files_combobox.removeItem(idx)
-
-
-    def fts_configure_plot_panel(self):
+    def fts_configure_analysis_panel(self):
         '''
         '''
         self.int_spec_plot_label = QtWidgets.QLabel('', self)
         self.int_spec_plot_label.setAttribute(QtCore.Qt.WA_TranslucentBackground)
-        self.layout().addWidget(self.int_spec_plot_label, 0, 4, 7, 5)
+        self.layout().addWidget(self.int_spec_plot_label, 0, 4, 8, 5)
         # Time stream 
         self.time_stream_plot_label = QtWidgets.QLabel('', self)
         self.time_stream_plot_label.setAttribute(QtCore.Qt.WA_TranslucentBackground)
-        self.layout().addWidget(self.time_stream_plot_label, 7, 4, 5, 5)
+        self.layout().addWidget(self.time_stream_plot_label, 8, 4, 5, 5)
         # Mean 
         self.data_mean_label = QtWidgets.QLabel('Data Mean (V):', self)
         self.layout().addWidget(self.data_mean_label, 12, 4, 1, 1)
@@ -205,75 +224,71 @@ class FourierTransformSpectrometer(QtWidgets.QWidget, GuiBuilder, FourierTransfo
         # Interferogram
         self.interferogram_label = QtWidgets.QLabel('Int:', self)
         self.layout().addWidget(self.interferogram_label, 12, 6, 1, 1)
-        self.optical_elements_combobox = self.gb_make_labeled_combobox(label_text='Optical Elements')
-        for optical_element in self.optical_elements:
-            self.optical_elements_combobox.addItem(optical_element)
-        self.layout().addWidget(self.optical_elements_combobox, 13, 4, 1, 1)
-        self.optical_elements_combobox.activated.connect(self.fts_show_active_optical_elements)
-        self.optical_element_active_checkbox = QtWidgets.QCheckBox('Active', self)
-        self.optical_element_active_checkbox.clicked.connect(self.fts_update_active_optical_elements)
-        self.layout().addWidget(self.optical_element_active_checkbox, 13, 5, 1, 1)
-        self.bands_combobox = self.gb_make_labeled_combobox(label_text='Detector Band')
-        self.divide_elements_checkbox = QtWidgets.QCheckBox('Divide Optical Elements?')
-        self.layout().addWidget(self.divide_elements_checkbox, 13, 6, 1, 1)
-        self.divide_elements_checkbox.clicked.connect(self.fts_plot_all)
         # Smoothing Factor
         self.smoothing_factor_lineedit = self.gb_make_labeled_lineedit(label_text='Smoothing Factor:')
         self.smoothing_factor_lineedit.setText('0.002')
         self.smoothing_factor_lineedit.setValidator(QtGui.QDoubleValidator(0, 1, 5, self.smoothing_factor_lineedit))
         self.smoothing_factor_lineedit.returnPressed.connect(self.fts_plot_all)
-        self.layout().addWidget(self.smoothing_factor_lineedit, 14, 5, 1, 1)
+        self.layout().addWidget(self.smoothing_factor_lineedit, 13, 4, 1, 1)
+        # Optical Elements 
+        self.optical_elements_combobox = self.gb_make_labeled_combobox(label_text='Optical Elements')
+        for optical_element in self.optical_elements:
+            self.optical_elements_combobox.addItem(optical_element)
+        self.layout().addWidget(self.optical_elements_combobox, 13, 5, 1, 1)
+        self.optical_elements_combobox.activated.connect(self.fts_show_active_optical_elements)
+        self.optical_element_active_checkbox = QtWidgets.QCheckBox('Active', self)
+        self.optical_element_active_checkbox.clicked.connect(self.fts_update_active_optical_elements)
+        self.layout().addWidget(self.optical_element_active_checkbox, 13, 6, 1, 1)
+        # Co-plot or divide spectra
+        self.co_plot_checkbox = QtWidgets.QCheckBox('Co Plot?')
+        self.layout().addWidget(self.co_plot_checkbox, 14, 6, 1, 1)
+        self.co_plot_checkbox.clicked.connect(self.fts_plot_all)
+        self.divide_checkbox = QtWidgets.QCheckBox('Divide Spectra')
+        self.layout().addWidget(self.divide_checkbox, 15, 6, 1, 1)
+        self.divide_checkbox.clicked.connect(self.fts_plot_all)
+        # Optial Elements
+        self.divide_elements_checkbox = QtWidgets.QCheckBox('Divide Optical Elements?')
+        self.layout().addWidget(self.divide_elements_checkbox, 14, 5, 1, 1)
+        self.divide_elements_checkbox.clicked.connect(self.fts_plot_all)
         # Element Division Threshold 
         self.element_division_threshhold_lineedit = self.gb_make_labeled_lineedit(label_text='Threshhold:')
         self.element_division_threshhold_lineedit.setText('0.1')
         self.element_division_threshhold_lineedit.setValidator(QtGui.QDoubleValidator(0, 1, 3, self.element_division_threshhold_lineedit))
         self.element_division_threshhold_lineedit.returnPressed.connect(self.fts_plot_all)
-        self.layout().addWidget(self.element_division_threshhold_lineedit, 13, 7, 1, 1)
+        self.layout().addWidget(self.element_division_threshhold_lineedit, 14, 4, 1, 1)
+        # Bands
+        self.bands_combobox = self.gb_make_labeled_combobox(label_text='Detector Band')
         for band in self.bands:
             self.bands_combobox.addItem(band)
-        self.layout().addWidget(self.bands_combobox, 14, 4, 1, 1)
-        self.bands_combobox.activated.connect(self.fts_plot_all)
+        self.layout().addWidget(self.bands_combobox, 15, 4, 1, 1)
+        self.bands_combobox.activated.connect(self.fts_show_active_bands)
+        self.detector_band_active_checkbox = QtWidgets.QCheckBox('Active', self)
+        self.detector_band_active_checkbox.clicked.connect(self.fts_update_active_bands)
+        self.layout().addWidget(self.detector_band_active_checkbox, 15, 5, 1, 1)
+        # Data Clip
         self.data_clip_lo_lineedit = self.gb_make_labeled_lineedit(label_text='Data Clip Lo (GHz):')
-        self.data_clip_lo_lineedit.setValidator(QtGui.QIntValidator(0, 25000, self.data_clip_lo_lineedit))
+        self.data_clip_lo_lineedit.setValidator(QtGui.QDoubleValidator(0, 25000, 3, self.data_clip_lo_lineedit))
         self.data_clip_lo_lineedit.setText('0.0')
         self.data_clip_lo_lineedit.returnPressed.connect(self.fts_plot_all)
-        self.layout().addWidget(self.data_clip_lo_lineedit, 17, 4, 1, 1)
+        self.layout().addWidget(self.data_clip_lo_lineedit, 16, 4, 1, 1)
         self.data_clip_hi_lineedit = self.gb_make_labeled_lineedit(label_text='Data Clip Hi (GHz):')
-        self.data_clip_hi_lineedit.setValidator(QtGui.QIntValidator(0, 25000, self.data_clip_hi_lineedit))
+        self.data_clip_hi_lineedit.setValidator(QtGui.QDoubleValidator(0, 25000, 3, self.data_clip_hi_lineedit))
         self.data_clip_hi_lineedit.returnPressed.connect(self.fts_plot_all)
         self.data_clip_hi_lineedit.setText('600.0')
-        self.layout().addWidget(self.data_clip_hi_lineedit, 17, 5, 1, 1)
-        self.voltage_bias_lineedit = self.gb_make_labeled_lineedit(label_text='TES Bias Voltage (uV):')
-        self.voltage_bias_lineedit.setValidator(QtGui.QDoubleValidator(0, 25000, 3, self.voltage_bias_lineedit))
-        self.layout().addWidget(self.voltage_bias_lineedit, 17, 6, 1, 1)
-        # Source Type
-        self.source_type_combobox = self.gb_make_labeled_combobox(label_text='Soure Type')
-        for source in ['NA', 'Heater']:
-            self.source_type_combobox.addItem(source)
-        self.layout().addWidget(self.source_type_combobox, 15, 4, 1, 1)
-        self.source_type_combobox.currentIndexChanged.connect(self.fts_update_heater_type)
-        # Source Modulation Frequency 
-        self.modulation_frequency_lineedit = self.gb_make_labeled_lineedit(label_text='Mod Frequency (Hz):')
-        self.modulation_frequency_lineedit.setValidator(QtGui.QDoubleValidator(0, 2e5, 2, self.modulation_frequency_lineedit))
-        self.layout().addWidget(self.modulation_frequency_lineedit, 15, 5, 1, 1)
-        self.modulation_frequency_lineedit.setText('12')
-        # Heater Voltage 
-        self.heater_voltage_lineedit = self.gb_make_labeled_lineedit(label_text='Heater Voltage (V):')
-        self.heater_voltage_lineedit.setValidator(QtGui.QDoubleValidator(0, 150, 2, self.heater_voltage_lineedit))
-        self.layout().addWidget(self.heater_voltage_lineedit, 16, 4, 1, 1)
-        # Source Power Voltage 
-        self.source_power_lineedit = self.gb_make_labeled_lineedit(label_text='Source Power (dBm):')
-        self.source_power_lineedit.setValidator(QtGui.QDoubleValidator(-1e6, 1e3, 2, self.source_power_lineedit))
-        self.layout().addWidget(self.source_power_lineedit, 16, 5, 1, 1)
-        # Source Frequency 
-        self.source_frequency_lineedit = self.gb_make_labeled_lineedit(label_text='Source Frequency (GHz):')
-        #self.source_frequency_lineedit.setValidator(QtGui.QDoubleValidator(0, 1500, 2, self.source_frequency_lineedit))
-        self.layout().addWidget(self.source_frequency_lineedit, 16, 6, 1, 1)
+        self.layout().addWidget(self.data_clip_hi_lineedit, 16, 5, 1, 1)
+        # Loading and Saving Pushbuttons 
         self.replot_pushbutton = QtWidgets.QPushButton('Replot', self)
-        self.layout().addWidget(self.replot_pushbutton, 18, 4, 1, 3)
+        self.layout().addWidget(self.replot_pushbutton, 17, 4, 1, 3)
         self.replot_pushbutton.clicked.connect(self.fts_plot_all)
-        self.source_type_combobox.setCurrentIndex(-1)
-
+        self.load_pushbutton = QtWidgets.QPushButton('Load', self)
+        self.load_pushbutton.clicked.connect(self.fts_load)
+        self.layout().addWidget(self.load_pushbutton, 18, 4, 1, 3)
+        self.remove_file_pushbutton = QtWidgets.QPushButton('Remove File')
+        self.remove_file_pushbutton.clicked.connect(self.fts_remove_file)
+        self.layout().addWidget(self.remove_file_pushbutton, 19, 6, 1, 1)
+        self.loaded_files_combobox = self.gb_make_labeled_combobox(label_text='Loaded Files')
+        self.layout().addWidget(self.loaded_files_combobox, 19, 4, 1, 2)
+        self.loaded_files_combobox.activated.connect(self.fts_plot_all)
 
     def fts_update_heater_type(self):
         '''
@@ -283,16 +298,28 @@ class FourierTransformSpectrometer(QtWidgets.QWidget, GuiBuilder, FourierTransfo
             self.heater_voltage_lineedit.setDisabled(False)
             self.source_power_lineedit.setDisabled(True)
             self.source_frequency_lineedit.setDisabled(True)
+            self.source_frequency_lineedit.setText('Thermal')
         else:
             self.heater_voltage_lineedit.setDisabled(True)
             self.source_power_lineedit.setDisabled(False)
             self.source_frequency_lineedit.setDisabled(False)
-    def fts_show_active_optical_elements(self):
+            self.source_frequency_lineedit.setText('')
+
+    def fts_update_active_bands(self):
         '''
         '''
-        optical_element = self.optical_elements_combobox.currentText()
-        active = self.optical_elements[optical_element]['Active']
-        self.optical_element_active_checkbox.setChecked(active)
+        band = self.bands_combobox.currentText()
+        self.bands[band]['Active'] = self.detector_band_active_checkbox.isChecked()
+        if self.bands[band]['Active']:
+            self.status_bar.showMessage('{0} is Active'.format(band))
+        self.fts_plot_all()
+
+    def fts_show_active_bands(self):
+        '''
+        '''
+        band = self.bands_combobox.currentText()
+        active = self.bands[band]['Active']
+        self.detector_band_active_checkbox.setChecked(active)
         self.fts_plot_all()
 
     def fts_update_active_optical_elements(self):
@@ -304,9 +331,34 @@ class FourierTransformSpectrometer(QtWidgets.QWidget, GuiBuilder, FourierTransfo
             self.status_bar.showMessage('{0} is Active'.format(optical_element))
         self.fts_plot_all()
 
+    def fts_show_active_optical_elements(self):
+        '''
+        '''
+        optical_element = self.optical_elements_combobox.currentText()
+        active = self.optical_elements[optical_element]['Active']
+        self.optical_element_active_checkbox.setChecked(active)
+        self.fts_plot_all()
+
     #################################################
     # Scanning
     #################################################
+
+    def fts_reset_zero(self):
+        '''
+        '''
+        if not hasattr(self.csm_widget, 'com_port'):
+            return None
+        self.csm_widget.csm_reset_zero()
+        self.set_position_lineedit.setText('0')
+
+    def fts_set_position(self):
+        '''
+        '''
+        if not hasattr(self.csm_widget, 'com_port'):
+            return None
+        position = int(self.set_position_lineedit.text())
+        print('adfa', position)
+        self.csm_widget.csm_set_position(position=position, verbose=True)
 
     def fts_update_scan_params(self):
         '''
@@ -338,14 +390,19 @@ class FourierTransformSpectrometer(QtWidgets.QWidget, GuiBuilder, FourierTransfo
             resolution = ((2.99792458 * 10 ** 8) / total_distance) / (10 ** 9) # GHz
             resolution = '{0:.2f} GHz'.format(resolution)
             max_frequency = '{0:.2f} GHz'.format(max_frequency)
-            info_string = 'N Data Points: {0} ::: '.format(self.n_data_points)
-            info_string += 'Resolution: {0} ::: Max Frequency (GHz): {1}'.format(resolution, max_frequency)
+            info_string = 'Data Points: {0}\n'.format(self.n_data_points)
+            info_string += 'Res: {0} GHz\n'.format(resolution)
+            info_string += 'Max Freq {0} (GHz)'.format(max_frequency)
         else:
             info_string = ''
+            resolution = np.nan
+            max_frequency = np.nan
         self.scan_settings_dict = {
              'end': end,
              'start': start,
              'mirror_interval': mirror_interval,
+             'resolution': resolution,
+             'max_frequency': max_frequency,
              'distance_per_step': distance_per_step,
              'pause_time': pause_time,
              'n_data_points': self.n_data_points
@@ -366,12 +423,13 @@ class FourierTransformSpectrometer(QtWidgets.QWidget, GuiBuilder, FourierTransfo
         self.scan_settings_dict.update({'sm_com_port': sm_com_port})
         self.status_bar.showMessage('Setting up serial connection to stepper motor on {0}'.format(sm_com_port))
         QtWidgets.QApplication.processEvents()
-        sm_settings_str = ''
+        sm_settings_str = 'Stepper Settings:'
         #self.scan_settings_dict.update(self.csm_widget.stepper_settings_dict)
         if hasattr(self.csm_widget, 'stepper_settings_dict'):
             for setting, value in self.csm_widget.stepper_settings_dict.items():
                 sm_settings_str += ' '.join([x.title() for x in setting.split('_')])
                 sm_settings_str += ' {0} ::: '.format(value)
+            print(setting)
             self.stepper_settings_label.setText(sm_settings_str)
 
     def fts_start_stop_scan(self):
@@ -459,7 +517,7 @@ class FourierTransformSpectrometer(QtWidgets.QWidget, GuiBuilder, FourierTransfo
                 peak_to_peak_average = 0.5 * (np.max(self.y_data) + np.min(self.y_data))
                 self.data_mean_label.setText('Data Mean (V): {0:.6f}'.format(out_mean))
                 self.data_std_label.setText('Data STD (V): {0:.6f}'.format(out_std))
-                self.interferogram_label.setText('Int Data Q: Avg {0:.3f} (V) Pk-Pk-Avg {1:.3f} (V)'.format(int_average, peak_to_peak_average))
+                self.interferogram_label.setText('Int Data Quality: Avg {0:.3f} (V) Pk-Pk-Avg {1:.3f} (V)'.format(int_average, peak_to_peak_average))
                 # Compute and report time diagnostics
                 t_now = datetime.now()
                 t_elapsed = t_now - t_start
@@ -486,11 +544,19 @@ class FourierTransformSpectrometer(QtWidgets.QWidget, GuiBuilder, FourierTransfo
     # File handling and plotting
     #################################################
 
+    def fts_remove_file(self):
+        '''
+        '''
+        idx = self.loaded_files_combobox.currentIndex()
+        self.loaded_files_combobox.removeItem(idx)
+
     def fts_index_file_name(self, suffix='if'):
         '''
         '''
+        resolution = int(float(self.scan_settings_dict['resolution'].split(' ')[0]))
+        max_frequency = int(float(self.scan_settings_dict['max_frequency'].split(' ')[0]))
         for i in range(1, 1000):
-            file_name = '{0}_{1}.{2}'.format(self.sample_name_lineedit.text(), str(i).zfill(3), suffix)
+            file_name = '{0}_{1}GHz_Res_{2}GHz_MaxFreq_{3}.{4}'.format(self.sample_name_lineedit.text(), resolution, max_frequency, str(i).zfill(3), suffix)
             save_path = os.path.join(self.data_folder, file_name)
             if not os.path.exists(save_path):
                 break
@@ -557,8 +623,8 @@ class FourierTransformSpectrometer(QtWidgets.QWidget, GuiBuilder, FourierTransfo
                 self.load_meta_data = True
         if if_save_path is not None:
             if self.load_meta_data:
-                meta_dict = self.gb_load_meta_data(if_save_path, 'if')
-                self.loaded_data_dict[if_save_path] = meta_dict
+                self.meta_dict = self.gb_load_meta_data(if_save_path, 'if')
+                self.loaded_data_dict[if_save_path] = self.meta_dict
             self.x_data, self.x_stds, self.y_data, self.y_stds = [], [], [], []
             with open(if_save_path, 'r') as fh:
                 lines = fh.readlines()
@@ -576,10 +642,12 @@ class FourierTransformSpectrometer(QtWidgets.QWidget, GuiBuilder, FourierTransfo
     def fts_plot_time_stream(self, ts, min_, max_):
         '''
         '''
-        fig, ax = self.fts_create_blank_fig(frac_screen_width=0.65, frac_screen_height=0.2, top=0.95, bottom=0.23, n_axes=1, left=0.15)
-        ax.plot(ts)
-        ax.set_xlabel('Samples', fontsize=12)
-        ax.set_ylabel('($V$)', fontsize=12)
+        fig, ax = self.fts_create_blank_fig(frac_screen_width=0.65, frac_screen_height=0.2, top=0.90, bottom=0.23, n_axes=1, left=0.15)
+        ax.plot(ts, label='TOD')
+        ax.set_xlabel('Samples', fontsize=10)
+        ax.set_ylabel('($V$)', fontsize=10)
+        ax.set_title('Data', fontsize=10)
+        pl.legend()
         fig.savefig('temp_files/temp_ts.png', transparent=True)
         image = QtGui.QPixmap('temp_files/temp_ts.png')
         self.time_stream_plot_label.setPixmap(image)
@@ -662,10 +730,8 @@ class FourierTransformSpectrometer(QtWidgets.QWidget, GuiBuilder, FourierTransfo
         smoothing_factor = float(self.smoothing_factor_lineedit.text())
         mirror_interval = self.scan_settings_dict['mirror_interval']
         band = self.bands_combobox.currentText()
-        if len(band) > 0:
-            fft_frequency_vector_simulated, fft_vector_simulated = self.ftsy_load_simulated_band(data_clip_lo, data_clip_hi, band)
         if fig is None or type(fig) == bool:
-            fig, ax1, ax2, ax3, ax4 = self.fts_create_blank_fig(frac_screen_width=0.65, frac_screen_height=0.4, wspace=0.25, hspace=0.4, bottom=0.18, left=0.15)
+            fig, ax1, ax2, ax3, ax4 = self.fts_create_blank_fig(frac_screen_width=0.65, frac_screen_height=0.4, wspace=0.2, hspace=0.4, bottom=0.18, left=0.15, top=0.9)
         else:
             ax1, ax2, ax3, ax4 = fig.get_axes()
         ax1.set_xlabel('Mirror Position (Steps)', fontsize=10)
@@ -678,39 +744,55 @@ class FourierTransformSpectrometer(QtWidgets.QWidget, GuiBuilder, FourierTransfo
             title += ': {0}'.format(self.sample_name_lineedit.text())
         ax1.set_title(title, fontsize=12)
         label = None
+        self.meta_dict=None
         if if_save_path is not None:
-            meta_dict = self.loaded_data_dict[if_save_path]
+            self.meta_dict = self.loaded_data_dict[if_save_path]
         if len(self.x_data) > 10:
             fft_freq_vector, fft_vector, phase_corrected_fft_vector, position_vector, efficiency_vector = self.ftsy_convert_IF_to_FFT_data(self.x_data, self.y_data, mirror_interval, data_selector='All')
             # Plot IF 
-            ax1.errorbar(self.x_data, self.y_data, yerr=self.y_stds, marker='.', linestyle='-', label='IF')
+            color = 'm'
+            label = 'Raw FFT'
+            if_label = 'IF'
+            if self.co_plot_checkbox.isChecked():
+                color = None
+                label = None
+                if_label = None
+            ax1.errorbar(self.x_data, self.y_data, yerr=self.y_stds, marker='.', linestyle='-', label=if_label)
             # Plot Raw FFT 
             data_selector = np.logical_and(data_clip_lo < fft_freq_vector, fft_freq_vector < data_clip_hi)
-            normalized_phase_corrected_fft_vector = np.abs(phase_corrected_fft_vector.real)
             normalized_phase_corrected_fft_vector = np.abs(phase_corrected_fft_vector.real / np.max(phase_corrected_fft_vector.real))
-            ax3.errorbar(fft_freq_vector[data_selector] * 1e-9, normalized_phase_corrected_fft_vector[data_selector], color='m', marker='.', linestyle='-', label='Raw FFT')
+            max_idx, max_freq, integrated_bandwidth = self.fts_find_max_frequency(fft_freq_vector[data_selector], normalized_phase_corrected_fft_vector[data_selector])
+            pk_label = 'Peak/BW {0:.2f}/{1:.2f} GHz Raw'.format(max_freq * 1e-9, integrated_bandwidth * 1e-9)
+            ax3.errorbar(max_freq * 1e-9, normalized_phase_corrected_fft_vector[data_selector][max_idx], color=color, marker='*', markersize=10, label=pk_label)
+            ax3.errorbar(fft_freq_vector[data_selector] * 1e-9, normalized_phase_corrected_fft_vector[data_selector], color=color, marker='.', linestyle='-', label=label)
             # Normalized and Smooth
             normalized_phase_corrected_fft_vector = self.ftsy_running_mean(normalized_phase_corrected_fft_vector, smoothing_factor=smoothing_factor)
-            if len(band) > 0:
-                sim_selector = np.where(fft_frequency_vector_simulated < data_clip_hi * 1e-9)
-                integrated_bandwidth = np.trapz(fft_vector_simulated[sim_selector], fft_frequency_vector_simulated[sim_selector] * 1e9)
-                label = 'HFSS BW {0:.2f} GHz '.format(integrated_bandwidth * 1e-9)
-                ax3.plot(fft_frequency_vector_simulated[sim_selector], fft_vector_simulated[sim_selector], color='k', label=label)
-                ax4.plot(fft_frequency_vector_simulated[sim_selector], fft_vector_simulated[sim_selector], color='k')
-            if if_save_path is not None:
-                label = '{0} FFT'.format(meta_dict['transmission_sample_lineedit'])
+            for band in self.bands:
+                if self.bands[band]['Active']:
+                    fft_frequency_vector_simulated, fft_vector_simulated = self.ftsy_load_simulated_band(data_clip_lo, data_clip_hi, band)
+                    sim_selector = np.where(fft_frequency_vector_simulated < data_clip_hi * 1e-9)
+                    integrated_bandwidth = np.trapz(fft_vector_simulated[sim_selector], fft_frequency_vector_simulated[sim_selector] * 1e9)
+                    label = '{0} Band BW {1:.2f} GHz '.format(band, integrated_bandwidth * 1e-9)
+                    ax3.plot(fft_frequency_vector_simulated[sim_selector], fft_vector_simulated[sim_selector], label=label)
+                    ax4.plot(fft_frequency_vector_simulated[sim_selector], fft_vector_simulated[sim_selector])
+            if self.meta_dict is not None:
+                label = '{0} FFT'.format(self.meta_dict['transmission_sample_lineedit'])
             if label in ax3.get_legend_handles_labels()[1]:
                 label = None
             # Plot processed FFT
             ax4, fft_freq_vector, normalized_phase_corrected_fft_vector = self.fts_plot_and_divide_optical_elements(ax4, fft_freq_vector[data_selector], normalized_phase_corrected_fft_vector[data_selector])
-            ax4.errorbar(fft_freq_vector * 1e-9, normalized_phase_corrected_fft_vector, color='g', marker='.', linestyle='-', label='Proc FFT')
-            max_idx = np.argmax(normalized_phase_corrected_fft_vector)
-            max_freq = fft_freq_vector[max_idx]
-            integrated_bandwidth = np.trapz(normalized_phase_corrected_fft_vector, fft_freq_vector)
-            pk_label = 'Peak/BW {0:.2f}/{1:.2f} GHz'.format(max_freq * 1e-9, integrated_bandwidth * 1e-9)
-            ax4.errorbar(max_freq * 1e-9, normalized_phase_corrected_fft_vector[max_idx], color='y', marker='*', markersize=5, label=pk_label)
-        if if_save_path is not None:
-            label = '{0} IF'.format(meta_dict['transmission_sample_lineedit'])
+            normalized_phase_corrected_fft_vector = normalized_phase_corrected_fft_vector/ np.max(normalized_phase_corrected_fft_vector)
+            color = 'g'
+            label = 'Proc FFT'
+            if self.co_plot_checkbox.isChecked():
+                color = None
+                label = None
+            ax4.errorbar(fft_freq_vector * 1e-9, normalized_phase_corrected_fft_vector, color=color, marker='.', linestyle='-', label=label)
+            max_idx, max_freq, integrated_bandwidth = self.fts_find_max_frequency(fft_freq_vector, normalized_phase_corrected_fft_vector)
+            pk_label = 'Peak/BW {0:.2f}/{1:.2f} GHz Proc'.format(max_freq * 1e-9, integrated_bandwidth * 1e-9)
+            ax4.errorbar(max_freq * 1e-9, normalized_phase_corrected_fft_vector[max_idx], color=color, marker='*', markersize=10, label=pk_label)
+        if self.meta_dict is not None:
+            label = '{0} IF'.format(self.meta_dict['transmission_sample_lineedit'])
         if label in ax1.get_legend_handles_labels()[1]:
             label = None
         temp_png_path = os.path.join('temp_files', 'temp_combo.png')
@@ -719,11 +801,21 @@ class FourierTransformSpectrometer(QtWidgets.QWidget, GuiBuilder, FourierTransfo
         labels += ax3.get_legend_handles_labels()[1]
         handles += ax4.get_legend_handles_labels()[0]
         labels += ax4.get_legend_handles_labels()[1]
-        ax2.legend(handles, labels, numpoints=1, mode="expand", bbox_to_anchor=(0, 0.1, 1, 1), fontsize=9)
+        ax2.legend(handles, labels, numpoints=1, mode="expand", bbox_to_anchor=(0, 0.1, 1, 1), fontsize=8)
         fig.savefig(temp_png_path, transparent=True)
         image_to_display = QtGui.QPixmap(temp_png_path)
         self.int_spec_plot_label.setPixmap(image_to_display)
         return fig
+
+    def fts_find_max_frequency(self, frequency_vector, normalized_transmission_vector):
+        '''
+        '''
+        max_idx = np.argmax(normalized_transmission_vector)
+        max_freq = frequency_vector[max_idx]
+        integrated_bandwidth = np.trapz(normalized_transmission_vector, frequency_vector)
+        return max_idx, max_freq, integrated_bandwidth
+
+
 
     def fts_plot_and_divide_optical_elements(self, ax, frequency_vector, normalized_transmission_vector):
         '''
@@ -764,9 +856,10 @@ class FourierTransformSpectrometer(QtWidgets.QWidget, GuiBuilder, FourierTransfo
             normalized_phase_corrected_fft_vector = np.abs(phase_corrected_fft_vector.real)
             normalized_phase_corrected_fft_vector = np.abs(phase_corrected_fft_vector.real / np.max(phase_corrected_fft_vector.real))
             ax.errorbar(fft_freq_vector[selector] * 1e-9, normalized_phase_corrected_fft_vector[selector], marker='.', linestyle='-')
-        if len(band) > 0:
-            fft_frequency_vector_simulated, fft_vector_simulated = self.ftsy_load_simulated_band(data_clip_lo, data_clip_hi, band)
-            ax.plot(fft_frequency_vector_simulated, fft_vector_simulated, label='HFSS')
+        for band in self.bands:
+            if self.bands[band]['Active']:
+                fft_frequency_vector_simulated, fft_vector_simulated = self.ftsy_load_simulated_band(data_clip_lo, data_clip_hi, band)
+                ax.plot(fft_frequency_vector_simulated, fft_vector_simulated, label='HFSS')
         fig.savefig(os.path.join('temp_files', 'temp_spectra.png'))
 
     def fts_plot_int(self):

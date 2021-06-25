@@ -10,16 +10,18 @@ from datetime import datetime
 from pprint import pprint
 from bd_lib.bolo_daq import BoloDAQ
 from bd_lib.iv_curve_lib import IVCurveLib
+from bd_lib.fourier_transform_spectroscopy import FourierTransformSpectroscopy
 from bd_lib.saving_manager import SavingManager
 from PyQt5 import QtCore, QtGui, QtWidgets
 from GuiBuilder.gui_builder import GuiBuilder, GenericClass
 
-class IVCollector(QtWidgets.QWidget, GuiBuilder, IVCurveLib):
+class IVCollector(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTransformSpectroscopy):
 
     def __init__(self, daq_settings, status_bar, screen_resolution, monitor_dpi, data_folder):
         '''
         '''
         super(IVCollector, self).__init__()
+        self.bands = self.ftsy_get_bands()
         self.status_bar = status_bar
         self.daq_settings = daq_settings
         self.screen_resolution = screen_resolution
@@ -87,9 +89,11 @@ class IVCollector(QtWidgets.QWidget, GuiBuilder, IVCurveLib):
         self.ivc_make_plot_panel()
         self.ivc_display_daq_settings()
         self.ivc_plot_running()
-        self.ivc_daq_combobox.setCurrentIndex(1)
         self.daq_x_combobox.setCurrentIndex(0)
         self.daq_y_combobox.setCurrentIndex(1)
+        self.squid_select_combobox.currentIndexChanged.connect(self.ivc_update_squid_calibration)
+        self.squid_select_combobox.setCurrentIndex(1)
+        self.squid_select_combobox.setCurrentIndex(0)
 
     def ivc_display_daq_settings(self):
         '''
@@ -111,30 +115,24 @@ class IVCollector(QtWidgets.QWidget, GuiBuilder, IVCurveLib):
         for daq in range(0, 8):
             self.daq_x_combobox.addItem(str(daq))
         self.layout().addWidget(self.daq_x_combobox, 1, 0, 1, 1)
-        self.daq_settings_x_label = QtWidgets.QLabel('', self)
-        self.daq_settings_x_label.setAlignment(QtCore.Qt.AlignLeft)
-        self.layout().addWidget(self.daq_settings_x_label, 2, 0, 1, 1)
         # DAQ Y
         self.daq_y_combobox = self.gb_make_labeled_combobox(label_text='DAQ Y Data:')
         for daq in range(0, 8):
             self.daq_y_combobox.addItem(str(daq))
-        self.layout().addWidget(self.daq_y_combobox, 4, 0, 1, 1)
-        self.daq_settings_y_label = QtWidgets.QLabel('', self)
-        self.daq_settings_y_label.setAlignment(QtCore.Qt.AlignLeft)
+        self.layout().addWidget(self.daq_y_combobox, 1, 1, 1, 1)
         self.daq_y_combobox.setCurrentIndex(1)
-        self.layout().addWidget(self.daq_settings_y_label, 5, 0, 1, 1)
         self.daq_y_combobox.currentIndexChanged.connect(self.ivc_display_daq_settings)
         self.daq_x_combobox.currentIndexChanged.connect(self.ivc_display_daq_settings)
         self.ivc_daq_combobox.currentIndexChanged.connect(self.ivc_display_daq_settings)
-        self.ivc_daq_combobox.setCurrentIndex(1)
+        self.ivc_daq_combobox.setCurrentIndex(0)
         self.int_time_lineedit = self.gb_make_labeled_lineedit(label_text='Int Time')
         self.int_time_lineedit.setValidator(QtGui.QDoubleValidator(0, 1e5, 2, self.int_time_lineedit))
-        self.layout().addWidget(self.int_time_lineedit, 6, 0, 1, 1)
+        self.layout().addWidget(self.int_time_lineedit, 2, 0, 1, 1)
         self.int_time_lineedit.setText('100')
         self.int_time = self.int_time_lineedit.text()
         self.sample_rate_lineedit = self.gb_make_labeled_lineedit(label_text='Sample Rate (Hz)')
         self.sample_rate_lineedit.setValidator(QtGui.QDoubleValidator(0, 1e5, 2, self.sample_rate_lineedit))
-        self.layout().addWidget(self.sample_rate_lineedit, 6, 1, 1, 1)
+        self.layout().addWidget(self.sample_rate_lineedit, 2, 1, 1, 1)
         self.sample_rate_lineedit.setText('5000')
         self.sample_rate = self.sample_rate_lineedit.text()
 
@@ -152,63 +150,62 @@ class IVCollector(QtWidgets.QWidget, GuiBuilder, IVCurveLib):
     def ivc_iv_config(self):
         '''
         '''
-        self.x_correction_label = QtWidgets.QLabel(self)
         # X Voltage Factor
-        self.layout().addWidget(self.x_correction_label, 8, 1, 1, 1)
+        self.x_correction_label = QtWidgets.QLabel('', self)
+        self.layout().addWidget(self.x_correction_label, 4, 0, 1, 1)
         self.cold_bias_resistor_combobox = self.gb_make_labeled_combobox(label_text='Cold Bias Resistor:')
         for index, cold_bias_resistance in self.cold_bias_resistor_dict.items():
             self.cold_bias_resistor_combobox.addItem('{0}'.format(cold_bias_resistance))
         self.cold_bias_resistor_combobox.activated.connect(self.ivc_calc_x_correction)
         self.cold_bias_resistor_combobox.setCurrentIndex(0)
-        self.layout().addWidget(self.cold_bias_resistor_combobox, 7, 0, 1, 1)
+        self.layout().addWidget(self.cold_bias_resistor_combobox, 3, 0, 1, 1)
         self.warm_bias_resistor_lineedit = self.gb_make_labeled_lineedit(label_text='Warm Bias Resistor:')
         self.warm_bias_resistor_lineedit.textChanged.connect(self.ivc_calc_x_correction)
-        self.warm_bias_resistor_lineedit.setText('20000')
+        self.warm_bias_resistor_lineedit.setText('2000')
         self.warm_bias_resistor_lineedit.setValidator(QtGui.QDoubleValidator(0, 1e12, 2, self.warm_bias_resistor_lineedit))
-        self.layout().addWidget(self.warm_bias_resistor_lineedit, 7, 1, 1, 1)
+        self.layout().addWidget(self.warm_bias_resistor_lineedit, 3, 1, 1, 1)
         # SQUID
         self.squid_calibration_label = QtWidgets.QLabel('', self)
         self.squid_calibration_label.setAlignment(QtCore.Qt.AlignRight)
-        self.layout().addWidget(self.squid_calibration_label, 10, 1, 1, 1)
+        self.layout().addWidget(self.squid_calibration_label, 5, 1, 1, 1)
         self.squid_select_combobox = self.gb_make_labeled_combobox(label_text='Select SQUID')
         for squid, calibration in self.squid_calibration_dict.items():
             self.squid_select_combobox.addItem('{0}'.format(squid))
-        self.squid_select_combobox.setCurrentIndex(1)
-        self.squid_select_combobox.setCurrentIndex(0)
-        self.squid_select_combobox.currentIndexChanged.connect(self.ivc_update_squid_calibration)
-        self.layout().addWidget(self.squid_select_combobox, 10, 0, 1, 1)
+        self.layout().addWidget(self.squid_select_combobox, 5, 0, 1, 1)
         # Data Clip
         self.data_clip_lo_lineedit = self.gb_make_labeled_lineedit(label_text='Data Clip Lo (uV)', lineedit_text='0.0')
         self.data_clip_lo_lineedit.returnPressed.connect(self.ivc_plot_running)
         self.data_clip_lo_lineedit.setValidator(QtGui.QDoubleValidator(0, 1e5, 2, self.data_clip_lo_lineedit))
-        self.layout().addWidget(self.data_clip_lo_lineedit, 11, 0, 1, 1)
+        self.layout().addWidget(self.data_clip_lo_lineedit, 6, 0, 1, 1)
         self.data_clip_hi_lineedit = self.gb_make_labeled_lineedit(label_text='Data Clip Hi (uV)', lineedit_text='100.0')
         self.data_clip_hi_lineedit.returnPressed.connect(self.ivc_plot_running)
         self.data_clip_hi_lineedit.setValidator(QtGui.QDoubleValidator(0, 1e5, 2, self.data_clip_hi_lineedit))
-        self.layout().addWidget(self.data_clip_hi_lineedit, 12, 0, 1, 1)
+        self.layout().addWidget(self.data_clip_hi_lineedit, 6, 1, 1, 1)
         # Fit Clip
         self.fit_clip_lo_lineedit = self.gb_make_labeled_lineedit(label_text='Fit Clip Lo (uV)', lineedit_text='0.0')
         self.fit_clip_lo_lineedit.returnPressed.connect(self.ivc_plot_running)
-        self.layout().addWidget(self.fit_clip_lo_lineedit, 11, 1, 1, 1)
+        self.layout().addWidget(self.fit_clip_lo_lineedit, 7, 0, 1, 1)
         self.fit_clip_lo_lineedit.setValidator(QtGui.QDoubleValidator(0, 1e5, 2, self.fit_clip_lo_lineedit))
         self.fit_clip_hi_lineedit = self.gb_make_labeled_lineedit(label_text='Fit Clip Hi (uV)', lineedit_text='100.0')
         self.fit_clip_hi_lineedit.setValidator(QtGui.QDoubleValidator(0, 1e5, 2, self.fit_clip_hi_lineedit))
         self.fit_clip_hi_lineedit.returnPressed.connect(self.ivc_plot_running)
-        self.layout().addWidget(self.fit_clip_hi_lineedit, 12, 1, 1, 1)
+        self.layout().addWidget(self.fit_clip_hi_lineedit, 7, 1, 1, 1)
         # Extra information
         self.t_bath_lineedit = self.gb_make_labeled_lineedit(label_text='T Bath (mK)')
         self.t_bath_lineedit.setText('275')
         self.t_bath_lineedit.returnPressed.connect(self.ivc_plot_running)
         self.t_bath_lineedit.setValidator(QtGui.QDoubleValidator(0, 10000, 8, self.t_bath_lineedit))
-        self.layout().addWidget(self.t_bath_lineedit, 15, 0, 1, 1)
+        self.layout().addWidget(self.t_bath_lineedit, 8, 0, 1, 1)
         self.t_load_lineedit = self.gb_make_labeled_lineedit(label_text='T Load (K)')
         self.t_load_lineedit.setText('300')
         self.t_load_lineedit.returnPressed.connect(self.ivc_plot_running)
         self.t_load_lineedit.setValidator(QtGui.QDoubleValidator(0, 500, 8, self.t_load_lineedit))
-        self.layout().addWidget(self.t_load_lineedit, 15, 1, 1, 1)
+        self.layout().addWidget(self.t_load_lineedit, 8, 1, 1, 1)
+        self.absorber_type_lineedit = self.gb_make_labeled_lineedit(label_text='Absorber Type:')
+        self.layout().addWidget(self.absorber_type_lineedit, 9, 0, 1, 1)
         self.sample_band_combobox = self.gb_make_labeled_combobox(label_text='Sample Band (GHz)')
-        self.layout().addWidget(self.sample_band_combobox, 17, 0, 1, 1)
-        for sample_band in ['', 'MF-Sinuous1p5', 'MF-Sinuous0p8', '30', '40', '90', '150', '220', '270']:
+        self.layout().addWidget(self.sample_band_combobox, 10, 1, 1, 1)
+        for sample_band in self.bands:
             self.sample_band_combobox.addItem(sample_band)
 
     def ivc_add_common_widgets(self):
@@ -219,16 +216,21 @@ class IVCollector(QtWidgets.QWidget, GuiBuilder, IVCurveLib):
         for sample in self.samples_settings:
             self.sample_name_combobox.addItem(sample)
         self.sample_name_combobox.currentIndexChanged.connect(self.ivc_update_sample_name)
-        self.layout().addWidget(self.sample_name_combobox, 18, 0, 1, 1)
+        self.layout().addWidget(self.sample_name_combobox, 10, 0, 1, 1)
         self.sample_name_lineedit = self.gb_make_labeled_lineedit(label_text='Sample Name')
-        self.layout().addWidget(self.sample_name_lineedit, 19, 0, 1, 1)
+        self.layout().addWidget(self.sample_name_lineedit, 11, 0, 1, 2)
+        self.notes_lineedit = self.gb_make_labeled_lineedit(label_text='Notes:')
+        self.layout().addWidget(self.notes_lineedit, 12, 0, 1, 2)
         # Buttons
-        start_pushbutton = QtWidgets.QPushButton('Start', self)
-        start_pushbutton.clicked.connect(self.ivc_start_stop)
-        self.layout().addWidget(start_pushbutton, 20, 0, 1, 1)
-        save_pushbutton = QtWidgets.QPushButton('Save', self)
-        save_pushbutton.clicked.connect(self.ivc_save)
-        self.layout().addWidget(save_pushbutton, 21, 0, 1, 1)
+        self.start_pushbutton = QtWidgets.QPushButton('Start', self)
+        self.start_pushbutton.clicked.connect(self.ivc_start_stop)
+        self.layout().addWidget(self.start_pushbutton, 13, 0, 1, 2)
+        self.load_pushbutton = QtWidgets.QPushButton('Load', self)
+        self.load_pushbutton.clicked.connect(self.ivc_load)
+        self.layout().addWidget(self.load_pushbutton, 14, 0, 1, 2)
+        self.save_pushbutton = QtWidgets.QPushButton('Save', self)
+        self.save_pushbutton.clicked.connect(self.ivc_save)
+        self.layout().addWidget(self.save_pushbutton, 15, 0, 1, 2)
 
     def ivc_update_sample_name(self, index):
         '''
@@ -251,11 +253,7 @@ class IVCollector(QtWidgets.QWidget, GuiBuilder, IVCurveLib):
         calibration_value = float(self.squid_calibration_dict[squid_key])
         self.squid_calibration_label.setText('SQ_Correction: {0:.2f} uA/V'.format(calibration_value))
         squid = squid_key.split('-')[1]
-        print(squid)
-        print(squid)
-        print(squid)
         for index in range(self.sample_name_combobox.count()):
-            print(index)
             if squid in self.sample_name_combobox.itemText(index):
                 self.sample_name_combobox.setCurrentIndex(index)
                 break
@@ -371,12 +369,34 @@ class IVCollector(QtWidgets.QWidget, GuiBuilder, IVCurveLib):
     def ivc_index_file_name(self):
         '''
         '''
+        absorber = self.absorber_type_lineedit.text()
+        t_bath = self.t_bath_lineedit.text()
+        t_load = self.t_load_lineedit.text()
         for i in range(1, 1000):
-            file_name = 'IV_{0}_Scan_{1}.txt'.format(self.sample_name_lineedit.text(), str(i).zfill(3))
+            file_name = 'IV_{0}_tb_{1}mK_Tl_{2}K_{3}_{4}.txt'.format(self.sample_name_lineedit.text(), t_bath, t_load, absorber, str(i).zfill(3))
             save_path = os.path.join(self.data_folder, file_name)
             if not os.path.exists(save_path):
                 break
         return save_path
+
+    def ivc_load(self):
+        '''
+        '''
+        save_path = QtWidgets.QFileDialog.getOpenFileName(self, 'Select IF data', '.if')[0]
+        self.meta_dict = self.gb_load_meta_data(save_path, 'txt')
+        self.x_data, self.x_stds, self.y_data, self.y_stds = [], [], [], []
+        with open(save_path, 'r') as fh:
+            lines = fh.readlines()
+            for line in lines:
+                x_data = float(line.split(', ')[0].strip())
+                x_std = float(line.split(', ')[1].strip())
+                y_data = float(line.split(', ')[2].strip())
+                y_std = float(line.split(', ')[3].strip())
+                self.x_data.append(x_data)
+                self.x_stds.append(x_std)
+                self.y_data.append(y_data)
+                self.y_stds.append(y_std)
+        self.ivc_plot_xy()
 
     def ivc_save(self, save_path=None):
         '''
@@ -385,10 +405,7 @@ class IVCollector(QtWidgets.QWidget, GuiBuilder, IVCurveLib):
             save_path = self.ivc_index_file_name()
             save_path = QtWidgets.QFileDialog.getSaveFileName(self, 'Data Save Location', save_path, filter='*.txt')[0]
         if len(save_path) > 0:
-            ss_save_path = save_path.replace('.txt', '_meta.png')
-            screen = QtWidgets.QApplication.primaryScreen()
-            screenshot = screen.grabWindow(self.winId())
-            screenshot.save(ss_save_path, 'png')
+            self.gb_save_meta_data(save_path, 'txt')
             calibrated_save_path = save_path.replace('.txt', '_calibrated.txt')
             with open(save_path, 'w') as save_handle:
                 for i, x_data in enumerate(self.x_data):
@@ -446,7 +463,7 @@ class IVCollector(QtWidgets.QWidget, GuiBuilder, IVCurveLib):
         '''
         if len(self.x_data) == 0:
             return None
-        fig, ax = self.ivc_create_blank_fig(frac_screen_width=0.8, frac_screen_height=0.4, left=0.1, top=0.9)
+        fig, ax = self.ivc_create_blank_fig(frac_screen_width=0.9, frac_screen_height=0.4, left=0.1, wspace=0.1, top=0.9)
         sample_name = self.sample_name_lineedit.text()
         t_bath = self.t_bath_lineedit.text()
         t_load = self.t_load_lineedit.text()
@@ -485,7 +502,7 @@ class IVCollector(QtWidgets.QWidget, GuiBuilder, IVCurveLib):
         ax.set_ylabel('TES Current ($\mu A$)', fontsize=14)
         ax.set_title(title, fontsize=14)
         pl.legend(loc='best', fontsize=14)
-        fig.savefig('temp_iv_all.png', transparent=False)
+        fig.savefig('temp_iv_all.png', transparent=True)
         pl.close('all')
         image_to_display = QtGui.QPixmap('temp_iv_all.png')
         self.xy_scatter_label.setPixmap(image_to_display)
@@ -540,7 +557,8 @@ class IVCollector(QtWidgets.QWidget, GuiBuilder, IVCurveLib):
         fit_clip_lo = data_clip_lo + self.fit_clip_offset # uV
 
     def ivc_create_blank_fig(self, frac_screen_width=0.5, frac_screen_height=0.25,
-                             left=0.15, right=0.98, top=0.9, bottom=0.23, multiple_axes=False,
+                             left=0.15, right=0.98, top=0.9, bottom=0.23, wspace=None,
+                             hspace=None, multiple_axes=False,
                              aspect=None):
         if frac_screen_width is None and frac_screen_height is None:
             fig = pl.figure()
@@ -555,7 +573,7 @@ class IVCollector(QtWidgets.QWidget, GuiBuilder, IVCurveLib):
                 ax = fig.add_subplot(111, aspect=aspect)
         else:
             ax = None
-        fig.subplots_adjust(left=left, right=right, top=top, bottom=bottom)
+        fig.subplots_adjust(left=left, right=right, top=top, bottom=bottom, wspace=wspace, hspace=hspace)
         ax.tick_params(axis='x', labelsize=10)
         ax.tick_params(axis='y', labelsize=10)
         return fig, ax

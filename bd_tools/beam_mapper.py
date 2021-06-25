@@ -62,59 +62,78 @@ class BeamMapper(QtWidgets.QWidget, GuiBuilder):
     def bm_configure_input_panel(self):
         '''
         '''
-        self.welcome_header_label = QtWidgets.QLabel('Welcome to Beam Mapper', self)
-        self.layout().addWidget(self.welcome_header_label, 0, 0, 1, 4)
+        #self.welcome_header_label = QtWidgets.QLabel('Welcome to Beam Mapper', self)
+        #self.layout().addWidget(self.welcome_header_label, 0, 0, 1, 4)
         # DAQ (Device + Channel) Selection
         device_header_label = QtWidgets.QLabel('Device:', self)
-        self.layout().addWidget(device_header_label, 1, 0, 1, 1)
+        self.layout().addWidget(device_header_label, 0, 0, 1, 1)
         self.device_combobox = QtWidgets.QComboBox(self)
-        self.layout().addWidget(self.device_combobox, 1, 1, 1, 1)
+        self.layout().addWidget(self.device_combobox, 0, 1, 1, 1)
         for device in self.daq_settings:
             self.device_combobox.addItem(device)
         self.device_combobox.setCurrentIndex(1)
         daq_header_label = QtWidgets.QLabel('DAQ:', self)
-        self.layout().addWidget(daq_header_label, 2, 0, 1, 1)
+        self.layout().addWidget(daq_header_label, 1, 0, 1, 1)
         self.daq_combobox = QtWidgets.QComboBox(self)
-        self.layout().addWidget(self.daq_combobox, 2, 1, 1, 1)
+        self.layout().addWidget(self.daq_combobox, 1, 1, 1, 1)
         for channel in sorted([int(x) for x in self.daq_settings[device]]):
             self.daq_combobox.addItem(str(channel))
         #Pause Time 
         self.pause_time_lineedit = self.gb_make_labeled_lineedit(label_text='Pause Time (ms):')
         self.pause_time_lineedit.setText('1250')
         self.pause_time_lineedit.setValidator(QtGui.QIntValidator(0, 25000, self.pause_time_lineedit))
-        self.layout().addWidget(self.pause_time_lineedit, 4, 0, 1, 1)
+        self.layout().addWidget(self.pause_time_lineedit, 2, 0, 1, 1)
         #Int Time 
         self.int_time_lineedit = self.gb_make_labeled_lineedit(label_text='Int Time (ms): ')
         self.int_time_lineedit.setText('500')
         self.int_time_lineedit.setValidator(QtGui.QIntValidator(0, 25000, self.int_time_lineedit))
-        self.layout().addWidget(self.int_time_lineedit, 4, 1, 1, 1)
+        self.layout().addWidget(self.int_time_lineedit, 2, 1, 1, 1)
         #Sample rate 
         self.sample_rate_lineedit = self.gb_make_labeled_lineedit(label_text='Sample Rate (Hz): ')
         self.sample_rate_lineedit.setText('5000')
         self.sample_rate_lineedit.setValidator(QtGui.QIntValidator(0, 25000, self.sample_rate_lineedit))
-        self.layout().addWidget(self.sample_rate_lineedit, 4, 3, 1, 1)
+        self.layout().addWidget(self.sample_rate_lineedit, 2, 2, 1, 1)
+        # Basic stepper control X
+        self.set_position_x_lineedit = self.gb_make_labeled_lineedit(label_text='Set to Position X')
+        self.set_position_x_lineedit.setValidator(QtGui.QIntValidator(-300000, 300000, self.set_position_x_lineedit))
+        self.layout().addWidget(self.set_position_x_lineedit, 3, 0, 1, 1)
+        self.set_position_x_pushbutton = QtWidgets.QPushButton('Set Position X')
+        self.layout().addWidget(self.set_position_x_pushbutton, 3, 1, 1, 1)
+        self.reset_zero_x_pushbutton = QtWidgets.QPushButton('Reset Zero X')
+        self.layout().addWidget(self.reset_zero_x_pushbutton, 3, 2, 1, 2)
+        # Basic stepper control Y
+        self.set_position_y_lineedit = self.gb_make_labeled_lineedit(label_text='Set to Position Y')
+        self.layout().addWidget(self.set_position_y_lineedit, 4, 0, 1, 1)
+        self.set_position_y_lineedit.setValidator(QtGui.QIntValidator(-300000, 300000, self.set_position_y_lineedit))
+        self.set_position_y_pushbutton = QtWidgets.QPushButton('Set Position Y')
+        self.layout().addWidget(self.set_position_y_pushbutton, 4, 1, 1, 1)
+        self.reset_zero_y_pushbutton = QtWidgets.QPushButton('Reset Zero Y')
+        self.layout().addWidget(self.reset_zero_y_pushbutton, 4, 2, 1, 2)
+        self.reset_zero_x_pushbutton.clicked.connect(self.bm_reset_zero)
+        self.reset_zero_y_pushbutton.clicked.connect(self.bm_reset_zero)
+        self.set_position_x_pushbutton.clicked.connect(self.bm_set_position)
+        self.set_position_y_pushbutton.clicked.connect(self.bm_set_position)
         # Stepper Motor Selection
         ######
         # Scan Params
         ######
-        #Start Scan
+        #X Scan
         self.start_position_x_lineedit = self.gb_make_labeled_lineedit(label_text='Start Position X:')
         self.start_position_x_lineedit.setText('-250000')
         self.start_position_x_lineedit.setValidator(QtGui.QIntValidator(-300000, 300000, self.start_position_x_lineedit))
         self.start_position_x_lineedit.textChanged.connect(self.bm_update_scan_params)
         self.layout().addWidget(self.start_position_x_lineedit, 7, 0, 1, 2)
-        self.start_position_y_lineedit = self.gb_make_labeled_lineedit(label_text='Start Position Y:')
-        self.start_position_y_lineedit.setText('-250000')
-        self.start_position_y_lineedit.setValidator(QtGui.QIntValidator(-300000, 300000, self.start_position_y_lineedit))
-        self.start_position_y_lineedit.textChanged.connect(self.bm_update_scan_params)
-        self.layout().addWidget(self.start_position_y_lineedit, 7, 2, 1, 2)
-        #End Scan
         self.end_position_x_lineedit = self.gb_make_labeled_lineedit(label_text='End Position X:')
         self.end_position_x_lineedit.setText('250000')
         self.end_position_x_lineedit.setValidator(QtGui.QIntValidator(-300000, 300000, self.end_position_x_lineedit))
         self.end_position_x_lineedit.textChanged.connect(self.bm_update_scan_params)
-        self.layout().addWidget(self.end_position_x_lineedit, 8, 0, 1, 2)
-        end_position_y_header_label = QtWidgets.QLabel
+        self.layout().addWidget(self.end_position_x_lineedit, 7, 2, 1, 2)
+        #Y Scan
+        self.start_position_y_lineedit = self.gb_make_labeled_lineedit(label_text='Start Position Y:')
+        self.start_position_y_lineedit.setText('-250000')
+        self.start_position_y_lineedit.setValidator(QtGui.QIntValidator(-300000, 300000, self.start_position_y_lineedit))
+        self.start_position_y_lineedit.textChanged.connect(self.bm_update_scan_params)
+        self.layout().addWidget(self.start_position_y_lineedit, 8, 0, 1, 2)
         self.end_position_y_lineedit = self.gb_make_labeled_lineedit(label_text='End Position Y:')
         self.end_position_y_lineedit.setText('250000')
         self.end_position_y_lineedit.setValidator(QtGui.QIntValidator(-300000, 300000, self.end_position_y_lineedit))
@@ -135,6 +154,9 @@ class BeamMapper(QtWidgets.QWidget, GuiBuilder):
         #Scan Info size
         self.aperture_description_lineedit = self.gb_make_labeled_lineedit(label_text='Aperture Description')
         self.layout().addWidget(self.aperture_description_lineedit, 10, 0, 1, 2)
+        self.voltage_bias_lineedit = self.gb_make_labeled_lineedit(label_text='Voltage Bias (uV):')
+        self.voltage_bias_lineedit.setValidator(QtGui.QDoubleValidator(0, 300, 3, self.voltage_bias_lineedit))
+        self.layout().addWidget(self.voltage_bias_lineedit, 12, 0, 1, 2)
         #Source Information 
         self.source_type_combobox = self.gb_make_labeled_combobox(label_text='Source Type')
         for source_type in ['Analyzer', 'LN2', 'Heater']:
@@ -197,7 +219,6 @@ class BeamMapper(QtWidgets.QWidget, GuiBuilder):
         load_pushbutton = QtWidgets.QPushButton('Load', self)
         self.layout().addWidget(load_pushbutton, 18, 2, 1, 2)
         load_pushbutton.clicked.connect(self.bm_load)
-
         #Call the the source type
         self.source_type_combobox.setCurrentIndex(1)
         self.source_type_combobox.setCurrentIndex(0)
@@ -211,6 +232,7 @@ class BeamMapper(QtWidgets.QWidget, GuiBuilder):
             self.source_power_lineedit.setDisabled(True)
             self.source_angle_lineedit.setDisabled(True)
             self.source_temp_lineedit.setDisabled(False)
+            self.source_frequency_lineedit.setText('Thermal')
             if source_type == 'LN2':
                 self.source_temp_lineedit.setText('77')
         else:
@@ -219,6 +241,7 @@ class BeamMapper(QtWidgets.QWidget, GuiBuilder):
             self.source_angle_lineedit.setDisabled(False)
             self.source_temp_lineedit.setDisabled(True)
             self.source_temp_lineedit.setText('')
+            self.source_frequency_lineedit.setText('')
 
     def bm_configure_plot_panel(self):
         '''
@@ -252,6 +275,28 @@ class BeamMapper(QtWidgets.QWidget, GuiBuilder):
     ##############################################################################
     # Scanning 
     ##############################################################################
+
+    def bm_reset_zero(self):
+        '''
+        '''
+        axis = self.sender().text().split(' ')[-1]
+        csm_widget = getattr(self, 'csm_widget_{0}'.format(axis).lower())
+        lineedit = getattr(self, 'set_position_{0}_lineedit'.format(axis).lower())
+        if not hasattr(csm_widget, 'com_port'):
+            return None
+        csm_widget.csm_reset_zero()
+        lineedit.setText('0')
+
+    def bm_set_position(self):
+        '''
+        '''
+        axis = self.sender().text().split(' ')[-1]
+        csm_widget = getattr(self, 'csm_widget_{0}'.format(axis).lower())
+        lineedit = getattr(self, 'set_position_{0}_lineedit'.format(axis).lower())
+        if not hasattr(csm_widget, 'com_port'):
+            return None
+        position = int(lineedit.text())
+        csm_widget.csm_set_position(position=position, verbose=True)
 
     def bm_update_sample_name(self):
         '''
@@ -448,7 +493,6 @@ class BeamMapper(QtWidgets.QWidget, GuiBuilder):
                 act_y_pos = y_pos
                 time.sleep(pause_time * 1e-3)
                 if self.zero_lock_in_checkbox.isChecked():
-                    print('adfadfdas')
                     self.srs_widget.srs_zero_lock_in_phase()
                 time.sleep(0.300) # Post Zero lock-in wait 3 or 1 time constants at 100 or 300 ms
                 data_dict = daq.run()
@@ -580,14 +624,9 @@ class BeamMapper(QtWidgets.QWidget, GuiBuilder):
         '''
         '''
         save_folder, folder_name = self.bm_index_file_name()
-        print(save_folder, folder_name)
         if save_folder:
             save_path = os.path.join(save_folder, '{0}.dat'.format(folder_name))
-            print(save_path)
-            ss_save_path = save_path.replace('.dat', '_meta.png')
-            screen = QtWidgets.QApplication.primaryScreen()
-            screenshot = screen.grabWindow(self.winId())
-            screenshot.save(ss_save_path, 'png')
+            self.gb_save_meta_data(save_path, '.dat')
             with open(save_path, 'w') as save_handle:
                 for i, x_data in enumerate(self.x_posns):
                     line = '{0:.5f}, {1:.5f}, {2:.5f}, {3:.5f}\n'.format(self.x_posns[i], self.y_posns[i], self.Z_data[i], self.Z_stds[i])

@@ -189,17 +189,11 @@ class DifferenceLoadCurves(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTra
             self.band_select_combobox.addItem(band)
         self.band_select_combobox.activated.connect(self.dlc_load_spectra)
         self.layout().addWidget(self.band_select_combobox, 2, 8, 1, 2)
-        self.optical_elements_combobox = self.gb_make_labeled_combobox(label_text='Optical Elements')
-        for i, optical_element in enumerate(self.optical_elements_dict):
-            self.optical_elements_combobox.addItem(optical_element)
-            if i == 0:
-                active = self.optical_elements_dict[optical_element]['Active']
-        self.layout().addWidget(self.optical_elements_combobox, 2, 10, 1, 2)
-        self.optical_elements_combobox.activated.connect(self.dlc_show_active_optical_elements)
-        self.optical_element_active_checkbox = QtWidgets.QCheckBox('Active', self)
-        self.layout().addWidget(self.optical_element_active_checkbox, 2, 12, 1, 1)
-        self.optical_element_active_checkbox.clicked.connect(self.dlc_update_active_optical_elements)
-
+        self.frac_rn_lineedit = self.gb_make_labeled_lineedit(label_text='Frac Rn:')
+        self.frac_rn_lineedit.returnPressed.connect(self.dlc_load_spectra)
+        self.frac_rn_lineedit.setValidator(QtGui.QDoubleValidator(0, 1200, 2, self.frac_rn_lineedit))
+        self.frac_rn_lineedit.setText('0.7')
+        self.layout().addWidget(self.frac_rn_lineedit, 2, 10, 1, 1)
         self.spectra_data_clip_lo_lineedit = self.gb_make_labeled_lineedit(label_text='Data Clip Lo (GHz):')
         self.spectra_data_clip_lo_lineedit.returnPressed.connect(self.dlc_load_spectra)
         self.spectra_data_clip_lo_lineedit.setText('0')
@@ -209,21 +203,6 @@ class DifferenceLoadCurves(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTra
         self.layout().addWidget(self.spectra_data_clip_hi_lineedit, 3, 10, 1, 2)
         self.spectra_data_clip_hi_lineedit.setText('300')
         self.spectra_data_clip_hi_lineedit.returnPressed.connect(self.dlc_load_spectra)
-        self.smoothing_factor_lineedit = self.gb_make_labeled_lineedit(label_text='Smoothing Factor')
-        self.smoothing_factor_lineedit.returnPressed.connect(self.dlc_load_spectra)
-        self.smoothing_factor_lineedit.setText('0.01')
-        self.smoothing_factor_lineedit.setValidator(QtGui.QDoubleValidator(0, 0.5, 4, self.smoothing_factor_lineedit))
-
-        self.frac_rn_lineedit = self.gb_make_labeled_lineedit(label_text='Frac Rn:')
-        self.frac_rn_lineedit.returnPressed.connect(self.dlc_load_spectra)
-        self.frac_rn_lineedit.setValidator(QtGui.QDoubleValidator(0, 1200, 2, self.frac_rn_lineedit))
-        self.frac_rn_lineedit.setText('0.7')
-        self.layout().addWidget(self.frac_rn_lineedit, 3, 12, 1, 2)
-
-        self.layout().addWidget(self.smoothing_factor_lineedit, 4, 8, 1, 2)
-        self.renormalize_checkbox = QtWidgets.QCheckBox('Renormalize post clip?')
-        self.renormalize_checkbox.setChecked(True)
-        self.layout().addWidget(self.renormalize_checkbox, 4, 10, 1, 2)
         # Spectra Plotting
         self.spectra_plot_raw_label = QtWidgets.QLabel('')
         self.layout().addWidget(self.spectra_plot_raw_label, 5, 8, 1, 4)
@@ -232,9 +211,6 @@ class DifferenceLoadCurves(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTra
         self.differenced_load_curve_label = QtWidgets.QLabel('')
         self.layout().addWidget(self.differenced_load_curve_label, 7, 8, 1, 4)
         # Spectra Saving (in case new fit would liked to be saved)
-        self.save_spectra_pushbutton = QtWidgets.QPushButton('Save Processed Spectra')
-        self.layout().addWidget(self.save_spectra_pushbutton, 8, 8, 1, 4)
-        self.save_spectra_pushbutton.clicked.connect(self.dlc_save_spectra)
         self.save_differenced_load_curves_pushbutton = QtWidgets.QPushButton('Save Differenced Load Curves')
         self.layout().addWidget(self.save_differenced_load_curves_pushbutton, 9, 8, 1, 4)
         self.save_differenced_load_curves_pushbutton.clicked.connect(self.dlc_save_differenced_load_curves)
@@ -311,10 +287,10 @@ class DifferenceLoadCurves(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTra
         text += '---------------------------------------------\n'
         text += 'Dew Eff          [%] | {0:.2f}     | {0:.2f} \n'.format(1e2 * self.dewar_transmission)
         text += 'T chop           [K] | {0:.2f}     | {0:.2f}\n'.format(t_chop)
-        text += 'P window        [pW] | {0:.2f}     | {1:.2f}\n'.format(measured_delta_power * 1e12, simulated_delta_power * 1e12)
         text += 'P sensed        [pW] | {0:.2f}     | {0:.2f} \n'.format(p_sensed)
+        text += 'P window        [pW] | {0:.2f}     | {1:.2f}\n'.format(measured_delta_power * 1e12, simulated_delta_power * 1e12)
         text += 'Int BW         [GHz] | {0:.2f}     | {1:.2f}\n'.format(measured_integrated_bandwidth * 1e-9, simulated_integrated_bandwidth * 1e-9)
-        text += 'Rel Eff (e2e)  [GHz] | {0:.2f}     | {1:.2f}\n'.format(efficiency, simulated_efficiency)
+        text += 'Rel Eff (e2e)    [%] | {0:.2f}     | {1:.2f}\n'.format(efficiency, simulated_efficiency)
         text += 'Rel Eff (pix)    [%] | {0:.2f}     | *{1:.2f}*\n'.format(efficiency / self.dewar_transmission, simulated_efficiency / self.dewar_transmission)
         text += 'Abs Eff       [pW/K]: ***{0:.3f}***'.format(pw_per_K_efficiency)
         print(text)
@@ -351,7 +327,7 @@ class DifferenceLoadCurves(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTra
         data_clip_lo = float(self.spectra_data_clip_lo_lineedit.text()) * 1e9
         data_clip_hi = float(self.spectra_data_clip_hi_lineedit.text()) * 1e9
         ax2 = fig.get_axes()[1] # Spectra
-        fft_frequency_vector_processed, fft_vector_processed, normalized_fft_vector_processed = self.dlc_load_spectra_data(self.spectra_path)
+        fft_frequency_vector_processed, normalized_fft_vector_processed = self.dlc_load_spectra_data(self.spectra_path)
         print('data', fft_frequency_vector_processed)
         measured_delta_power, measured_integrated_bandwidth = self.ftsy_compute_delta_power_and_bandwidth_at_window(fft_frequency_vector_processed, normalized_fft_vector_processed,
                                                                                                                     data_clip_lo=data_clip_lo, data_clip_hi=data_clip_hi,
@@ -416,7 +392,7 @@ class DifferenceLoadCurves(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTra
         ax2.set_xlabel('Frequency(GHz)', fontsize=11)
         ax2.set_ylabel('Transmission', fontsize=11)
         ax3.set_xlabel('$V_{bias}$ ($\mu V$) / Normalized Resistance', fontsize=11)
-        ax3.set_ylabel('Power ($\mu$V)', fontsize=11)
+        ax3.set_ylabel('Power ($pW$)', fontsize=11)
         return fig, (ax1, ax2, ax3, ax4)
 
     #################################################################################
@@ -435,8 +411,6 @@ class DifferenceLoadCurves(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTra
     def dlc_load_iv_1(self):
         '''
         '''
-        data_clip_lo = float(self.iv_1_data_clip_lo_lineedit.text())
-        data_clip_hi = float(self.iv_1_data_clip_hi_lineedit.text())
         fig, ax = self.dlc_create_blank_fig(frac_screen_height=0.2)
         if self.iv_1_path is None:
             iv_1_path = QtWidgets.QFileDialog.getOpenFileName(self, 'Select Data File')[0]
@@ -445,6 +419,27 @@ class DifferenceLoadCurves(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTra
             self.iv_1_path = iv_1_path
         else:
             iv_1_path = self.iv_1_path
+        meta_data_path = iv_1_path.replace('txt', 'json')
+        if os.path.exists(meta_data_path):
+            with open(meta_data_path, 'r') as fh:
+                meta_data = simplejson.load(fh)
+            pprint(meta_data)
+            self.iv_1_data_clip_lo_lineedit.setText(meta_data['data_clip_lo_lineedit'])
+            self.iv_1_data_clip_hi_lineedit.setText(meta_data['data_clip_hi_lineedit'])
+            self.iv_1_fit_clip_lo_lineedit.setText(meta_data['fit_clip_lo_lineedit'])
+            self.iv_1_fit_clip_hi_lineedit.setText(meta_data['fit_clip_hi_lineedit'])
+            x_correction = meta_data['x_correction_label'].split(' ')[1]
+            self.iv_1_x_correction_lineedit.setText(x_correction)
+            y_correction = meta_data['squid_calibration_label'].split(' ')[1]
+            self.iv_1_y_correction_lineedit.setText(y_correction)
+            self.iv_1_t_bath_lineedit.setText(meta_data['t_bath_lineedit'])
+            self.iv_1_t_load_lineedit.setText(meta_data['t_load_lineedit'])
+            self.sample_name_lineedit.setText(meta_data['sample_name_lineedit'])
+            band_idx = self.band_select_combobox.findText(meta_data['sample_band_combobox'])
+            self.band_select_combobox.setCurrentIndex(band_idx)
+        data_clip_lo = float(self.iv_1_data_clip_lo_lineedit.text())
+        data_clip_hi = float(self.iv_1_data_clip_hi_lineedit.text())
+        pprint(meta_data)
         # Calibration with Fit
         bias_voltage, squid_voltage = self.dlc_load_iv_data(iv_1_path)
         ax.plot(bias_voltage, squid_voltage, label='raw')
@@ -501,9 +496,6 @@ class DifferenceLoadCurves(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTra
     def dlc_load_iv_2(self):
         '''
         '''
-        data_clip_lo = float(self.iv_2_data_clip_lo_lineedit.text())
-        data_clip_hi = float(self.iv_2_data_clip_hi_lineedit.text())
-        fig, ax = self.dlc_create_blank_fig(frac_screen_height=0.2)
         if self.iv_2_path is None:
             iv_2_path = QtWidgets.QFileDialog.getOpenFileName(self, 'Select Data File')[0]
             if len(iv_2_path) == 0:
@@ -511,6 +503,24 @@ class DifferenceLoadCurves(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTra
             self.iv_2_path = iv_2_path
         else:
             iv_2_path = self.iv_2_path
+        meta_data_path = iv_2_path.replace('txt', 'json')
+        if os.path.exists(meta_data_path):
+            with open(meta_data_path, 'r') as fh:
+                meta_data = simplejson.load(fh)
+            self.iv_2_data_clip_lo_lineedit.setText(meta_data['data_clip_lo_lineedit'])
+            self.iv_2_data_clip_hi_lineedit.setText(meta_data['data_clip_hi_lineedit'])
+            self.iv_2_fit_clip_lo_lineedit.setText(meta_data['fit_clip_lo_lineedit'])
+            self.iv_2_fit_clip_hi_lineedit.setText(meta_data['fit_clip_hi_lineedit'])
+            x_correction = meta_data['x_correction_label'].split(' ')[1]
+            self.iv_2_x_correction_lineedit.setText(x_correction)
+            y_correction = meta_data['squid_calibration_label'].split(' ')[1]
+            self.iv_2_y_correction_lineedit.setText(y_correction)
+            self.iv_2_t_bath_lineedit.setText(meta_data['t_bath_lineedit'])
+            data_clip_lo = float(self.iv_2_data_clip_lo_lineedit.text())
+            data_clip_hi = float(self.iv_2_data_clip_hi_lineedit.text())
+            fig, ax = self.dlc_create_blank_fig(frac_screen_height=0.2)
+            self.iv_2_t_load_lineedit.setText(meta_data['t_load_lineedit'])
+            self.sample_name_lineedit.setText(meta_data['sample_name_lineedit'])
         # Calibration with Fit
         bias_voltage, squid_voltage = self.dlc_load_iv_data(iv_2_path)
         ax.plot(bias_voltage, squid_voltage, label='raw')
@@ -596,24 +606,15 @@ class DifferenceLoadCurves(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTra
     # Spectral Analysis
     ##################################################################################
 
-    def dlc_save_spectra(self):
-        '''
-        '''
-        temp_spectra_path = os.path.join('temp_files', 'temp_spectra.png')
-        suggested_save_path = self.spectra_path.replace('.txt', '.png').replace('.fft', '_processed.fft')
-        spectra_path = QtWidgets.QFileDialog.getSaveFileName(self, 'Select Data File', suggested_save_path, filter='.png')[0]
-        if len(spectra_path) > 0:
-            shutil.copy(temp_spectra_path, spectra_path)
-
     def dlc_load_spectra(self):
         '''
         '''
         t_source_high = float(self.iv_1_t_load_lineedit.text())
         t_source_low = float(self.iv_2_t_load_lineedit.text())
-        smoothing_factor = float(self.smoothing_factor_lineedit.text())
         data_clip_lo = float(self.spectra_data_clip_lo_lineedit.text()) * 1e9
         data_clip_hi = float(self.spectra_data_clip_hi_lineedit.text()) * 1e9
         band = self.band_select_combobox.currentText()
+
         if self.spectra_path is None:
             spectra_path = QtWidgets.QFileDialog.getOpenFileName(self, 'Select Data File')[0]
             if len(spectra_path) == 0:
@@ -621,11 +622,18 @@ class DifferenceLoadCurves(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTra
             self.spectra_path = spectra_path
         else:
             spectra_path = self.spectra_path
-        fft_frequency_vector, fft_vector, normalized_fft_vector = self.dlc_load_spectra_data(spectra_path, smoothing_factor=smoothing_factor, divide_optical_elements=False)
-        fft_frequency_vector_simulated, fft_vector_simulated = self.ftsy_load_simulated_band(data_clip_lo, data_clip_hi, band)
+        meta_data_path = spectra_path.replace('fft', 'json')
+        if os.path.exists(meta_data_path):
+            with open(meta_data_path, 'r') as fh:
+                meta_data = simplejson.load(fh)
+            pprint(meta_data)
+            self.sample_name_lineedit.setText(meta_data['sample_name_lineedit'])
         fig, ax = self.dlc_create_blank_fig(left=0.1, frac_screen_width=0.5, frac_screen_height=0.2)
+        fft_frequency_vector, normalized_fft_vector = self.dlc_load_spectra_data(spectra_path)
         ax.plot(fft_frequency_vector * 1e-9, normalized_fft_vector, label='Raw Data')
-        ax.plot(fft_frequency_vector_simulated, fft_vector_simulated, label='HFSS Data')
+        if len(band) > 0:
+            fft_frequency_vector_simulated, fft_vector_simulated = self.ftsy_load_simulated_band(data_clip_lo, data_clip_hi, band)
+            ax.plot(fft_frequency_vector_simulated, fft_vector_simulated, label='HFSS Data')
         ax.set_xlabel('Frequency (GHz)')
         ax.set_ylabel('Normalized\nTransmission')
         spectra_png_save_path = os.path.join('temp_files', 'temp_spectra.png')
@@ -635,7 +643,8 @@ class DifferenceLoadCurves(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTra
         self.spectra_plot_raw_label.setPixmap(image_to_display)
         pl.close('all')
         fig, ax = self.dlc_create_blank_fig(left=0.1, frac_screen_width=0.5, frac_screen_height=0.2)
-        fft_frequency_vector_processed, fft_vector_processed, normalized_fft_vector_processed = self.dlc_load_spectra_data(spectra_path)
+        fft_frequency_vector_processed, normalized_fft_vector_processed = self.dlc_load_spectra_data(spectra_path)
+        print(data_clip_lo, data_clip_hi)
         delta_power, integrated_bandwidth = self.ftsy_compute_delta_power_and_bandwidth_at_window(fft_frequency_vector_processed, normalized_fft_vector_processed,
                                                                                                   data_clip_lo=data_clip_lo, data_clip_hi=data_clip_hi,
                                                                                                   t_source_low=t_source_low, t_source_high=t_source_high)
@@ -643,7 +652,7 @@ class DifferenceLoadCurves(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTra
         if self.iv_1_path is not None and self.iv_2_path is not None:
             label='$\Delta(P)$ {0:.2f} pW\nBW {1:.2f} GHz '.format(delta_power * 1e12, integrated_bandwidth * 1e-9)
         ax.plot(fft_frequency_vector_processed * 1e-9, normalized_fft_vector_processed, label=label)
-        ax.plot(fft_frequency_vector_simulated, fft_vector_simulated, label='HFSS Data')
+        #ax.plot(fft_frequency_vector_simulated, fft_vector_simulated, label='HFSS Data')
         ax = self.dlc_plot_optical_elements(ax)
         ax.set_xlabel('Frequency (GHz)')
         ax.set_ylabel('Normalized\nTransmission')
@@ -673,12 +682,9 @@ class DifferenceLoadCurves(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTra
         return ax
 
 
-    def dlc_load_spectra_data(self, data_path, smoothing_factor=0.0, divide_optical_elements=True):
+    def dlc_load_spectra_data(self, data_path):
         '''
         '''
-        normalize_post_clip = self.renormalize_checkbox.isChecked()
-        if smoothing_factor is None:
-            smoothing_factor = float(self.smoothing_factor_lineedit.text())
         data_clip_lo = float(self.spectra_data_clip_lo_lineedit.text()) * 1e9
         data_clip_hi = float(self.spectra_data_clip_hi_lineedit.text()) * 1e9
         with open(data_path, 'r') as file_handle:
@@ -697,28 +703,7 @@ class DifferenceLoadCurves(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTra
                     np.put(transmission_vector, i, transmission)
         transmission_vector = transmission_vector[frequency_vector > 0.0]
         frequency_vector = frequency_vector[frequency_vector > 0.0]
-        if smoothing_factor > 0.0:
-            transmission_vector = self.ftsy_running_mean(transmission_vector, smoothing_factor=smoothing_factor)
-            normalized_transmission_vector = transmission_vector / max(transmission_vector)
-            with open(data_path.replace('.fft', '_smoothed.fft'), 'w') as smoothed_data_handle:
-                for i, transmission_value in enumerate(normalized_transmission_vector):
-                    frequency_value = frequency_vector[i]
-                    line = '{0:.4f}\t{1:.4f}\n'.format(frequency_value, transmission_value)
-                    smoothed_data_handle.write(line)
         normalized_transmission_vector = transmission_vector / np.max(transmission_vector)
-        if divide_optical_elements:
-            normalized_transmission_vector = self.dlc_divide_out_active_optical_elements(frequency_vector, normalized_transmission_vector)
-        return frequency_vector, transmission_vector, normalized_transmission_vector
-
-    def dlc_divide_out_active_optical_elements(self, frequency_vector, normalized_transmission_vector):
-        '''
-        '''
-        for optical_element in self.optical_elements_dict:
-            active = self.optical_elements_dict[optical_element]['Active']
-            path = self.optical_elements_dict[optical_element]['Path']
-            if active:
-                normalized_transmission_vector = self.ftsy_divide_out_optical_element_response(frequency_vector, normalized_transmission_vector,
-                                                                                               optical_element=optical_element, path=path)
         return frequency_vector, normalized_transmission_vector
 
     ####################
