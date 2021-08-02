@@ -239,14 +239,24 @@ class FourierTransformSpectroscopy():
                 np.put(averaged_vector, i, averaged_value)
         return averaged_vector
 
-    def ftsy_split_data_into_left_right_points(self, position_vector, efficiency_vector):
+    def ftsy_find_if_zero(self, y_data):
         '''
         '''
-        efficiency_left_data = efficiency_vector[position_vector < 0]
-        efficiency_right_data = efficiency_vector[position_vector >= 0]
-        position_left_data = position_vector[position_vector < 0]
-        position_right_data = position_vector[position_vector >= 0]
-        return efficiency_left_data, efficiency_right_data, position_left_data, position_right_data
+        zero_index = np.where(y_data == np.max(y_data))[0][0]
+        return zero_index
+
+    def ftsy_symmeterize_interferogram(self, x_data, y_data, copy_left=True, steps_per_in=1e-5):
+        '''
+        '''
+        zero_index = self.ftsy_find_if_zero(y_data)
+        interval = np.abs(x_data[-2] - x_data[-1])
+        if copy_left:
+            half_x_data = x_data[zero_index: -1]
+            half_y_data = y_data[zero_index: -1]
+        sym_y_data = self.ftsy_make_data_symmetric(half_y_data, is_right=True)
+        size = int(len(sym_y_data) / 2)
+        sym_x_data = np.arange(-size, size + 1, 1) * interval * steps_per_in
+        return sym_x_data, sym_y_data
 
     def ftsy_make_data_symmetric(self, data, is_right=True, position=False):
         '''
@@ -259,8 +269,17 @@ class FourierTransformSpectroscopy():
             left_data = data
         if position:
             left_data = left_data * -1
-        full_array = np.append(left_data, right_data)
+        full_array = np.append(left_data, right_data[1:])
         return full_array
+
+    def ftsy_split_data_into_left_right_points(self, position_vector, efficiency_vector):
+        '''
+        '''
+        efficiency_left_data = efficiency_vector[position_vector < 0]
+        efficiency_right_data = efficiency_vector[position_vector >= 0]
+        position_left_data = position_vector[position_vector < 0]
+        position_right_data = position_vector[position_vector >= 0]
+        return efficiency_left_data, efficiency_right_data, position_left_data, position_right_data
 
     def ftsy_remove_polynomial(self, data, n=1, return_fit=False):
         '''

@@ -41,6 +41,7 @@ from bd_tools.noise_analyzer import NoiseAnalyzer
 from bd_tools.hewlett_packard_34401a import HewlettPackard34401A
 from bd_tools.configure_bolo_daq_gui import ConfigureBoloDAQGui
 from bd_tools.configure_stepper_motor import ConfigureStepperMotor
+from bd_tools.configure_sigma_koki import ConfigureSigmaKoki
 from bd_tools.polarization_efficiency import PolarizationEfficiency
 from bd_tools.fourier_transform_spectrometer import FourierTransformSpectrometer
 from bd_tools.stanford_research_systems_sr830_dsp import StanfordResearchSystemsSR830DSP
@@ -84,7 +85,7 @@ class BoloDAQGui(QtWidgets.QMainWindow, GuiBuilder):
         self.setCentralWidget(self.central_widget)
         self.tool_and_menu_bar_json_path = os.path.join('bd_settings', 'tool_and_menu_bars.json')
         print(self.tool_and_menu_bar_json_path)
-        self.gb_setup_menu_and_tool_bars(self.tool_and_menu_bar_json_path, icon_size=35)
+        self.gb_setup_menu_and_tool_bars(self.tool_and_menu_bar_json_path, icon_size=25)
         self.selected_files = []
         self.user_desktop_path = os.path.expanduser('~')
         self.monitor_dpi = 120.0
@@ -499,7 +500,29 @@ class BoloDAQGui(QtWidgets.QMainWindow, GuiBuilder):
         self.central_widget.layout().addWidget(self.difference_load_curves_widget, 0, 0, 1, 1)
         self.status_bar.showMessage('Difference Load Curves')
         QtWidgets.QApplication.processEvents()
+
+    #################################################
+    # Configure Sigma Koki Rotation Stage
+    #################################################
+
+    def bd_sigma_koki(self):
+        '''
+        '''
+        self.gb_initialize_panel('central_widget')
+        dialog = 'Select the comport for the sigma koki'
+        com_port, okPressed = 'COM4', True
+        if not hasattr(self, 'sk_widget_{0}'.format(com_port)) and okPressed:
+            sk_widget = ConfigureSigmaKoki(com_port, self.status_bar)
+            setattr(self, 'sk_widget_{0}'.format(com_port), sk_widget)
+        elif okPressed:
+            sk_widget = getattr(self, 'sk_widget_{0}'.format(com_port))
+        else:
+            return None
+        self.central_widget.layout().addWidget(sk_widget, 0, 0, 1, 1)
+        self.status_bar.showMessage('Configure Sigma Koki')
+        QtWidgets.QApplication.processEvents()
         self.resize(self.minimumSizeHint())
+
     #################################################
     # Configure Stepper Motors
     #################################################
@@ -607,8 +630,7 @@ class BoloDAQGui(QtWidgets.QMainWindow, GuiBuilder):
         self.gb_initialize_panel('central_widget')
         self.status_bar.showMessage('Launching Polarization Efficiency')
         QtWidgets.QApplication.processEvents()
-        dialog = 'Select the comport for the SRS 830'
-        #com_port, okPressed = self.gb_quick_static_info_gather(title='', dialog=dialog, items=['COM10'])
+        # SRS 830
         com_port, okPressed = 'COM10', True
         if not hasattr(self, 'ser_{0}'.format(com_port)) and okPressed:
             if not hasattr(self, 'srs_sr830dsp_widget'):
@@ -628,8 +650,7 @@ class BoloDAQGui(QtWidgets.QMainWindow, GuiBuilder):
                 else:
                     self.srs_sr830dsp_widget = None
         dialog = 'Select the comport for the stepper motor you wish to configure'
-        stepper_motor_ports = ['COM12']
-        #sm_com_port, okPressed = self.gb_quick_static_info_gather(title='', dialog=dialog, items=stepper_motor_ports)
+        # Stepper Motor 
         sm_com_port, okPressed = 'COM12', True
         if not hasattr(self, 'csm_widget_{0}'.format(sm_com_port)) and okPressed:
             if getattr(self, 'ser_{0}'.format(com_port)) is None:
@@ -641,8 +662,15 @@ class BoloDAQGui(QtWidgets.QMainWindow, GuiBuilder):
             csm_widget = getattr(self, 'csm_widget_{0}'.format(sm_com_port))
         else:
             return None
+        # Sigma Koki
+        com_port, okPressed = 'COM4', True
+        if not hasattr(self, 'sk_widget_{0}'.format(com_port)) and okPressed:
+            sk_widget = ConfigureSigmaKoki(com_port, self.status_bar)
+            setattr(self, 'sk_widget_{0}'.format(com_port), sk_widget)
+        elif okPressed:
+            sk_widget = getattr(self, 'sk_widget_{0}'.format(com_port))
         if not hasattr(self, 'polarization_efficiency_widget'):
-            self.polarization_efficiency_widget = PolarizationEfficiency(self.daq_settings, self.status_bar, self.screen_resolution, self.monitor_dpi, csm_widget, self.srs_sr830dsp_widget, self.data_folder)
+            self.polarization_efficiency_widget = PolarizationEfficiency(self.daq_settings, self.status_bar, self.screen_resolution, self.monitor_dpi, csm_widget, self.srs_sr830dsp_widget, sk_widget, self.data_folder)
         self.polarization_efficiency_widget.pe_update_daq_settings(self.daq_settings)
         self.central_widget.layout().addWidget(self.polarization_efficiency_widget, 0, 0, 1, 1)
         self.status_bar.showMessage('Polarization Efficiency')

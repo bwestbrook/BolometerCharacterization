@@ -56,7 +56,7 @@ class ConfigureBoloDAQGui(QtWidgets.QWidget, GuiBuilder):
         loaded_column_header_label = QtWidgets.QLabel('SETTING VALUE', self)
         self.layout().addWidget(loaded_column_header_label, 1, 2, 1, 1)
         loaded_column_header_label = QtWidgets.QLabel('Controls', self)
-        self.layout().addWidget(loaded_column_header_label, 1, 3, 1, 3)
+        self.layout().addWidget(loaded_column_header_label, 1, 3, 1, 1)
         for i, config in enumerate(['Samples', 'SQUIDs', 'COM']):
             header_label = QtWidgets.QLabel('{0}: '.format(config), self)
             self.layout().addWidget(header_label, i + 2, 0, 1, 1)

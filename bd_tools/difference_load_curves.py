@@ -9,7 +9,6 @@ import scipy.optimize as opt
 from scipy.signal import medfilt2d
 from copy import copy
 from datetime import datetime
-from pprint import pprint
 from bd_lib.bolo_daq import BoloDAQ
 from bd_lib.iv_curve_lib import IVCurveLib
 from bd_lib.fourier_transform_spectroscopy import FourierTransformSpectroscopy
@@ -96,20 +95,26 @@ class DifferenceLoadCurves(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTra
         self.iv_1_y_correction_lineedit.setValidator(QtGui.QDoubleValidator(0, 1200, 2, self.iv_1_y_correction_lineedit))
         self.iv_1_y_correction_lineedit.returnPressed.connect(self.dlc_load_iv_1)
         self.layout().addWidget(self.iv_1_y_correction_lineedit, 4, 2, 1, 2)
+        # IV 1 Psat Override
+        self.iv_1_psat_override_lineedit = self.gb_make_labeled_lineedit(label_text='Psat Override (pW)')
+        self.iv_1_psat_override_lineedit.setText('')
+        self.iv_1_psat_override_lineedit.setValidator(QtGui.QDoubleValidator(0, 1200, 2, self.iv_1_psat_override_lineedit))
+        self.iv_1_psat_override_lineedit.returnPressed.connect(self.dlc_plot_differenced_load_curves)
+        self.layout().addWidget(self.iv_1_psat_override_lineedit, 5, 0, 1, 4)
         # IV 1 Plotting
         self.iv_1_raw_plot_label = QtWidgets.QLabel('')
-        self.layout().addWidget(self.iv_1_raw_plot_label, 5, 0, 1, 4)
+        self.layout().addWidget(self.iv_1_raw_plot_label, 6, 0, 1, 4)
         self.iv_1_calibrated_plot_label = QtWidgets.QLabel('')
-        self.layout().addWidget(self.iv_1_calibrated_plot_label, 6, 0, 1, 4)
+        self.layout().addWidget(self.iv_1_calibrated_plot_label, 7, 0, 1, 4)
         self.iv_1_paneled_plot_label = QtWidgets.QLabel('')
-        self.layout().addWidget(self.iv_1_paneled_plot_label, 7, 0, 1, 4)
+        self.layout().addWidget(self.iv_1_paneled_plot_label, 8, 0, 1, 4)
         # IV 1 Saving (in case new fit would liked to be saved)
         self.iv_1_save_plot_pushbutton = QtWidgets.QPushButton('Save IV 1 Plot')
-        self.layout().addWidget(self.iv_1_save_plot_pushbutton, 8, 0, 1, 4)
+        self.layout().addWidget(self.iv_1_save_plot_pushbutton, 9, 0, 1, 4)
         self.iv_1_save_plot_pushbutton.clicked.connect(self.dlc_save_iv_1)
         # High Load
         self.iv_1_high_load_label = QtWidgets.QLabel('High Load')
-        self.layout().addWidget(self.iv_1_high_load_label, 9, 0, 1, 4)
+        self.layout().addWidget(self.iv_1_high_load_label, 10, 0, 1, 4)
         #############################################################
         # IV 2
         #############################################################
@@ -159,20 +164,26 @@ class DifferenceLoadCurves(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTra
         self.iv_2_y_correction_lineedit.setValidator(QtGui.QDoubleValidator(0, 1200, 2, self.iv_2_y_correction_lineedit))
         self.iv_2_y_correction_lineedit.returnPressed.connect(self.dlc_load_iv_2)
         self.layout().addWidget(self.iv_2_y_correction_lineedit, 4, 6, 1, 2)
+        # IV 2 Psat Override
+        self.iv_2_psat_override_lineedit = self.gb_make_labeled_lineedit(label_text='Psat Override (pW)')
+        self.iv_2_psat_override_lineedit.setText('')
+        self.iv_2_psat_override_lineedit.setValidator(QtGui.QDoubleValidator(0, 1200, 2, self.iv_2_psat_override_lineedit))
+        self.layout().addWidget(self.iv_2_psat_override_lineedit, 5, 4, 1, 4)
+        self.iv_2_psat_override_lineedit.returnPressed.connect(self.dlc_plot_differenced_load_curves)
         # IV 2 Plotting
         self.iv_2_raw_plot_label = QtWidgets.QLabel('')
-        self.layout().addWidget(self.iv_2_raw_plot_label, 5, 4, 1, 4)
+        self.layout().addWidget(self.iv_2_raw_plot_label, 6, 4, 1, 4)
         self.iv_2_calibrated_plot_label = QtWidgets.QLabel('')
-        self.layout().addWidget(self.iv_2_calibrated_plot_label, 6, 4, 1, 4)
+        self.layout().addWidget(self.iv_2_calibrated_plot_label, 7, 4, 1, 4)
         self.iv_2_paneled_plot_label = QtWidgets.QLabel('')
-        self.layout().addWidget(self.iv_2_paneled_plot_label, 7, 4, 1, 4)
+        self.layout().addWidget(self.iv_2_paneled_plot_label, 8, 4, 1, 4)
         # IV 2 Saving (in case new fit would liked to be saved)
         self.iv_2_save_plot_pushbutton = QtWidgets.QPushButton('Save IV 2 Plot')
-        self.layout().addWidget(self.iv_2_save_plot_pushbutton, 8, 4, 1, 4)
+        self.layout().addWidget(self.iv_2_save_plot_pushbutton, 9, 4, 1, 4)
         self.iv_2_save_plot_pushbutton.clicked.connect(self.dlc_save_iv_2)
         # Low Load
         self.iv_2_low_load_label = QtWidgets.QLabel('Low Load')
-        self.layout().addWidget(self.iv_2_low_load_label, 9, 4, 1, 4)
+        self.layout().addWidget(self.iv_2_low_load_label, 10, 4, 1, 4)
         #############################################################
         # Spectra
         #############################################################
@@ -192,7 +203,7 @@ class DifferenceLoadCurves(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTra
         self.frac_rn_lineedit = self.gb_make_labeled_lineedit(label_text='Frac Rn:')
         self.frac_rn_lineedit.returnPressed.connect(self.dlc_load_spectra)
         self.frac_rn_lineedit.setValidator(QtGui.QDoubleValidator(0, 1200, 2, self.frac_rn_lineedit))
-        self.frac_rn_lineedit.setText('0.7')
+        self.frac_rn_lineedit.setText('0.75')
         self.layout().addWidget(self.frac_rn_lineedit, 2, 10, 1, 1)
         self.spectra_data_clip_lo_lineedit = self.gb_make_labeled_lineedit(label_text='Data Clip Lo (GHz):')
         self.spectra_data_clip_lo_lineedit.returnPressed.connect(self.dlc_load_spectra)
@@ -203,21 +214,25 @@ class DifferenceLoadCurves(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTra
         self.layout().addWidget(self.spectra_data_clip_hi_lineedit, 3, 10, 1, 2)
         self.spectra_data_clip_hi_lineedit.setText('300')
         self.spectra_data_clip_hi_lineedit.returnPressed.connect(self.dlc_load_spectra)
+        # Buttons
+        self.difference_load_curves_pushbutton = QtWidgets.QPushButton('Difference Load Curves')
+        self.difference_load_curves_pushbutton.clicked.connect(self.dlc_difference_load_curves)
+        self.layout().addWidget(self.difference_load_curves_pushbutton, 4, 8, 1, 4)
+        self.reset_input_pushbutton = QtWidgets.QPushButton('Reset Input')
+        self.reset_input_pushbutton.clicked.connect(self.dlc_reset_input)
+        self.layout().addWidget(self.reset_input_pushbutton, 5, 8, 1, 4)
         # Spectra Plotting
         self.spectra_plot_raw_label = QtWidgets.QLabel('')
-        self.layout().addWidget(self.spectra_plot_raw_label, 5, 8, 1, 4)
+        self.layout().addWidget(self.spectra_plot_raw_label, 6, 8, 1, 4)
         self.spectra_plot_calibrated = QtWidgets.QLabel('')
-        self.layout().addWidget(self.spectra_plot_calibrated, 6, 8, 1, 4)
+        self.layout().addWidget(self.spectra_plot_calibrated, 7, 8, 1, 4)
         self.differenced_load_curve_label = QtWidgets.QLabel('')
-        self.layout().addWidget(self.differenced_load_curve_label, 7, 8, 1, 4)
+        self.layout().addWidget(self.differenced_load_curve_label, 8, 8, 1, 4)
         # Spectra Saving (in case new fit would liked to be saved)
         self.save_differenced_load_curves_pushbutton = QtWidgets.QPushButton('Save Differenced Load Curves')
         self.layout().addWidget(self.save_differenced_load_curves_pushbutton, 9, 8, 1, 4)
         self.save_differenced_load_curves_pushbutton.clicked.connect(self.dlc_save_differenced_load_curves)
         # Spectra Saving (in case new fit would liked to be saved)
-        self.difference_load_curves_pushbutton = QtWidgets.QPushButton('Difference Load Curves')
-        self.difference_load_curves_pushbutton.clicked.connect(self.dlc_difference_load_curves)
-        self.layout().addWidget(self.difference_load_curves_pushbutton, 10, 0, 1, 12)
 
     def dlc_show_active_optical_elements(self):
         '''
@@ -259,7 +274,7 @@ class DifferenceLoadCurves(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTra
         self.differenced_load_curve_label.setPixmap(image_to_display)
         pl.close('all')
 
-    def dlc_plot_differenced_load_curves(self, frac_screen_width=0.5, frac_screen_height=0.3):
+    def dlc_plot_differenced_load_curves(self, frac_screen_width=0.4, frac_screen_height=0.3):
         '''
         '''
         fig, axes = self.dlc_create_differenced_load_curve_figure(frac_screen_width=frac_screen_width, frac_screen_height=frac_screen_height)
@@ -271,7 +286,11 @@ class DifferenceLoadCurves(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTra
         v_bolo_hi, i_bolo_hi = self.dlc_load_iv_data(self.iv_1_path)
         fig, power_hi = self.dlc_plot_differenced_iv_data(v_bolo_hi, i_bolo_hi, fig, iv=1)
         v_bolo_lo, i_bolo_lo = self.dlc_load_iv_data(self.iv_2_path)
+        if len(self.iv_1_psat_override_lineedit.text()) > 0:
+            power_hi = float(self.iv_1_psat_override_lineedit.text())
         fig, power_lo = self.dlc_plot_differenced_iv_data(v_bolo_lo, i_bolo_lo, fig, iv=2)
+        if len(self.iv_2_psat_override_lineedit.text()) > 0:
+            power_lo = float(self.iv_2_psat_override_lineedit.text())
         fig, measured_delta_power, measured_integrated_bandwidth, simulated_delta_power, simulated_integrated_bandwidth = self.dlc_plot_differenced_spectra_data(fig)
         # Summarize Results
         p_sensed = power_lo - power_hi
@@ -281,18 +300,18 @@ class DifferenceLoadCurves(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTra
         #pix_efficiency = efficiency / self.dewar_transmission # Dewar transmission
         #simulated_pix_efficiency = efficiency / self.dewar_transmission # Dewar transmission
         pw_per_K_efficiency = p_sensed / (t_source_high - t_source_low)
-        text = '----------------------------------------------\n'
-        text += '{0} Optical Efficiency Data\n'.format(sample_name)
-        text += 'QTY                  | Measured    | Simuated\n'
-        text += '---------------------------------------------\n'
-        text += 'Dew Eff          [%] | {0:.2f}     | {0:.2f} \n'.format(1e2 * self.dewar_transmission)
-        text += 'T chop           [K] | {0:.2f}     | {0:.2f}\n'.format(t_chop)
-        text += 'P sensed        [pW] | {0:.2f}     | {0:.2f} \n'.format(p_sensed)
-        text += 'P window        [pW] | {0:.2f}     | {1:.2f}\n'.format(measured_delta_power * 1e12, simulated_delta_power * 1e12)
-        text += 'Int BW         [GHz] | {0:.2f}     | {1:.2f}\n'.format(measured_integrated_bandwidth * 1e-9, simulated_integrated_bandwidth * 1e-9)
-        text += 'Rel Eff (e2e)    [%] | {0:.2f}     | {1:.2f}\n'.format(efficiency, simulated_efficiency)
-        text += 'Rel Eff (pix)    [%] | {0:.2f}     | *{1:.2f}*\n'.format(efficiency / self.dewar_transmission, simulated_efficiency / self.dewar_transmission)
-        text += 'Abs Eff       [pW/K]: ***{0:.3f}***'.format(pw_per_K_efficiency)
+        text = '{0} Optical Efficiency Data\n'.format(sample_name)
+        #text_space = '-' * len(text) + '\n'
+        text += 'QTY                  | Measured |  Simuated\n'
+        #text += text_space
+        text += 'Dew Eff          [%] | {0:7.2f}  | {0:7.2f}\n'.format(1e2 * self.dewar_transmission)
+        text += 'T chop           [K] | {0:7.2f}  | {0:7.2f}\n'.format(t_chop)
+        text += 'P sensed        [pW] | {0:7.2f}  | {0:7.2f} \n'.format(p_sensed)
+        text += 'Abs Eff       [pW/K] | {0:7.3f}  | {0:7.2f}\n'.format(pw_per_K_efficiency)
+        text += 'P window        [pW] | {0:7.2f}  | {1:7.2f}\n'.format(measured_delta_power * 1e12, simulated_delta_power * 1e12)
+        text += 'Int BW         [GHz] | {0:7.2f}  | {1:7.2f}\n'.format(measured_integrated_bandwidth * 1e-9, simulated_integrated_bandwidth * 1e-9)
+        text += 'Rel Eff (e2e)    [%] | {0:7.2f}  | {1:7.2f}\n'.format(efficiency, simulated_efficiency)
+        text += 'Rel Eff (pix)    [%] | {0:7.2f}  | {1:7.2f}\n'.format(efficiency / self.dewar_transmission, simulated_efficiency / self.dewar_transmission)
         print(text)
         ax4 = fig.get_axes()[3]
         ax4.annotate(text, xy=(0, 0), xytext=(-0.125, -0.3), fontfamily='monospace', fontsize=9)
@@ -311,7 +330,6 @@ class DifferenceLoadCurves(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTra
             hdls, lbls = ax.get_legend_handles_labels()
             handles.extend(hdls)
             labels.extend(lbls)
-        print(handles, labels)
         #ax4.legend(handles, labels, fontsize=10, numpoints=1, mode="expand", bbox_to_anchor=(0.0, 0, 1, 1))
         ax2 = fig.get_axes()[1]
         ax2.legend(handles, labels, fontsize=9, numpoints=1, loc='best')
@@ -399,6 +417,23 @@ class DifferenceLoadCurves(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTra
     # IV Analysis
     ##################################################################################
 
+    def dlc_reset_input(self):
+        '''
+        '''
+        self.iv_1_path = None
+        self.iv_2_path = None
+        self.spectra_path = None
+        self.differenced_load_curve_label.clear()
+        self.spectra_plot_calibrated.clear()
+        self.spectra_plot_raw_label.clear()
+        self.iv_1_calibrated_plot_label.clear()
+        self.iv_1_raw_plot_label.clear()
+        self.iv_1_paneled_plot_label.clear()
+        self.iv_2_calibrated_plot_label.clear()
+        self.iv_2_raw_plot_label.clear()
+        self.iv_2_paneled_plot_label.clear()
+        self.dlc_configure_panel()
+
     def dlc_save_iv_1(self):
         '''
         '''
@@ -423,7 +458,6 @@ class DifferenceLoadCurves(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTra
         if os.path.exists(meta_data_path):
             with open(meta_data_path, 'r') as fh:
                 meta_data = simplejson.load(fh)
-            pprint(meta_data)
             self.iv_1_data_clip_lo_lineedit.setText(meta_data['data_clip_lo_lineedit'])
             self.iv_1_data_clip_hi_lineedit.setText(meta_data['data_clip_hi_lineedit'])
             self.iv_1_fit_clip_lo_lineedit.setText(meta_data['fit_clip_lo_lineedit'])
@@ -439,7 +473,6 @@ class DifferenceLoadCurves(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTra
             self.band_select_combobox.setCurrentIndex(band_idx)
         data_clip_lo = float(self.iv_1_data_clip_lo_lineedit.text())
         data_clip_hi = float(self.iv_1_data_clip_hi_lineedit.text())
-        pprint(meta_data)
         # Calibration with Fit
         bias_voltage, squid_voltage = self.dlc_load_iv_data(iv_1_path)
         ax.plot(bias_voltage, squid_voltage, label='raw')
@@ -602,6 +635,7 @@ class DifferenceLoadCurves(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTra
             calibrated_squid_current = np.array(calibrated_squid_current)
         return calibrated_bias_voltage, calibrated_squid_current, fit_clip_lo, fit_clip_hi
 
+
     #################################################################################
     # Spectral Analysis
     ##################################################################################
@@ -626,9 +660,8 @@ class DifferenceLoadCurves(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTra
         if os.path.exists(meta_data_path):
             with open(meta_data_path, 'r') as fh:
                 meta_data = simplejson.load(fh)
-            pprint(meta_data)
             self.sample_name_lineedit.setText(meta_data['sample_name_lineedit'])
-        fig, ax = self.dlc_create_blank_fig(left=0.1, frac_screen_width=0.5, frac_screen_height=0.2)
+        fig, ax = self.dlc_create_blank_fig(left=0.1, frac_screen_width=0.4, frac_screen_height=0.2)
         fft_frequency_vector, normalized_fft_vector = self.dlc_load_spectra_data(spectra_path)
         ax.plot(fft_frequency_vector * 1e-9, normalized_fft_vector, label='Raw Data')
         if len(band) > 0:
@@ -642,7 +675,7 @@ class DifferenceLoadCurves(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTra
         image_to_display = QtGui.QPixmap(spectra_png_save_path)
         self.spectra_plot_raw_label.setPixmap(image_to_display)
         pl.close('all')
-        fig, ax = self.dlc_create_blank_fig(left=0.1, frac_screen_width=0.5, frac_screen_height=0.2)
+        fig, ax = self.dlc_create_blank_fig(left=0.1, frac_screen_width=0.4, frac_screen_height=0.2)
         fft_frequency_vector_processed, normalized_fft_vector_processed = self.dlc_load_spectra_data(spectra_path)
         print(data_clip_lo, data_clip_hi)
         delta_power, integrated_bandwidth = self.ftsy_compute_delta_power_and_bandwidth_at_window(fft_frequency_vector_processed, normalized_fft_vector_processed,

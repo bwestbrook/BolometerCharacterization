@@ -19,6 +19,7 @@ class FourierTransformSpectrometer(QtWidgets.QWidget, GuiBuilder, FourierTransfo
         '''
         '''
         super(FourierTransformSpectrometer, self).__init__()
+        self.c = 2.99792458 * 10 ** 8 # speed of light in m/s
         self.bands = self.ftsy_get_bands()
         self.optical_elements = self.ftsy_get_optical_elements()
         self.fts_update_samples()
@@ -103,30 +104,30 @@ class FourierTransformSpectrometer(QtWidgets.QWidget, GuiBuilder, FourierTransfo
         ######
         #Start Scan
         self.start_position_lineedit = self.gb_make_labeled_lineedit(label_text='Start Position:')
-        self.start_position_lineedit.setText('-300000')
-        self.start_position_lineedit.setValidator(QtGui.QIntValidator(-600000, 0, self.start_position_lineedit))
+        self.start_position_lineedit.setText('30000')
+        self.start_position_lineedit.setValidator(QtGui.QIntValidator(-600000, 300000, self.start_position_lineedit))
         self.start_position_lineedit.textChanged.connect(self.fts_update_scan_params)
         self.layout().addWidget(self.start_position_lineedit, 5, 0, 1, 1)
         #End Scan
         self.end_position_lineedit = self.gb_make_labeled_lineedit(label_text='End Position:')
-        self.end_position_lineedit.setValidator(QtGui.QIntValidator(0, 300000, self.end_position_lineedit))
-        self.end_position_lineedit.setText('300000')
+        self.end_position_lineedit.setValidator(QtGui.QIntValidator(-600000, 300000, self.end_position_lineedit))
+        self.end_position_lineedit.setText('-60000')
         self.end_position_lineedit.textChanged.connect(self.fts_update_scan_params)
         self.layout().addWidget(self.end_position_lineedit, 5, 1, 1, 1)
         #Mirror Interval 
         self.mirror_interval_lineedit = self.gb_make_labeled_lineedit(label_text='Mirror Interval (steps):')
-        self.mirror_interval_lineedit.setText('500')
+        self.mirror_interval_lineedit.setText('2000')
         self.mirror_interval_lineedit.textChanged.connect(self.fts_update_scan_params)
         self.mirror_interval_lineedit.setValidator(QtGui.QIntValidator(1, 200000, self.mirror_interval_lineedit))
         self.layout().addWidget(self.mirror_interval_lineedit, 6, 0, 1, 1)
         #Pause Time 
         self.pause_time_lineedit = self.gb_make_labeled_lineedit(label_text='Pause Time (ms):')
-        self.pause_time_lineedit.setText('1250')
+        self.pause_time_lineedit.setText('500')
         self.pause_time_lineedit.setValidator(QtGui.QIntValidator(0, 25000, self.pause_time_lineedit))
         self.layout().addWidget(self.pause_time_lineedit, 6, 1, 1, 1)
         #Int Time 
         self.int_time_lineedit = self.gb_make_labeled_lineedit(label_text='Int Time (ms): ')
-        self.int_time_lineedit.setText('500')
+        self.int_time_lineedit.setText('250')
         self.int_time_lineedit.setValidator(QtGui.QIntValidator(10, 1000000, self.int_time_lineedit))
         self.layout().addWidget(self.int_time_lineedit, 7, 0, 1, 1)
         #Sample Rate 
@@ -246,6 +247,9 @@ class FourierTransformSpectrometer(QtWidgets.QWidget, GuiBuilder, FourierTransfo
         self.divide_checkbox = QtWidgets.QCheckBox('Divide Spectra')
         self.layout().addWidget(self.divide_checkbox, 15, 6, 1, 1)
         self.divide_checkbox.clicked.connect(self.fts_plot_all)
+        self.symmeterize_data_checkbox = QtWidgets.QCheckBox('Symmeterize IF')
+        self.layout().addWidget(self.symmeterize_data_checkbox, 16, 6, 1, 1)
+        self.symmeterize_data_checkbox.setChecked(True)
         # Optial Elements
         self.divide_elements_checkbox = QtWidgets.QCheckBox('Divide Optical Elements?')
         self.layout().addWidget(self.divide_elements_checkbox, 14, 5, 1, 1)
@@ -377,21 +381,23 @@ class FourierTransformSpectrometer(QtWidgets.QWidget, GuiBuilder, FourierTransfo
         distance_per_step = float(self.distance_per_step_combobox.currentText())
         pause_time = float(self.pause_time_lineedit.text())
         if mirror_interval > 0:
-            self.n_data_points = int((end - start) / mirror_interval)
+            self.n_data_points = abs(int((end - start) / mirror_interval))
         else:
             self.n_data_points = np.nan
-        total_distance = self.n_data_points * distance_per_step * mirror_interval
-        min_distance = distance_per_step * mirror_interval
+        total_distance = (np.abs(end) + np.abs(start)) * distance_per_step * 1e-9
+        long_arm_distance = np.abs(end) * distance_per_step * 2 * 1e-9
+        min_distance = distance_per_step * mirror_interval * 1e-9
         if min_distance > 0 and total_distance > 0:
-            min_distance *= 1e-9 # from nm to m
-            total_distance *= 1e-9 # from nm to m
             nyquist_distance = 4 * min_distance
-            max_frequency = ((2.99792458 * 10 ** 8) / nyquist_distance) / (10 ** 9) # GHz
-            resolution = ((2.99792458 * 10 ** 8) / total_distance) / (10 ** 9) # GHz
+            max_frequency = (self.c / nyquist_distance) / (10 ** 9) # GHz
+            resolution = (self.c / total_distance) / (10 ** 9) # GHz
             resolution = '{0:.2f} GHz'.format(resolution)
+            long_resolution = (self.c / long_arm_distance) / (10 ** 9) # GHz
+            long_resolution = '{0:.2f} GHz'.format(long_resolution)
             max_frequency = '{0:.2f} GHz'.format(max_frequency)
             info_string = 'Data Points: {0}\n'.format(self.n_data_points)
-            info_string += 'Res: {0} GHz\n'.format(resolution)
+            info_string += 'Res: {0} GHz (raw)\n'.format(long_resolution)
+            info_string += 'Res: {0} GHz (sym)\n'.format(resolution)
             info_string += 'Max Freq {0} (GHz)'.format(max_frequency)
         else:
             info_string = ''
@@ -464,7 +470,7 @@ class FourierTransformSpectrometer(QtWidgets.QWidget, GuiBuilder, FourierTransfo
         int_time = float(self.int_time_lineedit.text())
         sample_rate = float(self.sample_rate_lineedit.text())
         signal_channel = self.scan_settings_dict['daq']
-        scan_positions = range(start, end + mirror_interval, mirror_interval)
+        scan_positions = np.linspace(start, end, n_data_points + 1)
         signal_channels = [signal_channel]
         daq = BoloDAQ(signal_channels=signal_channels,
                       int_time=int_time,
@@ -524,10 +530,13 @@ class FourierTransformSpectrometer(QtWidgets.QWidget, GuiBuilder, FourierTransfo
                 t_elapsed = t_elapsed.seconds + t_elapsed.microseconds * 1e-6
                 t_average = t_elapsed / float(i + 1)
                 steps_remain = n_data_points - i
-                t_remain = t_average * steps_remain / 60.0
-                status_message = 'Elapsed Time(s): {0:.1f} Remaining Time (m): {1:.1f} Avg Time / point (s) {2:.2f}'.format(t_elapsed, t_remain, t_average)
+                t_remain_s = t_average * steps_remain
+                t_remain_m = t_average * steps_remain / 60.0
+                status_message = 'Elapsed Time: {0:.1f} (s) Remaining Time: {1:.1f}/{2:.1f} (s/m) Avg Time / point (s) {3:.2f}'.format(t_elapsed, t_remain_s, t_remain_m, t_average)
                 status_message += ':::Scan Postion {0} (Step {1} of {2})'.format(scan_position, i, n_data_points)
                 self.status_bar.showMessage(status_message)
+                pct_finished = 1e2 * float(i + 1) / float(n_data_points)
+                self.status_bar.progress_bar.setValue(np.ceil(pct_finished))
                 QtWidgets.QApplication.processEvents()
                 if not self.started:
                     break
@@ -642,7 +651,7 @@ class FourierTransformSpectrometer(QtWidgets.QWidget, GuiBuilder, FourierTransfo
     def fts_plot_time_stream(self, ts, min_, max_):
         '''
         '''
-        fig, ax = self.fts_create_blank_fig(frac_screen_width=0.65, frac_screen_height=0.2, top=0.90, bottom=0.23, n_axes=1, left=0.15)
+        fig, ax = self.fts_create_blank_fig(frac_screen_width=0.5, frac_screen_height=0.2, top=0.90, bottom=0.23, n_axes=1, left=0.15)
         ax.plot(ts, label='TOD')
         ax.set_xlabel('Samples', fontsize=10)
         ax.set_ylabel('($V$)', fontsize=10)
@@ -659,7 +668,7 @@ class FourierTransformSpectrometer(QtWidgets.QWidget, GuiBuilder, FourierTransfo
         if self.loaded_files_combobox.count() <=1 or not self.co_plot_checkbox.isChecked():
             self.fts_plot(False)
         if self.co_plot_checkbox.isChecked():
-            fig, ax1, ax2, ax3, ax4 = self.fts_create_blank_fig(frac_screen_width=0.6, frac_screen_height=0.4, wspace=0.2, hspace=0.4, bottom=0.18, left=0.15)
+            fig, ax1, ax2, ax3, ax4 = self.fts_create_blank_fig(frac_screen_width=0.5, frac_screen_height=0.4, wspace=0.2, hspace=0.4, bottom=0.18, left=0.15)
             for idx in range(self.loaded_files_combobox.count()):
                 self.loaded_files_combobox.setCurrentIndex(idx)
                 self.fts_load_from_combobox(False, plot_type='Multi', fig=fig, load_meta_data=True)
@@ -707,9 +716,9 @@ class FourierTransformSpectrometer(QtWidgets.QWidget, GuiBuilder, FourierTransfo
                 fig, ax1, ax2, ax3, ax4 = self.fts_create_blank_fig(frac_screen_width=0.5, frac_screen_height=0.4, hspace=0.4, bottom=0.18, left=0.15)
             else:
                 ax1, ax2, ax3, ax4 = fig.get_axes()
-            ax3.plot(fft_frequency_vector, normalized_spectra, label=label)
-            ax3.set_xlabel('Frequency (GHz)', fontsize=12)
-            ax3.set_ylabel('Spectral Amp', fontsize=12)
+            ax1.plot(fft_frequency_vector, normalized_spectra, label=label)
+            ax1.set_xlabel('Frequency (GHz)', fontsize=12)
+            ax1.set_ylabel('Spectral Amp', fontsize=12)
 
             temp_png_path = os.path.join('temp_files', 'temp_combo.png')
             handles, labels = ax1.get_legend_handles_labels()
@@ -731,14 +740,14 @@ class FourierTransformSpectrometer(QtWidgets.QWidget, GuiBuilder, FourierTransfo
         mirror_interval = self.scan_settings_dict['mirror_interval']
         band = self.bands_combobox.currentText()
         if fig is None or type(fig) == bool:
-            fig, ax1, ax2, ax3, ax4 = self.fts_create_blank_fig(frac_screen_width=0.65, frac_screen_height=0.4, wspace=0.2, hspace=0.4, bottom=0.18, left=0.15, top=0.9)
+            fig, ax1, ax2, ax3, ax4 = self.fts_create_blank_fig(frac_screen_width=0.5, frac_screen_height=0.4, wspace=0.2, hspace=0.4, bottom=0.18, left=0.15, top=0.9)
         else:
             ax1, ax2, ax3, ax4 = fig.get_axes()
-        ax1.set_xlabel('Mirror Position (Steps)', fontsize=10)
-        ax1.set_ylabel('Response (V)', fontsize=10)
-        ax3.set_xlabel('Frequency (GHz)', fontsize=10)
-        ax3.set_ylabel('Spectral Amp', fontsize=10)
-        ax4.set_xlabel('Frequency (GHz)', fontsize=10)
+        ax1.set_xlabel('Frequency (GHz)', fontsize=10)
+        ax1.set_ylabel('Spectral Amp', fontsize=10)
+        ax3.set_xlabel('Mirror Position (Steps)', fontsize=10)
+        ax3.set_ylabel('Response (V)', fontsize=10)
+        ax4.set_xlabel('Mirror Position (Inches)', fontsize=10)
         title = 'Inteferogram and Spectra'
         if len(self.sample_name_lineedit.text()) > 0:
             title += ': {0}'.format(self.sample_name_lineedit.text())
@@ -747,24 +756,29 @@ class FourierTransformSpectrometer(QtWidgets.QWidget, GuiBuilder, FourierTransfo
         self.meta_dict=None
         if if_save_path is not None:
             self.meta_dict = self.loaded_data_dict[if_save_path]
+        if_label = 'Raw IF'
+        ax3.errorbar(self.x_data, self.y_data, yerr=self.y_stds, marker='.', linestyle='-', label=if_label)
         if len(self.x_data) > 10:
-            fft_freq_vector, fft_vector, phase_corrected_fft_vector, position_vector, efficiency_vector = self.ftsy_convert_IF_to_FFT_data(self.x_data, self.y_data, mirror_interval, data_selector='All')
+            if self.symmeterize_data_checkbox.isChecked() and np.abs(min(self.x_data)) >= max(self.x_data):
+                sym_x_data, sym_y_data = self.ftsy_symmeterize_interferogram(self.x_data, self.y_data)
+                ax4.errorbar(sym_x_data, sym_y_data, linestyle='-', label='Sym IF')
+            else:
+                sym_x_data, sym_y_data = self.x_data, self.y_data
+            fft_freq_vector, fft_vector, phase_corrected_fft_vector, position_vector, efficiency_vector = self.ftsy_convert_IF_to_FFT_data(sym_x_data, sym_y_data, mirror_interval, data_selector='All')
             # Plot IF 
             color = 'm'
             label = 'Raw FFT'
-            if_label = 'IF'
             if self.co_plot_checkbox.isChecked():
                 color = None
                 label = None
                 if_label = None
-            ax1.errorbar(self.x_data, self.y_data, yerr=self.y_stds, marker='.', linestyle='-', label=if_label)
             # Plot Raw FFT 
             data_selector = np.logical_and(data_clip_lo < fft_freq_vector, fft_freq_vector < data_clip_hi)
             normalized_phase_corrected_fft_vector = np.abs(phase_corrected_fft_vector.real / np.max(phase_corrected_fft_vector.real))
             max_idx, max_freq, integrated_bandwidth = self.fts_find_max_frequency(fft_freq_vector[data_selector], normalized_phase_corrected_fft_vector[data_selector])
             pk_label = 'Peak/BW {0:.2f}/{1:.2f} GHz Raw'.format(max_freq * 1e-9, integrated_bandwidth * 1e-9)
-            ax3.errorbar(max_freq * 1e-9, normalized_phase_corrected_fft_vector[data_selector][max_idx], color=color, marker='*', markersize=10, label=pk_label)
-            ax3.errorbar(fft_freq_vector[data_selector] * 1e-9, normalized_phase_corrected_fft_vector[data_selector], color=color, marker='.', linestyle='-', label=label)
+            ax1.errorbar(max_freq * 1e-9, normalized_phase_corrected_fft_vector[data_selector][max_idx], color=color, marker='*', markersize=10, label=pk_label)
+            ax1.errorbar(fft_freq_vector[data_selector] * 1e-9, normalized_phase_corrected_fft_vector[data_selector], color=color, linestyle='-', label=label)
             # Normalized and Smooth
             normalized_phase_corrected_fft_vector = self.ftsy_running_mean(normalized_phase_corrected_fft_vector, smoothing_factor=smoothing_factor)
             for band in self.bands:
@@ -773,24 +787,29 @@ class FourierTransformSpectrometer(QtWidgets.QWidget, GuiBuilder, FourierTransfo
                     sim_selector = np.where(fft_frequency_vector_simulated < data_clip_hi * 1e-9)
                     integrated_bandwidth = np.trapz(fft_vector_simulated[sim_selector], fft_frequency_vector_simulated[sim_selector] * 1e9)
                     label = '{0} Band BW {1:.2f} GHz '.format(band, integrated_bandwidth * 1e-9)
-                    ax3.plot(fft_frequency_vector_simulated[sim_selector], fft_vector_simulated[sim_selector], label=label)
-                    ax4.plot(fft_frequency_vector_simulated[sim_selector], fft_vector_simulated[sim_selector])
+                    ax1.plot(fft_frequency_vector_simulated[sim_selector], fft_vector_simulated[sim_selector], label=label)
+                    ax1.plot(fft_frequency_vector_simulated[sim_selector], fft_vector_simulated[sim_selector])
             if self.meta_dict is not None:
                 label = '{0} FFT'.format(self.meta_dict['transmission_sample_lineedit'])
             if label in ax3.get_legend_handles_labels()[1]:
                 label = None
             # Plot processed FFT
-            ax4, fft_freq_vector, normalized_phase_corrected_fft_vector = self.fts_plot_and_divide_optical_elements(ax4, fft_freq_vector[data_selector], normalized_phase_corrected_fft_vector[data_selector])
+            ax1, fft_freq_vector, normalized_phase_corrected_fft_vector = self.fts_plot_and_divide_optical_elements(ax1, fft_freq_vector[data_selector], normalized_phase_corrected_fft_vector[data_selector])
             normalized_phase_corrected_fft_vector = normalized_phase_corrected_fft_vector/ np.max(normalized_phase_corrected_fft_vector)
             color = 'g'
             label = 'Proc FFT'
             if self.co_plot_checkbox.isChecked():
                 color = None
                 label = None
-            ax4.errorbar(fft_freq_vector * 1e-9, normalized_phase_corrected_fft_vector, color=color, marker='.', linestyle='-', label=label)
-            max_idx, max_freq, integrated_bandwidth = self.fts_find_max_frequency(fft_freq_vector, normalized_phase_corrected_fft_vector)
-            pk_label = 'Peak/BW {0:.2f}/{1:.2f} GHz Proc'.format(max_freq * 1e-9, integrated_bandwidth * 1e-9)
-            ax4.errorbar(max_freq * 1e-9, normalized_phase_corrected_fft_vector[max_idx], color=color, marker='*', markersize=10, label=pk_label)
+            #ax1.errorbar(fft_freq_vector * 1e-9, normalized_phase_corrected_fft_vector, color=color, marker='.', linestyle='-', label=label)
+            #max_idx, max_freq, integrated_bandwidth = self.fts_find_max_frequency(fft_freq_vector, normalized_phase_corrected_fft_vector)
+            #pk_label = 'Peak/BW {0:.2f}/{1:.2f} GHz Proc'.format(max_freq * 1e-9, integrated_bandwidth * 1e-9)
+            #ax1.errorbar(max_freq * 1e-9, normalized_phase_corrected_fft_vector[max_idx], color=color, marker='*', markersize=10, label=pk_label)
+            # Raw Data
+            fft_freq_vector, fft_vector, phase_corrected_fft_vector, position_vector, efficiency_vector = self.ftsy_convert_IF_to_FFT_data(self.x_data, self.y_data, mirror_interval, data_selector='All')
+            data_selector = np.logical_and(data_clip_lo < fft_freq_vector, fft_freq_vector < data_clip_hi)
+            normalized_phase_corrected_fft_vector = np.abs(phase_corrected_fft_vector.real / np.max(phase_corrected_fft_vector.real))
+            ax1.errorbar(fft_freq_vector[data_selector] * 1e-9, normalized_phase_corrected_fft_vector[data_selector], color='k', alpha=0.25, linewidth=3, linestyle='-', label='All data')
         if self.meta_dict is not None:
             label = '{0} IF'.format(self.meta_dict['transmission_sample_lineedit'])
         if label in ax1.get_legend_handles_labels()[1]:

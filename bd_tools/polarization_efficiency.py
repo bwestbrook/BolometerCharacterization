@@ -15,7 +15,7 @@ from GuiBuilder.gui_builder import GuiBuilder, GenericClass
 
 class PolarizationEfficiency(QtWidgets.QWidget, GuiBuilder):
 
-    def __init__(self, daq_settings, status_bar, screen_resolution, monitor_dpi, csm_widget, srs_widget, data_folder):
+    def __init__(self, daq_settings, status_bar, screen_resolution, monitor_dpi, csm_widget, srs_widget, sk_widget, data_folder):
         '''
         '''
         super(PolarizationEfficiency, self).__init__()
@@ -25,6 +25,7 @@ class PolarizationEfficiency(QtWidgets.QWidget, GuiBuilder):
         self.screen_resolution = screen_resolution
         self.monitor_dpi = monitor_dpi
         self.csm_widget = csm_widget
+        self.sk_widget = sk_widget
         self.pe_update_samples()
         self.daq = BoloDAQ()
         grid = QtWidgets.QGridLayout()
@@ -42,6 +43,7 @@ class PolarizationEfficiency(QtWidgets.QWidget, GuiBuilder):
         self.start_pause = 5.0
         self.status_bar.showMessage('Ready')
         self.y_fit = []
+        self.angles = []
         self.x_data = []
         self.x_stds = []
         self.y_data = []
@@ -65,117 +67,161 @@ class PolarizationEfficiency(QtWidgets.QWidget, GuiBuilder):
         self.daq_settings = daq_settings
         self.pe_update_scan_params()
 
+    def pe_update_source_type(self):
+        '''
+        '''
+        source_type = self.source_type_combobox.currentText()
+        if source_type in ['LN2', 'Heater']:
+            self.source_frequency_lineedit.setDisabled(True)
+            self.source_power_lineedit.setDisabled(True)
+            self.source_angle_lineedit.setDisabled(True)
+            self.source_temp_lineedit.setDisabled(False)
+            self.source_frequency_lineedit.setText('Thermal')
+            if source_type == 'LN2':
+                self.source_temp_lineedit.setText('77')
+        else:
+            self.source_frequency_lineedit.setDisabled(False)
+            self.source_power_lineedit.setDisabled(False)
+            self.source_angle_lineedit.setDisabled(False)
+            self.source_temp_lineedit.setDisabled(True)
+            self.source_temp_lineedit.setText('')
+            self.source_frequency_lineedit.setText('')
+
     def pe_update_sample_name(self):
         '''
         '''
         sample_key = self.sample_name_combobox.currentText()
+        sample_name = self.samples_settings[sample_key]
+        self.sample_name_lineedit.setText(sample_name)
 
     def pe_configure_input_panel(self):
         '''
         '''
-        welcome_header_label = QtWidgets.QLabel('Welcome to Polarization Efficiency', self)
-        welcome_header_label.setFixedWidth(0.3 * self.screen_resolution.width())
-        self.layout().addWidget(welcome_header_label, 0, 0, 1, 2)
         # DAQ (Device + Channel) Selection
-        device_header_label = QtWidgets.QLabel('Device:', self)
-        self.layout().addWidget(device_header_label, 1, 0, 1, 1)
-        self.device_combobox = QtWidgets.QComboBox(self)
-        self.layout().addWidget(self.device_combobox, 1, 1, 1, 1)
+        self.device_combobox = self.gb_make_labeled_combobox(label_text='Device:')
+        self.layout().addWidget(self.device_combobox, 0, 0, 1, 1)
         for device in self.daq_settings:
             self.device_combobox.addItem(device)
-        daq_header_label = QtWidgets.QLabel('DAQ:', self)
-        self.layout().addWidget(daq_header_label, 2, 0, 1, 1)
-        self.daq_combobox = QtWidgets.QComboBox(self)
-        self.layout().addWidget(self.daq_combobox, 2, 1, 1, 1)
+        self.daq_combobox = self.gb_make_labeled_combobox(label_text='DAQ:')
+        self.layout().addWidget(self.daq_combobox, 0, 1, 1, 1)
         for channel in sorted([int(x) for x in self.daq_settings[device]]):
             self.daq_combobox.addItem(str(channel))
         self.int_time_lineedit = self.gb_make_labeled_lineedit(label_text='Int Time (ms):')
-        self.layout().addWidget(self.int_time_lineedit, 3, 0, 1, 1)
+        self.layout().addWidget(self.int_time_lineedit, 1, 0, 1, 1)
         self.int_time_lineedit.setValidator(QtGui.QIntValidator(0, 25000, self.int_time_lineedit))
         self.int_time_lineedit.setText('500')
         self.sample_rate_lineedit = self.gb_make_labeled_lineedit(label_text='Sample Rate (Hz):')
-        self.layout().addWidget(self.sample_rate_lineedit, 3, 1, 1, 1)
+        self.layout().addWidget(self.sample_rate_lineedit, 1, 1, 1, 1)
         self.sample_rate_lineedit.setText('5000')
         self.sample_rate_lineedit.setValidator(QtGui.QIntValidator(0, 25000, self.sample_rate_lineedit))
+        #Pause Time 
+        self.pause_time_lineedit = self.gb_make_labeled_lineedit(label_text='Pause Time (ms):', lineedit_text='1500')
+        self.pause_time_lineedit.setValidator(QtGui.QIntValidator(0, 25000, self.pause_time_lineedit))
+        self.layout().addWidget(self.pause_time_lineedit, 2, 0, 1, 2)
         # Stepper Motor Selection
         if self.csm_widget is not None:
             stepper_motor_header_label = QtWidgets.QLabel('Stepper Motor:', self)
-            self.layout().addWidget(stepper_motor_header_label, 4, 0, 1, 1)
+            self.layout().addWidget(stepper_motor_header_label, 3, 0, 1, 1)
             self.stepper_motor_label = QtWidgets.QLabel(self.csm_widget.com_port, self)
-            self.layout().addWidget(self.stepper_motor_label, 4, 1, 1, 1)
+            self.layout().addWidget(self.stepper_motor_label, 3, 1, 1, 1)
             self.stepper_settings_label = QtWidgets.QLabel('Stepper Settings', self)
-            self.layout().addWidget(self.stepper_settings_label, 5, 1, 1, 1)
+            self.layout().addWidget(self.stepper_settings_label, 4, 0, 1, 1)
         ######
         # Scan Params
         ######
-        #Pause Time 
-        pause_time_header_label = QtWidgets.QLabel('Pause Time (ms):', self)
-        self.layout().addWidget(pause_time_header_label, 6, 0, 1, 1)
-        self.pause_time_lineedit = QtWidgets.QLineEdit('1000', self)
-        self.pause_time_lineedit.setValidator(QtGui.QIntValidator(0, 25000, self.pause_time_lineedit))
-        self.layout().addWidget(self.pause_time_lineedit, 6, 1, 1, 1)
         #Start Scan
-        start_position_header_label = QtWidgets.QLabel('Start Position:', self)
-        self.layout().addWidget(start_position_header_label, 7, 0, 1, 1)
-        self.start_position_lineedit = QtWidgets.QLineEdit('-45000', self)
-        self.start_position_lineedit.setValidator(QtGui.QIntValidator(-500000, 0, self.start_position_lineedit))
-        self.start_position_lineedit.textChanged.connect(self.pe_update_scan_params)
-        self.layout().addWidget(self.start_position_lineedit, 7, 1, 1, 1)
+        self.start_angle_lineedit = self.gb_make_labeled_lineedit(label_text='Start Angle (degs):', lineedit_text='0')
+        self.start_angle_lineedit.setValidator(QtGui.QIntValidator(-1, 1, self.start_angle_lineedit))
+        self.start_angle_lineedit.textChanged.connect(self.pe_update_scan_params)
+        self.layout().addWidget(self.start_angle_lineedit, 5, 0, 1, 1)
         #End Scan
-        end_position_header_label = QtWidgets.QLabel('End Position:', self)
-        self.layout().addWidget(end_position_header_label, 8, 0, 1, 1)
-        self.end_position_lineedit = QtWidgets.QLineEdit('45000', self)
-        self.end_position_lineedit.setValidator(QtGui.QIntValidator(0, 300000, self.end_position_lineedit))
-        self.end_position_lineedit.textChanged.connect(self.pe_update_scan_params)
-        self.layout().addWidget(self.end_position_lineedit, 8, 1, 1, 1)
+        self.end_angle_lineedit = self.gb_make_labeled_lineedit(label_text='End Angle (degs):', lineedit_text='180')
+        self.end_angle_lineedit.setValidator(QtGui.QIntValidator(0, 720, self.end_angle_lineedit))
+        self.end_angle_lineedit.textChanged.connect(self.pe_update_scan_params)
+        self.layout().addWidget(self.end_angle_lineedit, 5, 1, 1, 1)
         #Grid Angle Interval
-        grid_angle_interval_header_label = QtWidgets.QLabel('Grid Angle Interval (steps):', self)
-        self.layout().addWidget(grid_angle_interval_header_label, 9, 0, 1, 1)
-        self.grid_angle_interval_lineedit = QtWidgets.QLineEdit('1000', self)
-        self.grid_angle_interval_lineedit.textChanged.connect(self.pe_update_scan_params)
-        self.grid_angle_interval_lineedit.setValidator(QtGui.QIntValidator(1, 200000, self.grid_angle_interval_lineedit))
-        self.layout().addWidget(self.grid_angle_interval_lineedit, 9, 1, 1, 1)
-        #Angle Step size (Fixed for Bill's pe right now)
-        angle_per_step_header_label = QtWidgets.QLabel('Angle Per Step (mDeg):', self)
-        self.layout().addWidget(angle_per_step_header_label, 10, 0, 1, 1)
-        self.angle_per_step_combobox = QtWidgets.QComboBox(self)
-        for angle_per_step in ['72']:
-            self.angle_per_step_combobox.addItem(angle_per_step)
-        self.angle_per_step_combobox.activated.connect(self.pe_update_scan_params)
-        self.layout().addWidget(self.angle_per_step_combobox, 10, 1, 1, 1)
+        self.angle_interval_lineedit = self.gb_make_labeled_lineedit(label_text='Grid Angle Interval (degs):', lineedit_text='10')
+        self.angle_interval_lineedit.textChanged.connect(self.pe_update_scan_params)
+        self.angle_interval_lineedit.setValidator(QtGui.QIntValidator(1, 90, self.angle_interval_lineedit))
+        self.layout().addWidget(self.angle_interval_lineedit, 6, 0, 1, 1)
+
+        # Voltage Bias
+        self.voltage_bias_lineedit = self.gb_make_labeled_lineedit(label_text='Voltage Bias (uV):')
+        self.voltage_bias_lineedit.setValidator(QtGui.QDoubleValidator(0, 300, 3, self.voltage_bias_lineedit))
+        self.layout().addWidget(self.voltage_bias_lineedit, 6, 1, 1, 1)
+        #Scan Type (Grid or Monchromatic Horn)
+        self.scan_type_combobox = self.gb_make_labeled_combobox(label_text='Scan Type')
+        for scan_type in ['Horn', 'Grid']:
+            self.scan_type_combobox.addItem(scan_type)
+        self.layout().addWidget(self.scan_type_combobox, 7, 0, 1, 1)
+        #Angle Step size (Changes grid vs Sigma Koki)
+        self.angle_per_step_label = QtWidgets.QLabel('', self)
+        self.layout().addWidget(self.angle_per_step_label, 7, 1, 1, 1)
+        self.scan_type_combobox.currentIndexChanged.connect(self.pe_update_scan_params)
+        # Source Type
+        self.source_type_combobox = self.gb_make_labeled_combobox(label_text='Source Type')
+        for source_type in ['Analyzer', 'LN2', 'Heater']:
+            self.source_type_combobox.addItem(source_type)
+        self.source_type_combobox.currentIndexChanged.connect(self.pe_update_source_type)
+        self.layout().addWidget(self.source_type_combobox, 8, 0, 1, 1)
+
+        self.modulation_frequency_lineedit = self.gb_make_labeled_lineedit(label_text='Modulation Frequency (Hz)', lineedit_text='12')
+        self.modulation_frequency_lineedit.setValidator(QtGui.QDoubleValidator(0, 300, 3, self.modulation_frequency_lineedit))
+        self.layout().addWidget(self.modulation_frequency_lineedit, 8, 1, 1, 1)
+        # Source Temp
+        self.source_temp_lineedit = self.gb_make_labeled_lineedit(label_text='Source Temp (K):')
+        self.source_temp_lineedit.setValidator(QtGui.QDoubleValidator(0, 300, 3, self.source_temp_lineedit))
+        self.layout().addWidget(self.source_temp_lineedit, 9, 0, 1, 1)
+        # Source Frequency
+        self.source_frequency_lineedit = self.gb_make_labeled_lineedit(label_text='Source Frequency (GHz):')
+        self.source_frequency_lineedit.setValidator(QtGui.QDoubleValidator(0, 1000, 3, self.source_frequency_lineedit))
+        self.layout().addWidget(self.source_frequency_lineedit, 9, 1, 1, 1)
+        # Source Power
+        self.source_power_lineedit = self.gb_make_labeled_lineedit(label_text='Source Power (dBm):')
+        self.source_power_lineedit.setValidator(QtGui.QDoubleValidator(-1e3, 1e3, 5, self.source_power_lineedit))
+        self.layout().addWidget(self.source_power_lineedit, 10, 0, 1, 1)
+        # Source Angle
+        self.source_angle_lineedit = self.gb_make_labeled_lineedit(label_text='Source Angle (degs):')
+        self.source_angle_lineedit.setValidator(QtGui.QDoubleValidator(0, 360, 2, self.source_angle_lineedit))
+        self.layout().addWidget(self.source_angle_lineedit, 10, 1, 1, 1)
+        self.set_source_angle_pushbutton = QtWidgets.QPushButton('Set Angle', self)
+        self.layout().addWidget(self.set_source_angle_pushbutton, 11, 0, 1, 1)
+        self.set_source_angle_pushbutton.clicked.connect(self.pe_set_source_angle)
+        self.set_source_angle_home_pushbutton = QtWidgets.QPushButton('Set Angle Home', self)
+        self.layout().addWidget(self.set_source_angle_home_pushbutton, 11, 1, 1, 1)
+        self.set_source_angle_pushbutton.clicked.connect(self.sk_widget.sk_set_home)
         #Scan Info size
         self.scan_info_label = QtWidgets.QLabel('Scan Info', self)
-        self.layout().addWidget(self.scan_info_label, 11, 1, 1, 1)
-        self.pe_update_scan_params()
-        self.sample_name_lineedit = self.gb_make_labeled_lineedit(label_text='Sample Name:')
-        self.layout().addWidget(self.sample_name_lineedit, 12, 1, 1, 1)
+        self.layout().addWidget(self.scan_info_label, 12, 0, 1, 2)
         self.sample_name_combobox = self.gb_make_labeled_combobox(label_text='Sample Name:')
-        for i in range(6):
-            self.sample_name_combobox.addItem(str(i + 1))
+        self.layout().addWidget(self.sample_name_combobox, 13, 0, 1, 1)
+        for sample in self.samples_settings:
+            self.sample_name_combobox.addItem(sample)
+        self.sample_name_combobox.setCurrentIndex(5)
+        self.sample_name_lineedit = self.gb_make_labeled_lineedit(label_text='Sample Name:')
+        self.layout().addWidget(self.sample_name_lineedit, 13, 1, 1, 1)
         self.sample_name_combobox.activated.connect(self.pe_update_sample_name)
         self.sample_name_combobox.currentIndexChanged.connect(self.pe_update_sample_name)
-        self.sample_name_combobox.setCurrentIndex(5)
-        self.layout().addWidget(self.sample_name_combobox, 12, 0, 1, 1)
         # Zero Lock in
         self.zero_lock_in_checkbox = QtWidgets.QCheckBox('Zero Lock In?', self)
         self.zero_lock_in_checkbox.setChecked(True)
-        self.layout().addWidget(self.zero_lock_in_checkbox, 13, 0, 1, 1)
+        self.layout().addWidget(self.zero_lock_in_checkbox, 14, 0, 1, 1)
         self.reverse_scan_checkbox = QtWidgets.QCheckBox('Reverse Scan?', self)
         self.reverse_scan_checkbox.setChecked(False)
-        self.layout().addWidget(self.reverse_scan_checkbox, 13, 1, 1, 1)
+        self.layout().addWidget(self.reverse_scan_checkbox, 14, 1, 1, 1)
         #####
         # Control Buttons 
         ######
         self.start_pushbutton = QtWidgets.QPushButton('Start', self)
-        self.layout().addWidget(self.start_pushbutton, 14, 0, 1, 2)
+        self.layout().addWidget(self.start_pushbutton, 15, 0, 1, 2)
         self.start_pushbutton.clicked.connect(self.pe_start_stop_scan)
 
         self.load_pushbutton = QtWidgets.QPushButton('Load', self)
-        self.layout().addWidget(self.load_pushbutton, 15, 0, 1, 2)
+        self.layout().addWidget(self.load_pushbutton, 16, 0, 1, 2)
         self.load_pushbutton.clicked.connect(self.pe_load)
 
         self.save_pushbutton = QtWidgets.QPushButton('Save', self)
-        self.layout().addWidget(self.save_pushbutton, 16, 0, 1, 2)
+        self.layout().addWidget(self.save_pushbutton, 17, 0, 1, 2)
         self.save_pushbutton.clicked.connect(self.pe_save)
 
         if self.csm_widget is None:
@@ -190,71 +236,69 @@ class PolarizationEfficiency(QtWidgets.QWidget, GuiBuilder):
         self.time_stream_plot_label = QtWidgets.QLabel('', self.pe_plot_panel)
         self.time_stream_plot_label.setAttribute(QtCore.Qt.WA_TranslucentBackground)
         self.pe_plot_panel.layout().addWidget(self.time_stream_plot_label, 1, 0, 1, 4)
-        data_mean_header_label = QtWidgets.QLabel('Data Mean (V):', self.pe_plot_panel)
-        data_mean_header_label.setAlignment(QtCore.Qt.AlignRight)
-        self.pe_plot_panel.layout().addWidget(data_mean_header_label, 2, 0, 1, 1)
-        self.data_mean_label = QtWidgets.QLabel('', self.pe_plot_panel)
-        self.pe_plot_panel.layout().addWidget(self.data_mean_label, 2, 1, 1, 1)
-        data_std_header_label = QtWidgets.QLabel('Data STD (V):', self.pe_plot_panel)
-        data_std_header_label.setAlignment(QtCore.Qt.AlignRight)
-        self.pe_plot_panel.layout().addWidget(data_std_header_label, 2, 2, 1, 1)
-        self.data_std_label = QtWidgets.QLabel('', self.pe_plot_panel)
-        self.pe_plot_panel.layout().addWidget(self.data_std_label, 2, 3, 1, 1)
+        self.data_mean_label = QtWidgets.QLabel('Data Mean (V):', self.pe_plot_panel)
+        self.pe_plot_panel.layout().addWidget(self.data_mean_label, 2, 0, 1, 1)
+        self.data_std_label = QtWidgets.QLabel('Data STD (V)', self.pe_plot_panel)
+        self.pe_plot_panel.layout().addWidget(self.data_std_label, 2, 1, 1, 1)
+        self.data_summary_label = QtWidgets.QLabel('', self.pe_plot_panel)
+        self.pe_plot_panel.layout().addWidget(self.data_summary_label, 3, 0, 1, 2)
+        self.data_time_stream = QtWidgets.QLabel('', self.pe_plot_panel)
 
     def bd_get_simulated_data(self, datatype, current_position, noise=10):
         '''
         noise is in percent and is of the max-min of data
         '''
-        in_degree = current_position*np.pi/180
+        in_degs = current_position*np.pi/180
         dev = (np.random.randn()-0.5)*2/100*noise
-        simulated_data = np.sin(in_degree) + dev
+        simulated_data = np.sin(in_degs) + dev
         return simulated_data
 
     #################################################
     # Scanning
     #################################################
 
+    def pe_set_source_angle(self, clicked, set_to_position_deg=None):
+        '''
+        '''
+        if set_to_position_deg is None:
+            set_to_position_deg = float(self.source_angle_lineedit.text())
+        self.sk_widget.sk_set_position(clicked, set_to_position_deg=set_to_position_deg)
+
     def pe_update_scan_params(self):
         '''
         '''
-        if self.csm_widget is None:
+        if len(self.end_angle_lineedit.text()) == 0 or len(self.start_angle_lineedit.text()) == 0:
             return None
-        end = int(self.end_position_lineedit.text())
-        start = int(self.start_position_lineedit.text())
-        grid_angle_interval = int(self.grid_angle_interval_lineedit.text())
-        angle_per_step = float(self.angle_per_step_combobox.currentText())
-        pause_time = float(self.pause_time_lineedit.text())
-        if grid_angle_interval > 0:
-            self.n_data_points = int((end - start) / grid_angle_interval)
+        if len(self.angle_interval_lineedit.text()) == 0:
+            return None
+        if int(self.end_angle_lineedit.text()) < int(self.start_angle_lineedit.text()):
+            return None
+        if int(self.angle_interval_lineedit.text()) == 0:
+            return None
+        end_angle = int(self.end_angle_lineedit.text())
+        start_angle = int(self.start_angle_lineedit.text())
+        angle_interval = int(self.angle_interval_lineedit.text())
+        if self.scan_type_combobox.currentText() == 'Grid':
+            angle_per_step = 0.0035 # mDeg
         else:
-            self.n_data_points = np.nan
-        self.scan_settings_dict = {
-             'end': end,
-             'start': start,
-             'grid_angle_interval': grid_angle_interval,
-             'angle_per_step': angle_per_step,
-             'pause_time': pause_time,
-             'n_data_points': self.n_data_points
-            }
-        info_string = 'N Data Points: {0} ::: '.format(self.n_data_points)
+            angle_per_step = 0.005 # mDeg
+        stepper_motor_steps_data_point = angle_interval / angle_per_step
+        scan_positions = np.arange(start_angle, end_angle, angle_interval)
+        n_data_points = len(scan_positions)
+        info_string = 'N Data Points: {0} ::: '.format(n_data_points)
+        info_string += 'Angle Per Step {0:.1f} ::: '.format(angle_per_step)
+        info_string += 'Stepper Motor Steps Per Data Point {0}'.format(stepper_motor_steps_data_point)
         self.scan_info_label.setText(info_string)
-        device = self.device_combobox.currentText()
-        daq = self.daq_combobox.currentText()
-        self.scan_settings_dict.update({'device': device, 'daq': daq})
-        daq_settings = str(self.daq_settings[device][daq])
-        self.scan_settings_dict.update(self.daq_settings[device][daq])
         self.pe_setup_stepper()
 
     def pe_setup_stepper(self):
         '''
         '''
         sm_com_port = self.stepper_motor_label.text()
-        self.scan_settings_dict.update({'sm_com_port': sm_com_port})
         self.status_bar.showMessage('Setting up serial connection to stepper motor on {0}'.format(sm_com_port))
         QtWidgets.QApplication.processEvents()
         sm_settings_str = ''
         if self.csm_widget is not None:
-            self.scan_settings_dict.update(self.csm_widget.stepper_settings_dict)
             for setting, value in self.csm_widget.stepper_settings_dict.items():
                 sm_settings_str += ' '.join([x.title() for x in setting.split('_')])
                 sm_settings_str += ' {0} ::: '.format(value)
@@ -275,21 +319,36 @@ class PolarizationEfficiency(QtWidgets.QWidget, GuiBuilder):
             self.started = False
             self.pe_save()
 
+    def pe_convert_angles_to_stepper_motor_positions(self, scan_angles):
+        '''
+        '''
+        scan_type = self.scan_type_combobox.currentText()
+        if scan_type == 'Grid':
+            angle_per_step = 0.0032 # deg
+            set_position = self.csm_widget.csm_set_position
+        else:
+            angle_per_step = 0.005 # deg
+            set_position = self.sk_widget.sk_set_position
+        stepper_motor_positions = [float(x) / angle_per_step  for x in scan_angles]
+        return stepper_motor_positions, set_position
+
     def pe_scan(self):
         '''
         '''
-        pprint(self.scan_settings_dict)
-        start = self.scan_settings_dict['start']
-        end = self.scan_settings_dict['end']
-        grid_angle_interval = self.scan_settings_dict['grid_angle_interval']
-        pause_time = self.scan_settings_dict['pause_time']
-        n_data_points = self.scan_settings_dict['n_data_points']
-        device = self.scan_settings_dict['device']
-        int_time = float(self.int_time_lineedit.text())
+        pause_time = int(self.pause_time_lineedit.text())
+        device = self.device_combobox.currentText()
+        signal_channel = self.daq_combobox.currentText()
+        int_time = int(self.int_time_lineedit.text())
         sample_rate = float(self.sample_rate_lineedit.text())
-        signal_channel = self.scan_settings_dict['daq']
-        scan_positions = range(start, end + grid_angle_interval, grid_angle_interval)
-        start_position = scan_positions[0]
+        scan_type = self.scan_type_combobox.currentText()
+        start_angle = int(self.start_angle_lineedit.text())
+        end_angle = int(self.end_angle_lineedit.text())
+        angle_interval = int(self.angle_interval_lineedit.text())
+        scan_angles = range(start_angle, end_angle + angle_interval, angle_interval)
+        start_angle = scan_angles[0]
+        n_data_points = len(scan_angles)
+        stepper_motor_positions, set_position = self.pe_convert_angles_to_stepper_motor_positions(scan_angles)
+        start_position = stepper_motor_positions[0]
         signal_channels = [signal_channel]
         daq = BoloDAQ(signal_channels=signal_channels,
                       int_time=int_time,
@@ -297,21 +356,23 @@ class PolarizationEfficiency(QtWidgets.QWidget, GuiBuilder):
                       device=device)
         while self.started:
             t_start = datetime.now()
+            self.angles = []
             self.x_data, self.x_stds = [], []
             self.y_data, self.y_stds = [], []
             if self.reverse_scan_checkbox.isChecked():
-                scan_positions = list(reversed(scan_positions))
-            for i, scan_position in enumerate(scan_positions):
-                self.csm_widget.csm_set_position(position=scan_position, verbose=False)
+                stepper_motor_positions = list(reversed(stepper_motor_positions))
+            for i, position in enumerate(stepper_motor_positions):
+                set_position(clicked=False, position=int(position))
                 if i == 0:
                     self.status_bar.showMessage('Waiting {0}s for grid to move to start position'.format(self.start_pause))
                     QtWidgets.QApplication.processEvents()
                     time.sleep(self.start_pause) # wait for motor to reach starting point
+                time.sleep(pause_time * 1.5e-3)
                 if self.zero_lock_in_checkbox.isChecked():
                     self.srs_widget.srs_zero_lock_in_phase()
                 time.sleep(pause_time * 1e-3)
                 # Gather Data and Append to Vector then plot
-                self.x_data.append(scan_position)
+                self.x_data.append(position)
                 self.x_stds.append(2) # guesstimated < 2 step error in position
                 data_dict = daq.run()
                 data_time_stream = data_dict[signal_channel]['ts']
@@ -321,26 +382,34 @@ class PolarizationEfficiency(QtWidgets.QWidget, GuiBuilder):
                 std = data_dict[signal_channel]['std']
                 self.y_data.append(mean)
                 self.y_stds.append(std)
-                pol_eff_str = None
-                if np.abs(scan_position - start_position) > 30000:
-                    normalized_amplitude = self.y_data / np.max(self.y_data)
-                    degsperpoint = 30.0
-                    initial_fit_params = self.pe_moments(self.x_data, np.asarray(self.y_data), degsperpoint)
-                    fit_params = self.pe_fit_sine(self.x_data, np.asarray(self.y_data), initial_fit_params)
-                    self.y_fit = []
+                pol_eff_str = ''
+                scan_angle = scan_angles[i]
+                self.angles.append(scan_angle)
+                if np.abs(scan_angle - start_angle) > 90:
                     self.x_fit = []
-                    for x_val in np.arange(start_position, scan_position, 50):
-                        fit_val = self.pe_test_sine(x_val, fit_params[0], fit_params[1], fit_params[2], fit_params[3])
-                        angle_ = (x_val /fit_params[1]) * 2 * np.pi
-                        self.y_fit.append(fit_val)
-                        self.x_fit.append(x_val)
-                    pol_eff_fit = np.min(self.y_fit) / np.max(self.y_fit) * 1e2 # is a pct
-                    pol_eff_data = np.min(self.y_data) / np.max(self.y_data) * 1e2 # is a pct
-                    pol_eff_str = 'Pol Eff: {0:.2f}% (Fit) Pol Eff: {1:.2f}% (Data)'.format(pol_eff_fit, pol_eff_data)
+                    self.y_fit = []
+                    normalized_amplitude = self.y_data / np.max(self.y_data)
+                    initial_fit_params = self.pe_moments(self.x_data, np.asarray(self.y_data), angle_interval)
+                    try:
+                        fit_params = self.pe_fit_sine(self.x_data, np.asarray(self.y_data), initial_fit_params)
+                        for x_val in range(int(start_position), int(position), 100):
+                            fit_val = self.pe_test_sine(x_val, fit_params[0], fit_params[1], fit_params[2], fit_params[3])
+                            angle_ = (self.x_data[i] /fit_params[1]) * 2 * np.pi
+                            self.y_fit.append(fit_val)
+                            self.x_fit.append(x_val)
+                        pol_eff_fit = np.min(self.y_fit) / np.max(self.y_fit) * 1e2 # is a pct
+                        pol_eff_data = np.min(self.y_data) / np.max(self.y_data) * 1e2 # is a pct
+                        pol_eff_str = 'Pol Eff: {0:.2f}% (Fit) Pol Eff: {1:.2f}% (Data)'.format(pol_eff_fit, pol_eff_data)
+                    except RuntimeError:
+                        fit_params = initial_fit_params
+                pct_finished = 1e2 * float(i + 1) / float(len(scan_angles))
+                self.status_bar.progress_bar.setValue(np.ceil(pct_finished))
                 self.pe_plot_time_stream(data_time_stream, min_, max_)
                 self.pe_plot(running=True, pol_eff_str=pol_eff_str)
+                pol_eff_str += 'Min: {0} Max:{1}'.format(np.min(self.y_data), np.max(self.y_data))
                 self.data_mean_label.setText('{0:.6f}'.format(mean))
                 self.data_std_label.setText('{0:.6f}'.format(std))
+                self.data_summary_label.setText(pol_eff_str)
                 # Compute and report time diagnostics
                 t_now = datetime.now()
                 t_elapsed = t_now - t_start
@@ -348,17 +417,17 @@ class PolarizationEfficiency(QtWidgets.QWidget, GuiBuilder):
                 t_average = t_elapsed / float(i + 1)
                 steps_remain = n_data_points - i
                 t_remain = t_average * steps_remain
-                status_message = 'Elapsed Time(s): {0:.1f} Remaining Time (s): {1:.1f} ::: Current Position (step) {2} ::: (Step {3} of {4})'.format(t_elapsed, t_remain, scan_position, i, n_data_points)
+                status_message = 'Elapsed Time(s): {0:.1f} Remaining Time (s): {1:.1f} ::: Current Angle (deg) {2} ::: (Step {3} of {4})'.format(t_elapsed, t_remain, scan_angle, i, n_data_points)
                 self.status_bar.showMessage(status_message)
                 QtWidgets.QApplication.processEvents()
                 if not self.started:
                     break
-                elif i + 1 == self.n_data_points:
+                elif i + 1 == n_data_points:
                     self.started = False
         self.pe_save()
         self.sender().setText('Start')
         self.started = False
-        self.csm_widget.csm_set_position(position=scan_positions[0], verbose=False)
+        set_position(clicked=False, position=int(stepper_motor_positions[1]))
 
     ###################################################################
     # Saving and Plotting
@@ -393,7 +462,6 @@ class PolarizationEfficiency(QtWidgets.QWidget, GuiBuilder):
                 self.x_stds.append(x_std)
                 self.y_data.append(y_data)
                 self.y_stds.append(y_std)
-        print(self.x_data)
         self.pe_plot()
 
     def pe_save(self):
@@ -402,6 +470,7 @@ class PolarizationEfficiency(QtWidgets.QWidget, GuiBuilder):
         save_path = self.pe_index_file_name()
         save_path = QtWidgets.QFileDialog.getSaveFileName(self, 'Data Save Location', save_path, filter='*.txt')[0]
         if len(save_path) > 0:
+            self.gb_save_meta_data(save_path, 'txt')
             with open(save_path, 'w') as save_handle:
                 for i, x_data in enumerate(self.x_data):
                     line = '{0:.5f}, {1:.5f}, {2:.5f}, {3:.5f}\n'.format(self.x_data[i], self.x_stds[i], self.y_data[i], self.y_stds[i])
@@ -412,12 +481,11 @@ class PolarizationEfficiency(QtWidgets.QWidget, GuiBuilder):
                 shutil.copy(os.path.join('temp_files', 'temp_pol.png'), save_path.replace('dat', 'png'))
         else:
             self.gb_quick_message('Warning Data Not Written to File!', msg_type='Warning')
-        self.pe_plot()
 
     def pe_plot_time_stream(self, ts, min_, max_):
         '''
         '''
-        fig, ax = self.pe_create_blank_fig(frac_screen_width=0.7, frac_screen_height=0.3, top=0.9, bottom=0.21, n_axes=1)
+        fig, ax, ax_twin = self.pe_create_blank_fig(left=0.15, frac_screen_width=0.6, frac_screen_height=0.25, top=0.9, bottom=0.21, n_axes=1)
         ax.plot(ts)
         ax.set_xlabel('Samples', fontsize=14)
         ax.set_ylabel('($V$)', fontsize=14)
@@ -430,31 +498,36 @@ class PolarizationEfficiency(QtWidgets.QWidget, GuiBuilder):
         '''
         '''
         pl.close('all')
-        fig, ax = self.pe_create_blank_fig(frac_screen_width=0.7, frac_screen_height=0.6, n_axes=1)
-        ax.set_xlabel('Steps', fontsize=10)
+        fig, ax, ax_twin = self.pe_create_blank_fig(left=0.15, bottom=0.2, frac_screen_width=0.6, frac_screen_height=0.5, n_axes=1, twin_yaxis=True)
+        ax.set_xlabel('Degrees ($^\circ$)', fontsize=10)
         ax.set_ylabel('Amplitude', fontsize=10)
         title = 'Polarization Efficiency'
         if len(self.sample_name_lineedit.text()) > 0:
             title += ' {0}'.format(self.sample_name_lineedit.text())
         ax.set_title(title, fontsize=14)
-        ax.errorbar(self.x_data, self.y_data, yerr=self.y_stds, xerr=self.x_stds, marker='.', linestyle='-', label='data')
+        ax_twin.errorbar(self.x_data, self.y_data, yerr=self.y_stds, xerr=self.x_stds, marker='.', linestyle='-', color='k', label='data')
+        ax.plot(self.angles, self.y_data, marker='.', linestyle='-', color='k')
         if len(self.y_fit) > 0:
             if pol_eff_str is not None:
-                ax.plot(self.x_fit, self.y_fit, color='r', linestyle='-', label=pol_eff_str)
+                ax_twin.plot(self.x_fit, self.y_fit, color='r', linestyle='-', label=pol_eff_str)
             else:
-                ax.plot(self.x_fit, self.y_fit, color='r', linestyle='-', label='fit')
+                ax_twin.plot(self.x_fit, self.y_fit, color='r', linestyle='-', label='fit')
+            fit_to_subtract = np.interp(self.x_data, self.x_fit, self.y_fit)
+            residual = np.asarray(self.y_data) - np.asarray(fit_to_subtract)
+            pct_residual = 1e2 * np.max(np.abs(residual)) / np.max(self.y_data)
+            label = 'Residual {0:.2f}/{1:.2f}/{2:.2f} (pk/data_max / %)'.format(np.max(np.abs(residual)), np.max(self.y_data), pct_residual)
+            ax_twin.plot(self.x_data, residual, color='g', linestyle='-', label='Residual')
         pl.legend()
         fig.savefig(os.path.join('temp_files', 'temp_pol.png'), transparent=True)
         image = QtGui.QPixmap(os.path.join('temp_files', 'temp_pol.png'))
         self.pe_plot_label.setPixmap(image)
         if not running and False:
-            degsperpoint = 30
-            initial_fit_params = self.pe_moments(self.x_data, np.asarray(self.y_data), degsperpoint)
+            angle_interval = int(self.angle_interval_lineedit.text())
+            initial_fit_params = self.pe_moments(self.x_data, np.asarray(self.y_data), angle_interval)
             fit_params = self.pe_fit_sine(self.x_data, np.asarray(self.y_data), initial_fit_params)
             self.y_fit = []
             self.x_fit = []
             for x_val in np.arange(0, 360, 2):
-                print(fit_params)
                 fit_val = self.pe_test_sine(x_val, fit_params[0], fit_params[1], fit_params[2], fit_params[3])
                 angle_ = (x_val /fit_params[1]) * 2 * np.pi
                 self.y_fit.append(fit_val)
@@ -463,9 +536,21 @@ class PolarizationEfficiency(QtWidgets.QWidget, GuiBuilder):
             pol_eff_data = np.min(self.y_data) / np.max(self.y_data) * 1e2 # is a pct
             pol_eff_str = 'Pol Eff: {0:.2f}% (Fit) Pol Eff: {1:.2f}% (Data)'.format(pol_eff_fit, pol_eff_data)
 
+    def pe_angle_to_position(self, angle):
+        '''
+        '''
+        position = angle * 1e-3
+        return position
+
+    def pe_position_to_angle(self, position):
+        '''
+        '''
+        angle = position * 1e3
+        return angle
+
     def pe_create_blank_fig(self, frac_screen_width=0.5, frac_screen_height=0.8,
                              left=0.08, right=0.98, top=0.95, bottom=0.08, n_axes=2,
-                             aspect=None):
+                             aspect=None, twin_yaxis=False):
         if frac_screen_width is None and frac_screen_height is None:
             fig = pl.figure()
         else:
@@ -479,11 +564,15 @@ class PolarizationEfficiency(QtWidgets.QWidget, GuiBuilder):
             return fig, ax1, ax2
         else:
             ax = fig.add_subplot(111)
-            return fig, ax
+            ax_twin = None
+            if twin_yaxis:
+                ax_twin = ax.twiny()
+            return fig, ax, ax_twin
 
     ##################################################
     ## Fitting Utilities
     ##################################################
+
     def pe_arbitrary_sine(self, amplitude, period, y_offset):
         def arb_sine(x):
             value = amplitude*np.sin(x * period) ** 2 + y_offset
@@ -493,7 +582,6 @@ class PolarizationEfficiency(QtWidgets.QWidget, GuiBuilder):
     def pe_test_sine(self, x_val, amplitude, period, phase, y_offset=0.0):
         if period is None:
             return np.nan
-        print(x_val)
         period = float(period)
         y_offset = float(y_offset)
         #value = amplitude * np.sin((2.5 * x_val / period) * 2 * np.pi + phase) + y_offset
@@ -501,8 +589,6 @@ class PolarizationEfficiency(QtWidgets.QWidget, GuiBuilder):
         return value
 
     def pe_moments(self, raw_angle, data, degsperstep):
-        print(raw_angle)
-        print(data)
         if len(data) == 0:
             return None, None, None
         try:

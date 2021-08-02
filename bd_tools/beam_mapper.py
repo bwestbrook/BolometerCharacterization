@@ -113,6 +113,13 @@ class BeamMapper(QtWidgets.QWidget, GuiBuilder):
         self.reset_zero_y_pushbutton.clicked.connect(self.bm_reset_zero)
         self.set_position_x_pushbutton.clicked.connect(self.bm_set_position)
         self.set_position_y_pushbutton.clicked.connect(self.bm_set_position)
+        # Common Positions 
+        self.set_origin_pushbutton = QtWidgets.QPushButton('Go to Origin')
+        self.set_origin_pushbutton.clicked.connect(self.bm_set_origin)
+        self.layout().addWidget(self.set_origin_pushbutton, 5, 0, 1, 2)
+        self.set_ln2_load_pushbutton = QtWidgets.QPushButton('Go to LN2 Load')
+        self.set_ln2_load_pushbutton.clicked.connect(self.bm_set_ln2_load)
+        self.layout().addWidget(self.set_ln2_load_pushbutton, 5, 2, 1, 2)
         # Stepper Motor Selection
         ######
         # Scan Params
@@ -156,27 +163,33 @@ class BeamMapper(QtWidgets.QWidget, GuiBuilder):
         self.layout().addWidget(self.aperture_description_lineedit, 10, 0, 1, 2)
         self.voltage_bias_lineedit = self.gb_make_labeled_lineedit(label_text='Voltage Bias (uV):')
         self.voltage_bias_lineedit.setValidator(QtGui.QDoubleValidator(0, 300, 3, self.voltage_bias_lineedit))
-        self.layout().addWidget(self.voltage_bias_lineedit, 12, 0, 1, 2)
+        self.layout().addWidget(self.voltage_bias_lineedit, 10, 2, 1, 2)
         #Source Information 
         self.source_type_combobox = self.gb_make_labeled_combobox(label_text='Source Type')
         for source_type in ['Analyzer', 'LN2', 'Heater']:
             self.source_type_combobox.addItem(source_type)
         self.source_type_combobox.currentIndexChanged.connect(self.bm_update_source_type)
-        self.layout().addWidget(self.source_type_combobox, 11, 0, 1, 2)
+        self.layout().addWidget(self.source_type_combobox, 11, 0, 1, 1)
+
+        self.modulation_frequency_lineedit = self.gb_make_labeled_lineedit(label_text='Modulation Frequency (Hz)', lineedit_text='12')
+        self.modulation_frequency_lineedit.setValidator(QtGui.QDoubleValidator(0, 300, 3, self.modulation_frequency_lineedit))
+        self.layout().addWidget(self.modulation_frequency_lineedit, 11, 1, 1, 1)
+        # Source Temp
         self.source_temp_lineedit = self.gb_make_labeled_lineedit(label_text='Source Temp (K):')
         self.source_temp_lineedit.setValidator(QtGui.QDoubleValidator(0, 300, 3, self.source_temp_lineedit))
         self.layout().addWidget(self.source_temp_lineedit, 11, 2, 1, 2)
+        # Source Frequency
         self.source_frequency_lineedit = self.gb_make_labeled_lineedit(label_text='Source Frequency (GHz):')
         self.source_frequency_lineedit.setValidator(QtGui.QDoubleValidator(0, 1000, 3, self.source_frequency_lineedit))
         self.layout().addWidget(self.source_frequency_lineedit, 12, 0, 1, 1)
+        # Source Power
         self.source_power_lineedit = self.gb_make_labeled_lineedit(label_text='Source Power (dBm):')
         self.source_power_lineedit.setValidator(QtGui.QDoubleValidator(-1e3, 1e3, 5, self.source_power_lineedit))
         self.layout().addWidget(self.source_power_lineedit, 12, 1, 1, 1)
-
+        # Source Angle
         self.source_angle_lineedit = self.gb_make_labeled_lineedit(label_text='Source Angle (degrees):')
         self.source_angle_lineedit.setValidator(QtGui.QDoubleValidator(0, 360, 2, self.source_angle_lineedit))
         self.layout().addWidget(self.source_angle_lineedit, 12, 2, 1, 1)
-
         # Time Stream and data label
         self.time_stream_plot_label = QtWidgets.QLabel('', self)
         self.time_stream_plot_label.setAttribute(QtCore.Qt.WA_TranslucentBackground)
@@ -262,6 +275,8 @@ class BeamMapper(QtWidgets.QWidget, GuiBuilder):
         self.layout().addWidget(self.x_cut_select_combobox, 14, 4, 1, 1)
         for x_tick in self.x_ticks:
             self.x_cut_select_combobox.addItem(x_tick)
+        self.x_slice_fit_label = QtWidgets.QLabel('', self)
+        self.layout().addWidget(self.x_slice_fit_label, 15, 4, 1, 1)
         # Y
         self.y_cut_plot_label = QtWidgets.QLabel('', self)
         self.layout().addWidget(self.y_cut_plot_label, 10, 6, 4, 2)
@@ -271,10 +286,32 @@ class BeamMapper(QtWidgets.QWidget, GuiBuilder):
         self.layout().addWidget(self.y_cut_select_combobox, 14, 6, 1, 1)
         for y_tick in self.y_ticks:
             self.y_cut_select_combobox.addItem(y_tick)
+        self.y_slice_fit_label = QtWidgets.QLabel('', self)
+        self.layout().addWidget(self.y_slice_fit_label, 15, 6, 1, 1)
 
     ##############################################################################
     # Scanning 
     ##############################################################################
+
+    def bm_set_ln2_load(self):
+        '''
+        '''
+        if not hasattr(self.csm_widget_x, 'com_port') or not hasattr(self.csm_widget_y, 'com_port'):
+            return None
+        self.csm_widget_x.csm_set_position(position=0)
+        self.csm_widget_y.csm_set_position(position=-250000)
+        self.set_position_x_lineedit.setText('0')
+        self.set_position_y_lineedit.setText('-250000')
+
+    def bm_set_origin(self):
+        '''
+        '''
+        if not hasattr(self.csm_widget_x, 'com_port') or not hasattr(self.csm_widget_y, 'com_port'):
+            return None
+        self.csm_widget_x.csm_set_position(position=0)
+        self.csm_widget_y.csm_set_position(position=0)
+        self.set_position_x_lineedit.setText('0')
+        self.set_position_y_lineedit.setText('0')
 
     def bm_reset_zero(self):
         '''
@@ -313,6 +350,8 @@ class BeamMapper(QtWidgets.QWidget, GuiBuilder):
         if len(self.start_position_y_lineedit.text()) == 0 or len(self.end_position_y_lineedit.text()) == 0:
             return None
         if len(self.step_size_x_lineedit.text()) == 0 or len(self.step_size_y_lineedit.text()) == 0:
+            return None
+        if int(self.step_size_x_lineedit.text()) == 0 or int(self.step_size_y_lineedit.text()) == 0:
             return None
         if self.start_position_x_lineedit.text() == '-' or self.start_position_y_lineedit.text() == '-':
             return None
@@ -363,6 +402,8 @@ class BeamMapper(QtWidgets.QWidget, GuiBuilder):
              'n_y_data_points': n_y_data_points,
              'n_data_points': n_data_points
             }
+        data_string = '{0} x {1} scan {2} total points\n'.format(self.scan_settings_dict['n_x_data_points'], self.scan_settings_dict['n_y_data_points'], self.scan_settings_dict['n_data_points'])
+        self.data_string_label.setText(data_string)
         sm_settings_str = ''
 
     def bm_pause(self):
@@ -473,6 +514,8 @@ class BeamMapper(QtWidgets.QWidget, GuiBuilder):
             time.sleep(2 * wait) # Safety factor of three
         self.status_bar.showMessage('Beam Mapper is Ready! Starting Scan.... ')
         QtWidgets.QApplication.processEvents()
+        fit_params_1d_human = ['Amp', 'x_0', 'sigma']
+        fit_params_2d_human = ['Amp', 'x_0', 'y_0', 'sigma_x', 'sigma_y', 'theta']
         while i < len(x_grid) and self.started:
             x_pos = x_grid[i]
             if self.csm_widget_x is not None:
@@ -496,19 +539,6 @@ class BeamMapper(QtWidgets.QWidget, GuiBuilder):
                     self.srs_widget.srs_zero_lock_in_phase()
                 time.sleep(0.300) # Post Zero lock-in wait 3 or 1 time constants at 100 or 300 ms
                 data_dict = daq.run()
-                #data_dict = {
-                    #'0':
-                        #{'ts': [0, 1, 1, 2, 3, 1],
-                        ##'mean': 0.13,
-                        #'max': 3,
-                        ##'min': 0,
-                        #'std': 0.5
-                         #}
-                        #}
-                mean = data_dict[signal_channel]['mean']
-                min_ = data_dict[signal_channel]['min']
-                max_ = data_dict[signal_channel]['max']
-                std = data_dict[signal_channel]['std']
                 data_time_stream = data_dict[signal_channel]['ts']
                 mean = data_dict[signal_channel]['mean']
                 min_ = data_dict[signal_channel]['min']
@@ -517,8 +547,21 @@ class BeamMapper(QtWidgets.QWidget, GuiBuilder):
                 self.bm_plot_time_stream(data_time_stream, min_, max_)
                 Z_datum = mean
                 #Z_datum = Z_data_loaded[i][j]
+                # Process Slices
                 fit_params, residuals = self.bm_plot_x_cut(y_ticks, Z_data)
+                fit_string = 'No X Fit'
+                if fit_params is not None:
+                    fit_string = ''
+                    for param, value in zip(fit_params_1d_human, fit_params):
+                        fit_string += '{0}: {1:.2f} '.format(param, value)
+                self.x_slice_fit_label.setText(fit_string)
                 fit_params, residuals = self.bm_plot_y_cut(x_ticks, Z_data)
+                fit_string = 'No Y Fit'
+                if fit_params is not None:
+                    fit_string = ''
+                    for param, value in zip(fit_params_1d_human, fit_params):
+                        fit_string += '{0}: {1:.2f} '.format(param, value)
+                self.y_slice_fit_label.setText(fit_string)
                 if direction == -1:
                     self.z_stds[len(y_scan) -1 - j][i] = std
                     Z_data[len(y_scan) - 1- j][i] = Z_datum
@@ -530,16 +573,35 @@ class BeamMapper(QtWidgets.QWidget, GuiBuilder):
                 Z_fit_data = np.zeros(shape=X.shape)
                 self.Z_data.append(Z_datum)
                 self.Z_stds.append(std)
+                good_fit = False
+                pct_residual = 0.0
                 try:
                     X, Y = np.meshgrid(x_grid, y_grid)
                     fit_Z, fit_params = self.bm_fit_2d_data(X, Y, Z_data.flatten())
                     self.bm_plot_beam_map(x_ticks, y_ticks, Z_data, fit_Z.reshape(X.shape), running=True)
                     Z_res = Z_data - fit_Z.reshape(X.shape)
                     self.bm_plot_residual_beam_map(x_ticks, y_ticks, fit_Z.reshape(X.shape), Z_res, fit_params)
+                    pct_residual = 1e2 * np.max(np.abs(Z_res)) / np.max(Z_data)
+                    good_fit = True
                 except RuntimeError:
                     self.bm_plot_beam_map(x_ticks, y_ticks, Z_data, None, running=True)
-                data_string = '{0} x {1} scan {2} total points'.format(self.scan_settings_dict['n_x_data_points'], self.scan_settings_dict['n_y_data_points'], self.scan_settings_dict['n_data_points'])
-                data_string += '\nX:{0}\t\tY:{1}\nZ:{2:.4f}+/-{3:.4f}'.format(x_pos, y_pos, Z_datum, std)
+                progress = 1e2 * float(float(count) / float(Z_data.size))
+                data_string = '{0} x {1} scan {2} total points\n'.format(self.scan_settings_dict['n_x_data_points'], self.scan_settings_dict['n_y_data_points'], self.scan_settings_dict['n_data_points'])
+                data_string += 'X:{0}\t\tY:{1}\nZ:{2:.4f}+/-{3:.4f}\n'.format(x_pos, y_pos, Z_datum, std)
+                data_string += '{0} of {1} Points Taken {2:.0f}%\n'.format(count, Z_data.size, progress)
+                data_string += 'Fit Resisdual {0:.2f}%\n'.format(pct_residual)
+                self.status_bar.progress_bar.setValue(int(progress))
+                if good_fit:
+                    k = 0
+                    for param, value in zip(fit_params_2d_human, fit_params):
+                        if 'sigma' in param or '0' in param:
+                            value *= 1e-5
+                        if k in (2, 4):
+                            data_string += '{0}: {1:.2f}\n'.format(param, value)
+                        else:
+                            data_string += '{0}: {1:.2f} '.format(param, value)
+                        k += 1
+                #data_string = '{0} x {1} scan {2} total points\n'.format(self.scan_settings_dict['n_x_data_points'], self.scan_settings_dict['n_y_data_points'], self.scan_settings_dict['n_data_points'])
                 self.data_string_label.setText(data_string)
                 now_time = datetime.now()
                 now_time_str = datetime.strftime(now_time, '%H:%M')
@@ -573,7 +635,8 @@ class BeamMapper(QtWidgets.QWidget, GuiBuilder):
         if not self.saved:
             self.bm_take_all_y_cuts(y_ticks, Z_data.reshape(X.shape))
             self.bm_take_all_x_cuts(x_ticks, Z_data.reshape(X.shape))
-            self.bm_save()
+            self.bm_save(fit_params)
+        self.bm_set_origin()
 
     ##############################################################################
     # Saving and plotting
@@ -619,19 +682,47 @@ class BeamMapper(QtWidgets.QWidget, GuiBuilder):
     def bm_load(self):
         '''
         '''
-
-    def bm_save(self):
-        '''
-        '''
-        save_folder, folder_name = self.bm_index_file_name()
         if save_folder:
             save_path = os.path.join(save_folder, '{0}.dat'.format(folder_name))
-            self.gb_save_meta_data(save_path, '.dat')
+            self.gb_save_meta_data(save_path, 'dat')
             with open(save_path, 'w') as save_handle:
                 for i, x_data in enumerate(self.x_posns):
                     line = '{0:.5f}, {1:.5f}, {2:.5f}, {3:.5f}\n'.format(self.x_posns[i], self.y_posns[i], self.Z_data[i], self.Z_stds[i])
                     save_handle.write(line)
             self.bm_save_plots(save_folder, folder_name)
+
+
+    def bm_save_fit_data(self, save_path, fit_params):
+        '''
+        '''
+        fit_params_2d_human = ['Amp', 'x_0', 'y_0', 'sigma_x', 'sigma_y', 'theta']
+        with open(save_path, 'w') as fh:
+            for param, value in zip(fit_params_2d_human, fit_params):
+                if '0' in param or 'sigma' in param:
+                    value *= 1e-5
+                    units = ' in'
+                elif 'theta' in param:
+                    units = ' degs'
+                else:
+                    units = ''
+                line = '{0}: {1}{2}\n'.format(param, value, units)
+                fh.write(line)
+
+    def bm_save(self, fit_params=None):
+        '''
+        '''
+        save_folder, folder_name = self.bm_index_file_name()
+        if save_folder:
+            save_path = os.path.join(save_folder, '{0}.dat'.format(folder_name))
+            self.gb_save_meta_data(save_path, 'dat')
+            with open(save_path, 'w') as save_handle:
+                for i, x_data in enumerate(self.x_posns):
+                    line = '{0:.5f}, {1:.5f}, {2:.5f}, {3:.5f}\n'.format(self.x_posns[i], self.y_posns[i], self.Z_data[i], self.Z_stds[i])
+                    save_handle.write(line)
+            self.bm_save_plots(save_folder, folder_name)
+            if fit_params is not None:
+                fit_save_path = save_path.replace('.dat', '_fits.txt')
+                self.bm_save_fit_data(fit_save_path, fit_params)
         else:
             self.gb_quick_message('Warning Data Not Written to File!', msg_type='Warning')
 

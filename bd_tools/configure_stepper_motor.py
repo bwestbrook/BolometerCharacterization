@@ -147,7 +147,7 @@ class ConfigureStepperMotor(QtWidgets.QWidget, GuiBuilder):
         # tell the motor what to do
         if position is None:
             position = int(self.position_lineedit.text())
-        self.csm_send_command("DI{:d}".format(position))
+        self.csm_send_command("DI{:d}".format(int(position)))
         self.csm_send_command("DI")
         self.csm_send_command('FP')
         # check that the motor did what you wanted

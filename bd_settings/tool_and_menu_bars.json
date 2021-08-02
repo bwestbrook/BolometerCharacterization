@@ -1,18 +1,7 @@
 {
     "Bottom": {},
-    "Left": {},
-    "Right": {},
-    "Top": {
-        "01_File": {
-            "01_Quit": {
-                "Shortcut": "Ctrl+Q",
-                "StatusTip": "Quit",
-                "ToolTip": "Quit ",
-                "function": "bd_close_main",
-                "icon": "close.png"
-            }
-        },
-        "02_DAQ_Mode": {
+    "Left": {
+        "01_DAQ_Mode": {
             "01_IV Curves": {
                 "Shortcut": "1",
                 "StatusTip": "IV Curves",
@@ -90,32 +79,20 @@
                 "function": "bd_noise_analyzer",
                 "icon": "noise_analyzer.png"
             }
-        },
-        "03_Edit": {
-            "01_Bolo DAQ Settings": {
-                "ToolTip": "Bolo DAQ Settings",
-                "function": "bd_configure_bolo_daq_gui",
-                "icon": "parameters.png"
-            },
-            "02_Configure NI DAQ": {
-                "StatusTip": "Configure NI DAQ",
-                "ToolTip": "Configure NI DAQ",
-                "function": "bd_configure_ni_daq",
-                "icon": "multimeter.png"
-            },
-            "03_Configure Stepper": {
-                "StatusTip": "Configure Steppers",
-                "ToolTip": "Configure Steppers",
-                "function": "bd_configure_stepper_motor",
-                "icon": "steppermotor.png"
-            },
-            "04_COM Port Utility": {
-                "ToolTip": "COM Port Utility",
-                "function": "bd_com_port_utility",
-                "icon": "comport.png"
+        }
+    },
+    "Right": {},
+    "Top": {
+        "01_File": {
+            "01_Quit": {
+                "Shortcut": "Ctrl+Q",
+                "StatusTip": "Quit",
+                "ToolTip": "Quit ",
+                "function": "bd_close_main",
+                "icon": "close.png"
             }
         },
-        "04_Lab Instruments": {
+        "02_Lab Instruments": {
             "01_SRS SR830DSP": {
                 "StatusTip": "Lakeshore 372",
                 "ToolTip": "Lakeshore 372 Configuration ",
@@ -139,6 +116,36 @@
                 "ToolTip": "HP 34401A Configuration ",
                 "function": "bd_hewlett_packard_34401a",
                 "icon": "power_supply.png"
+            },
+            "05_Sigma Koki": {
+                "StatusTip": "Sigma Koki",
+                "ToolTip": "Sigma Koki",
+                "function": "bd_sigma_koki",
+                "icon": "rotation.png"
+            }
+        },
+        "03_Edit": {
+            "01_Bolo DAQ Settings": {
+                "ToolTip": "Bolo DAQ Settings",
+                "function": "bd_configure_bolo_daq_gui",
+                "icon": "parameters.png"
+            },
+            "02_Configure NI DAQ": {
+                "StatusTip": "Configure NI DAQ",
+                "ToolTip": "Configure NI DAQ",
+                "function": "bd_configure_ni_daq",
+                "icon": "multimeter.png"
+            },
+            "03_Configure Stepper": {
+                "StatusTip": "Configure Steppers",
+                "ToolTip": "Configure Steppers",
+                "function": "bd_configure_stepper_motor",
+                "icon": "steppermotor.png"
+            },
+            "04_COM Port Utility": {
+                "ToolTip": "COM Port Utility",
+                "function": "bd_com_port_utility",
+                "icon": "comport.png"
             }
         }
     }
