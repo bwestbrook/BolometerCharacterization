@@ -25,6 +25,8 @@ class BeamMapper(QtWidgets.QWidget, GuiBuilder):
         self.screen_resolution = screen_resolution
         self.monitor_dpi = monitor_dpi
         self.srs_widget = srs_widget
+        self.fit_params_1d_human = ['Amp', 'x_0', 'sigma']
+        self.fit_params_2d_human = ['Amp', 'x_0', 'y_0', 'sigma_x', 'sigma_y', 'theta']
         self.com_port_x = csm_widget_dict['X']['com_port']
         self.com_port_y = csm_widget_dict['Y']['com_port']
         self.csm_widget_x = csm_widget_dict['X']['widget']
@@ -126,23 +128,23 @@ class BeamMapper(QtWidgets.QWidget, GuiBuilder):
         ######
         #X Scan
         self.start_position_x_lineedit = self.gb_make_labeled_lineedit(label_text='Start Position X:')
-        self.start_position_x_lineedit.setText('-250000')
+        self.start_position_x_lineedit.setText('-25000')
         self.start_position_x_lineedit.setValidator(QtGui.QIntValidator(-300000, 300000, self.start_position_x_lineedit))
         self.start_position_x_lineedit.textChanged.connect(self.bm_update_scan_params)
         self.layout().addWidget(self.start_position_x_lineedit, 7, 0, 1, 2)
         self.end_position_x_lineedit = self.gb_make_labeled_lineedit(label_text='End Position X:')
-        self.end_position_x_lineedit.setText('250000')
+        self.end_position_x_lineedit.setText('25000')
         self.end_position_x_lineedit.setValidator(QtGui.QIntValidator(-300000, 300000, self.end_position_x_lineedit))
         self.end_position_x_lineedit.textChanged.connect(self.bm_update_scan_params)
         self.layout().addWidget(self.end_position_x_lineedit, 7, 2, 1, 2)
         #Y Scan
         self.start_position_y_lineedit = self.gb_make_labeled_lineedit(label_text='Start Position Y:')
-        self.start_position_y_lineedit.setText('-250000')
+        self.start_position_y_lineedit.setText('-25000')
         self.start_position_y_lineedit.setValidator(QtGui.QIntValidator(-300000, 300000, self.start_position_y_lineedit))
         self.start_position_y_lineedit.textChanged.connect(self.bm_update_scan_params)
         self.layout().addWidget(self.start_position_y_lineedit, 8, 0, 1, 2)
         self.end_position_y_lineedit = self.gb_make_labeled_lineedit(label_text='End Position Y:')
-        self.end_position_y_lineedit.setText('250000')
+        self.end_position_y_lineedit.setText('25000')
         self.end_position_y_lineedit.setValidator(QtGui.QIntValidator(-300000, 300000, self.end_position_y_lineedit))
         self.end_position_y_lineedit.textChanged.connect(self.bm_update_scan_params)
         self.layout().addWidget(self.end_position_y_lineedit, 8, 2, 1, 2)
@@ -190,6 +192,10 @@ class BeamMapper(QtWidgets.QWidget, GuiBuilder):
         self.source_angle_lineedit = self.gb_make_labeled_lineedit(label_text='Source Angle (degrees):')
         self.source_angle_lineedit.setValidator(QtGui.QDoubleValidator(0, 360, 2, self.source_angle_lineedit))
         self.layout().addWidget(self.source_angle_lineedit, 12, 2, 1, 1)
+        # Source Distance
+        self.source_distance_lineedit = self.gb_make_labeled_lineedit(label_text='Source Distance (in):', lineedit_text='10')
+        self.source_distance_lineedit.setValidator(QtGui.QDoubleValidator(0, 360, 2, self.source_distance_lineedit))
+        self.layout().addWidget(self.source_distance_lineedit, 12, 3, 1, 1)
         # Time Stream and data label
         self.time_stream_plot_label = QtWidgets.QLabel('', self)
         self.time_stream_plot_label.setAttribute(QtCore.Qt.WA_TranslucentBackground)
@@ -213,10 +219,15 @@ class BeamMapper(QtWidgets.QWidget, GuiBuilder):
         self.zero_lock_in_checkbox = QtWidgets.QCheckBox('Zero Lock In?', self)
         self.zero_lock_in_checkbox.setChecked(True)
         self.layout().addWidget(self.zero_lock_in_checkbox, 16, 0, 1, 1)
-        # Reverse Scan Lock in
+        # Reverse Scan
         self.reverse_scan_checkbox = QtWidgets.QCheckBox('Reverse Scan', self)
         self.reverse_scan_checkbox.setChecked(False)
         self.layout().addWidget(self.reverse_scan_checkbox, 16, 1, 1, 1)
+        # Vertical/Horizontal Scan
+        self.scan_raster_combobox = self.gb_make_labeled_combobox(label_text='Scan Orientation')
+        for scan in ['Vertical', 'Horizontal']:
+            self.scan_raster_combobox.addItem(scan)
+        self.layout().addWidget(self.scan_raster_combobox, 16, 2, 1, 1)
         ######
         # Control Buttons 
         ######
@@ -365,13 +376,13 @@ class BeamMapper(QtWidgets.QWidget, GuiBuilder):
         step_size_y = int(self.step_size_y_lineedit.text())
         pause_time = float(self.pause_time_lineedit.text())
         if step_size_x > 0:
-            n_x_data_points = int((end_x - start_x) / step_size_x) + 1
+            self.n_x_data_points = int((end_x - start_x) / step_size_x) + 1
         else:
-            n_x_data_points = np.nan
+            self.n_x_data_points = np.nan
         if step_size_y > 0:
-            n_y_data_points = int((end_y - start_y) / step_size_y) + 1
+            self.n_y_data_points = int((end_y - start_y) / step_size_y) + 1
         else:
-            n_y_data_points = np.nan
+            self.n_y_data_points = np.nan
         x_grid = np.arange(start_x, end_x + step_size_x, step_size_x)
         y_grid = np.arange(start_y, end_y + step_size_y, step_size_y)
         self.x_ticks = [str(int(x * 1e-3)) for x in x_grid]
@@ -384,25 +395,11 @@ class BeamMapper(QtWidgets.QWidget, GuiBuilder):
             self.y_cut_select_combobox.clear()
             for y_tick in self.y_ticks:
                 self.y_cut_select_combobox.addItem(y_tick)
-        n_data_points = n_x_data_points * n_y_data_points
+        self.n_data_points = self.n_x_data_points * self.n_y_data_points
         #import ipdb;ipdb.set_trace()
         device = self.device_combobox.currentText()
         signal_channel = self.daq_combobox.currentText()
-        self.scan_settings_dict = {
-             'device': device,
-             'signal_channel': signal_channel,
-             'end_x': end_x,
-             'start_x': start_x,
-             'step_size_x': step_size_x,
-             'end_y': end_y,
-             'start_y': start_y,
-             'step_size_y': step_size_y,
-             'pause_time': pause_time,
-             'n_x_data_points': n_x_data_points,
-             'n_y_data_points': n_y_data_points,
-             'n_data_points': n_data_points
-            }
-        data_string = '{0} x {1} scan {2} total points\n'.format(self.scan_settings_dict['n_x_data_points'], self.scan_settings_dict['n_y_data_points'], self.scan_settings_dict['n_data_points'])
+        data_string = '{0} x {1} scan {2} total points\n'.format(self.n_x_data_points, self.n_y_data_points, self.n_data_points)
         self.data_string_label.setText(data_string)
         sm_settings_str = ''
 
@@ -430,6 +427,162 @@ class BeamMapper(QtWidgets.QWidget, GuiBuilder):
             self.started = False
             self.saved = True
 
+    def bm_get_daq(self):
+        '''
+        '''
+        int_time = float(self.int_time_lineedit.text())
+        sample_rate = float(self.sample_rate_lineedit.text())
+        device = self.device_combobox.currentText()
+        signal_channel = self.daq_combobox.currentText()
+        signal_channels = [signal_channel]
+        daq = BoloDAQ(signal_channels=signal_channels,
+                      int_time=int_time,
+                      sample_rate=sample_rate,
+                      device=device)
+        return daq
+
+    def bm_setup_scan(self):
+        '''
+        '''
+        start_x = int(self.start_position_x_lineedit.text())
+        end_x = int(self.end_position_x_lineedit.text())
+        step_size_x = int(self.step_size_x_lineedit.text())
+        start_y = int(self.start_position_y_lineedit.text())
+        end_y = int(self.end_position_y_lineedit.text())
+        step_size_y = int(self.step_size_y_lineedit.text())
+        x_grid = np.arange(start_x, end_x + step_size_x, step_size_x)
+        y_grid = np.arange(start_y, end_y + step_size_y, step_size_y)
+        x_ticks = [str(int(x * 1e-3)) for x in x_grid]
+        y_ticks = [str(int(x * 1e-3)) for x in y_grid]
+        if self.reverse_scan_checkbox.isChecked():
+            x_grid = reversed(x_grid)
+            y_grid = reversed(y_grid)
+        if self.scan_raster_combobox.currentText() == 'Vertical':
+            raster_1, raster_2 = np.meshgrid(x_grid, y_grid)
+            csm_1 = self.csm_widget_x
+            csm_2 = self.csm_widget_y
+        else:
+            raster_1, raster_2 = np.meshgrid(y_grid, x_grid)
+            csm_2 = self.csm_widget_x
+            csm_1 = self.csm_widget_y
+        Z_data = np.zeros(shape=raster_1.shape)
+        Z_fit_data = np.zeros(shape=Z_data.shape)
+        return x_ticks, y_ticks, raster_1, raster_2, csm_1, csm_2, Z_data, Z_fit_data
+
+    def bm_initialize_scan(self, grid_1_start_position, grid_2_start_position):
+        '''
+        '''
+        self.status_bar.showMessage('Moving source to start position')
+        QtWidgets.QApplication.processEvents()
+        if self.csm_widget_x is not None:
+            if self.scan_raster_combobox.currentText() == 'Vertical':
+                self.csm_widget_x.csm_set_position(position=grid_1_start_position, verbose=False)
+                self.csm_widget_y.csm_set_position(position=grid_2_start_position, verbose=False)
+            else:
+                self.csm_widget_x.csm_set_position(position=grid_2_start_position, verbose=False)
+                self.csm_widget_y.csm_set_position(position=grid_1_start_position, verbose=False)
+            time.sleep(1)
+        self.status_bar.showMessage('Beam Mapper is Ready! Starting Scan.... ')
+        QtWidgets.QApplication.processEvents()
+
+    def bm_collect_data(self, daq, Z_data, Z_fit_data, count, x_i, y_i, direction, size_y):
+        '''
+        '''
+        signal_channel = self.daq_combobox.currentText()
+        data_dict = daq.run()
+        data_time_stream = data_dict[signal_channel]['ts']
+        mean = data_dict[signal_channel]['mean']
+        min_ = data_dict[signal_channel]['min']
+        max_ = data_dict[signal_channel]['max']
+        std = data_dict[signal_channel]['std']
+        self.bm_plot_time_stream(data_time_stream, min_, max_)
+        if direction == -1:
+            Z_data[size_y - 1 - j][i] = mean
+            Z_fit_data[size_y - 1 - j][i] = mean
+        else:
+            try:
+                Z_data[y_i][x_i] = mean
+                Z_fit_data[y_i][x_i] = mean
+            except IndexError:
+                import ipdb;ipdb.set_trace()
+        self.Z_data.append(mean)
+        self.Z_stds.append(std)
+        return Z_data, Z_fit_data, mean, std
+
+    def bm_update_stats(self, start_time, count, x_pos, y_pos, Z_data, mean, std, pct_residual):
+        '''
+        '''
+        now_time = datetime.now()
+        now_time_str = datetime.strftime(now_time, '%H:%M')
+        duration = now_time - start_time
+        time_per_step = duration.seconds / count
+        steps_left = self.n_data_points - count
+        time_left = time_per_step * steps_left / 60
+        progress = 1e2 * float(float(count) / float(Z_data.size))
+        data_string = '{0} x {1} scan {2} total points\n'.format(self.n_x_data_points, self.n_y_data_points, self.n_data_points)
+        data_string += 'X:{0}\t\tY:{1}\nZ:{2:.4f}+/-{3:.4f}\n'.format(x_pos, y_pos, mean, std)
+        data_string += '{0} of {1} Points Taken {2:.0f}%\n'.format(count, Z_data.size, progress)
+        data_string += 'Fit Resisdual {0:.2f}%\n'.format(pct_residual)
+        self.status_bar.progress_bar.setValue(int(progress))
+        status_msg = 'X: {0} Y: {1} ::: '.format(x_pos, y_pos)
+        status_msg += '{0} of {1} ::: Total Duration {2:.2f} (m) ::: Time per Point {3:.2f} (s) ::: Time Left {4:.2f} (m)'.format(count, self.n_data_points, duration.seconds / 60, time_per_step, time_left)
+        self.status_bar.showMessage(status_msg)
+        QtWidgets.QApplication.processEvents()
+
+    def bm_take_1d_cuts(self, x_ticks, y_ticks, Z_data):
+        '''
+        '''
+        fit_params, residuals = self.bm_plot_x_cut(y_ticks, Z_data)
+        fit_string = 'No X Fit'
+        if fit_params is not None:
+            fit_string = ''
+            for param, value in zip(self.fit_params_1d_human, fit_params):
+                fit_string += '{0}: {1:.2f} '.format(param, value)
+        self.x_slice_fit_label.setText(fit_string)
+        fit_params, residuals = self.bm_plot_y_cut(x_ticks, Z_data)
+        fit_string = 'No Y Fit'
+        if fit_params is not None:
+            fit_string = ''
+            for param, value in zip(self.fit_params_1d_human, fit_params):
+                fit_string += '{0}: {1:.2f} '.format(param, value)
+        self.y_slice_fit_label.setText(fit_string)
+
+    def bm_fit_and_plot_2d_data(self, x_grid, x_ticks, y_grid, y_ticks, Z_data):
+        '''
+        '''
+        print(Z_data)
+        # Process Slices
+        Z_fit_data = np.zeros(shape=Z_data.shape)
+        good_fit = False
+        pct_residual = 0.0
+        try:
+            print(Z_data)
+            X = x_grid.reshape(Z_data.shape)
+            Y = y_grid.reshape(Z_data.shape)
+            fit_Z, fit_params = self.bm_fit_2d_data(X, Y, Z_data.flatten())
+            self.bm_plot_beam_map(x_ticks, y_ticks, Z_data, fit_Z.reshape(x_grid.shape), running=True)
+            Z_res = Z_data.flatten() - fit_Z.reshape(x_grid.shape)
+            Z_res = Z_res.reshape(Z_data.shape)
+            fit_Z = fit_Z.reshape(Z_data.shape)
+            self.bm_plot_residual_beam_map(x_ticks, y_ticks, fit_Z, Z_res, fit_params)
+            pct_residual = 1e2 * np.max(np.abs(Z_res)) / np.max(Z_data)
+            good_fit = True
+        except RuntimeError:
+            self.bm_plot_beam_map(x_ticks, y_ticks, Z_data, None, running=True)
+        data_string = self.data_string_label.text()
+        if good_fit:
+            k = 0
+            for param, value in zip(self.fit_params_2d_human, fit_params):
+                if 'sigma' in param or '0' in param:
+                    value *= 1e-5
+                if k in (2, 4):
+                    data_string += '\n{0}: {1:.2f}\n'.format(param, value)
+                else:
+                    data_string += '{0}: {1:.2f} '.format(param, value)
+                k += 1
+        self.data_string_label.setText(data_string)
+        return pct_residual
+
     def bm_scan(self):
         '''
         '''
@@ -440,189 +593,68 @@ class BeamMapper(QtWidgets.QWidget, GuiBuilder):
                 os.remove(os.path.join('temp_beam_files', file_name))
         else:
             os.makedirs('temp_beam_files')
-        device = self.scan_settings_dict['device']
-        test_data_path = os.path.join('bd_lib', 'Scan_2p5x2p5in_Step_0p250in_BT8-14-30T_001.dat')
-        test_data_path = os.path.join('bd_lib', 'Scan_2p5x2p5in_Step_0p250in_BT8-14-30T_002.dat')
-        signal_channel = self.scan_settings_dict['signal_channel']
-        pause_time = self.scan_settings_dict['pause_time']
-        total_points = self.scan_settings_dict['n_data_points']
-        start_x = self.scan_settings_dict['start_x']
-        start_y = self.scan_settings_dict['start_y']
-        end_x = self.scan_settings_dict['end_x']
-        end_y = self.scan_settings_dict['end_y']
-        step_size_x = self.scan_settings_dict['step_size_x']
-        step_size_y = self.scan_settings_dict['step_size_y']
+        daq = self.bm_get_daq()
+        x_ticks, y_ticks, raster_1, raster_2, csm_1, csm_2, Z_data, Z_fit_data = self.bm_setup_scan()
+        self.bm_initialize_scan(raster_1.ravel()[0], raster_2.ravel()[0])
         pause_time = float(self.pause_time_lineedit.text())
-        int_time = float(self.int_time_lineedit.text())
-        sample_rate = float(self.sample_rate_lineedit.text())
-        x_grid = np.arange(start_x, end_x + step_size_x, step_size_x)
-        y_grid = np.arange(start_y, end_y + step_size_y, step_size_y)
-        x_ticks = [str(int(x * 1e-3)) for x in x_grid]
-        y_ticks = [str(int(x * 1e-3)) for x in y_grid]
-        if self.reverse_scan_checkbox.isChecked():
-            y_grid_reversed = y_grid
-            y_grid = np.flip(y_grid_reversed)
-            x_grid = np.flip(x_grid)
-        else:
-            y_grid_reversed = np.flip(y_grid)
-        X, Y = np.meshgrid(x_grid, y_grid)
-        Z_data = np.zeros(shape=X.shape)
-        Z_fit_data = np.zeros(shape=X.shape)
-        #Z_data_loaded = []
-        #with open(test_data_path, 'r') as file_handle:
-            #lines = file_handle.readlines()
-            #for line in lines:
-                #Z_data_loaded.append(float(line.split(',')[2]))
-        #Z_data_loaded = np.asarray(Z_data_loaded).reshape(X.shape)
-        self.z_stds = np.zeros(shape=X.shape)
-        direction = -1
-        start_time = datetime.now()
-        count = 1
-        i = 0
-        signal_channels = [signal_channel]
-        daq = BoloDAQ(signal_channels=signal_channels,
-                      int_time=int_time,
-                      sample_rate=sample_rate,
-                      device=device)
+        source_distance = float(self.source_distance_lineedit.text())
+        #import ipdb;ipdb.set_trace()
         self.x_posns = []
         self.y_posns = []
         self.Z_data = []
         self.Z_stds = []
-        start_position_x = x_grid[0]
-        start_position_y = y_grid[0]
-        self.status_bar.showMessage('Moving source to start position')
-        QtWidgets.QApplication.processEvents()
-        if self.csm_widget_x is not None:
-            self.csm_widget_x.csm_set_position(position=start_position_x, verbose=False)
-            self.csm_widget_y.csm_set_position(position=start_position_y, verbose=False)
-            position_x = ''
-            while len(position_x) == 0:
-                position_x = self.csm_widget_x.csm_get_position()
-            velocity_x = self.csm_widget_y.csm_get_velocity()
-            velocity_x = float(self.csm_widget_x.stepper_settings_dict['velocity'])
-            x_diff = np.abs(int(position_x) - int(start_position_x)) * 1e-5
-            wait_x = x_diff / velocity_x
-            position_y = ''
-            while len(position_y) == 0:
-                position_y = self.csm_widget_y.csm_get_position()
-            position_y = self.csm_widget_y.csm_get_position()
-            velocity_y = float(self.csm_widget_x.stepper_settings_dict['velocity'])
-            y_diff = np.abs(int(position_x) - int(start_position_x)) * 1e-5
-            wait_y = y_diff / velocity_y
-            wait = np.max((wait_x, wait_y))
-            y_diff = np.abs(int(position_y) - int(start_position_y))
-            time.sleep(2 * wait) # Safety factor of three
-        self.status_bar.showMessage('Beam Mapper is Ready! Starting Scan.... ')
-        QtWidgets.QApplication.processEvents()
-        fit_params_1d_human = ['Amp', 'x_0', 'sigma']
-        fit_params_2d_human = ['Amp', 'x_0', 'y_0', 'sigma_x', 'sigma_y', 'theta']
-        while i < len(x_grid) and self.started:
-            x_pos = x_grid[i]
-            if self.csm_widget_x is not None:
-                self.csm_widget_x.csm_set_position(position=int(x_pos), verbose=False)
-            act_x_pos = x_pos
-            direction *= -1
-            if direction == -1:
-                y_scan = y_grid_reversed
-            else:
-                y_scan = y_grid
-            j = 0
-            while j < len(y_scan) and self.started:
-                y_pos = y_scan[j]
-                if self.csm_widget_x is not None:
-                    self.csm_widget_y.csm_set_position(position=int(y_pos), verbose=False)
-                self.x_posns.append(x_pos)
-                self.y_posns.append(y_pos)
-                act_y_pos = y_pos
-                time.sleep(pause_time * 1e-3)
-                if self.zero_lock_in_checkbox.isChecked():
-                    self.srs_widget.srs_zero_lock_in_phase()
-                time.sleep(0.300) # Post Zero lock-in wait 3 or 1 time constants at 100 or 300 ms
-                data_dict = daq.run()
-                data_time_stream = data_dict[signal_channel]['ts']
-                mean = data_dict[signal_channel]['mean']
-                min_ = data_dict[signal_channel]['min']
-                max_ = data_dict[signal_channel]['max']
-                std = data_dict[signal_channel]['std']
-                self.bm_plot_time_stream(data_time_stream, min_, max_)
-                Z_datum = mean
-                #Z_datum = Z_data_loaded[i][j]
-                # Process Slices
-                fit_params, residuals = self.bm_plot_x_cut(y_ticks, Z_data)
-                fit_string = 'No X Fit'
-                if fit_params is not None:
-                    fit_string = ''
-                    for param, value in zip(fit_params_1d_human, fit_params):
-                        fit_string += '{0}: {1:.2f} '.format(param, value)
-                self.x_slice_fit_label.setText(fit_string)
-                fit_params, residuals = self.bm_plot_y_cut(x_ticks, Z_data)
-                fit_string = 'No Y Fit'
-                if fit_params is not None:
-                    fit_string = ''
-                    for param, value in zip(fit_params_1d_human, fit_params):
-                        fit_string += '{0}: {1:.2f} '.format(param, value)
-                self.y_slice_fit_label.setText(fit_string)
-                if direction == -1:
-                    self.z_stds[len(y_scan) -1 - j][i] = std
-                    Z_data[len(y_scan) - 1- j][i] = Z_datum
-                    Z_fit_data[len(y_scan) - 1- j][i] = Z_datum
-                else:
-                    self.z_stds[j][i] = std
-                    Z_data[j][i] = Z_datum
-                    Z_fit_data[j][i] = Z_datum
-                Z_fit_data = np.zeros(shape=X.shape)
-                self.Z_data.append(Z_datum)
-                self.Z_stds.append(std)
-                good_fit = False
-                pct_residual = 0.0
-                try:
-                    X, Y = np.meshgrid(x_grid, y_grid)
-                    fit_Z, fit_params = self.bm_fit_2d_data(X, Y, Z_data.flatten())
-                    self.bm_plot_beam_map(x_ticks, y_ticks, Z_data, fit_Z.reshape(X.shape), running=True)
-                    Z_res = Z_data - fit_Z.reshape(X.shape)
-                    self.bm_plot_residual_beam_map(x_ticks, y_ticks, fit_Z.reshape(X.shape), Z_res, fit_params)
-                    pct_residual = 1e2 * np.max(np.abs(Z_res)) / np.max(Z_data)
-                    good_fit = True
-                except RuntimeError:
-                    self.bm_plot_beam_map(x_ticks, y_ticks, Z_data, None, running=True)
-                progress = 1e2 * float(float(count) / float(Z_data.size))
-                data_string = '{0} x {1} scan {2} total points\n'.format(self.scan_settings_dict['n_x_data_points'], self.scan_settings_dict['n_y_data_points'], self.scan_settings_dict['n_data_points'])
-                data_string += 'X:{0}\t\tY:{1}\nZ:{2:.4f}+/-{3:.4f}\n'.format(x_pos, y_pos, Z_datum, std)
-                data_string += '{0} of {1} Points Taken {2:.0f}%\n'.format(count, Z_data.size, progress)
-                data_string += 'Fit Resisdual {0:.2f}%\n'.format(pct_residual)
-                self.status_bar.progress_bar.setValue(int(progress))
-                if good_fit:
-                    k = 0
-                    for param, value in zip(fit_params_2d_human, fit_params):
-                        if 'sigma' in param or '0' in param:
-                            value *= 1e-5
-                        if k in (2, 4):
-                            data_string += '{0}: {1:.2f}\n'.format(param, value)
-                        else:
-                            data_string += '{0}: {1:.2f} '.format(param, value)
-                        k += 1
-                #data_string = '{0} x {1} scan {2} total points\n'.format(self.scan_settings_dict['n_x_data_points'], self.scan_settings_dict['n_y_data_points'], self.scan_settings_dict['n_data_points'])
-                self.data_string_label.setText(data_string)
-                now_time = datetime.now()
-                now_time_str = datetime.strftime(now_time, '%H:%M')
-                duration = now_time - start_time
-                time_per_step = duration.seconds / count
-                steps_left = total_points - count
-                time_left = time_per_step * steps_left / 60
-                status_msg = 'X: {0} Y: {1} ::: '.format(act_x_pos, act_y_pos)
-                status_msg += '{0} of {1} ::: Total Duration {2:.2f} (m) ::: Time per Point {3:.2f} (s) ::: Time Left {4:.2f} (m)'.format(count, total_points, duration.seconds / 60, time_per_step, time_left)
-                self.status_bar.showMessage(status_msg)
-                QtWidgets.QApplication.processEvents()
-                time.sleep(0.300) # Wait 3 or 1 time constants at 100 or 300 ms, before moving motor
-                self.resize(self.minimumSizeHint())
-                count += 1
-                j += 1
-                self.y_ticks_temp = y_ticks
-                self.Z_data_temp = Z_data
+        start_time = datetime.now()
+        count = 1
+        direction = 1
+        raster_1_positions = raster_1.ravel()[:-1]
+        raster_2_positions = raster_2.ravel()[:-1]
+        while self.started:
+            i = 0
+            for i, position_1 in enumerate(raster_1.ravel()):
+                for j, position_2 in enumerate(raster_2_positions):
+                    print(i, j)
+                    csm_1.csm_set_position(position=int(position_1), verbose=False)
+                    csm_2.csm_set_position(position=int(position_2), verbose=False)
+                    if self.scan_raster_combobox.currentText() == 'Vertical':
+                        x_i = i
+                        y_i = j
+                        x_pos = position_1
+                        y_pos = position_2
+                        self.x_posns.append(position_1)
+                        self.y_posns.append(position_2)
+                        if i == 0:
+                            x_grid = raster_1_positions
+                            y_grid = raster_2_positions
+                    else:
+                        x_i = j
+                        y_i = i
+                        self.x_posns.append(position_2)
+                        self.y_posns.append(position_1)
+                        x_pos = position_2
+                        y_pos = position_1
+                        if i == 0:
+                            x_grid = raster_2_positions
+                            y_grid = raster_1_positions
+                    time.sleep(pause_time * 1e-3)
+                    if self.zero_lock_in_checkbox.isChecked():
+                        self.srs_widget.srs_zero_lock_in_phase()
+                    time.sleep(0.300) # Post Zero lock-in wait 3 or 1 time constants at 100 or 300 ms
+                    # Process Slices
+                    Z_data, Z_fit_data, mean, std = self.bm_collect_data(daq, Z_data, Z_fit_data, count, x_i, y_i, direction, y_grid)
+                    self.bm_take_1d_cuts(x_ticks, y_ticks, Z_data)
+                    pct_residual = self.bm_fit_and_plot_2d_data(x_grid, x_ticks, y_grid, y_ticks, Z_data)
+                    self.bm_update_stats(start_time, count, x_pos, y_pos, Z_data, mean, std, pct_residual)
+                    time.sleep(0.300) # Wait 3 or 1 time constants at 100 or 300 ms, before moving motor
+                    self.resize(self.minimumSizeHint())
+                    count += 1
+                    self.y_ticks_temp = y_ticks
+                    self.Z_data_temp = Z_data
+                raster_2_positions = list(reversed(raster_2_positions)) # Reverse scan direction every time
+                direction *= -1 # 
+                i += 1
             if i + 1 == len(x_grid):
                 self.started = False
                 self.start_pushbutton.setText('Start')
-            i += 1
             self.x_cut_select_combobox.setCurrentIndex(i - 1)
         X, Y = np.meshgrid(x_grid, y_grid)
         try:
