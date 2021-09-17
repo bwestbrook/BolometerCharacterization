@@ -17,86 +17,112 @@ from GuiBuilder.gui_builder import GuiBuilder, GenericClass
 
 class NoiseAnalyzer(QtWidgets.QWidget, GuiBuilder):
 
-    def __init__(self, daq_settings, status_bar, screen_resolution, monitor_dpi):
+    def __init__(self, daq_settings, squid_calibration_dict, status_bar, data_folder, screen_resolution, monitor_dpi):
         '''
         '''
         super(NoiseAnalyzer, self).__init__()
+        self.data_folder = data_folder
         self.status_bar = status_bar
         self.daq_settings = daq_settings
+        self.squid_calibration_dict = squid_calibration_dict
         self.screen_resolution = screen_resolution
         self.monitor_dpi = monitor_dpi
         grid = QtWidgets.QGridLayout()
         self.setLayout(grid)
         self.today = datetime.now()
         self.today_str = datetime.strftime(self.today, '%Y_%m_%d')
-        self.data_folder = os.path.join('Data', '{0}'.format(self.today_str))
+        self.squid_gains = {
+                '5': '1e-2',
+                '50': '1e-1',
+                '500': '1',
+                }
+        self.na_update_samples()
         self.na_daq_panel()
-        self.na_display_daq_settings()
         self.fft = FastFourierTransform()
         self.qthreadpool = QThreadPool()
         self.timer = QTimer()
         self.timer.setInterval(100)
         self.timer.timeout.connect(self.na_update_progress)
 
-    def na_update_daq_settings(self, daq_settings):
+    def na_update_squids(self):
         '''
         '''
-        self.daq_settings = daq_settings
-        self.na_display_daq_settings()
+        with open(os.path.join('bd_settings', 'squids_settings.json'), 'r') as fh:
+            self.squid_calibration_dict = simplejson.load(fh)
+
+    def na_update_samples(self):
+        '''
+        '''
+        with open(os.path.join('bd_settings', 'samples_settings.json'), 'r') as fh:
+            self.samples_settings = simplejson.load(fh)
 
     def na_daq_panel(self):
         '''
         '''
-        daq_header_label = QtWidgets.QLabel('DAQ Device:', self)
-        self.layout().addWidget(daq_header_label, 0, 0, 1, 1)
-        self.device_combobox = QtWidgets.QComboBox(self)
+        self.device_combobox = self.gb_make_labeled_combobox(label_text='DAQ Device:')
         for device in self.daq_settings:
             self.device_combobox.addItem(device)
         self.device_combobox.setCurrentIndex(1)
-        self.device_combobox.activated.connect(self.na_display_daq_settings)
-        self.layout().addWidget(self.device_combobox, 0, 1, 1, 1)
-        daq_header_label = QtWidgets.QLabel('DAQ Ch 1 Data:', self)
-        self.layout().addWidget(daq_header_label, 1, 0, 1, 1)
-        self.daq_combobox = QtWidgets.QComboBox(self)
+        self.device_combobox.activated.connect(self.na_update_sample_name)
+        self.layout().addWidget(self.device_combobox, 0, 0, 1, 1)
+        self.daq_combobox = self.gb_make_labeled_combobox(label_text='DAQ Ch 1 Data:')
         for daq in range(0, 4):
             self.daq_combobox.addItem(str(daq))
-        self.daq_combobox.activated.connect(self.na_display_daq_settings)
-        self.layout().addWidget(self.daq_combobox, 1, 1, 1, 1)
+        self.daq_combobox.activated.connect(self.na_update_sample_name)
+        self.layout().addWidget(self.daq_combobox, 0, 1, 1, 1)
+        self.int_time_lineedit = self.gb_make_labeled_lineedit(label_text='Int Time (ms):', lineedit_text='100')
+        self.int_time_lineedit.textChanged.connect(self.na_update_sample_name)
+        self.layout().addWidget(self.int_time_lineedit, 0, 2, 1, 1)
+        self.sample_rate_lineedit = self.gb_make_labeled_lineedit(label_text='Sample Rate (Hz)', lineedit_text='5000')
+        self.sample_rate_lineedit.textChanged.connect(self.na_update_sample_name)
+        self.layout().addWidget(self.sample_rate_lineedit, 0, 3, 1, 1)
         # Chan 1
         self.channel_settings_label = QtWidgets.QLabel('', self)
-        self.layout().addWidget(self.channel_settings_label, 2, 0, 1, 2)
+        self.layout().addWidget(self.channel_settings_label, 1, 2, 1, 2)
         # Chan 2
         # Sample Name
+        self.sample_name_combobox = self.gb_make_labeled_combobox('Sample Name:')
+        self.layout().addWidget(self.sample_name_combobox, 3, 0, 1, 1)
+        for sample in sorted(self.samples_settings):
+            self.sample_name_combobox.addItem(str(sample))
+        self.sample_name_combobox.activated.connect(self.na_update_sample_name)
         self.sample_name_lineedit = self.gb_make_labeled_lineedit('Sample Name:')
-        self.layout().addWidget(self.sample_name_lineedit, 3, 0, 1, 1)
+        self.layout().addWidget(self.sample_name_lineedit, 4, 0, 1, 2)
+
+        self.gain_select_combobox = self.gb_make_labeled_combobox('SQUID Gain:')
+        for gains in self.squid_gains:
+            self.gain_select_combobox.addItem(gains)
+        self.gain_select_combobox.activated.connect(self.na_update_sample_name)
+        self.layout().addWidget(self.gain_select_combobox, 3, 2, 1, 1)
+        self.squid_calbration_label = self.gb_make_labeled_label('SQ Calibration (uA/V)')
+        self.layout().addWidget(self.squid_calbration_label, 3, 3, 1, 1)
+        self.apply_calibration_checkbox = QtWidgets.QCheckBox('Apply Calibration?')
+        self.apply_calibration_checkbox.setChecked(True)
+        self.layout().addWidget(self.apply_calibration_checkbox, 4, 2, 1, 1)
+        # Plot and Data Panel
+        # Plots
+        self.ts_label = QtWidgets.QLabel('', self)
+        self.layout().addWidget(self.ts_label, 6, 0, 1, 2)
+        self.fft_label = QtWidgets.QLabel('', self)
+        self.layout().addWidget(self.fft_label, 6, 2, 1, 2)
+        # Plot Settings
+        self.plot_clip_low_lineedit = self.gb_make_labeled_lineedit(label_text='Plot Clip Low (Hz)', lineedit_text='0.01')
+        self.plot_clip_low_lineedit.setValidator(QtGui.QDoubleValidator(0, 1e6, 2, self.plot_clip_low_lineedit))
+        self.layout().addWidget(self.plot_clip_low_lineedit, 7, 0, 1, 1)
+        self.plot_clip_high_lineedit = self.gb_make_labeled_lineedit(label_text='Plot Clip High (Hz)', lineedit_text='1e6')
+        self.plot_clip_high_lineedit.setValidator(QtGui.QDoubleValidator(0, 1e6, 2, self.plot_clip_high_lineedit))
+        self.layout().addWidget(self.plot_clip_high_lineedit, 7, 1, 1, 1)
+        # Bin edges
         self.noise_bin_low_edge_lineedit = self.gb_make_labeled_lineedit(label_text='Noise Bin Low Edge (Hz)')
         self.noise_bin_low_edge_lineedit.setText('3.0')
         self.noise_bin_low_edge_lineedit.setValidator(QtGui.QDoubleValidator(0, 1200, 2, self.noise_bin_low_edge_lineedit))
-        self.layout().addWidget(self.noise_bin_low_edge_lineedit, 4, 0, 1, 1)
+        self.layout().addWidget(self.noise_bin_low_edge_lineedit, 7, 2, 1, 1)
         self.noise_bin_high_edge_lineedit = self.gb_make_labeled_lineedit(label_text='Noise Bin High Edge (Hz)')
         self.noise_bin_high_edge_lineedit.setText('10.0')
         self.noise_bin_high_edge_lineedit.setValidator(QtGui.QDoubleValidator(0, 1200, 2, self.noise_bin_high_edge_lineedit))
-        self.layout().addWidget(self.noise_bin_high_edge_lineedit, 4, 1, 1, 1)
-        self.plot_clip_low_lineedit = self.gb_make_labeled_lineedit(label_text='Plot Clip Low (Hz)')
-        self.plot_clip_low_lineedit.setText('0.01')
-        self.plot_clip_low_lineedit.setValidator(QtGui.QDoubleValidator(0, 1e6, 2, self.plot_clip_low_lineedit))
-        self.layout().addWidget(self.plot_clip_low_lineedit, 5, 0, 1, 1)
-        self.plot_clip_high_lineedit = self.gb_make_labeled_lineedit(label_text='Plot Clip High (Hz)')
-        self.plot_clip_high_lineedit.setValidator(QtGui.QDoubleValidator(0, 1e6, 2, self.plot_clip_high_lineedit))
-        self.layout().addWidget(self.plot_clip_high_lineedit, 5, 1, 1, 1)
-        # Plot and Data Panel
-        #self.mean_label = QtWidgets.QLabel('', self)
-        #self.std_label = QtWidgets.QLabel('', self)
-        #mean_header_label = QtWidgets.QLabel('Mean Ch 1:', self)
-        #self.layout().addWidget(mean_header_label, 7, 0, 1, 1)
-        #std_header_label = QtWidgets.QLabel('STD Ch 1:', self)
-        #self.layout().addWidget(std_header_label, 7, 2, 1, 1)
-        self.ts_label = QtWidgets.QLabel('', self)
-        self.layout().addWidget(self.ts_label, 6, 0, 1, 1)
-        self.fft_label = QtWidgets.QLabel('', self)
-        self.layout().addWidget(self.fft_label, 6, 1, 1, 1)
+        self.layout().addWidget(self.noise_bin_high_edge_lineedit, 7, 3, 1, 1)
         self.in_band_noise_label = QtWidgets.QLabel('In Band Noise (pA/sqrt(Hz)): np.nan', self)
-        self.layout().addWidget(self.in_band_noise_label, 7, 1, 1, 1)
+        self.layout().addWidget(self.in_band_noise_label, 8, 0, 1, 1)
         # Buttons
         start_pushbutton = QtWidgets.QPushButton('Start', self)
         start_pushbutton.clicked.connect(self.na_collector)
@@ -108,21 +134,33 @@ class NoiseAnalyzer(QtWidgets.QWidget, GuiBuilder):
         save_pushbutton.clicked.connect(self.na_save)
         self.layout().addWidget(save_pushbutton, 12, 0, 1, 4)
         # Connect to functions after placing widgets
-        self.daq_combobox.activated.connect(self.na_display_daq_settings)
-        self.device_combobox.activated.connect(self.na_display_daq_settings)
+        self.daq_combobox.activated.connect(self.na_update_sample_name)
+        self.device_combobox.activated.connect(self.na_update_sample_name)
+        self.na_update_sample_name()
 
-    def na_display_daq_settings(self):
+    def na_update_sample_name(self):
         '''
         '''
+        self.na_update_samples()
+        self.na_update_squids()
         self.device = self.device_combobox.currentText()
         self.channel = self.daq_combobox.currentIndex()
-        self.int_time = self.daq_settings[self.device][str(self.channel)]['int_time']
-        self.sample_rate = self.daq_settings[self.device][str(self.channel)]['sample_rate']
+        self.int_time = int(self.int_time_lineedit.text())
+        self.sample_rate = int(self.sample_rate_lineedit.text())
         info_str = 'Sample Rate (Hz): {0} :::: '.format(self.sample_rate)
         info_str += 'Int Time (ms): {0}'.format(self.int_time)
         self.channel_settings_label.setText(info_str)
-        native_high_f = '{0:.1f}'.format(0.5 * float(self.sample_rate))
-        self.plot_clip_high_lineedit.setText(native_high_f)
+        sample_key = self.sample_name_combobox.currentText()
+        sample_name = self.samples_settings[sample_key]
+        self.sample_name_lineedit.setText(sample_name)
+        gain = float(self.squid_gains[self.gain_select_combobox.currentText()])
+        squid = sample_key.split('-')[0]
+        for squid in self.squid_calibration_dict:
+            if sample_key in squid:
+                squid_calibration = float(self.squid_calibration_dict[squid])
+                break
+        squid_calibration *= gain
+        self.squid_calbration_label.setText('{0:.6f}'.format(squid_calibration))
 
     ###########
     # Running
@@ -131,16 +169,16 @@ class NoiseAnalyzer(QtWidgets.QWidget, GuiBuilder):
     def na_collector(self):
         '''
         '''
-        self.na_display_daq_settings()
+        self.na_update_sample_name()
         device = self.device_combobox.currentText()
         self.na_scan_file_name()
         signal_channels = [self.channel]
-        self.int_time = self.daq_settings[self.device][str(self.channel)]['int_time']
-        self.sample_rate = self.daq_settings[self.device][str(self.channel)]['sample_rate']
+        int_time = int(self.int_time_lineedit.text())
+        sample_rate = int(self.sample_rate_lineedit.text())
         self.data, self.stds = [], []
         daq = BoloDAQ(signal_channels=signal_channels,
-                      int_time=self.int_time,
-                      sample_rate=self.sample_rate,
+                      int_time=int_time,
+                      sample_rate=sample_rate,
                       device=device)
         self.data_dict = daq.run()
         #self.qthreadpool.start(daq.run)
@@ -210,27 +248,28 @@ class NoiseAnalyzer(QtWidgets.QWidget, GuiBuilder):
             else:
                 fft_png_path = save_path.replace('.dat', '_fft.png')
                 ts_png_path = save_path.replace('.dat', '_ts.png')
-
-
-
-            new_fft_png_path = os.path.join(os.path.dirname(fft_png_path), os.path.basename(fft_png_path))
-            new_ts_png_path = os.path.join(os.path.dirname(ts_png_path), os.path.basename(ts_png_path))
-
-            shutil.copy.savefig(fft_png_path, new_fft_png_path)
-            shutil.copy.savefig(fft_ts_path, new_ts_png_path)
+            temp_png_path = os.path.join('temp_files', 'temp_fft.png')
+            shutil.copy(temp_png_path, fft_png_path)
+            temp_png_path = os.path.join('temp_files', 'temp_ts.png')
+            shutil.copy(temp_png_path, ts_png_path)
             save_path.replace('.dat', '_fft.png')
-            ts_fig.savefig(save_path.replace('.dat', '_ts.png'))
         else:
             self.gb_quick_message('Warning Data Not Written to File!', msg_type='Warning')
 
     def na_plot(self, save_path=None):
         '''
         '''
+        gain = float(self.squid_calbration_label.text())
+        int_time = float(self.int_time_lineedit.text())
         ts_fig, ts_ax = self.na_create_blank_fig(frac_screen_width=0.5, frac_screen_height=0.5,
                                                  left=0.14, right=0.98, top=0.9, bottom=0.13, aspect=None)
         ts_ax.set_xlabel('Sample', fontsize=16)
-        ts_ax.set_ylabel('Voltage', fontsize=16)
         mean_subtracted_ts = self.ts - np.mean(self.ts)
+        if self.apply_calibration_checkbox.isChecked():
+            mean_subtracted_ts *= gain
+            ts_ax.set_ylabel('Current (uA)', fontsize=16)
+        else:
+            ts_ax.set_ylabel('Voltage (V)', fontsize=16)
         ts_ax.plot(mean_subtracted_ts, label='Mean Subtracted Time Stream')
         temp_png_path = os.path.join('temp_files', 'temp_ts.png')
         ts_fig.savefig(temp_png_path)
@@ -261,7 +300,7 @@ class NoiseAnalyzer(QtWidgets.QWidget, GuiBuilder):
         print('max freq')
         print(max_frequnecy)
         print('int time')
-        int_time = float(self.int_time) * 1e-3 # in s
+        int_time *= 1e-3
         print(int_time)
         #import ipdb;ipdb.set_trace()
         interval_length = 0.5 * int_time

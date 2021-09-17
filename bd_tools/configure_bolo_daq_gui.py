@@ -141,6 +141,8 @@ class ConfigureBoloDAQGui(QtWidgets.QWidget, GuiBuilder):
         setting = self.sender().whatsThis().split('_')[0]
         setting_file_name = os.path.join('bd_settings', '{0}_settings_{1}.json'.format(setting, self.today_str))
         save_path = QtWidgets.QFileDialog.getSaveFileName(self, 'bd_settings\\', setting_file_name, filter='.json')[0]
+        if len(save_path) == 0:
+            return None
         default_path = os.path.join('bd_settings', '{0}_settings.json'.format(setting))
         print(default_path, save_path)
         shutil.copy(default_path, save_path)

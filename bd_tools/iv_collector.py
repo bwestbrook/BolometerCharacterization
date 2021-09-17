@@ -17,7 +17,7 @@ from GuiBuilder.gui_builder import GuiBuilder, GenericClass
 
 class IVCollector(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTransformSpectroscopy):
 
-    def __init__(self, daq_settings, status_bar, screen_resolution, monitor_dpi, data_folder):
+    def __init__(self, daq_settings, status_bar, screen_resolution, monitor_dpi, data_folder, dewar):
         '''
         '''
         super(IVCollector, self).__init__()
@@ -26,10 +26,16 @@ class IVCollector(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTransformSpe
         self.daq_settings = daq_settings
         self.screen_resolution = screen_resolution
         self.monitor_dpi = monitor_dpi
+        self.dewar = dewar
         with open(os.path.join('bd_settings', 'squids_settings.json'), 'r') as fh:
             self.squid_calibration_dict = simplejson.load(fh)
         with open(os.path.join('bd_settings', 'samples_settings.json'), 'r') as fh:
             self.samples_settings = simplejson.load(fh)
+        self.squid_gains = {
+            '5': 1e-2,
+            '50': 1e-1,
+            '500': 1,
+            }
         self.cold_bias_resistor_dict  = {
             '1': 20e-3, # 20mOhm
             '2': 250e-6, # 250microOhm
@@ -70,6 +76,12 @@ class IVCollector(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTransformSpe
         '''
         with open(os.path.join('bd_settings', 'samples_settings.json'), 'r') as fh:
             self.samples_settings = simplejson.load(fh)
+
+    def ivc_update_squids_data(self):
+        '''
+        '''
+        with open(os.path.join('bd_settings', 'squids_settings.json'), 'r') as fh:
+            self.squid_calibration_dict = simplejson.load(fh)
 
     def ivc_update_daq_settings(self, daq_settings):
         '''
@@ -124,7 +136,10 @@ class IVCollector(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTransformSpe
         self.daq_y_combobox.currentIndexChanged.connect(self.ivc_display_daq_settings)
         self.daq_x_combobox.currentIndexChanged.connect(self.ivc_display_daq_settings)
         self.ivc_daq_combobox.currentIndexChanged.connect(self.ivc_display_daq_settings)
-        self.ivc_daq_combobox.setCurrentIndex(0)
+        if self.dewar == '576':
+            self.ivc_daq_combobox.setCurrentIndex(0)
+        else:
+            self.ivc_daq_combobox.setCurrentIndex(1)
         self.int_time_lineedit = self.gb_make_labeled_lineedit(label_text='Int Time')
         self.int_time_lineedit.setValidator(QtGui.QDoubleValidator(0, 1e5, 2, self.int_time_lineedit))
         self.layout().addWidget(self.int_time_lineedit, 2, 0, 1, 1)
@@ -152,7 +167,7 @@ class IVCollector(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTransformSpe
         '''
         # X Voltage Factor
         self.x_correction_label = QtWidgets.QLabel('', self)
-        self.layout().addWidget(self.x_correction_label, 4, 0, 1, 1)
+        self.layout().addWidget(self.x_correction_label, 5, 0, 1, 1)
         self.cold_bias_resistor_combobox = self.gb_make_labeled_combobox(label_text='Cold Bias Resistor:')
         for index, cold_bias_resistance in self.cold_bias_resistor_dict.items():
             self.cold_bias_resistor_combobox.addItem('{0}'.format(cold_bias_resistance))
@@ -165,13 +180,19 @@ class IVCollector(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTransformSpe
         self.warm_bias_resistor_lineedit.setValidator(QtGui.QDoubleValidator(0, 1e12, 2, self.warm_bias_resistor_lineedit))
         self.layout().addWidget(self.warm_bias_resistor_lineedit, 3, 1, 1, 1)
         # SQUID
-        self.squid_calibration_label = QtWidgets.QLabel('', self)
-        self.squid_calibration_label.setAlignment(QtCore.Qt.AlignRight)
+        self.squid_calibration_label = self.gb_make_labeled_label('Squid Conv (uA/V)')
         self.layout().addWidget(self.squid_calibration_label, 5, 1, 1, 1)
         self.squid_select_combobox = self.gb_make_labeled_combobox(label_text='Select SQUID')
         for squid, calibration in self.squid_calibration_dict.items():
             self.squid_select_combobox.addItem('{0}'.format(squid))
-        self.layout().addWidget(self.squid_select_combobox, 5, 0, 1, 1)
+        self.layout().addWidget(self.squid_select_combobox, 4, 0, 1, 1)
+        self.squid_gain_select_combobox = self.gb_make_labeled_combobox(label_text='SQUID Gain')
+        for gain in self.squid_gains:
+            self.squid_gain_select_combobox.addItem(gain)
+        self.layout().addWidget(self.squid_gain_select_combobox, 4, 1, 1, 1)
+        self.squid_gain_select_combobox.setCurrentIndex(2)
+        self.squid_gain_select_combobox.currentIndexChanged.connect(self.ivc_update_squid_calibration)
+
         # Data Clip
         self.data_clip_lo_lineedit = self.gb_make_labeled_lineedit(label_text='Data Clip Lo (uV)', lineedit_text='0.0')
         self.data_clip_lo_lineedit.returnPressed.connect(self.ivc_plot_running)
@@ -236,6 +257,9 @@ class IVCollector(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTransformSpe
         '''
         '''
         sample_key = self.sample_name_combobox.currentText()
+        if len(sample_key) == 0:
+            return None
+        #import ipdb;ipdb.set_trace()
         sample_name = self.samples_settings[sample_key]
         squid = sample_key.split('-')[1]
         self.sample_name_lineedit.setText(sample_name)
@@ -244,13 +268,13 @@ class IVCollector(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTransformSpe
                 self.squid_select_combobox.setCurrentIndex(index)
                 break
 
-        #import ipdb;ipdb.set_trace()
-
     def ivc_update_squid_calibration(self, index):
         '''
         '''
+        self.ivc_update_squids_data()
+        gain = self.squid_gains[self.squid_gain_select_combobox.currentText()]
         squid_key = self.squid_select_combobox.currentText()
-        calibration_value = float(self.squid_calibration_dict[squid_key])
+        calibration_value = float(self.squid_calibration_dict[squid_key]) * gain
         self.squid_calibration_label.setText('SQ_Correction: {0:.2f} uA/V'.format(calibration_value))
         squid = squid_key.split('-')[1]
         for index in range(self.sample_name_combobox.count()):

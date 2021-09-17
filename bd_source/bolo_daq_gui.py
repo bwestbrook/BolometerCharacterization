@@ -104,6 +104,8 @@ class BoloDAQGui(QtWidgets.QMainWindow, GuiBuilder):
         if not os.path.exists(self.data_folder):
             os.makedirs(self.data_folder)
         self.bd_setup_status_bar()
+        self.squid_calibration_dict_path = os.path.join('bd_settings', 'squids_settings.json')
+        self.bd_load_squid_settings()
         self.com_port_utility_widget = ComPortUtility(self.splash_screen, self.screen_resolution, self.monitor_dpi)
         self.bd_get_daq_settings()
         self.splash_screen.close()
@@ -118,9 +120,17 @@ class BoloDAQGui(QtWidgets.QMainWindow, GuiBuilder):
     ##################################################################################
 
     def __apply_settings__(self, settings):
+        '''
+        '''
         for setting in dir(settings):
             if '__' not in setting:
                 setattr(self, setting, getattr(settings, setting))
+
+    def bd_load_squid_settings(self):
+        '''
+        '''
+        with open(self.squid_calibration_dict_path, 'r') as fh:
+            self.squid_calibration_dict = simplejson.load(fh )
 
     ##################################################################################
     #### Global Gui     ##############################################################
@@ -430,7 +440,7 @@ class BoloDAQGui(QtWidgets.QMainWindow, GuiBuilder):
         QtWidgets.QApplication.processEvents()
         self.daq_settings = self.bolo_daq.initialize_daqs()
         if not hasattr(self, 'ivc_widget'):
-            self.ivc_widget = IVCollector(self.daq_settings, self.status_bar, self.screen_resolution, self.monitor_dpi, self.data_folder)
+            self.ivc_widget = IVCollector(self.daq_settings, self.status_bar, self.screen_resolution, self.monitor_dpi, self.data_folder, self.dewar)
         self.ivc_widget.ivc_update_samples()
         self.ivc_widget.ivc_update_daq_settings(self.daq_settings)
         self.central_widget.layout().addWidget(self.ivc_widget, 0, 0, 1, 1)
@@ -478,7 +488,6 @@ class BoloDAQGui(QtWidgets.QMainWindow, GuiBuilder):
         else:
             self.daq_settings = self.bolo_daq.initialize_daqs()
             self.rtc_widget.rtc_update_samples()
-            self.rtc_widget.rtc_update_daq_settings(self.daq_settings)
         self.central_widget.layout().addWidget(self.rtc_widget, 0, 0, 1, 1)
         self.status_bar.showMessage('RT Curves')
         QtWidgets.QApplication.processEvents()
@@ -557,10 +566,10 @@ class BoloDAQGui(QtWidgets.QMainWindow, GuiBuilder):
         self.gb_initialize_panel('central_widget')
         if not hasattr(self, 'noise_analyzer_widget'):
             self.daq_settings = self.bolo_daq.initialize_daqs()
-            self.noise_analyzer_widget = NoiseAnalyzer(self.daq_settings, self.status_bar, self.screen_resolution, self.monitor_dpi)
+            self.noise_analyzer_widget = NoiseAnalyzer(self.daq_settings, self.squid_calibration_dict, self.status_bar, self.data_folder, self.screen_resolution, self.monitor_dpi)
         else:
             self.daq_settings = self.bolo_daq.initialize_daqs()
-        self.noise_analyzer_widget.na_update_daq_settings(self.daq_settings)
+        self.noise_analyzer_widget.na_update_samples()
         self.central_widget.layout().addWidget(self.noise_analyzer_widget, 0, 0, 1, 1)
         self.status_bar.showMessage('Noise Analyzer')
         QtWidgets.QApplication.processEvents()

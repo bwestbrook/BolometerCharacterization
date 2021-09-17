@@ -36,6 +36,8 @@ class CosmicRays(QtWidgets.QWidget, GuiBuilder):
         self.today = datetime.now()
         self.today_str = datetime.strftime(self.today, '%Y_%m_%d')
         self.data_folder = os.path.join('S:', 'Daily_Data', '{0}'.format(self.today_str))
+        self.n_samples = 4
+        self.gains = ['1.0', '10.0', '100.0']
         self.cr_daq_panel()
 
     def cr_update_daq_settings(self, daq_settings):
@@ -62,61 +64,67 @@ class CosmicRays(QtWidgets.QWidget, GuiBuilder):
         self.int_time_lineedit.setText('1000')
         self.int_time_lineedit.setValidator(QtGui.QDoubleValidator(0, 1e6, 1, self.int_time_lineedit))
         self.layout().addWidget(self.int_time_lineedit, 0, 2, 1, 1)
-        self.daq_1_combobox = self.gb_make_labeled_combobox(label_text='Ch 1 DAQ: ')
-        # DAQ Ch Select 
-        for daq in range(0, 4):
-            self.daq_1_combobox.addItem(str(daq))
-        self.layout().addWidget(self.daq_1_combobox, 1, 0, 1, 1)
-        self.daq_2_combobox = self.gb_make_labeled_combobox(label_text='Ch 2 DAQ: ')
-        for daq in range(0, 4):
-            self.daq_2_combobox.addItem(str(daq))
-        self.layout().addWidget(self.daq_2_combobox, 1, 1, 1, 1)
-        self.daq_2_combobox.setCurrentIndex(1)
-        self.daq_3_combobox = self.gb_make_labeled_combobox(label_text= 'CH 3 DAQ: ')
-        for daq in range(0, 4):
-            self.daq_3_combobox.addItem(str(daq))
-        self.daq_3_combobox.setCurrentIndex(2)
-        self.layout().addWidget(self.daq_3_combobox, 1, 2, 1, 1)
-        # Sample Name
-        sample_name_header_label = QtWidgets.QLabel('Sample Name:', self)
-        self.layout().addWidget(sample_name_header_label, 3, 0, 1, 1)
-        self.sample_name_lineedit = QtWidgets.QLineEdit('', self)
-        self.layout().addWidget(self.sample_name_lineedit, 3, 1, 1, 3)
-        # Plot
-        self.running_plot_label = QtWidgets.QLabel('', self)
-        self.layout().addWidget(self.running_plot_label, 4, 0, 1, 5)
-        # Analysis
-        #def cra_analyze(self,data, sets, SQs, gain, bias, scantime,
+        # SamplDAQ Ch Select 
+        for sample in range(1, self.n_samples + 1):
+            daq_combobox = self.gb_make_labeled_combobox(label_text='DAQ {0}'.format(sample))
+            for daq in range(0, 4):
+                daq_combobox.addItem(str(daq))
+            setattr(self, 'daq_{0}_combobox'.format(sample), daq_combobox)
+            daq_combobox.setCurrentIndex(sample - 1)
+            self.layout().addWidget(daq_combobox, 1, sample - 1, 1, 1)
+            # SQUID  Selec
+            squid_combobox = self.gb_make_labeled_combobox(label_text='SQUID:')
+            for squid in range(1, 7):
+                squid_combobox.addItem(str(squid))
+            squid_combobox.setCurrentIndex(sample - 1)
+            setattr(self, 'squid_{0}_combobox'.format(sample), squid_combobox)
+            self.layout().addWidget(squid_combobox, 2, sample - 1, 1, 1)
+            # Gains 
+            gain_combobox = self.gb_make_labeled_combobox(label_text='Gain:')
+            for gain in self.gains:
+                gain_combobox.addItem(str(gain))
+            self.layout().addWidget(gain_combobox, 3, sample - 1, 1, 1)
+            setattr(self, 'gain_{0}_combobox'.format(sample), gain_combobox)
+            # Bias 
+            bias_lineedit = self.gb_make_labeled_lineedit(label_text='Bias Voltage (uV):')
+            bias_lineedit.setText(str(sample))
+            self.layout().addWidget(bias_lineedit, 4, sample - 1, 1, 1)
+            setattr(self, 'bias_{0}_lineedit'.format(sample), bias_lineedit)
+            # Sample Name 
+            sample_name_lineedit = self.gb_make_labeled_lineedit(label_text='Sample {0} Name:'.format(sample))
+            self.layout().addWidget(sample_name_lineedit, 5, sample - 1, 1, 1)
+            setattr(self, 'sample_name_{0}_lineedit'.format(sample), sample_name_lineedit)
+            #Mean
+            mean_label = self.gb_make_labeled_label(label_text='Mean {0}:'.format(sample))
+            self.layout().addWidget(mean_label, 6, sample - 1, 1, 1)
+            setattr(self, 'mean_{0}_label'.format(sample), mean_label)
+            #STD
+            std_label = self.gb_make_labeled_label(label_text='STD {0}:'.format(sample))
+            self.layout().addWidget(std_label, 7, sample - 1, 1, 1)
+            setattr(self, 'std_{0}_label'.format(sample), std_label)
+        #Analysis Option
         self.analysis_options_combobox = self.gb_make_labeled_combobox(label_text='Analysis Options')
         for option in self.analysis_options_dict:
             self.analysis_options_combobox.addItem(option)
         self.analysis_options_combobox.activated.connect(self.cr_update_analysis_option_checkbox)
-        self.layout().addWidget(self.analysis_options_combobox, 6, 6, 1, 2)
+        self.layout().addWidget(self.analysis_options_combobox, 9, 0, 1, 1)
         self.analysis_option_checkbox = QtWidgets.QCheckBox('Active', self)
-        self.layout().addWidget(self.analysis_option_checkbox, 6, 9, 1, 1)
+        self.layout().addWidget(self.analysis_option_checkbox, 9, 1, 1, 1)
         self.analysis_option_checkbox.clicked.connect(self.cr_update_analysis_options)
+        self.data_set_name_lineedit = self.gb_make_labeled_lineedit(label_text='Data Set Name:')
+        self.layout().addWidget(self.data_set_name_lineedit, 8, 0, 1, 3)
+        # Plot
+        self.running_plot_label = QtWidgets.QLabel('', self)
+        self.layout().addWidget(self.running_plot_label, 10, 0, 1, 5)
+        # Analysis
         # Data Panel Ch 1
-        self.mean_1_label = QtWidgets.QLabel('Mean 1: ', self)
-        self.layout().addWidget(self.mean_1_label, 5, 0, 1, 1)
-        self.std_1_label = QtWidgets.QLabel('STD 1: ', self)
-        self.layout().addWidget(self.std_1_label, 5, 1, 1, 1)
-        # Data Panel Ch 2
-        self.mean_2_label = QtWidgets.QLabel('Mean 2: ', self)
-        self.layout().addWidget(self.mean_2_label, 6, 0, 1, 1)
-        self.std_2_label = QtWidgets.QLabel('STD 2: ', self)
-        self.layout().addWidget(self.std_2_label, 6, 1, 1, 1)
-        # Data Panel Ch 3
-        self.mean_3_label = QtWidgets.QLabel('Mean 3: ', self)
-        self.layout().addWidget(self.mean_3_label, 7, 0, 1, 1)
-        self.std_3_label = QtWidgets.QLabel('STD 3: ', self)
-        self.layout().addWidget(self.std_3_label, 7, 1, 1, 1)
         # Buttons
         start_pushbutton = QtWidgets.QPushButton('Start', self)
         start_pushbutton.clicked.connect(self.cr_start_stop)
-        self.layout().addWidget(start_pushbutton, 8, 0, 1, 4)
+        self.layout().addWidget(start_pushbutton, 11, 0, 1, 3)
         save_pushbutton = QtWidgets.QPushButton('Save', self)
         save_pushbutton.clicked.connect(self.cr_save)
-        self.layout().addWidget(save_pushbutton, 9, 0, 1, 4)
+        self.layout().addWidget(save_pushbutton, 12, 0, 1, 3)
 
     def cr_update_analysis_options(self):
         '''
@@ -149,64 +157,57 @@ class CosmicRays(QtWidgets.QWidget, GuiBuilder):
         '''
         '''
         device = self.device_combobox.currentText()
-        ch_1 = self.daq_1_combobox.currentText()
-        ch_2 = self.daq_2_combobox.currentText()
-        ch_3 = self.daq_3_combobox.currentText()
         int_time = float(self.int_time_lineedit.text())
         sample_rate = float(self.sample_rate_lineedit.text())
+        squids, gains, biases, signal_channels, scan_time = self.cr_get_analyzer_input()
         self.cr_scan_file_name()
-        signal_channels = [ch_1, ch_2, ch_3]
-
         daq = BoloDAQ(signal_channels=signal_channels,
                       int_time=int_time,
                       sample_rate=sample_rate,
                       device=device)
         while self.started:
             data_dict = daq.run()
-            self.data_1, self.stds_1 = [], []
-            self.data_2, self.stds_2 = [], []
-            self.data_3, self.stds_3 = [], []
-#            data_dict = self.daq.get_data(signal_channels=signal_channels,
-                                          #device=device)
-            ts_1 = data_dict[ch_1]['ts']
-            mean_1 = data_dict[ch_1]['mean']
-            min_1 = data_dict[ch_1]['min']
-            max_1 = data_dict[ch_1]['max']
-            std_1 = data_dict[ch_1]['std']
+            for i, ch in enumerate(data_dict.keys()):
+                if not hasattr(self, 'data_{0}'.format(i + 1)):
+                    setattr(self, 'data_{0}'.format(i + 1), [])
+                    setattr(self, 'stds_{0}'.format(i + 1), [])
 
-            ts_2 = data_dict[ch_2]['ts']
-            mean_2 = data_dict[ch_2]['mean']
-            min_2 = data_dict[ch_2]['min']
-            max_2 = data_dict[ch_2]['max']
-            std_2 = data_dict[ch_2]['std']
-
-            ts_3 = data_dict[ch_3]['ts']
-            mean_3 = data_dict[ch_3]['mean']
-            min_3 = data_dict[ch_3]['min']
-            max_3 = data_dict[ch_3]['max']
-            std_3 = data_dict[ch_3]['std']
-
-            self.mean_1_label.setText('Mean 1: {0:.5f}'.format(mean_1))
-            self.std_1_label.setText('STD 1: {0:.5f}'.format(std_1))
-            self.mean_2_label.setText('Mean 2: {0:.5f}'.format(mean_2))
-            self.std_2_label.setText('STD 2: {0:.5f}'.format(std_2))
-            self.mean_3_label.setText('Mean 3: {0:.5f}'.format(mean_3))
-            self.std_3_label.setText('STD 3: {0:.5f}'.format(std_3))
-
-            self.data_1.extend(ts_1)
-            self.stds_1.append(std_1)
-            self.data_2.extend(ts_2)
-            self.stds_2.append(std_2)
-            self.data_3.extend(ts_3)
-            self.stds_3.append(std_3)
+                squid = squids[i]
+                data = data_dict[ch]
+                mean = data['mean']
+                std = data['std']
+                print(i, ch)
+                getattr(self, 'mean_{0}_label'.format(i + 1)).setText('Mean {0}: {1:.5f}'.format(squid, mean))
+                getattr(self, 'std_{0}_label'.format(i + 1)).setText('STD {0}: {1:.5f}'.format(squid, mean))
+                getattr(self, 'data_{0}'.format(i + 1)).extend(data['ts'])
+                getattr(self, 'stds_{0}'.format(i + 1)).append(data['std'])
+            self.cra.cra_analyze(data_dict, squids, gains, biases, scan_time)
             save_path = self.cr_index_file_name()
             self.cr_plot(running=True, save_path=save_path)
             with open(save_path, 'w') as save_handle:
-                for i, data_1 in enumerate(self.data_1):
-                    line = '{0:.6f}, {1:.6f}, {2:.6f}\n'.format(self.data_1[i], self.data_2[i], self.data_3[i])
+                data_1 = self.data_1
+                for i, datum in enumerate(data_1):
+                    line = ''
+                    for j, ch in enumerate(data_dict.keys()):
+                        if j < len(data_dict.keys()) - 1:
+                            line += '{0:.6f}, '.format(getattr(self, 'data_{0}'.format(j + 1))[i])
+                        else:
+                            line += '{0:.6f}\n'.format(getattr(self, 'data_{0}'.format(j + 1))[i])
                     save_handle.write(line)
             QtWidgets.QApplication.processEvents()
             self.repaint()
+
+    def cr_get_analyzer_input(self):
+        '''
+        '''
+        scan_time = float(self.int_time_lineedit.text()) * 1e-3
+        squids, gains, biases, signal_channels = [], [], [], []
+        for sample in range(1, self.n_samples + 1):
+            squids.append(getattr(self, 'squid_{0}_combobox'.format(sample)).currentText())
+            gains.append(getattr(self, 'gain_{0}_combobox'.format(sample)).currentText())
+            biases.append(getattr(self, 'bias_{0}_lineedit'.format(sample)).text())
+            signal_channels.append(getattr(self, 'daq_{0}_combobox'.format(sample)).currentText())
+        return squids, gains, biases, signal_channels, scan_time
 
     def cr_scan_file_name(self):
         '''
@@ -222,7 +223,7 @@ class CosmicRays(QtWidgets.QWidget, GuiBuilder):
         '''
         '''
         for i in range(1, 1000):
-            file_name = '{0}_{1}.txt'.format(self.sample_name_lineedit.text(), str(i).zfill(3))
+            file_name = '{0}_{1}.txt'.format(self.data_set_name_lineedit.text(), str(i).zfill(3))
             save_path = os.path.join(self.folder_path, file_name)
             if not os.path.exists(save_path):
                 break
@@ -245,13 +246,14 @@ class CosmicRays(QtWidgets.QWidget, GuiBuilder):
     def cr_plot(self, running=False, save_path=None):
         '''
         '''
-        fig, ax1, ax2, ax3 = self.cr_create_blank_fig(frac_screen_width=0.8, frac_screen_height=0.5,
-                                                      left=0.12, right=0.98, top=0.9, bottom=0.13, aspect=None, n_axes=3)
-        #ax1.errorbar(range(len(self.data_1)), self.data_1, yerr=self.stds_1, marker='.', linestyle='-')
+        fig_axes = self.cr_create_blank_fig(frac_screen_width=0.8, frac_screen_height=0.5,
+                                             left=0.12, right=0.98, top=0.9, bottom=0.13, aspect=None, n_axes=self.n_samples)
+        fig = fig_axes[0]
+        axes = fig_axes[1:]
+        #ax1.errorbar(range(len(self.data_1)), self.daa_1, yerr=self.stds_1, marker='.', linestyle='-')
         #ax2.errorbar(range(len(self.data_2)), self.data_2, yerr=self.stds_2, marker='.', linestyle='-')
-        ax1.plot(self.data_1)
-        ax2.plot(self.data_2)
-        ax3.plot(self.data_3)
+        for i in range(1, self.n_samples + 1):
+            axes[i - 1].plot(getattr(self, 'data_{0}'.format(i)))
         if running:
             temp_png_path = os.path.join('temp_files', 'temp_cr.png')
             fig.savefig(temp_png_path)
@@ -276,6 +278,12 @@ class CosmicRays(QtWidgets.QWidget, GuiBuilder):
             height = (frac_screen_height * self.screen_resolution.height()) / self.monitor_dpi
             fig = pl.figure(figsize=(width, height))
         fig.subplots_adjust(left=left, right=right, top=top, bottom=bottom)
+        if n_axes == 4:
+            ax1 = fig.add_subplot(411, label='ch 1')
+            ax2 = fig.add_subplot(412, label='ch 2')
+            ax3 = fig.add_subplot(413, label='ch 3')
+            ax4 = fig.add_subplot(414, label='ch 4')
+            return fig, ax1, ax2, ax3, ax4
         if n_axes == 3:
             ax1 = fig.add_subplot(311, label='ch 1')
             ax2 = fig.add_subplot(312, label='ch 2')
