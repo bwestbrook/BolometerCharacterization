@@ -409,6 +409,8 @@ class IVCollector(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTransformSpe
         save_path = QtWidgets.QFileDialog.getOpenFileName(self, 'Select IF data', '.if')[0]
         self.meta_dict = self.gb_load_meta_data(save_path, 'txt')
         self.x_data, self.x_stds, self.y_data, self.y_stds = [], [], [], []
+        if len(save_path) == 0:
+            return None
         with open(save_path, 'r') as fh:
             lines = fh.readlines()
             for line in lines:
