@@ -105,7 +105,9 @@ class BoloDAQGui(QtWidgets.QMainWindow, GuiBuilder):
             os.makedirs(self.data_folder)
         self.bd_setup_status_bar()
         self.squid_calibration_dict_path = os.path.join('bd_settings', 'squids_settings.json')
+        self.com_port_dict_path = os.path.join('bd_settings', 'comports_settings.json')
         self.bd_load_squid_settings()
+        self.bd_load_com_port_settings()
         self.com_port_utility_widget = ComPortUtility(self.splash_screen, self.screen_resolution, self.monitor_dpi)
         self.bd_get_daq_settings()
         self.splash_screen.close()
@@ -131,6 +133,12 @@ class BoloDAQGui(QtWidgets.QMainWindow, GuiBuilder):
         '''
         with open(self.squid_calibration_dict_path, 'r') as fh:
             self.squid_calibration_dict = simplejson.load(fh )
+
+    def bd_load_com_port_settings(self):
+        '''
+        '''
+        with open(self.com_port_dict_path, 'r') as fh:
+            self.com_ports_dict = simplejson.load(fh )
 
     ##################################################################################
     #### Global Gui     ##############################################################
@@ -693,12 +701,14 @@ class BoloDAQGui(QtWidgets.QMainWindow, GuiBuilder):
     def bd_fts(self):
         '''
         '''
+        okPressed = True
         self.gb_initialize_panel('central_widget')
         self.status_bar.showMessage('Launching FTS')
         QtWidgets.QApplication.processEvents()
         dialog = 'Select the comport for the SRS 830'
         #com_port, okPressed = self.gb_quick_static_info_gather(title='', dialog=dialog, items=['COM10'])
         com_port, okPressed = 'COM10', True
+        com_port = self.com_ports_dict['SRS SR830DSP']
         if not hasattr(self, 'ser_{0}'.format(com_port)) and okPressed:
             if not hasattr(self, 'srs_sr830dsp_widget'):
                 self.status_bar.showMessage('Connecting to the SRS SR830 DSP')
@@ -718,8 +728,7 @@ class BoloDAQGui(QtWidgets.QMainWindow, GuiBuilder):
                     self.srs_sr830dsp_widget = None
         dialog = 'Select the comport for the stepper motor you wish to configure'
         stepper_motor_ports = ['COM12']
-        #sm_com_port, okPressed = self.gb_quick_static_info_gather(title='', dialog=dialog, items=stepper_motor_ports)
-        sm_com_port, okPressed = 'COM12', True
+        sm_com_port = self.com_ports_dict['FTS Mirror Motor']
         if not hasattr(self, 'csm_widget_{0}'.format(sm_com_port)) and okPressed:
             if getattr(self, 'ser_{0}'.format(com_port)) is None:
                 setattr(self, 'csm_widget_{0}'.format(sm_com_port), None)

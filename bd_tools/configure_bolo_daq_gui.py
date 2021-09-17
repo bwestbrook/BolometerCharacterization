@@ -25,7 +25,7 @@ class ConfigureBoloDAQGui(QtWidgets.QWidget, GuiBuilder):
         self.setLayout(grid)
         self.today = datetime.now()
         self.today_str = datetime.strftime(self.today, '%Y_%m_%d')
-        for i, config in enumerate(['samples', 'squids', 'com']):
+        for i, config in enumerate(['samples', 'squids', 'comports']):
             path = os.path.join('bd_settings', '{0}_settings.json'.format(config))
             if os.path.exists(path):
                 with open(path, 'r') as fh:
@@ -57,7 +57,7 @@ class ConfigureBoloDAQGui(QtWidgets.QWidget, GuiBuilder):
         self.layout().addWidget(loaded_column_header_label, 1, 2, 1, 1)
         loaded_column_header_label = QtWidgets.QLabel('Controls', self)
         self.layout().addWidget(loaded_column_header_label, 1, 3, 1, 1)
-        for i, config in enumerate(['Samples', 'SQUIDs', 'COM']):
+        for i, config in enumerate(['Samples', 'SQUIDs', 'COMPORTS']):
             header_label = QtWidgets.QLabel('{0}: '.format(config), self)
             self.layout().addWidget(header_label, i + 2, 0, 1, 1)
             combobox = QtWidgets.QComboBox(self)
@@ -98,7 +98,7 @@ class ConfigureBoloDAQGui(QtWidgets.QWidget, GuiBuilder):
             save_pushbutton.clicked.connect(self.cbd_save_dict)
             load_pushbutton.clicked.connect(self.cbd_load_dict)
             j += 1
-        self.cbd_populate_combobox('com')
+        self.cbd_populate_combobox('comports')
         self.cbd_populate_combobox('squids')
         self.cbd_populate_combobox('samples')
 
