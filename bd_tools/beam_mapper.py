@@ -81,18 +81,15 @@ class BeamMapper(QtWidgets.QWidget, GuiBuilder):
         for channel in sorted([int(x) for x in self.daq_settings[device]]):
             self.daq_combobox.addItem(str(channel))
         #Pause Time 
-        self.pause_time_lineedit = self.gb_make_labeled_lineedit(label_text='Pause Time (ms):')
-        self.pause_time_lineedit.setText('1250')
+        self.pause_time_lineedit = self.gb_make_labeled_lineedit(label_text='Pause Time (ms):', lineedit_text='1250')
         self.pause_time_lineedit.setValidator(QtGui.QIntValidator(0, 25000, self.pause_time_lineedit))
         self.layout().addWidget(self.pause_time_lineedit, 2, 0, 1, 1)
         #Int Time 
-        self.int_time_lineedit = self.gb_make_labeled_lineedit(label_text='Int Time (ms): ')
-        self.int_time_lineedit.setText('500')
+        self.int_time_lineedit = self.gb_make_labeled_lineedit(label_text='Int Time (ms): ', lineedit_text='500')
         self.int_time_lineedit.setValidator(QtGui.QIntValidator(0, 25000, self.int_time_lineedit))
         self.layout().addWidget(self.int_time_lineedit, 2, 1, 1, 1)
         #Sample rate 
-        self.sample_rate_lineedit = self.gb_make_labeled_lineedit(label_text='Sample Rate (Hz): ')
-        self.sample_rate_lineedit.setText('5000')
+        self.sample_rate_lineedit = self.gb_make_labeled_lineedit(label_text='Sample Rate (Hz): ', lineedit_text='5000')
         self.sample_rate_lineedit.setValidator(QtGui.QIntValidator(0, 25000, self.sample_rate_lineedit))
         self.layout().addWidget(self.sample_rate_lineedit, 2, 2, 1, 1)
         # Basic stepper control X
@@ -127,36 +124,30 @@ class BeamMapper(QtWidgets.QWidget, GuiBuilder):
         # Scan Params
         ######
         #X Scan
-        self.start_position_x_lineedit = self.gb_make_labeled_lineedit(label_text='Start Position X:')
-        self.start_position_x_lineedit.setText('-25000')
+        self.start_position_x_lineedit = self.gb_make_labeled_lineedit(label_text='Start Position X:', lineedit_text='-50000')
         self.start_position_x_lineedit.setValidator(QtGui.QIntValidator(-300000, 300000, self.start_position_x_lineedit))
         self.start_position_x_lineedit.textChanged.connect(self.bm_update_scan_params)
         self.layout().addWidget(self.start_position_x_lineedit, 7, 0, 1, 2)
-        self.end_position_x_lineedit = self.gb_make_labeled_lineedit(label_text='End Position X:')
-        self.end_position_x_lineedit.setText('25000')
+        self.end_position_x_lineedit = self.gb_make_labeled_lineedit(label_text='End Position X:', lineedit_text='50000')
         self.end_position_x_lineedit.setValidator(QtGui.QIntValidator(-300000, 300000, self.end_position_x_lineedit))
         self.end_position_x_lineedit.textChanged.connect(self.bm_update_scan_params)
         self.layout().addWidget(self.end_position_x_lineedit, 7, 2, 1, 2)
         #Y Scan
-        self.start_position_y_lineedit = self.gb_make_labeled_lineedit(label_text='Start Position Y:')
-        self.start_position_y_lineedit.setText('-25000')
+        self.start_position_y_lineedit = self.gb_make_labeled_lineedit(label_text='Start Position Y:', lineedit_text='-50000')
         self.start_position_y_lineedit.setValidator(QtGui.QIntValidator(-300000, 300000, self.start_position_y_lineedit))
         self.start_position_y_lineedit.textChanged.connect(self.bm_update_scan_params)
         self.layout().addWidget(self.start_position_y_lineedit, 8, 0, 1, 2)
-        self.end_position_y_lineedit = self.gb_make_labeled_lineedit(label_text='End Position Y:')
-        self.end_position_y_lineedit.setText('25000')
+        self.end_position_y_lineedit = self.gb_make_labeled_lineedit(label_text='End Position Y:', lineedit_text='50000')
         self.end_position_y_lineedit.setValidator(QtGui.QIntValidator(-300000, 300000, self.end_position_y_lineedit))
         self.end_position_y_lineedit.textChanged.connect(self.bm_update_scan_params)
         self.layout().addWidget(self.end_position_y_lineedit, 8, 2, 1, 2)
         #Step Size 
-        self.step_size_x_lineedit = self.gb_make_labeled_lineedit(label_text='Step Size X (steps):')
-        self.step_size_x_lineedit.setText('25000')
+        self.step_size_x_lineedit = self.gb_make_labeled_lineedit(label_text='Step Size X (steps):', lineedit_text='25000')
         self.step_size_x_lineedit.textChanged.connect(self.bm_update_scan_params)
         self.step_size_x_lineedit.setValidator(QtGui.QIntValidator(1, 200000, self.step_size_x_lineedit))
         self.layout().addWidget(self.step_size_x_lineedit, 9, 0, 1, 2)
         step_size_y_header_label = QtWidgets.QLabel
-        self.step_size_y_lineedit = self.gb_make_labeled_lineedit(label_text='Step Size Y (steps):')
-        self.step_size_y_lineedit.setText('25000')
+        self.step_size_y_lineedit = self.gb_make_labeled_lineedit(label_text='Step Size Y (steps):', lineedit_text='25000')
         self.step_size_y_lineedit.textChanged.connect(self.bm_update_scan_params)
         self.step_size_y_lineedit.setValidator(QtGui.QIntValidator(1, 200000, self.step_size_y_lineedit))
         self.layout().addWidget(self.step_size_y_lineedit, 9, 2, 1, 2)
@@ -222,12 +213,17 @@ class BeamMapper(QtWidgets.QWidget, GuiBuilder):
         # Reverse Scan
         self.reverse_scan_checkbox = QtWidgets.QCheckBox('Reverse Scan', self)
         self.reverse_scan_checkbox.setChecked(False)
+        self.reverse_scan_checkbox.clicked.connect(self.bm_show_scan)
         self.layout().addWidget(self.reverse_scan_checkbox, 16, 1, 1, 1)
         # Vertical/Horizontal Scan
         self.scan_raster_combobox = self.gb_make_labeled_combobox(label_text='Scan Orientation')
         for scan in ['Vertical', 'Horizontal']:
             self.scan_raster_combobox.addItem(scan)
+        self.scan_raster_combobox.currentIndexChanged.connect(self.bm_show_scan)
         self.layout().addWidget(self.scan_raster_combobox, 16, 2, 1, 1)
+        self.scan_display_label = QtWidgets.QLabel(self)
+        self.layout().addWidget(self.scan_display_label, 16, 3, 1, 1)
+
         ######
         # Control Buttons 
         ######
@@ -246,6 +242,19 @@ class BeamMapper(QtWidgets.QWidget, GuiBuilder):
         #Call the the source type
         self.source_type_combobox.setCurrentIndex(1)
         self.source_type_combobox.setCurrentIndex(0)
+        self.bm_show_scan()
+
+    def bm_show_scan(self):
+        '''
+        '''
+        orientation = self.scan_raster_combobox.currentText()
+        direction = 'Forward'
+        if self.reverse_scan_checkbox.isChecked():
+            direction = 'Reverse'
+        path = os.path.join('bd_resources', '{0}_{1}.png'.format(orientation, direction))
+        pixmap = QtGui.QPixmap(path)
+        new_pixmap = pixmap.scaled(30, 30)
+        self.scan_display_label.setPixmap(new_pixmap)
 
     def bm_update_source_type(self):
         '''
@@ -339,6 +348,8 @@ class BeamMapper(QtWidgets.QWidget, GuiBuilder):
         '''
         '''
         axis = self.sender().text().split(' ')[-1]
+        print()
+        print(axis)
         csm_widget = getattr(self, 'csm_widget_{0}'.format(axis).lower())
         lineedit = getattr(self, 'set_position_{0}_lineedit'.format(axis).lower())
         if not hasattr(csm_widget, 'com_port'):
@@ -426,6 +437,8 @@ class BeamMapper(QtWidgets.QWidget, GuiBuilder):
             self.sender().setText('Start')
             self.started = False
             self.saved = True
+            #print(self.started)
+            #import ipdb;ipdb.set_trace()
 
     def bm_get_daq(self):
         '''
@@ -455,19 +468,19 @@ class BeamMapper(QtWidgets.QWidget, GuiBuilder):
         x_ticks = [str(int(x * 1e-3)) for x in x_grid]
         y_ticks = [str(int(x * 1e-3)) for x in y_grid]
         if self.reverse_scan_checkbox.isChecked():
-            x_grid = reversed(x_grid)
-            y_grid = reversed(y_grid)
+            x_grid = list(reversed(x_grid))
+            y_grid = list(reversed(y_grid))
+        raster_1, raster_2 = np.meshgrid(x_grid, y_grid)
         if self.scan_raster_combobox.currentText() == 'Vertical':
-            raster_1, raster_2 = np.meshgrid(x_grid, y_grid)
-            csm_1 = self.csm_widget_x
-            csm_2 = self.csm_widget_y
-        else:
-            raster_1, raster_2 = np.meshgrid(y_grid, x_grid)
-            csm_2 = self.csm_widget_x
-            csm_1 = self.csm_widget_y
+            raster_1 = raster_1.T
+            raster_2 = raster_2.T
+        if self.scan_raster_combobox.currentText() != 'Vertical':
+            raster_1_temp = copy(raster_2)
+            raster_2 = raster_1
+            raster_1 = raster_1_temp
         Z_data = np.zeros(shape=raster_1.shape)
         Z_fit_data = np.zeros(shape=Z_data.shape)
-        return x_ticks, y_ticks, raster_1, raster_2, csm_1, csm_2, Z_data, Z_fit_data
+        return x_ticks, y_ticks, raster_1, raster_2, Z_data, Z_fit_data
 
     def bm_initialize_scan(self, grid_1_start_position, grid_2_start_position):
         '''
@@ -484,30 +497,6 @@ class BeamMapper(QtWidgets.QWidget, GuiBuilder):
             time.sleep(1)
         self.status_bar.showMessage('Beam Mapper is Ready! Starting Scan.... ')
         QtWidgets.QApplication.processEvents()
-
-    def bm_collect_data(self, daq, Z_data, Z_fit_data, count, x_i, y_i, direction, size_y):
-        '''
-        '''
-        signal_channel = self.daq_combobox.currentText()
-        data_dict = daq.run()
-        data_time_stream = data_dict[signal_channel]['ts']
-        mean = data_dict[signal_channel]['mean']
-        min_ = data_dict[signal_channel]['min']
-        max_ = data_dict[signal_channel]['max']
-        std = data_dict[signal_channel]['std']
-        self.bm_plot_time_stream(data_time_stream, min_, max_)
-        if direction == -1:
-            Z_data[size_y - 1 - j][i] = mean
-            Z_fit_data[size_y - 1 - j][i] = mean
-        else:
-            try:
-                Z_data[y_i][x_i] = mean
-                Z_fit_data[y_i][x_i] = mean
-            except IndexError:
-                import ipdb;ipdb.set_trace()
-        self.Z_data.append(mean)
-        self.Z_stds.append(std)
-        return Z_data, Z_fit_data, mean, std
 
     def bm_update_stats(self, start_time, count, x_pos, y_pos, Z_data, mean, std, pct_residual):
         '''
@@ -532,14 +521,14 @@ class BeamMapper(QtWidgets.QWidget, GuiBuilder):
     def bm_take_1d_cuts(self, x_ticks, y_ticks, Z_data):
         '''
         '''
-        fit_params, residuals = self.bm_plot_x_cut(y_ticks, Z_data)
+        fit_params, residuals = self.bm_plot_x_cut(x_ticks, Z_data)
         fit_string = 'No X Fit'
         if fit_params is not None:
             fit_string = ''
             for param, value in zip(self.fit_params_1d_human, fit_params):
                 fit_string += '{0}: {1:.2f} '.format(param, value)
         self.x_slice_fit_label.setText(fit_string)
-        fit_params, residuals = self.bm_plot_y_cut(x_ticks, Z_data)
+        fit_params, residuals = self.bm_plot_y_cut(y_ticks, Z_data)
         fit_string = 'No Y Fit'
         if fit_params is not None:
             fit_string = ''
@@ -550,18 +539,18 @@ class BeamMapper(QtWidgets.QWidget, GuiBuilder):
     def bm_fit_and_plot_2d_data(self, x_grid, x_ticks, y_grid, y_ticks, Z_data):
         '''
         '''
-        print(Z_data)
+        #print(Z_data)
         # Process Slices
         Z_fit_data = np.zeros(shape=Z_data.shape)
         good_fit = False
         pct_residual = 0.0
         try:
-            print(Z_data)
+            #print(Z_data)
             X = x_grid.reshape(Z_data.shape)
             Y = y_grid.reshape(Z_data.shape)
             fit_Z, fit_params = self.bm_fit_2d_data(X, Y, Z_data.flatten())
             self.bm_plot_beam_map(x_ticks, y_ticks, Z_data, fit_Z.reshape(x_grid.shape), running=True)
-            Z_res = Z_data.flatten() - fit_Z.reshape(x_grid.shape)
+            Z_res = Z_data.flatten() - fit_Z.reshape(Z_data.flatten().shape)
             Z_res = Z_res.reshape(Z_data.shape)
             fit_Z = fit_Z.reshape(Z_data.shape)
             self.bm_plot_residual_beam_map(x_ticks, y_ticks, fit_Z, Z_res, fit_params)
@@ -569,7 +558,7 @@ class BeamMapper(QtWidgets.QWidget, GuiBuilder):
             good_fit = True
         except RuntimeError:
             self.bm_plot_beam_map(x_ticks, y_ticks, Z_data, None, running=True)
-        data_string = self.data_string_label.text()
+        data_string = ''
         if good_fit:
             k = 0
             for param, value in zip(self.fit_params_2d_human, fit_params):
@@ -594,11 +583,10 @@ class BeamMapper(QtWidgets.QWidget, GuiBuilder):
         else:
             os.makedirs('temp_beam_files')
         daq = self.bm_get_daq()
-        x_ticks, y_ticks, raster_1, raster_2, csm_1, csm_2, Z_data, Z_fit_data = self.bm_setup_scan()
+        x_ticks, y_ticks, raster_1, raster_2, Z_data, Z_fit_data = self.bm_setup_scan()
         self.bm_initialize_scan(raster_1.ravel()[0], raster_2.ravel()[0])
         pause_time = float(self.pause_time_lineedit.text())
         source_distance = float(self.source_distance_lineedit.text())
-        #import ipdb;ipdb.set_trace()
         self.x_posns = []
         self.y_posns = []
         self.Z_data = []
@@ -606,69 +594,121 @@ class BeamMapper(QtWidgets.QWidget, GuiBuilder):
         start_time = datetime.now()
         count = 1
         direction = 1
-        raster_1_positions = raster_1.ravel()[:-1]
-        raster_2_positions = raster_2.ravel()[:-1]
+        #positions_1 = raster_1.ravel()
+        #positions_2 = raster_2.ravel()
+        #import ipdb;ipdb.set_trace()
         while self.started:
-            i = 0
-            for i, position_1 in enumerate(raster_1.ravel()):
-                for j, position_2 in enumerate(raster_2_positions):
-                    print(i, j)
-                    csm_1.csm_set_position(position=int(position_1), verbose=False)
-                    csm_2.csm_set_position(position=int(position_2), verbose=False)
+            for i, positions_1 in enumerate(raster_1):
+                positions_2 = raster_2[i]
+                if direction == -1:
+                    #print(positions_2)
+                    positions_2 = list(reversed(positions_2)) # Reverse scan direction every time
+                    #import ipdb;ipdb.set_trace()
+                #print(positions_2)
+                #print(positions_2)
+                for j, position_2 in enumerate(positions_2):
                     if self.scan_raster_combobox.currentText() == 'Vertical':
-                        x_i = i
-                        y_i = j
-                        x_pos = position_1
-                        y_pos = position_2
-                        self.x_posns.append(position_1)
-                        self.y_posns.append(position_2)
+                        x_position = positions_1[j]
+                        y_position = positions_2[j]
                         if i == 0:
-                            x_grid = raster_1_positions
-                            y_grid = raster_2_positions
+                            x_grid = raster_1
+                            y_grid = raster_2
                     else:
-                        x_i = j
-                        y_i = i
-                        self.x_posns.append(position_2)
-                        self.y_posns.append(position_1)
-                        x_pos = position_2
-                        y_pos = position_1
+                        x_position = positions_2[j]
+                        y_position = positions_1[j]
+                        print()
+                        print(x_position)
+                        print(y_position)
+                        #import ipdb;ipdb.set_trace()
                         if i == 0:
-                            x_grid = raster_2_positions
-                            y_grid = raster_1_positions
+                            x_grid = raster_2
+                            y_grid = raster_1
+                    self.csm_widget_x.csm_set_position(position=int(x_position), verbose=False)
+                    self.csm_widget_y.csm_set_position(position=int(y_position), verbose=False)
+                    self.x_posns.append(x_position)
+                    self.y_posns.append(y_position)
                     time.sleep(pause_time * 1e-3)
                     if self.zero_lock_in_checkbox.isChecked():
                         self.srs_widget.srs_zero_lock_in_phase()
-                    time.sleep(0.300) # Post Zero lock-in wait 3 or 1 time constants at 100 or 300 ms
+                        time.sleep(0.500) # Post Zero lock-in wait 3 or 1 time constants at 100 or 300 ms
                     # Process Slices
-                    Z_data, Z_fit_data, mean, std = self.bm_collect_data(daq, Z_data, Z_fit_data, count, x_i, y_i, direction, y_grid)
+                    if self.scan_raster_combobox.currentText() == 'Vertical':
+                        Z_data, Z_fit_data, mean, std = self.bm_collect_data(daq, Z_data, Z_fit_data, count, i, j, direction, raster_2.size)
+                    else:
+                        Z_data, Z_fit_data, mean, std = self.bm_collect_data(daq, Z_data, Z_fit_data, count, i, j, direction, raster_2.size)
                     self.bm_take_1d_cuts(x_ticks, y_ticks, Z_data)
                     pct_residual = self.bm_fit_and_plot_2d_data(x_grid, x_ticks, y_grid, y_ticks, Z_data)
-                    self.bm_update_stats(start_time, count, x_pos, y_pos, Z_data, mean, std, pct_residual)
+                    self.bm_update_stats(start_time, count, x_position, y_position, Z_data, mean, std, pct_residual)
                     time.sleep(0.300) # Wait 3 or 1 time constants at 100 or 300 ms, before moving motor
                     self.resize(self.minimumSizeHint())
-                    count += 1
                     self.y_ticks_temp = y_ticks
                     self.Z_data_temp = Z_data
-                raster_2_positions = list(reversed(raster_2_positions)) # Reverse scan direction every time
+                    count += 1
+                    #print(x_position, y_position)
+                    print(self.started)
+                    #print(x_grid)
+                    #import ipdb;ipdb.set_trace()
+                    if not self.started:
+                        break
                 direction *= -1 # 
-                i += 1
-            if i + 1 == len(x_grid):
-                self.started = False
-                self.start_pushbutton.setText('Start')
-            self.x_cut_select_combobox.setCurrentIndex(i - 1)
-        X, Y = np.meshgrid(x_grid, y_grid)
+                if i + 1 == len(x_grid):
+                    self.started = False
+                    self.start_pushbutton.setText('Start')
+                self.x_cut_select_combobox.setCurrentIndex(i - 1)
+                if not self.started:
+                    break
         try:
+            X = x_grid.reshape(Z_data.shape)
+            Y = y_grid.reshape(Z_data.shape)
             Z_fit, fit_params = self.bm_fit_2d_data(X, Y, Z_data.flatten())
             self.bm_plot_beam_map(x_ticks, y_ticks, Z_data, Z_fit.reshape(X.shape), running=True)
-            Z_res = Z_data - fit_Z.reshape(X.shape)
+            Z_res = Z_data - Z_fit.reshape(X.shape)
             self.bm_plot_residual_beam_map(x_ticks, y_ticks, Z_fit.reshape(X.shape), Z_res, fit_params)
         except RuntimeError:
             self.gb_quick_message('Error With Final Fit', msg_type='Warning')
+            fit_params = None
         if not self.saved:
             self.bm_take_all_y_cuts(y_ticks, Z_data.reshape(X.shape))
             self.bm_take_all_x_cuts(x_ticks, Z_data.reshape(X.shape))
             self.bm_save(fit_params)
-        self.bm_set_origin()
+        #self.bm_set_origin()
+
+    def bm_collect_data(self, daq, Z_data, Z_fit_data, count, x_i, y_i, direction, size_y):
+        '''
+        '''
+        signal_channel = self.daq_combobox.currentText()
+        data_dict = daq.run()
+        data_time_stream = data_dict[signal_channel]['ts']
+        mean = data_dict[signal_channel]['mean']
+        min_ = data_dict[signal_channel]['min']
+        max_ = data_dict[signal_channel]['max']
+        std = data_dict[signal_channel]['std']
+        self.bm_plot_time_stream(data_time_stream, min_, max_)
+        if direction == -1:
+            try:
+                if self.scan_raster_combobox.currentText() == 'Vertical':
+                    Z_data[Z_data.shape[1] - 1 - y_i][x_i] = mean
+                    Z_fit_data[Z_data.shape[1] - 1 - y_i][x_i] = mean
+                else:
+                    Z_data[x_i][Z_data.shape[1] - 1 - y_i] = mean
+                    Z_fit_data[x_i][Z_data.shape[1] - 1 - y_i] = mean
+            except IndexError:
+                print('reverse')
+                import ipdb;ipdb.set_trace()
+        else:
+            try:
+                if self.scan_raster_combobox.currentText() == 'Vertical':
+                    Z_data[y_i][x_i] = mean
+                    Z_fit_data[y_i][x_i] = mean
+                else:
+                    Z_data[x_i][y_i] = mean
+                    Z_fit_data[x_i][y_i] = mean
+            except IndexError:
+                print('forward')
+                import ipdb;ipdb.set_trace()
+        self.Z_data.append(mean)
+        self.Z_stds.append(std)
+        return Z_data, Z_fit_data, mean, std
 
     ##############################################################################
     # Saving and plotting
@@ -782,7 +822,7 @@ class BeamMapper(QtWidgets.QWidget, GuiBuilder):
         x_pos = self.x_cut_select_combobox.currentText()
         x_cut_beam_path = os.path.join('temp_beam_files', 'temp_x_beam_cut_{0}.png'.format(x_pos))
         if len(x_ticks) > 0 and Z_data.size > 8:
-            amps = Z_data.transpose()[x_cut_pos]
+            amps = Z_data.T[x_cut_pos]
             fig, ax = self.bm_create_blank_fig(left=0.12, bottom=0.26, right=0.98, top=0.83,
                                                frac_screen_width=0.25, frac_screen_height=0.3)
             ax.plot(x_ticks, amps, label='data')
@@ -816,8 +856,8 @@ class BeamMapper(QtWidgets.QWidget, GuiBuilder):
             try:
                 amps = Z_data[y_cut_pos - 1][:]
             except IndexError:
-                print(Z_data)
-                print(y_cut_pos)
+                #print(Z_data)
+                #print(y_cut_pos)
                 import ipdb;ipdb.set_trace()
             fig, ax = self.bm_create_blank_fig(left=0.12, bottom=0.26, right=0.98, top=0.83,
                                                frac_screen_width=0.25, frac_screen_height=0.3)
@@ -975,8 +1015,12 @@ class BeamMapper(QtWidgets.QWidget, GuiBuilder):
     def bm_fit_2D_gaussian(self, function, XY, Z, initial_guess):
         '''
         '''
-        X, Y = XY[0], XY[0]
-        popt, pcov = opt.curve_fit(self.bm_twoD_Gaussian, XY, Z.T, p0=initial_guess)
+        X, Y = XY[0], XY[1]
+        Z = Z.ravel()
+        #print(Z)
+        #print(XY)
+        #import ipdb;ipdb.set_trace()
+        popt, pcov = opt.curve_fit(self.bm_twoD_Gaussian, XY, Z, p0=initial_guess)
         return popt
 
     #Initial Guesses for Fitting

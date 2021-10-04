@@ -356,6 +356,7 @@ class DifferenceLoadCurves(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTra
         fft_frequency_vector_processed, normalized_fft_vector_processed = self.dlc_load_spectra_data(self.spectra_path)
         if smoothing_factor > 0:
             normalized_fft_vector_processed = self.ftsy_running_mean(normalized_fft_vector_processed, smoothing_factor=smoothing_factor)
+        normalized_fft_vector_processed = normalized_fft_vector_processed / np.max(normalized_fft_vector_processed)
         print('data', fft_frequency_vector_processed)
         measured_delta_power, measured_integrated_bandwidth = self.ftsy_compute_delta_power_and_bandwidth_at_window(fft_frequency_vector_processed, normalized_fft_vector_processed,
                                                                                                                     data_clip_lo=data_clip_lo, data_clip_hi=data_clip_hi,
