@@ -114,8 +114,8 @@ class BoloDAQGui(QtWidgets.QMainWindow, GuiBuilder):
         self.move(0, 0)
         self.show()
         getattr(self, 'action_Bolo_DAQ_Settings').trigger()
-        if not hasattr(self, 'configure_ni_daq_widget'):
-            self.configure_ni_daq_widget = ConfigureNIDAQ(self.daq_settings, self.status_bar)
+        #if not hasattr(self, 'configure_ni_daq_widget'):
+            #self.configure_ni_daq_widget = ConfigureNIDAQ(self.daq_settings, self.status_bar)
 
     ##################################################################################
     #### Start up Tasks ##############################################################
@@ -464,6 +464,7 @@ class BoloDAQGui(QtWidgets.QMainWindow, GuiBuilder):
         '''
         Opens the panel and sets som defaults
         '''
+        okPressed = True
         self.gb_initialize_panel('central_widget')
         self.status_bar.showMessage('Loading RT Curves')
         QtWidgets.QApplication.processEvents()
@@ -472,8 +473,7 @@ class BoloDAQGui(QtWidgets.QMainWindow, GuiBuilder):
             ls_372_samples_widget = None
             ls_372_temp_widget = None
         elif self.dewar == 'BlueForsDR1':
-            #com_port, okPressed = self.gb_quick_static_info_gather(title='', dialog=dialog, items=['COM4'])
-            com_port, okPressed = 'COM4', True
+            com_port = self.com_ports_dict['Housekeeping Lakeshore']
             if not hasattr(self, 'ser_{0}'.format(com_port)) and okPressed:
                 serial_com = BoloSerial(com_port, device='Model372', splash_screen=self.status_bar)
                 setattr(self, 'ser_{0}'.format(com_port), serial_com)
@@ -481,8 +481,7 @@ class BoloDAQGui(QtWidgets.QMainWindow, GuiBuilder):
                     ls_372_temp_widget = LakeShore372(serial_com, com_port, self.status_bar)
                     setattr(self, 'ls_372_widget_{0}'.format(com_port), ls_372_temp_widget)
             dialog = 'Select the comport for the Sample Lakeshore'
-            #com_port, okPressed = self.gb_quick_static_info_gather(title='', dialog=dialog, items=['COM6'])
-            com_port, okPressed = 'COM6', True
+            com_port = self.com_ports_dict['Samples Lakeshore']
             if not hasattr(self, 'ser_{0}'.format(com_port)) and okPressed:
                 serial_com = BoloSerial(com_port, device='Model372', splash_screen=self.status_bar)
                 setattr(self, 'ser_{0}'.format(com_port), serial_com)
@@ -549,7 +548,7 @@ class BoloDAQGui(QtWidgets.QMainWindow, GuiBuilder):
         '''
         self.gb_initialize_panel('central_widget')
         dialog = 'Select the comport for the stepper motor you wish to configure'
-        stepper_motor_ports = ['COM12', 'COM13', 'COM14']
+        stepper_motor_ports = [self.com_ports_dict['FTS Mirror Motor'],]
         com_port, okPressed = self.gb_quick_static_info_gather(title='', dialog=dialog, items=stepper_motor_ports)
         if not hasattr(self, 'csm_widget_{0}'.format(com_port)) and okPressed:
             csm_widget = ConfigureStepperMotor(com_port, self.status_bar)
@@ -702,14 +701,15 @@ class BoloDAQGui(QtWidgets.QMainWindow, GuiBuilder):
         '''
         '''
         okPressed = True
+        self.bd_load_com_port_settings()
         self.gb_initialize_panel('central_widget')
         self.status_bar.showMessage('Launching FTS')
         QtWidgets.QApplication.processEvents()
         dialog = 'Select the comport for the SRS 830'
         #com_port, okPressed = self.gb_quick_static_info_gather(title='', dialog=dialog, items=['COM10'])
-        com_port, okPressed = 'COM10', True
         com_port = self.com_ports_dict['SRS SR830DSP']
-        if not hasattr(self, 'ser_{0}'.format(com_port)) and okPressed:
+        self.srs_sr830dsp_widget = None
+        if not hasattr(self, 'ser_{0}'.format(com_port)) and com_port != 'None':
             if not hasattr(self, 'srs_sr830dsp_widget'):
                 self.status_bar.showMessage('Connecting to the SRS SR830 DSP')
                 QtWidgets.QApplication.processEvents()
@@ -724,25 +724,18 @@ class BoloDAQGui(QtWidgets.QMainWindow, GuiBuilder):
                 setattr(self, 'ser_{0}'.format(com_port), serial_com)
                 if serial_com is not None:
                     self.srs_sr830dsp_widget = StanfordResearchSystemsSR830DSP(serial_com, com_port, self.status_bar, self.screen_resolution, self.monitor_dpi)
-                else:
-                    self.srs_sr830dsp_widget = None
-        dialog = 'Select the comport for the stepper motor you wish to configure'
-        stepper_motor_ports = ['COM12']
         sm_com_port = self.com_ports_dict['FTS Mirror Motor']
-        if not hasattr(self, 'csm_widget_{0}'.format(sm_com_port)) and okPressed:
-            if getattr(self, 'ser_{0}'.format(com_port)) is None:
-                setattr(self, 'csm_widget_{0}'.format(sm_com_port), None)
-                csm_widget = None
-            else:
+        if not hasattr(self, 'ser_{0}'.format(sm_com_port)):
+            if hasattr(self, 'csm_widget_{0}'.format(sm_com_port)):
+                csm_widget = getattr(self, 'csm_widget_{0}'.format(sm_com_port))
+            elif okPressed:
                 csm_widget = ConfigureStepperMotor(sm_com_port, self.status_bar)
+            else:
+                return None
             setattr(self, 'csm_widget_{0}'.format(sm_com_port), csm_widget)
-        elif okPressed:
-            csm_widget = getattr(self, 'csm_widget_{0}'.format(sm_com_port))
-        else:
-            return None
-        #self.srs_sr830dsp_widget = None
-        if not hasattr(self, 'fts_widget'):
-            self.fts_widget = FourierTransformSpectrometer(self.daq_settings, self.status_bar, self.screen_resolution, self.monitor_dpi, csm_widget, self.srs_sr830dsp_widget, self.data_folder)
+            #self.srs_sr830dsp_widget = None
+            if not hasattr(self, 'fts_widget'):
+                self.fts_widget = FourierTransformSpectrometer(self.daq_settings, self.status_bar, self.screen_resolution, self.monitor_dpi, csm_widget, self.srs_sr830dsp_widget, self.data_folder)
         self.fts_widget.fts_update_samples()
         self.central_widget.layout().addWidget(self.fts_widget, 0, 0, 1, 1)
         self.status_bar.showMessage('FTS')
@@ -756,6 +749,7 @@ class BoloDAQGui(QtWidgets.QMainWindow, GuiBuilder):
     def bd_beam_mapper(self):
         '''
         '''
+        self.bd_load_com_port_settings()
         self.gb_initialize_panel('central_widget')
         self.status_bar.showMessage('Launching Beam Mapper')
         QtWidgets.QApplication.processEvents()

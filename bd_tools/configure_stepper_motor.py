@@ -58,7 +58,7 @@ class ConfigureStepperMotor(QtWidgets.QWidget, GuiBuilder):
         for i, item in enumerate(self.stepper_settings_dict):
             value = getattr(self, 'csm_get_{0}'.format(item))()
             self.stepper_settings_dict[item] = value
-            self.status_bar.showMessage('Getting {0} data for stepper motor on {1}'.format(item, self.com_port))
+            self.status_bar.showMessage('Getting {0} = {1} data for stepper motor on {2}'.format(item, value, self.com_port))
             QtWidgets.QApplication.processEvents()
             current_value_label = QtWidgets.QLabel('{0}:'.format(item), self)
             self.layout().addWidget(current_value_label, i + 1, 0, 1, 1)

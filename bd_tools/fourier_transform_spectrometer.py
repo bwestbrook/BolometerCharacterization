@@ -20,6 +20,7 @@ class FourierTransformSpectrometer(QtWidgets.QWidget, GuiBuilder, FourierTransfo
         '''
         super(FourierTransformSpectrometer, self).__init__()
         self.c = 2.99792458 * 10 ** 8 # speed of light in m/s
+        self.com_port_dict_path = os.path.join('bd_settings', 'comports_settings.json')
         self.bands = self.ftsy_get_bands()
         self.optical_elements = self.ftsy_get_optical_elements()
         self.fts_update_samples()
@@ -58,6 +59,12 @@ class FourierTransformSpectrometer(QtWidgets.QWidget, GuiBuilder, FourierTransfo
         with open(os.path.join('bd_settings', 'samples_settings.json'), 'r') as fh:
             self.samples_settings = simplejson.load(fh)
 
+    def fts_load_com_port_settings(self):
+        '''
+        '''
+        with open(self.com_port_dict_path, 'r') as fh:
+            self.com_ports_dict = simplejson.load(fh )
+
     def fts_update_daq_settings(self, daq_settings):
         '''
         '''
@@ -67,6 +74,7 @@ class FourierTransformSpectrometer(QtWidgets.QWidget, GuiBuilder, FourierTransfo
     def fts_update_sample_name(self, index):
         '''
         '''
+        self.fts_load_com_port_settings()
         sample_key = self.sample_select_combobox.currentText()
         sample_name = self.samples_settings[sample_key]
         self.sample_name_lineedit.setText(sample_name)

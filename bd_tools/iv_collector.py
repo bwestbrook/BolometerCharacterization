@@ -274,7 +274,7 @@ class IVCollector(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTransformSpe
         self.ivc_update_squids_data()
         gain = self.squid_gains[self.squid_gain_select_combobox.currentText()]
         squid_key = self.squid_select_combobox.currentText()
-        calibration_value = float(self.squid_calibration_dict[squid_key]) * gain
+        calibration_value = float(self.squid_calibration_dict[squid_key].split(' ')[0]) * gain
         self.squid_calibration_label.setText('SQ_Correction: {0:.2f} uA/V'.format(calibration_value))
         squid = squid_key.split('-')[1]
         for index in range(self.sample_name_combobox.count()):

@@ -210,7 +210,6 @@ class RTCollector(QtWidgets.QWidget, GuiBuilder):
         '''
         '''
         new_set_point = float(self.temp_set_point_lineedit.text()) * 1e-3
-        print('afdaf')
         self.ls372_temp_widget.temp_control.set_run_function('ls372_set_temp_set_point', new_set_point)
         self.qthreadpool.start(self.ls372_temp_widget.temp_control)
         #self.ls372_temp_widget.temp_ready.connect(self.rtc_get_temp_set_point)
@@ -334,7 +333,7 @@ class RTCollector(QtWidgets.QWidget, GuiBuilder):
         self.layout().addWidget(self.daq_y_combobox, 1, 1, 1, 1)
         self.daq_y_combobox.setCurrentIndex(1)
         self.rtc_daq_combobox.setCurrentIndex(1)
-        self.int_time_lineedit = self.gb_make_labeled_lineedit(label_text='Int Time')
+        self.int_time_lineedit = self.gb_make_labeled_lineedit(label_text='Int Time (ms):')
         self.int_time_lineedit.setValidator(QtGui.QDoubleValidator(0, 1e5, 2, self.int_time_lineedit))
         self.layout().addWidget(self.int_time_lineedit, 2, 0, 1, 1)
         self.int_time_lineedit.setText('100')
@@ -349,28 +348,28 @@ class RTCollector(QtWidgets.QWidget, GuiBuilder):
         '''
         '''
         # GRT Serial 
-        self.x_correction_combobox = self.gb_make_labeled_combobox(label_text='GRT Serial:', width=self.le_width)
+        self.x_correction_combobox = self.gb_make_labeled_combobox(label_text='GRT Serial:')
         for grt_serial in ['Lakeshore']:
             self.x_correction_combobox.addItem(grt_serial)
         self.layout().addWidget(self.x_correction_combobox, 3, 0, 1, 1)
         # Y Voltage Factor 
-        self.y_correction_lineedit = self.gb_make_labeled_lineedit(label_text='Resistance Correction Factor:', width=self.le_width)
+        self.y_correction_lineedit = self.gb_make_labeled_lineedit(label_text='Resistance Correction Factor:')
         self.layout().addWidget(self.y_correction_lineedit, 3, 1, 1, 1)
         # Data Clip
-        self.data_clip_lo_lineedit = self.gb_make_labeled_lineedit(label_text='Data Clip Lo (mK)', width=self.le_width)
+        self.data_clip_lo_lineedit = self.gb_make_labeled_lineedit(label_text='Data Clip Lo (mK)')
         self.data_clip_lo_lineedit.setText(str(0.0))
         self.data_clip_lo_lineedit.setValidator(QtGui.QDoubleValidator(-1e18, 1e18, 5, self.data_clip_lo_lineedit))
         self.layout().addWidget(self.data_clip_lo_lineedit, 4, 0, 1, 1)
-        self.data_clip_hi_lineedit = self.gb_make_labeled_lineedit(label_text='Data Clip Hi (mK)', width=self.le_width)
+        self.data_clip_hi_lineedit = self.gb_make_labeled_lineedit(label_text='Data Clip Hi (mK)')
         self.data_clip_hi_lineedit.setText(str(1000.0))
         self.data_clip_hi_lineedit.setValidator(QtGui.QDoubleValidator(-1e18, 1e18, 5, self.data_clip_hi_lineedit))
         self.layout().addWidget(self.data_clip_hi_lineedit, 4, 1, 1, 1)
         # Sample Clip
-        self.sample_clip_lo_lineedit = self.gb_make_labeled_lineedit(label_text='Sample Clip Lo', width=self.le_width)
+        self.sample_clip_lo_lineedit = self.gb_make_labeled_lineedit(label_text='Sample Clip Lo')
         self.sample_clip_lo_lineedit.setText(str(0))
         self.sample_clip_lo_lineedit.setValidator(QtGui.QIntValidator(0, 1e8, self.sample_clip_lo_lineedit))
         self.layout().addWidget(self.sample_clip_lo_lineedit, 5, 0, 1, 1)
-        self.sample_clip_hi_lineedit = self.gb_make_labeled_lineedit(label_text='Sample Clip Hi', width=self.le_width)
+        self.sample_clip_hi_lineedit = self.gb_make_labeled_lineedit(label_text='Sample Clip Hi')
         self.sample_clip_hi_lineedit.setText(str(1000000))
         self.sample_clip_hi_lineedit.setValidator(QtGui.QIntValidator(0, 1e8, self.sample_clip_hi_lineedit))
         self.layout().addWidget(self.sample_clip_hi_lineedit, 5, 1, 1, 1)
@@ -384,7 +383,7 @@ class RTCollector(QtWidgets.QWidget, GuiBuilder):
         '''
         '''
         # Sample Name
-        self.sample_name_combobox = self.gb_make_labeled_combobox(label_text='Select Sample', width=self.le_width)
+        self.sample_name_combobox = self.gb_make_labeled_combobox(label_text='Select Sample')
         for sample in sorted(self.samples_settings):
             self.sample_name_combobox.addItem(str(sample))
         self.sample_name_combobox.activated.connect(self.rtc_update_sample_name)
@@ -671,13 +670,12 @@ class Collector(QRunnable):
         '''
         self.rtc_plot_x()
         self.rtc_plot_y()
-        print('plot xy')
         self.rtc_plot_xy(running=True)
 
     def rtc_plot_x(self):
         '''
         '''
-        fig, ax = self.rtc_create_blank_fig(frac_screen_width=0.275, frac_screen_height=0.15, left=0.2, bottom=0.20, top=0.98)
+        fig, ax = self.rtc_create_blank_fig(frac_screen_width=0.25, frac_screen_height=0.15, left=0.2, bottom=0.20, top=0.98)
         ax.set_xlabel('Sample', fontsize=8)
         ax.set_ylabel('X ($V$)', fontsize=8)
         label = 'DAQ {0}'.format(self.x_channel)
@@ -690,7 +688,7 @@ class Collector(QRunnable):
     def rtc_plot_y(self):
         '''
         '''
-        fig, ax = self.rtc_create_blank_fig(frac_screen_width=0.275, frac_screen_height=0.15, left=0.2, bottom=0.20, top=0.98)
+        fig, ax = self.rtc_create_blank_fig(frac_screen_width=0.25, frac_screen_height=0.15, left=0.2, bottom=0.20, top=0.98)
         ax.set_xlabel('Sample', fontsize=8)
         ax.set_ylabel('Y ($V$)', fontsize=8)
         label = 'DAQ {0}'.format(self.y_channel)
@@ -719,7 +717,7 @@ class Collector(QRunnable):
         data_clip_lo = float(self.rtc.data_clip_lo_lineedit.text())
         data_clip_hi = float(self.rtc.data_clip_hi_lineedit.text())
         if running:
-            fig, ax = self.rtc_create_blank_fig(frac_screen_width=0.55, frac_screen_height=0.4, left=0.08, bottom=0.16, top=0.92)
+            fig, ax = self.rtc_create_blank_fig(frac_screen_width=0.4, frac_screen_height=0.4, left=0.08, bottom=0.16, top=0.92)
             y_data, y_stds = self.rtc_adjust_y_data()
             x_data, x_stds = self.rtc_adjust_x_data()
             x_data = x_data[sample_clip_lo:sample_clip_hi]
@@ -734,7 +732,7 @@ class Collector(QRunnable):
             fig.savefig('temp_xy.png', transparent=False)
             pl.close('all')
         else:
-            fig, ax = self.rtc_create_blank_fig(frac_screen_width=0.55, frac_screen_height=0.4, left=0.12, bottom=0.16, top=0.92)
+            fig, ax = self.rtc_create_blank_fig(frac_screen_width=0.4, frac_screen_height=0.4, left=0.12, bottom=0.16, top=0.92)
             self.y_data, self.y_stds = self.rtc_adjust_y_data()
             self.x_data, self.x_stds = self.rtc_adjust_x_data()
             selector =  np.where(np.logical_and(data_clip_lo < self.x_data, self.x_data < data_clip_hi))

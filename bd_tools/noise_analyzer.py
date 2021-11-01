@@ -94,8 +94,8 @@ class NoiseAnalyzer(QtWidgets.QWidget, GuiBuilder):
             self.gain_select_combobox.addItem(gains)
         self.gain_select_combobox.activated.connect(self.na_update_sample_name)
         self.layout().addWidget(self.gain_select_combobox, 3, 2, 1, 1)
-        self.squid_calbration_label = self.gb_make_labeled_label('SQ Calibration (uA/V)')
-        self.layout().addWidget(self.squid_calbration_label, 3, 3, 1, 1)
+        self.squid_calibration_label = self.gb_make_labeled_label('SQ Calibration (uA/V)')
+        self.layout().addWidget(self.squid_calibration_label, 3, 3, 1, 1)
         self.apply_calibration_checkbox = QtWidgets.QCheckBox('Apply Calibration?')
         self.apply_calibration_checkbox.setChecked(True)
         self.layout().addWidget(self.apply_calibration_checkbox, 4, 2, 1, 1)
@@ -160,7 +160,7 @@ class NoiseAnalyzer(QtWidgets.QWidget, GuiBuilder):
                 squid_calibration = float(self.squid_calibration_dict[squid])
                 break
         squid_calibration *= gain
-        self.squid_calbration_label.setText('{0:.6f}'.format(squid_calibration))
+        self.squid_calibration_label.setText('{0:.6f}'.format(squid_calibration))
 
     ###########
     # Running
@@ -259,15 +259,19 @@ class NoiseAnalyzer(QtWidgets.QWidget, GuiBuilder):
     def na_plot(self, save_path=None):
         '''
         '''
-        gain = float(self.squid_calbration_label.text())
+        #gain = float(self.squid_calibration_label.text())
+        squid_calibration = float(self.squid_calibration_label.text())
+        #squid_calibration *= gain
+        squid_calibration *= 1e-6 # uA to A
+
         int_time = float(self.int_time_lineedit.text())
         ts_fig, ts_ax = self.na_create_blank_fig(frac_screen_width=0.5, frac_screen_height=0.5,
                                                  left=0.14, right=0.98, top=0.9, bottom=0.13, aspect=None)
         ts_ax.set_xlabel('Sample', fontsize=16)
         mean_subtracted_ts = self.ts - np.mean(self.ts)
         if self.apply_calibration_checkbox.isChecked():
-            mean_subtracted_ts *= gain
-            ts_ax.set_ylabel('Current (uA)', fontsize=16)
+            mean_subtracted_ts *= squid_calibration
+            ts_ax.set_ylabel('Current (A)', fontsize=16)
         else:
             ts_ax.set_ylabel('Voltage (V)', fontsize=16)
         ts_ax.plot(mean_subtracted_ts, label='Mean Subtracted Time Stream')
@@ -276,7 +280,7 @@ class NoiseAnalyzer(QtWidgets.QWidget, GuiBuilder):
         image_to_display = QtGui.QPixmap(temp_png_path)
         self.ts_label.setPixmap(image_to_display)
         fft_fig, fft_ax = self.na_create_blank_fig(frac_screen_width=0.5, frac_screen_height=0.5,
-                                                   left=0.12, right=0.98, top=0.9, bottom=0.13, aspect=None)
+                                                   left=0.15, right=0.98, top=0.9, bottom=0.13, aspect=None)
         fft_ax.set_xlabel('Frequency ($Hz$)', fontsize=16)
         fft_ax.set_ylabel('PSD ($pA / \sqrt{Hz}$)', fontsize=16)
         bin_low_edge = float(self.noise_bin_low_edge_lineedit.text())
@@ -288,7 +292,10 @@ class NoiseAnalyzer(QtWidgets.QWidget, GuiBuilder):
         fft_ax.axvspan(bin_low_edge, bin_high_edge, alpha=0.33, color='c')
 
         nperseg = int(float(len(self.ts)) / 10.)
-        fft_freq_vector, fft_psd_vector = scipy.signal.welch(self.ts, fs=float(self.sample_rate), nperseg=nperseg)
+        ts_in_amps = self.ts * squid_calibration
+        fft_freq_vector, fft_psd_vector = scipy.signal.welch(ts_in_amps, fs=float(self.sample_rate), nperseg=nperseg)
+        fft_psd_vector *= 1e24 # A to pA
+        fft_psd_vector = np.sqrt(fft_psd_vector) # CONVERSION to ASD
 
         ##############################################
         ##############################################
@@ -349,7 +356,7 @@ class NoiseAnalyzer(QtWidgets.QWidget, GuiBuilder):
         self.fft_psd_vector = fft_psd_vector
 
     def na_create_blank_fig(self, frac_screen_width=0.5, frac_screen_height=0.8,
-                             left=0.13, right=0.98, top=0.95, bottom=0.08, n_axes=1,
+                             left=0.18, right=0.98, top=0.95, bottom=0.08, n_axes=1,
                              aspect=None):
         if frac_screen_width is None and frac_screen_height is None:
             fig = pl.figure()
