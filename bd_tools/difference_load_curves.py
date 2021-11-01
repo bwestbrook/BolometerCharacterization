@@ -198,6 +198,7 @@ class DifferenceLoadCurves(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTra
         self.band_select_combobox = self.gb_make_labeled_combobox(label_text='Detector Band')
         for band in self.bands:
             self.band_select_combobox.addItem(band)
+        self.band_select_combobox.setCurrentIndex(1)
         self.band_select_combobox.activated.connect(self.dlc_load_spectra)
         self.layout().addWidget(self.band_select_combobox, 2, 8, 1, 2)
         self.frac_rn_lineedit = self.gb_make_labeled_lineedit(label_text='Frac Rn:')
@@ -208,12 +209,14 @@ class DifferenceLoadCurves(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTra
         self.spectra_data_clip_lo_lineedit = self.gb_make_labeled_lineedit(label_text='Data Clip Lo (GHz):')
         self.spectra_data_clip_lo_lineedit.returnPressed.connect(self.dlc_load_spectra)
         self.spectra_data_clip_lo_lineedit.setText('0')
-        self.layout().addWidget(self.spectra_data_clip_lo_lineedit, 3, 8, 1, 2)
+        self.layout().addWidget(self.spectra_data_clip_lo_lineedit, 3, 8, 1, 1)
+        #
         self.spectra_data_clip_hi_lineedit = self.gb_make_labeled_lineedit(label_text='Data Clip Hi (GHz):')
-        self.spectra_data_clip_hi_lineedit.setText('300')
-        self.layout().addWidget(self.spectra_data_clip_hi_lineedit, 3, 10, 1, 2)
+        self.layout().addWidget(self.spectra_data_clip_hi_lineedit, 3, 9, 1, 1)
         self.spectra_data_clip_hi_lineedit.setText('300')
         self.spectra_data_clip_hi_lineedit.returnPressed.connect(self.dlc_load_spectra)
+        self.smoothing_factor_lineedit = self.gb_make_labeled_lineedit(label_text='Smoothing Factor:', lineedit_text='0.0')
+        self.layout().addWidget(self.smoothing_factor_lineedit, 3, 10, 1, 2)
         # Buttons
         self.difference_load_curves_pushbutton = QtWidgets.QPushButton('Difference Load Curves')
         self.difference_load_curves_pushbutton.clicked.connect(self.dlc_difference_load_curves)
@@ -266,6 +269,10 @@ class DifferenceLoadCurves(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTra
     def dlc_difference_load_curves(self):
         '''
         '''
+        band = self.band_select_combobox.currentText()
+        if len(band) == 0:
+            self.gb_quick_message("Select a band first!")
+            return None
         fig = self.dlc_plot_differenced_load_curves()
         differenced_load_curves_path = os.path.join('temp_files', 'temp_differenced_load_curves.png')
         fig.savefig(differenced_load_curves_path)
@@ -340,12 +347,16 @@ class DifferenceLoadCurves(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTra
         '''
 
         band = self.band_select_combobox.currentText()
+        smoothing_factor = float(self.smoothing_factor_lineedit.text())
         t_source_high = float(self.iv_1_t_load_lineedit.text())
         t_source_low = float(self.iv_2_t_load_lineedit.text())
         data_clip_lo = float(self.spectra_data_clip_lo_lineedit.text()) * 1e9
         data_clip_hi = float(self.spectra_data_clip_hi_lineedit.text()) * 1e9
         ax2 = fig.get_axes()[1] # Spectra
         fft_frequency_vector_processed, normalized_fft_vector_processed = self.dlc_load_spectra_data(self.spectra_path)
+        if smoothing_factor > 0:
+            normalized_fft_vector_processed = self.ftsy_running_mean(normalized_fft_vector_processed, smoothing_factor=smoothing_factor)
+        normalized_fft_vector_processed = normalized_fft_vector_processed / np.max(normalized_fft_vector_processed)
         print('data', fft_frequency_vector_processed)
         measured_delta_power, measured_integrated_bandwidth = self.ftsy_compute_delta_power_and_bandwidth_at_window(fft_frequency_vector_processed, normalized_fft_vector_processed,
                                                                                                                     data_clip_lo=data_clip_lo, data_clip_hi=data_clip_hi,
@@ -643,6 +654,7 @@ class DifferenceLoadCurves(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTra
     def dlc_load_spectra(self):
         '''
         '''
+        smoothing_factor = float(self.smoothing_factor_lineedit.text())
         t_source_high = float(self.iv_1_t_load_lineedit.text())
         t_source_low = float(self.iv_2_t_load_lineedit.text())
         data_clip_lo = float(self.spectra_data_clip_lo_lineedit.text()) * 1e9
@@ -684,6 +696,8 @@ class DifferenceLoadCurves(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTra
         label=None
         if self.iv_1_path is not None and self.iv_2_path is not None:
             label='$\Delta(P)$ {0:.2f} pW\nBW {1:.2f} GHz '.format(delta_power * 1e12, integrated_bandwidth * 1e-9)
+        if smoothing_factor > 0:
+            normalized_fft_vector_processed = self.ftsy_running_mean(normalized_fft_vector_processed, smoothing_factor=smoothing_factor)
         ax.plot(fft_frequency_vector_processed * 1e-9, normalized_fft_vector_processed, label=label)
         #ax.plot(fft_frequency_vector_simulated, fft_vector_simulated, label='HFSS Data')
         ax = self.dlc_plot_optical_elements(ax)
