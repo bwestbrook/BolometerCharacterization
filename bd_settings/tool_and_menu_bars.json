@@ -130,19 +130,13 @@
                 "function": "bd_configure_bolo_daq_gui",
                 "icon": "parameters.png"
             },
-            "02_Configure NI DAQ": {
-                "StatusTip": "Configure NI DAQ",
-                "ToolTip": "Configure NI DAQ",
-                "function": "bd_configure_ni_daq",
-                "icon": "multimeter.png"
-            },
-            "03_Configure Stepper": {
+            "02_Configure Stepper": {
                 "StatusTip": "Configure Steppers",
                 "ToolTip": "Configure Steppers",
                 "function": "bd_configure_stepper_motor",
                 "icon": "steppermotor.png"
             },
-            "04_COM Port Utility": {
+            "03_COM Port Utility": {
                 "ToolTip": "COM Port Utility",
                 "function": "bd_com_port_utility",
                 "icon": "comport.png"

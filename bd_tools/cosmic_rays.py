@@ -168,9 +168,8 @@ class CosmicRays(QtWidgets.QWidget, GuiBuilder):
         while self.started:
             data_dict = daq.run()
             for i, ch in enumerate(data_dict.keys()):
-                if not hasattr(self, 'data_{0}'.format(i + 1)):
-                    setattr(self, 'data_{0}'.format(i + 1), [])
-                    setattr(self, 'stds_{0}'.format(i + 1), [])
+                setattr(self, 'data_{0}'.format(i + 1), [])
+                setattr(self, 'stds_{0}'.format(i + 1), [])
 
                 squid = squids[i]
                 data = data_dict[ch]
@@ -181,7 +180,7 @@ class CosmicRays(QtWidgets.QWidget, GuiBuilder):
                 getattr(self, 'std_{0}_label'.format(i + 1)).setText('STD {0}: {1:.5f}'.format(squid, mean))
                 getattr(self, 'data_{0}'.format(i + 1)).extend(data['ts'])
                 getattr(self, 'stds_{0}'.format(i + 1)).append(data['std'])
-            self.cra.cra_analyze(data_dict, squids, gains, biases, scan_time)
+            #self.cra.cra_analyze(data_dict, squids, gains, biases, scan_time)
             save_path = self.cr_index_file_name()
             self.cr_plot(running=True, save_path=save_path)
             with open(save_path, 'w') as save_handle:
