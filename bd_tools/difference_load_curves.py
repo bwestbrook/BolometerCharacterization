@@ -114,7 +114,10 @@ class DifferenceLoadCurves(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTra
         self.iv_1_save_plot_pushbutton.clicked.connect(self.dlc_save_iv_1)
         # High Load
         self.iv_1_high_load_label = QtWidgets.QLabel('High Load')
-        self.layout().addWidget(self.iv_1_high_load_label, 10, 0, 1, 4)
+        self.layout().addWidget(self.iv_1_high_load_label, 10, 0, 1, 2)
+        self.iv_1_high_load_metadata_checkbox = QtWidgets.QCheckBox('Load Meta')
+        self.iv_1_high_load_metadata_checkbox.setChecked(True)
+        self.layout().addWidget(self.iv_1_high_load_metadata_checkbox, 10, 2, 1, 2)
         #############################################################
         # IV 2
         #############################################################
@@ -183,7 +186,10 @@ class DifferenceLoadCurves(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTra
         self.iv_2_save_plot_pushbutton.clicked.connect(self.dlc_save_iv_2)
         # Low Load
         self.iv_2_low_load_label = QtWidgets.QLabel('Low Load')
-        self.layout().addWidget(self.iv_2_low_load_label, 10, 4, 1, 4)
+        self.layout().addWidget(self.iv_2_low_load_label, 10, 4, 1, 2)
+        self.iv_2_high_load_metadata_checkbox = QtWidgets.QCheckBox('Load Meta')
+        self.iv_2_high_load_metadata_checkbox.setChecked(True)
+        self.layout().addWidget(self.iv_2_high_load_metadata_checkbox, 10, 6, 1, 2)
         #############################################################
         # Spectra
         #############################################################
@@ -457,6 +463,8 @@ class DifferenceLoadCurves(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTra
     def dlc_load_iv_1(self):
         '''
         '''
+        if not self.iv_1_high_load_metadata_checkbox.isChecked:
+            return None
         fig, ax = self.dlc_create_blank_fig(frac_screen_height=0.2)
         if self.iv_1_path is None:
             iv_1_path = QtWidgets.QFileDialog.getOpenFileName(self, 'Select Data File')[0]
@@ -466,7 +474,7 @@ class DifferenceLoadCurves(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTra
         else:
             iv_1_path = self.iv_1_path
         meta_data_path = iv_1_path.replace('txt', 'json')
-        if os.path.exists(meta_data_path):
+        if os.path.exists(meta_data_path) and self.iv_1_high_load_metadata_checkbox.isChecked():
             with open(meta_data_path, 'r') as fh:
                 meta_data = simplejson.load(fh)
             self.iv_1_data_clip_lo_lineedit.setText(meta_data['data_clip_lo_lineedit'])
@@ -527,6 +535,7 @@ class DifferenceLoadCurves(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTra
         pl.close('all')
         if self.spectra_path is not None and self.iv_2_path is not None:
             self.dlc_difference_load_curves()
+        self.iv_1_high_load_metadata_checkbox.setChecked(False)
 
     def dlc_save_iv_2(self):
         '''
@@ -548,7 +557,7 @@ class DifferenceLoadCurves(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTra
         else:
             iv_2_path = self.iv_2_path
         meta_data_path = iv_2_path.replace('txt', 'json')
-        if os.path.exists(meta_data_path):
+        if os.path.exists(meta_data_path) and self.iv_2_high_load_metadata_checkbox.isChecked():
             with open(meta_data_path, 'r') as fh:
                 meta_data = simplejson.load(fh)
             self.iv_2_data_clip_lo_lineedit.setText(meta_data['data_clip_lo_lineedit'])
@@ -607,6 +616,7 @@ class DifferenceLoadCurves(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTra
         pl.close('all')
         if self.spectra_path is not None and self.iv_1_path is not None:
             self.dlc_difference_load_curves()
+        self.iv_2_high_load_metadata_checkbox.setChecked(False)
 
     def dlc_load_iv_data(self, data_path):
         '''
@@ -676,6 +686,7 @@ class DifferenceLoadCurves(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTra
         fig, ax = self.dlc_create_blank_fig(left=0.1, frac_screen_width=0.4, frac_screen_height=0.2)
         fft_frequency_vector, normalized_fft_vector = self.dlc_load_spectra_data(spectra_path)
         ax.plot(fft_frequency_vector * 1e-9, normalized_fft_vector, label='Raw Data')
+        print(band)
         if len(band) > 0:
             fft_frequency_vector_simulated, fft_vector_simulated = self.ftsy_load_simulated_band(data_clip_lo, data_clip_hi, band)
             ax.plot(fft_frequency_vector_simulated, fft_vector_simulated, label='HFSS Data')

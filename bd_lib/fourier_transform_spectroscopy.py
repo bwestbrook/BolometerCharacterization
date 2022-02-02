@@ -31,6 +31,24 @@ class FourierTransformSpectroscopy():
                 'Header Lines': 'NA',
                 'Path': 'NA',
                 },
+            '90': {
+                'Active': False,
+                'Band Center': 90,
+                'Project': 'Simons Array',
+                'Freq Column': 0,
+                'Transmission Column': 1,
+                'Header Lines': 1,
+                'Path': os.path.join('bd_lib', 'simulated_bands', 'PB2abcBands.csv')
+                },
+            '150': {
+                'Active': False,
+                'Band Center': 150,
+                'Project': 'Simons Array',
+                'Freq Column': 0,
+                'Transmission Column': 2,
+                'Header Lines': 1,
+                'Path': os.path.join('bd_lib', 'simulated_bands', 'PB2abcBands.csv')
+                },
             'SO30': {
                 'Active': False,
                 'Band Center': 30,
@@ -86,14 +104,13 @@ class FourierTransformSpectroscopy():
         freq_idx = self.bands[band]['Freq Column']
         trans_idx = self.bands[band]['Transmission Column']
         header_lines = self.bands[band]['Header Lines']
-        if 'bd_lib' in data_path:
-            data_path.replace('bd_lib', '.')
         with open(data_path, 'r') as file_handle:
             lines = file_handle.readlines()
             frequency_vector = np.zeros([])
             transmission_vector = np.zeros([])
             for i, line in enumerate(lines):
                 if i > header_lines:
+                    print(line)
                     try:
                         if ',' in line:
                             frequency = line.split(',')[freq_idx].strip()
@@ -101,6 +118,7 @@ class FourierTransformSpectroscopy():
                         else:
                             frequency = line.split('\t')[freq_idx].strip()
                             transmission = line.split('\t')[trans_idx].strip()
+                        #import ipdb;ipdb.set_trace()
                         if float(data_clip_lo) < float(frequency) * 1e9 < float(data_clip_hi) and self.ftsy_is_float(transmission):
                             frequency_vector = np.append(frequency_vector, float(frequency))
                             transmission_vector = np.append(transmission_vector, float(transmission))
@@ -275,6 +293,7 @@ class FourierTransformSpectroscopy():
     def ftsy_split_data_into_left_right_points(self, position_vector, efficiency_vector):
         '''
         '''
+        print(position_vector, efficiency_vector)
         efficiency_left_data = efficiency_vector[position_vector < 0]
         efficiency_right_data = efficiency_vector[position_vector >= 0]
         position_left_data = position_vector[position_vector < 0]
@@ -672,7 +691,19 @@ class BeamSplitter():
         ##pl.show()
 
 if __name__ == '__main__':
-    bs = BeamSplitter()
-    bs.run()
+    ftsy = FourierTransformSpectroscopy()
+    band = '150'
+    data_clip_lo = 0
+    data_clip_hi = 300 * 1e9
+    t_source_low = 77
+    t_source_high = 295
+    fft_frequency_vector_simulated, fft_vector_simulated = ftsy.ftsy_load_simulated_band(data_clip_lo, data_clip_hi, band)
+    simulated_delta_power, simulated_integrated_bandwidth = ftsy.ftsy_compute_delta_power_and_bandwidth_at_window(fft_frequency_vector_simulated * 1e9, fft_vector_simulated,
+                                                                                                                  data_clip_lo=data_clip_lo, data_clip_hi=data_clip_hi,
+                                                                                                                  t_source_low=t_source_low, t_source_high=t_source_high)
+    label = '{0} {1:.2f}pW {2:.2f}GHz'.format(band, simulated_delta_power * 1e12, simulated_integrated_bandwidth * 1e-9)
+    pl.plot(fft_frequency_vector_simulated, fft_vector_simulated, label=label)
+    pl.legend()
+    pl.show()
     #fourier = Fourier()
     #fourier.run_test()

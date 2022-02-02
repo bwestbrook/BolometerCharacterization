@@ -45,8 +45,8 @@ class BeamMapper(QtWidgets.QWidget, GuiBuilder):
         self.bm_plot_time_stream([0], -1.0, 1.0)
         self.bm_plot_beam_map([], [], [], running=True)
         self.bm_plot_residual_beam_map([], [], [], [], '')
-        self.bm_plot_x_cut(np.asarray([]), np.asarray([]))
-        self.bm_plot_y_cut(np.asarray([]), np.asarray([]))
+        self.bm_plot_x_cut(x_ticks=np.asarray([]), Z_data=np.asarray([]))
+        self.bm_plot_y_cut(y_ticks=np.asarray([]), Z_data=np.asarray([]))
         self.resize(self.minimumSizeHint())
 
     def bm_update_samples(self):
@@ -170,23 +170,26 @@ class BeamMapper(QtWidgets.QWidget, GuiBuilder):
         # Source Temp
         self.source_temp_lineedit = self.gb_make_labeled_lineedit(label_text='Source Temp (K):')
         self.source_temp_lineedit.setValidator(QtGui.QDoubleValidator(0, 300, 3, self.source_temp_lineedit))
-        self.layout().addWidget(self.source_temp_lineedit, 11, 2, 1, 2)
+        self.layout().addWidget(self.source_temp_lineedit, 11, 2, 1, 1)
         # Source Frequency
         self.source_frequency_lineedit = self.gb_make_labeled_lineedit(label_text='Source Frequency (GHz):')
         self.source_frequency_lineedit.setValidator(QtGui.QDoubleValidator(0, 1000, 3, self.source_frequency_lineedit))
-        self.layout().addWidget(self.source_frequency_lineedit, 12, 0, 1, 1)
+        self.layout().addWidget(self.source_frequency_lineedit, 11, 3, 1, 1)
         # Source Power
         self.source_power_lineedit = self.gb_make_labeled_lineedit(label_text='Source Power (dBm):')
         self.source_power_lineedit.setValidator(QtGui.QDoubleValidator(-1e3, 1e3, 5, self.source_power_lineedit))
-        self.layout().addWidget(self.source_power_lineedit, 12, 1, 1, 1)
+        self.layout().addWidget(self.source_power_lineedit, 12, 0, 1, 1)
         # Source Angle
         self.source_angle_lineedit = self.gb_make_labeled_lineedit(label_text='Source Angle (degrees):')
         self.source_angle_lineedit.setValidator(QtGui.QDoubleValidator(0, 360, 2, self.source_angle_lineedit))
-        self.layout().addWidget(self.source_angle_lineedit, 12, 2, 1, 1)
+        self.layout().addWidget(self.source_angle_lineedit, 12, 1, 1, 1)
         # Source Distance
         self.source_distance_lineedit = self.gb_make_labeled_lineedit(label_text='Source Distance (in):', lineedit_text='10')
         self.source_distance_lineedit.setValidator(QtGui.QDoubleValidator(0, 360, 2, self.source_distance_lineedit))
-        self.layout().addWidget(self.source_distance_lineedit, 12, 3, 1, 1)
+        self.layout().addWidget(self.source_distance_lineedit, 12, 2, 1, 1)
+        self.plot_angles_checkbox = QtWidgets.QCheckBox('Plot Angles?')
+        self.plot_angles_checkbox.setChecked(True)
+        self.layout().addWidget(self.plot_angles_checkbox, 12, 3, 1, 1)
         # Time Stream and data label
         self.time_stream_plot_label = QtWidgets.QLabel('', self)
         self.time_stream_plot_label.setAttribute(QtCore.Qt.WA_TranslucentBackground)
@@ -239,6 +242,9 @@ class BeamMapper(QtWidgets.QWidget, GuiBuilder):
         load_pushbutton = QtWidgets.QPushButton('Load', self)
         self.layout().addWidget(load_pushbutton, 18, 2, 1, 2)
         load_pushbutton.clicked.connect(self.bm_load)
+        plot_pushbutton = QtWidgets.QPushButton('Plot', self)
+        self.layout().addWidget(plot_pushbutton, 19, 2, 1, 2)
+        load_pushbutton.clicked.connect(self.bm_plot_beam_map)
         #Call the the source type
         self.source_type_combobox.setCurrentIndex(1)
         self.source_type_combobox.setCurrentIndex(0)
@@ -291,7 +297,7 @@ class BeamMapper(QtWidgets.QWidget, GuiBuilder):
         self.x_cut_plot_label = QtWidgets.QLabel('', self)
         self.layout().addWidget(self.x_cut_plot_label, 10, 4, 4, 2)
         self.x_cut_select_combobox = self.gb_make_labeled_combobox(label_text='X Slice')
-        self.x_cut_select_combobox.activated.connect(self.bm_plot_beam_map)
+        self.x_cut_select_combobox.activated.connect(self.bm_plot_x_cut)
         self.layout().addWidget(self.x_cut_select_combobox, 14, 4, 1, 1)
         for x_tick in self.x_ticks:
             self.x_cut_select_combobox.addItem(x_tick)
@@ -302,7 +308,7 @@ class BeamMapper(QtWidgets.QWidget, GuiBuilder):
         self.layout().addWidget(self.y_cut_plot_label, 10, 6, 4, 2)
         self.device_combobox.setCurrentIndex(0)
         self.y_cut_select_combobox = self.gb_make_labeled_combobox(label_text='Y Slice')
-        self.y_cut_select_combobox.activated.connect(self.bm_plot_beam_map)
+        self.y_cut_select_combobox.activated.connect(self.bm_plot_y_cut)
         self.layout().addWidget(self.y_cut_select_combobox, 14, 6, 1, 1)
         for y_tick in self.y_ticks:
             self.y_cut_select_combobox.addItem(y_tick)
@@ -521,14 +527,14 @@ class BeamMapper(QtWidgets.QWidget, GuiBuilder):
     def bm_take_1d_cuts(self, x_ticks, y_ticks, Z_data):
         '''
         '''
-        fit_params, residuals = self.bm_plot_x_cut(x_ticks, Z_data)
+        fit_params, residuals = self.bm_plot_x_cut(x_ticks=x_ticks, Z_data=Z_data)
         fit_string = 'No X Fit'
         if fit_params is not None:
             fit_string = ''
             for param, value in zip(self.fit_params_1d_human, fit_params):
                 fit_string += '{0}: {1:.2f} '.format(param, value)
         self.x_slice_fit_label.setText(fit_string)
-        fit_params, residuals = self.bm_plot_y_cut(y_ticks, Z_data)
+        fit_params, residuals = self.bm_plot_y_cut(y_ticks=y_ticks, Z_data=Z_data)
         fit_string = 'No Y Fit'
         if fit_params is not None:
             fit_string = ''
@@ -541,6 +547,8 @@ class BeamMapper(QtWidgets.QWidget, GuiBuilder):
         '''
         #print(Z_data)
         # Process Slices
+        source_distance = float(self.source_distance_lineedit.text())
+        plot_angles = self.plot_angles_checkbox.isChecked()
         Z_fit_data = np.zeros(shape=Z_data.shape)
         good_fit = False
         pct_residual = 0.0
@@ -557,17 +565,21 @@ class BeamMapper(QtWidgets.QWidget, GuiBuilder):
             pct_residual = 1e2 * np.max(np.abs(Z_res)) / np.max(Z_data)
             good_fit = True
         except RuntimeError:
-            self.bm_plot_beam_map(x_ticks, y_ticks, Z_data, None, running=True)
+            self.bm_plot_beam_map(x_ticks, y_ticks, Z_data, running=True)
         data_string = ''
         if good_fit:
             k = 0
             for param, value in zip(self.fit_params_2d_human, fit_params):
+                units = ''
                 if 'sigma' in param or '0' in param:
                     value *= 1e-5
-                if k in (2, 4):
-                    data_string += '\n{0}: {1:.2f}\n'.format(param, value)
-                else:
-                    data_string += '{0}: {1:.2f} '.format(param, value)
+                    units = ' k-steps'
+                    if plot_angles:
+                        value = np.rad2deg(np.arctan(value / source_distance))
+                        units = ' deg'
+                elif 'theta' in param:
+                    units = ' deg'
+                data_string += '{0}: {1:.2f}{2}\n'.format(param, value, units)
                 k += 1
         self.data_string_label.setText(data_string)
         return pct_residual
@@ -633,9 +645,9 @@ class BeamMapper(QtWidgets.QWidget, GuiBuilder):
                         time.sleep(0.500) # Post Zero lock-in wait 3 or 1 time constants at 100 or 300 ms
                     # Process Slices
                     if self.scan_raster_combobox.currentText() == 'Vertical':
-                        Z_data, Z_fit_data, mean, std = self.bm_collect_data(daq, Z_data, Z_fit_data, count, i, j, direction, raster_2.size)
+                        Z_data, Z_fit_data, mean, std = self.bm_collect_data(daq, Z_data, Z_fit_data, count, x_position, y_position, i, j, direction, raster_2.size)
                     else:
-                        Z_data, Z_fit_data, mean, std = self.bm_collect_data(daq, Z_data, Z_fit_data, count, i, j, direction, raster_2.size)
+                        Z_data, Z_fit_data, mean, std = self.bm_collect_data(daq, Z_data, Z_fit_data, count, x_position, y_position, i, j, direction, raster_2.size)
                     self.bm_take_1d_cuts(x_ticks, y_ticks, Z_data)
                     pct_residual = self.bm_fit_and_plot_2d_data(x_grid, x_ticks, y_grid, y_ticks, Z_data)
                     self.bm_update_stats(start_time, count, x_position, y_position, Z_data, mean, std, pct_residual)
@@ -673,9 +685,12 @@ class BeamMapper(QtWidgets.QWidget, GuiBuilder):
             self.bm_save(fit_params)
         #self.bm_set_origin()
 
-    def bm_collect_data(self, daq, Z_data, Z_fit_data, count, x_i, y_i, direction, size_y):
+    def bm_collect_data(self, daq, Z_data, Z_fit_data, count, x_position, y_position, x_i, y_i, direction, size_y):
         '''
         '''
+        planar_distance = np.sqrt((x_position * 1e-5) ** 2 + (y_position * 1e-5) ** 2)
+        source_distance = float(self.source_distance_lineedit.text())
+        plot_angles = self.plot_angles_checkbox.isChecked()
         signal_channel = self.daq_combobox.currentText()
         data_dict = daq.run()
         data_time_stream = data_dict[signal_channel]['ts']
@@ -684,6 +699,12 @@ class BeamMapper(QtWidgets.QWidget, GuiBuilder):
         max_ = data_dict[signal_channel]['max']
         std = data_dict[signal_channel]['std']
         self.bm_plot_time_stream(data_time_stream, min_, max_)
+        if plot_angles:
+            print(mean)
+            correction_factor = np.rad2deg(np.arctan(planar_distance / source_distance))
+            print(correction_factor)
+            mean *= correction_factor
+            print(mean)
         if direction == -1:
             try:
                 if self.scan_raster_combobox.currentText() == 'Vertical':
@@ -719,7 +740,7 @@ class BeamMapper(QtWidgets.QWidget, GuiBuilder):
         '''
         for i in range(self.x_cut_select_combobox.count()):
             self.x_cut_select_combobox.setCurrentIndex(i)
-            fit_params, residuals = self.bm_plot_x_cut(x_ticks, Z_data)
+            fit_params, residuals = self.bm_plot_x_cut(x_ticks=x_ticks, Z_data=Z_data)
             self.status_bar.showMessage('Taking x cut {0}'.format(i + 1))
             QtWidgets.QApplication.processEvents()
 
@@ -728,11 +749,11 @@ class BeamMapper(QtWidgets.QWidget, GuiBuilder):
         '''
         for i in range(self.y_cut_select_combobox.count()):
             self.y_cut_select_combobox.setCurrentIndex(i)
-            fit_params, residuals = self.bm_plot_y_cut(y_ticks, Z_data)
+            fit_params, residuals = self.bm_plot_y_cut(y_ticks=y_ticks, Z_data=Z_data)
             self.status_bar.showMessage('Taking y cut {0}'.format(i + 1))
             QtWidgets.QApplication.processEvents()
 
-    def bm_index_file_name(self):
+    def bm_index_file_name(self, load=False):
         '''
         '''
         start_x = np.abs(float(self.start_position_x_lineedit.text())) / 1e5
@@ -749,30 +770,53 @@ class BeamMapper(QtWidgets.QWidget, GuiBuilder):
                     break
                 else:
                     return False, False
+            elif load:
+                return save_folder, folder_name
         return save_folder, folder_name
 
     def bm_load(self):
         '''
         '''
-        if save_folder:
-            save_path = os.path.join(save_folder, '{0}.dat'.format(folder_name))
-            self.gb_save_meta_data(save_path, 'dat')
-            with open(save_path, 'w') as save_handle:
-                for i, x_data in enumerate(self.x_posns):
-                    line = '{0:.5f}, {1:.5f}, {2:.5f}, {3:.5f}\n'.format(self.x_posns[i], self.y_posns[i], self.Z_data[i], self.Z_stds[i])
-                    save_handle.write(line)
-            self.bm_save_plots(save_folder, folder_name)
 
+        saved_path = QtWidgets.QFileDialog.getOpenFileName(self, 'Beam Data', self.data_folder)[0]
+        if saved_path:
+            self.gb_load_meta_data(saved_path, 'dat', ignore_list=['source_distance'])
+            with open(saved_path, 'r') as saved_handle:
+                lines = saved_handle.readlines()
+                self.x_posns, self.y_posns, self.Z_data, self.Z_stds = np.zeros(len(lines)), np.zeros(len(lines)), np.zeros(len(lines)), np.zeros(len(lines))
+                for i, line in enumerate(lines):
+                    line_split = line.strip('\n').split(', ')
+                    x_posn, y_posn, Z_datum, Z_std = line_split[0].strip(), line_split[1].strip(), line_split[2].strip(), line_split[3].strip()
+                    self.x_posns[i] = x_posn
+                    self.y_posns[i] = y_posn
+                    self.Z_data[i] = Z_datum
+                    self.Z_stds[i] = Z_std
+            x_grid = list(sorted(list(set(self.x_posns))))
+            y_grid = list(sorted(list(set(self.y_posns))))
+            x_ticks = [str(int(x * 1e-3)) for x in x_grid]
+            y_ticks = [str(int(x * 1e-3)) for x in y_grid]
+            X, Y = np.meshgrid(x_grid, y_grid)
+            Z_data = self.Z_data.reshape(X.shape)
+            Z_data_fit = np.zeros(shape=Z_data.shape)
+            #import ipdb;ipdb.set_trace()
+            self.bm_take_all_x_cuts(x_grid, Z_data)
+            self.bm_take_all_y_cuts(y_grid, Z_data)
+            pct_residual = self.bm_fit_and_plot_2d_data(X, x_ticks, Y, y_ticks, Z_data)
 
     def bm_save_fit_data(self, save_path, fit_params):
         '''
         '''
+        source_distance = float(self.source_distance_lineedit.text())
         fit_params_2d_human = ['Amp', 'x_0', 'y_0', 'sigma_x', 'sigma_y', 'theta']
         with open(save_path, 'w') as fh:
             for param, value in zip(fit_params_2d_human, fit_params):
-                if '0' in param or 'sigma' in param:
+                if '0' in param:
                     value *= 1e-5
                     units = ' in'
+                elif 'sigma' in param:
+                    value *= 1e-5
+                    value = np.rad2deg(np.arctan(value / source_distance))
+                    units = ' degs'
                 elif 'theta' in param:
                     units = ' degs'
                 else:
@@ -814,28 +858,36 @@ class BeamMapper(QtWidgets.QWidget, GuiBuilder):
                 new_name = plot_name.replace('temp_', '')
                 shutil.copy(os.path.join('temp_beam_files', plot_name), os.path.join(save_folder, new_name))
 
-    def bm_plot_x_cut(self, x_ticks, Z_data, x_pos=0):
+    def bm_plot_x_cut(self, index=0, x_ticks=[], Z_data=[], x_pos=0):
         '''
         '''
         fit_params, residual = None, None
         x_cut_pos = int(self.x_cut_select_combobox.currentIndex())
         x_pos = self.x_cut_select_combobox.currentText()
         x_cut_beam_path = os.path.join('temp_beam_files', 'temp_x_beam_cut_{0}.png'.format(x_pos))
+        source_distance = float(self.source_distance_lineedit.text())
+        plot_angles = self.plot_angles_checkbox.isChecked()
         if len(x_ticks) > 0 and Z_data.size > 8:
             amps = Z_data.T[x_cut_pos]
             fig, ax = self.bm_create_blank_fig(left=0.12, bottom=0.26, right=0.98, top=0.83,
                                                frac_screen_width=0.25, frac_screen_height=0.3)
-            ax.plot(x_ticks, amps, label='data')
+            x_array = x_ticks
+            if plot_angles:
+                x_ticks_in_inches = np.asarray(x_ticks, dtype=float) / 1e5 #steps to inches
+                angles = np.rad2deg(np.arctan(x_ticks_in_inches / source_distance))
+                x_array = angles
+                #print(angles)
+            ax.plot(x_array, amps, label='data')
             try:
-                fit_amps, fit_params = self.bm_fit_1d_data(x_ticks, amps)
+                fit_amps, fit_params = self.bm_fit_1d_data(x_array, amps)
                 residual = amps - fit_amps
-                ax.plot(x_ticks, fit_amps, label='fit')
-                ax.plot(x_ticks, residual, label='residual')
+                ax.plot(x_array, fit_amps, label='fit')
+                ax.plot(x_array, residual, label='residual')
             except RuntimeError:
                 print('')
-            ax.set_xlabel('Position (steps)', fontsize=12)
-            ax.set_xlabel('X cut at {0} (steps)'.format(x_pos), fontsize=12)
-            ax.set_ylabel('Amplitude', fontsize=12)
+            ax.set_title('X cut at {0} (steps)'.format(x_pos), fontsize=9)
+            ax.set_xlabel('Angles ($^{\circ}$)', fontsize=9)
+            ax.set_ylabel('Amplitude', fontsize=9)
             pl.legend()
             fig.savefig(x_cut_beam_path, transparent=True)
             pl.close('all')
@@ -844,34 +896,37 @@ class BeamMapper(QtWidgets.QWidget, GuiBuilder):
             self.x_cut_plot_label.setPixmap(image)
         return fit_params, residual
 
-    def bm_plot_y_cut(self, y_ticks, Z_data, y_pos=0):
+    def bm_plot_y_cut(self, index=0, y_ticks=[], Z_data=[], y_pos=0):
         '''
         '''
         fit_params, residual = None, None
         y_cut_pos = int(self.y_cut_select_combobox.currentIndex())
         y_pos = self.y_cut_select_combobox.currentText()
         y_cut_beam_path = os.path.join('temp_beam_files', 'temp_y_beam_cut_{0}.png'.format(y_pos))
+        source_distance = float(self.source_distance_lineedit.text())
+        plot_angles = self.plot_angles_checkbox.isChecked()
+        y_array = y_ticks
         if len(y_ticks) > 0:
             y_cut_pos = int(self.y_cut_select_combobox.currentIndex())
-            try:
-                amps = Z_data[y_cut_pos - 1][:]
-            except IndexError:
-                #print(Z_data)
-                #print(y_cut_pos)
-                import ipdb;ipdb.set_trace()
+            amps = Z_data[y_cut_pos]
             fig, ax = self.bm_create_blank_fig(left=0.12, bottom=0.26, right=0.98, top=0.83,
                                                frac_screen_width=0.25, frac_screen_height=0.3)
-            ax.plot(y_ticks, amps, label='data')
+            if plot_angles:
+                y_ticks_in_inches = np.asarray(y_ticks, dtype=float) / 1e5 #steps to inches
+                angles = np.rad2deg(np.arctan(y_ticks_in_inches / source_distance))
+                y_array = angles
+                #print(angles)
+            ax.plot(y_array, amps, label='data')
             try:
-                fit_amps, fit_params = self.bm_fit_1d_data(y_ticks, amps)
+                fit_amps, fit_params = self.bm_fit_1d_data(y_array, amps)
                 residual = amps - fit_amps
-                ax.plot(y_ticks, fit_amps, label='fit')
-                ax.plot(y_ticks, residual, label='residual')
+                ax.plot(y_array, fit_amps, label='fit')
+                ax.plot(y_array, residual, label='residual')
             except RuntimeError:
-                print('')
-            ax.set_xlabel('Position (steps)', fontsize=12)
-            ax.set_xlabel('Y cut at {0} (steps)'.format(y_pos), fontsize=12)
-            ax.set_ylabel('Amplitude', fontsize=12)
+                print(' not why fits')
+            ax.set_title('Y cut at {0} (steps)'.format(y_pos), fontsize=9)
+            ax.set_xlabel('Angles ($^{\circ}$)', fontsize=9)
+            ax.set_ylabel('Amplitude', fontsize=9)
             pl.legend()
             y_cut_beam_path = os.path.join('temp_beam_files', 'temp_y_beam_cut_{0}.png'.format(y_pos))
             fig.savefig(y_cut_beam_path, transparent=True)
@@ -898,7 +953,7 @@ class BeamMapper(QtWidgets.QWidget, GuiBuilder):
     def bm_plot_residual_beam_map(self, x_ticks=[], y_ticks=[], Z_fit=[], Z_res=[], fit_params=''):
         '''
         '''
-        fig, ax = self.bm_create_blank_fig(left=0.05, bottom=0.11, right=0.98, top=0.9,
+        fig, ax = self.bm_create_blank_fig(left=0.05, bottom=0.21, right=0.98, top=0.9,
                                            frac_screen_width=0.3, frac_screen_height=0.4,
                                            aspect='equal')
         if len(x_ticks) > 0:
@@ -907,53 +962,74 @@ class BeamMapper(QtWidgets.QWidget, GuiBuilder):
             else:
                 ax_image = ax.contour(Z_fit)
             ax_image = ax.pcolormesh(Z_res, label=str(fit_params))
+            ax = self.bm_configure_axes(ax, x_ticks, y_ticks)
             ax.set_title('Beam Fit and Residual', fontsize=12)
-            ax.set_xlabel('X Position (k-steps)', fontsize=12)
-            ax.set_ylabel('Y Position (k-steps)', fontsize=12)
-            x_tick_locs = [0.5 + x for x in range(len(x_ticks))]
-            y_tick_locs = [0.5 + x for x in range(len(x_ticks))]
-            y_cut_idx = int(self.y_cut_select_combobox.currentIndex())
-            x_cut_idx = int(self.x_cut_select_combobox.currentIndex())
-            ax.axvline(x_tick_locs[x_cut_idx], color='r', lw=3, alpha=0.75)
-            ax.axhline(y_tick_locs[y_cut_idx], color='m', lw=3, alpha=0.75)
-            ax.set_xticks(x_tick_locs)
-            ax.set_yticks(y_tick_locs)
-            ax.set_xticklabels(x_ticks, rotation=35, fontsize=10)
-            ax.set_yticklabels(y_ticks, fontsize=10)
             color_bar = fig.colorbar(ax_image, ax=ax)
         fig.savefig(os.path.join('temp_beam_files', 'temp_beammap_res.png'), transparent=True)
         pl.close('all')
         image = QtGui.QPixmap(os.path.join('temp_beam_files', 'temp_beammap_res.png'))
         self.residual_beam_map_plot_label.setPixmap(image)
 
-    def bm_plot_beam_map(self, x_ticks=[], y_ticks=[], Z=[], fit_Z=None, x_cut_pos=0, y_cut_pos=0, running=False):
+    def bm_plot_beam_map(self, x_ticks=[], y_ticks=[], Z=[], fit_Z=None, running=False):
         '''
         '''
-        fig, ax = self.bm_create_blank_fig(left=0.05, bottom=0.11, right=0.98, top=0.9,
+        fig, ax = self.bm_create_blank_fig(left=0.05, bottom=0.21, right=0.98, top=0.9,
                                            frac_screen_width=0.3, frac_screen_height=0.4,
                                            aspect='equal')
+        plot_angles = self.plot_angles_checkbox.isChecked()
         if type(x_ticks) == int:
             x_tick_index = x_ticks
-            ax.axvline(self.x_ticks[x_tick_index], color='r', lw=3)
+        elif type(x_ticks) == bool:
+            return None
         elif len(x_ticks) > 0:
             if self.reverse_scan_checkbox.isChecked():
                 ax_image = ax.pcolormesh(np.flip(Z))
             else:
                 ax_image = ax.pcolormesh(Z)
+            ax = self.bm_configure_axes(ax, x_ticks, y_ticks)
             ax.set_title('BEAM DATA', fontsize=12)
-            ax.set_xlabel('X Position (k-steps)', fontsize=12)
-            ax.set_ylabel('Y Position (k-steps)', fontsize=12)
-            x_tick_locs = [0.5 + x for x in range(len(self.x_ticks))]
-            y_tick_locs = [0.5 + x for x in range(len(self.y_ticks))]
-            ax.set_xticks(x_tick_locs)
-            ax.set_yticks(y_tick_locs)
-            ax.set_xticklabels(x_ticks, rotation=35, fontsize=10)
-            ax.set_yticklabels(y_ticks, fontsize=10)
             color_bar = fig.colorbar(ax_image, ax=ax)
         fig.savefig(os.path.join('temp_beam_files', 'temp_beam.png'), transparent=True)
         pl.close('all')
         image = QtGui.QPixmap(os.path.join('temp_beam_files', 'temp_beam.png'))
         self.beam_map_plot_label.setPixmap(image)
+
+    def bm_configure_axes(self, ax, x_ticks, y_ticks):
+        '''
+        '''
+        plot_angles = self.plot_angles_checkbox.isChecked()
+        source_distance = float(self.source_distance_lineedit.text())
+        x_tick_locs = [0.5 + x for x in range(len(self.x_ticks))]
+        y_tick_locs = [0.5 + x for x in range(len(self.y_ticks))]
+        x_label = 'X Position (k-steps)'
+        y_label = 'Y Position (k-steps)'
+        x_ticks_labels = x_ticks
+        y_ticks_labels = y_ticks
+        if plot_angles:
+            x_label = 'X Position ($^\circ$)'
+            y_label = 'Y Position ($^\circ$)'
+            print(x_ticks)
+            print(y_ticks)
+            x_ticks_labels = ['{0:.1f}'.format(np.rad2deg(np.arctan((float(x) / 1e2) / source_distance))) for x in x_ticks]
+            y_ticks_labels = ['{0:.1f}'.format(np.rad2deg(np.arctan((float(y) / 1e2) / source_distance))) for y in y_ticks]
+        print(x_ticks_labels)
+        print(x_ticks_labels)
+        ax.set_xticks(x_tick_locs)
+        ax.set_yticks(y_tick_locs)
+        ax.set_xticklabels(x_ticks_labels, rotation=35, fontsize=10)
+        ax.set_yticklabels(y_ticks_labels, fontsize=10)
+        ax.set_xlabel(x_label, fontsize=10)
+        ax.set_ylabel(y_label, fontsize=10)
+        #y_cut_idx = int(self.y_cut_select_combobox.currentIndex())
+        #x_cut_idx = int(self.x_cut_select_combobox.currentIndex())
+        #ax.axvline(x_tick_locs[x_cut_idx], color='r', lw=3, alpha=0.75)
+        #ax.axhline(y_tick_locs[y_cut_idx], color='m', lw=3, alpha=0.75)
+        #ax.set_xticks(x_tick_locs)
+        #ax.set_yticks(y_tick_locs)
+        #ax.set_xticklabels(x_ticks, rotation=35, fontsize=10)
+        #ax.set_yticklabels(y_ticks, fontsize=10)
+        return ax
+
 
     def bm_create_blank_fig(self, frac_screen_width=0.5, frac_screen_height=0.8,
                             left=0.18, right=0.98, top=0.95, bottom=0.08, n_axes=1,
@@ -967,22 +1043,13 @@ class BeamMapper(QtWidgets.QWidget, GuiBuilder):
             height = (frac_screen_height * self.screen_resolution.height()) / self.monitor_dpi
             fig = pl.figure(figsize=(width, height))
         fig.subplots_adjust(left=left, right=right, top=top, bottom=bottom)
-        if n_axes == 2:
-            ax1 = fig.add_subplot(211, label='int')
-            ax2 = fig.add_subplot(212, label='spec')
-            ax1.tick_params(axis='x', labelsize=font_label_size)
-            ax1.tick_params(axis='y', labelsize=font_label_size)
-            ax2.tick_params(axis='x', labelsize=font_label_size)
-            ax2.tick_params(axis='y', labelsize=font_label_size)
-            return fig, ax1, ax2
+        if aspect is None:
+            ax = fig.add_subplot(111)
         else:
-            if aspect is None:
-                ax = fig.add_subplot(111)
-            else:
-                ax = fig.add_subplot(111, aspect=aspect)
-            ax.tick_params(axis='x', labelsize=font_label_size)
-            ax.tick_params(axis='y', labelsize=font_label_size)
-            return fig, ax
+            ax = fig.add_subplot(111, aspect=aspect)
+        ax.tick_params(axis='x', labelsize=font_label_size)
+        ax.tick_params(axis='y', labelsize=font_label_size)
+        return fig, ax
 
     ################################# 
     # Math and Fitting Functions    #

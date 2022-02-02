@@ -15,7 +15,16 @@ from bd_tools.configure_stepper_motor import ConfigureStepperMotor
 
 class FourierTransformSpectrometer(QtWidgets.QWidget, GuiBuilder, FourierTransformSpectroscopy):
 
-    def __init__(self, daq_settings, status_bar, screen_resolution, monitor_dpi, csm_widget, srs_widget, data_folder):
+    def __init__(self,
+            daq_settings,
+            status_bar,
+            screen_resolution,
+            monitor_dpi,
+            csm_widget,
+            srs_widget,
+            data_folder):
+            #csm_input_polarizer_widget,
+            #csm_output_polarizer_widget,
         '''
         '''
         super(FourierTransformSpectrometer, self).__init__()
@@ -26,6 +35,8 @@ class FourierTransformSpectrometer(QtWidgets.QWidget, GuiBuilder, FourierTransfo
         self.status_bar = status_bar
         self.srs_widget = srs_widget
         self.csm_widget = csm_widget
+        #self.csm_input_polarizer_widget = csm_input_polarizer_widget
+        #self.csm_output_polarizer_widget = csm_output_polarizer_widget
         self.daq_settings = daq_settings
         self.screen_resolution = screen_resolution
         self.monitor_dpi = monitor_dpi
