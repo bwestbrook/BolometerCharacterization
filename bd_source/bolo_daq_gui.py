@@ -584,11 +584,15 @@ class BoloDAQGui(QtWidgets.QMainWindow, GuiBuilder):
         '''
         self.gb_initialize_panel('central_widget')
         dialog = 'Select the comport for the stepper motor you wish to configure'
-        stepper_motor_ports = [self.com_ports_dict['FTS Mirror Motor'],]
+        if self.dewar == '576':
+            stepper_motor_ports = ['COM12', 'COM13', 'COM14']
+        elif self.dewar == 'BlueForsDR1':
+            stepper_motor_ports = ['COM12', 'COM13', 'COM14']
+        else:
+            stepper_motor_ports = []
         com_port, okPressed = self.gb_quick_static_info_gather(title='', dialog=dialog, items=stepper_motor_ports)
         if not hasattr(self, 'csm_widget_{0}'.format(com_port)) and okPressed:
             csm_widget = ConfigureStepperMotor(com_port, self.status_bar)
-            #csm_widget.csm_get_motor_state()
             setattr(self, 'csm_widget_{0}'.format(com_port), csm_widget)
         elif okPressed:
             csm_widget = getattr(self, 'csm_widget_{0}'.format(com_port))
@@ -760,6 +764,27 @@ class BoloDAQGui(QtWidgets.QMainWindow, GuiBuilder):
                 setattr(self, 'ser_{0}'.format(com_port), serial_com)
                 if serial_com is not None:
                     self.srs_sr830dsp_widget = StanfordResearchSystemsSR830DSP(serial_com, com_port, self.status_bar, self.screen_resolution, self.monitor_dpi)
+                else:
+                    self.srs_sr830dsp_widget = None
+        dialog = 'Select the comport for the stepper motor you wish to configure'
+        for motor in ['FTS Mirror Motor']:
+            sm_com_port = self.com_ports_dict[motor]
+            if not hasattr(self, 'csm_widget_{0}'.format(sm_com_port)) and okPressed:
+                if getattr(self, 'ser_{0}'.format(com_port)) is None:
+                    setattr(self, 'csm_widget_{0}'.format(sm_com_port), None)
+                    csm_widget = None
+                else:
+                    csm_widget = ConfigureStepperMotor(sm_com_port, self.status_bar)
+                setattr(self, 'csm_widget_{0}'.format(sm_com_port), csm_widget)
+            elif okPressed:
+                csm_widget = getattr(self, 'csm_widget_{0}'.format(sm_com_port))
+            else:
+                return None
+            #self.srs_sr830dsp_widget = None
+            if motor == 'FTS Mirror Motor':
+                csm_mirror_widget = csm_widget
+        if not hasattr(self, 'fts_widget'):
+            self.fts_widget = FourierTransformSpectrometer(self.daq_settings, self.status_bar, self.screen_resolution, self.monitor_dpi, csm_mirror_widget, self.srs_sr830dsp_widget, self.data_folder)
         sm_com_port = self.com_ports_dict['FTS Mirror Motor']
         if not hasattr(self, 'ser_{0}'.format(sm_com_port)):
             if hasattr(self, 'csm_widget_{0}'.format(sm_com_port)):
