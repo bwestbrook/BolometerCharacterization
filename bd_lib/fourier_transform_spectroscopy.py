@@ -1,6 +1,5 @@
 import os
 import numpy as np
-import pylab as pl
 import scipy.fftpack
 from pprint import pprint
 from copy import copy, deepcopy

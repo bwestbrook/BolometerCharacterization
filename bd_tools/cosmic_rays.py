@@ -1,14 +1,15 @@
 import time
 import os
 import simplejson
-import pylab as pl
 import numpy as np
 from copy import copy
 from datetime import datetime
+
 from pprint import pprint
 from bd_lib.bolo_daq import BoloDAQ
 from PyQt5 import QtCore, QtGui, QtWidgets
 from GuiBuilder.gui_builder import GuiBuilder, GenericClass
+from bd_lib.mpl_canvas import MplCanvas
 from bd_lib.cosmic_ray_analyzer import CosmicRayAnalyzer
 
 class CosmicRays(QtWidgets.QWidget, GuiBuilder):
@@ -18,6 +19,7 @@ class CosmicRays(QtWidgets.QWidget, GuiBuilder):
         '''
         super(CosmicRays, self).__init__()
         self.cra = CosmicRayAnalyzer()
+        self.mplc = MplCanvas(self, screen_resolution, monitor_dpi)
         self.status_bar = status_bar
         self.daq_settings = daq_settings
         self.screen_resolution = screen_resolution
@@ -245,12 +247,20 @@ class CosmicRays(QtWidgets.QWidget, GuiBuilder):
     def cr_plot(self, running=False, save_path=None):
         '''
         '''
-        fig_axes = self.cr_create_blank_fig(frac_screen_width=0.8, frac_screen_height=0.5,
-                                             left=0.12, right=0.98, top=0.9, bottom=0.13, aspect=None, n_axes=self.n_samples)
-        fig = fig_axes[0]
-        axes = fig_axes[1:]
-        #ax1.errorbar(range(len(self.data_1)), self.daa_1, yerr=self.stds_1, marker='.', linestyle='-')
-        #ax2.errorbar(range(len(self.data_2)), self.data_2, yerr=self.stds_2, marker='.', linestyle='-')
+
+        axes_names = ['Ch {0}'.format(i + 1) for i in range(self.n_samples)]
+        fig =self.mplc.mplc_create_horizontal_array_fig(
+            name='Cosmic Rays',
+            axes_names=axes_names,
+            left=0.05,
+            right=0.98,
+            top=0.95,
+            bottom=0.2,
+            frac_screen_width=0.8,
+            frac_screen_height=0.3,
+            wspace=0.15,
+            hspace=0.05)
+        axes = fig.get_axes()
         for i in range(1, self.n_samples + 1):
             axes[i - 1].plot(getattr(self, 'data_{0}'.format(i)))
         if running:
@@ -260,38 +270,9 @@ class CosmicRays(QtWidgets.QWidget, GuiBuilder):
             self.running_plot_label.setPixmap(image_to_display)
             if save_path is not None:
                 fig.savefig(save_path.replace('txt', 'png'))
-            pl.close('all')
+            for ax in fig.get_axes():
+                ax.cla()
 
         else:
             title, okPressed = self.gb_quick_info_gather(title='Plot Title', dialog='What is the title of this plot?')
             ax1.set_title(title)
-            pl.show()
-
-    def cr_create_blank_fig(self, frac_screen_width=0.5, frac_screen_height=0.8,
-                             left=0.13, right=0.98, top=0.95, bottom=0.08, n_axes=2,
-                             aspect=None):
-        if frac_screen_width is None and frac_screen_height is None:
-            fig = pl.figure()
-        else:
-            width = (frac_screen_width * self.screen_resolution.width()) / self.monitor_dpi
-            height = (frac_screen_height * self.screen_resolution.height()) / self.monitor_dpi
-            fig = pl.figure(figsize=(width, height))
-        fig.subplots_adjust(left=left, right=right, top=top, bottom=bottom)
-        if n_axes == 4:
-            ax1 = fig.add_subplot(411, label='ch 1')
-            ax2 = fig.add_subplot(412, label='ch 2')
-            ax3 = fig.add_subplot(413, label='ch 3')
-            ax4 = fig.add_subplot(414, label='ch 4')
-            return fig, ax1, ax2, ax3, ax4
-        if n_axes == 3:
-            ax1 = fig.add_subplot(311, label='ch 1')
-            ax2 = fig.add_subplot(312, label='ch 2')
-            ax3 = fig.add_subplot(313, label='ch 3')
-            return fig, ax1, ax2, ax3
-        elif n_axes == 2:
-            ax1 = fig.add_subplot(211, label='ch 1')
-            ax2 = fig.add_subplot(212, label='ch 2')
-            return fig, ax1, ax2
-        else:
-            ax = fig.add_subplot(111)
-            return fig, ax

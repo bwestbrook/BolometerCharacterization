@@ -1,8 +1,4 @@
-import matplotlib
 import os
-matplotlib.use('TkAgg')
-import pylab as pl
-#from DFT import *
 import numpy as np
 import numpy.polynomial.polynomial as poly
 from scipy import signal

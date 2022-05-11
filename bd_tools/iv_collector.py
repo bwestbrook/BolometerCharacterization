@@ -2,16 +2,16 @@ import time
 import shutil
 import os
 import simplejson
-import pylab as pl
 import numpy as np
 import pickle as pkl
 from copy import copy
 from datetime import datetime
 from pprint import pprint
 from bd_lib.bolo_daq import BoloDAQ
+from bd_lib.mpl_canvas import MplCanvas
 from bd_lib.iv_curve_lib import IVCurveLib
-from bd_lib.fourier_transform_spectroscopy import FourierTransformSpectroscopy
 from bd_lib.saving_manager import SavingManager
+from bd_lib.fourier_transform_spectroscopy import FourierTransformSpectroscopy
 from PyQt5 import QtCore, QtGui, QtWidgets
 from GuiBuilder.gui_builder import GuiBuilder, GenericClass
 
@@ -21,6 +21,7 @@ class IVCollector(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTransformSpe
         '''
         '''
         super(IVCollector, self).__init__()
+        self.mplc = MplCanvas(self, screen_resolution, monitor_dpi)
         self.bands = self.ftsy_get_bands()
         self.status_bar = status_bar
         self.daq_settings = daq_settings
@@ -198,16 +199,16 @@ class IVCollector(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTransformSpe
         self.data_clip_lo_lineedit.returnPressed.connect(self.ivc_plot_running)
         self.data_clip_lo_lineedit.setValidator(QtGui.QDoubleValidator(0, 1e5, 2, self.data_clip_lo_lineedit))
         self.layout().addWidget(self.data_clip_lo_lineedit, 6, 0, 1, 1)
-        self.data_clip_hi_lineedit = self.gb_make_labeled_lineedit(label_text='Data Clip Hi (uV)', lineedit_text='100.0')
+        self.data_clip_hi_lineedit = self.gb_make_labeled_lineedit(label_text='Data Clip Hi (uV)', lineedit_text='10.0')
         self.data_clip_hi_lineedit.returnPressed.connect(self.ivc_plot_running)
         self.data_clip_hi_lineedit.setValidator(QtGui.QDoubleValidator(0, 1e5, 2, self.data_clip_hi_lineedit))
         self.layout().addWidget(self.data_clip_hi_lineedit, 6, 1, 1, 1)
         # Fit Clip
-        self.fit_clip_lo_lineedit = self.gb_make_labeled_lineedit(label_text='Fit Clip Lo (uV)', lineedit_text='0.0')
+        self.fit_clip_lo_lineedit = self.gb_make_labeled_lineedit(label_text='Fit Clip Lo (uV)', lineedit_text='1.0')
         self.fit_clip_lo_lineedit.returnPressed.connect(self.ivc_plot_running)
         self.layout().addWidget(self.fit_clip_lo_lineedit, 7, 0, 1, 1)
         self.fit_clip_lo_lineedit.setValidator(QtGui.QDoubleValidator(0, 1e5, 2, self.fit_clip_lo_lineedit))
-        self.fit_clip_hi_lineedit = self.gb_make_labeled_lineedit(label_text='Fit Clip Hi (uV)', lineedit_text='100.0')
+        self.fit_clip_hi_lineedit = self.gb_make_labeled_lineedit(label_text='Fit Clip Hi (uV)', lineedit_text='4.0')
         self.fit_clip_hi_lineedit.setValidator(QtGui.QDoubleValidator(0, 1e5, 2, self.fit_clip_hi_lineedit))
         self.fit_clip_hi_lineedit.returnPressed.connect(self.ivc_plot_running)
         self.layout().addWidget(self.fit_clip_hi_lineedit, 7, 1, 1, 1)
@@ -457,14 +458,23 @@ class IVCollector(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTransformSpe
     def ivc_plot_x(self):
         '''
         '''
-        fig, ax = self.ivc_create_blank_fig(frac_screen_width=0.4, frac_screen_height=0.3, left=0.15)
+        fig, ax = self.mplc.mplc_create_basic_fig(
+            name='x_fig',
+            left=0.18,
+            right=0.95,
+            bottom=0.25,
+            top=0.88,
+            frac_screen_height=0.15,
+            frac_screen_width=0.3)
         ax.set_xlabel('Sample', fontsize=12)
         ax.set_ylabel('X ($V$)', fontsize=12)
         label = 'DAQ {0}'.format(self.x_channel)
+        if len(self.x_data) > 1:
+            label = None
         ax.errorbar(range(len(self.x_data)), self.x_data, self.x_stds, marker='.', linestyle='None', label=label)
-        pl.legend(loc='best', fontsize=12)
+        if len(self.x_data) > 0:
+            ax.legend(loc='best', fontsize=12)
         fig.savefig('temp_x.png', transparent=True)
-        pl.close('all')
         image_to_display = QtGui.QPixmap('temp_x.png')
         self.x_time_stream_label.setPixmap(image_to_display)
         os.remove('temp_x.png')
@@ -472,14 +482,22 @@ class IVCollector(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTransformSpe
     def ivc_plot_y(self):
         '''
         '''
-        fig, ax = self.ivc_create_blank_fig(frac_screen_width=0.4, frac_screen_height=0.3, left=0.15)
+        fig, ax = self.mplc.mplc_create_basic_fig(
+            name='x_fig',
+            left=0.18,
+            right=0.95,
+            bottom=0.25,
+            top=0.88,
+            frac_screen_height=0.15,
+            frac_screen_width=0.3)
         ax.set_xlabel('Sample', fontsize=12)
         ax.set_ylabel('Y ($V$)', fontsize=12)
         label = 'DAQ {0}'.format(self.y_channel)
+        if len(self.x_data) > 1:
+            label = None
         ax.errorbar(range(len(self.y_data)), self.y_data, self.y_stds, marker='.', linestyle='None', label=label)
-        pl.legend(loc='best', fontsize=12)
+        ax.legend(loc='best', fontsize=12)
         fig.savefig('temp_y.png', transparent=True)
-        pl.close('all')
         image_to_display = QtGui.QPixmap('temp_y.png')
         self.y_time_stream_label.setPixmap(image_to_display)
         os.remove('temp_y.png')
@@ -487,119 +505,231 @@ class IVCollector(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTransformSpe
     def ivc_plot_xy(self, file_name=''):
         '''
         '''
+        #####################################
+        # Screen for bad input
+        #####################################
         if len(self.x_data) == 0:
             return None
-        fig, ax = self.ivc_create_blank_fig(frac_screen_width=0.9, frac_screen_height=0.4, left=0.1, wspace=0.1, top=0.9)
+        if not self.gb_is_float(self.data_clip_lo_lineedit.text()):
+            return None
+        if not self.gb_is_float(self.data_clip_hi_lineedit.text()):
+            return None
+        if not self.gb_is_float(self.fit_clip_lo_lineedit.text()):
+            return None
+        if not self.gb_is_float(self.fit_clip_hi_lineedit.text()):
+            return None
+
+        #####################################
+        # Plot creation labeling Plotting
+        #####################################
+        fig = self.mplc.mplc_create_iv_paneled_plot(
+            name='xy_fig',
+            left=0.18,
+            right=0.95,
+            bottom=0.25,
+            top=0.88,
+            frac_screen_height=0.5,
+            frac_screen_width=0.5,
+            hspace=0.3,
+            wspace=0.2)
+
+        ax1, ax2, ax3, ax4 = fig.get_axes()
+
+        ax1.set_xlabel("Voltage ($\mu$V)", fontsize=12)
+        ax1.set_ylabel("Current ($\mu$A)", fontsize=12)
+        ax3.set_xlabel("Voltage ($\mu$V)", fontsize=12)
+        ax3.set_ylabel("Res ($\Omega$)", fontsize=12)
+        ax4.set_xlabel("Res ($\Omega$)", fontsize=12)
+        ax4.set_ylabel("Power ($pW$)", fontsize=12)
+
+        # Set the titles
         sample_name = self.sample_name_lineedit.text()
+        ax1.set_title('IV of {0}'.format(sample_name))
+        ax3.set_title('RV of {0}'.format(sample_name))
+        ax4.set_title('PR of {0}'.format(sample_name))
         t_bath = self.t_bath_lineedit.text()
         t_load = self.t_load_lineedit.text()
+        title = '{0}\n@{1}mK with {2}K Load'.format(sample_name, t_bath, t_load)
+        ax1.set_title(title, fontsize=14)
+
+        #####################################
+        # Data Plotting
+        #####################################
+
         data_clip_lo = float(self.data_clip_lo_lineedit.text())
         data_clip_hi = float(self.data_clip_hi_lineedit.text())
         fit_clip_lo = float(self.fit_clip_lo_lineedit.text())
         fit_clip_hi = float(self.fit_clip_hi_lineedit.text())
-        squid_calibration_factor = float(self.squid_calibration_label.text().split(' ')[1])
-        x_correction_factor = float(self.x_correction_label.text().split(' ')[1])
-        i_bolo_real = self.ivc_fit_and_remove_squid_offset()
-        i_bolo_std = np.asarray(self.y_stds) * squid_calibration_factor
-        v_bias_real = np.asarray(self.x_data) * x_correction_factor * 1e6 #uV
-        v_bias_std = np.asarray(self.x_stds) * x_correction_factor * 1e6 #uV
-        #v_bias_real = np.asarray(self.x_data) * float(2e-6) * 1e6 #uV
-        #v_bias_std = np.asarray(self.x_stds) * float(2e-6) * 1e6
-        fit_selector = np.where(np.logical_and(fit_clip_lo < v_bias_real, v_bias_real < fit_clip_hi))
-        try:
-            fit_vals = np.polyfit(v_bias_real[fit_selector], i_bolo_real[fit_selector], 1)
-            resistance = 1.0 / fit_vals[0]
-            fit_vector = np.polyval(fit_vals, v_bias_real)
-            ax.plot(v_bias_real[fit_selector], fit_vector[fit_selector], '-', lw=3, color='r', label='fit')
-        except TypeError:
-            resistance = np.nan
-        selector =  np.where(np.logical_and(data_clip_lo < v_bias_real, v_bias_real < data_clip_hi))
-        title = 'IV Curve for {0}'.format(self.sample_name_lineedit.text())
+
+        v_bolo_real, v_bolo_stds = self.ivc_adjust_x_data()
+        i_bolo_real, i_bolo_stds, fit_vals = self.ivc_adjust_y_data()
+        resistance = 1.0 / fit_vals[0] # in Ohms
+
+        p_bolo = v_bolo_real * i_bolo_real
+        r_bolo = v_bolo_real / i_bolo_real
+
+        x_fit_vector = np.arange(fit_clip_lo, fit_clip_hi, 0.02)
+        y_fit_vector = np.polyval(fit_vals, x_fit_vector) - fit_vals[1]
+        if fit_vals[0] < 0:
+            y_fit_vector *= -1
+        fit_selector = np.where(np.logical_and(fit_clip_lo < x_fit_vector, x_fit_vector < fit_clip_hi))
+
+        plot_selector =  np.where(np.logical_and(data_clip_lo < v_bolo_real, v_bolo_real < data_clip_hi))
+
         label = 'R={0:.3f} ($\Omega$)'.format(resistance)
-        self.x_data_real = v_bias_real
-        self.x_stds_real = v_bias_std
+        if len(self.x_data) > 1:
+            label = None
+
+        ax1.plot(x_fit_vector[fit_selector], y_fit_vector[fit_selector], '-', lw=3, color='r', label='fit')
+        ax1.plot(v_bolo_real[plot_selector], i_bolo_real[plot_selector], '.', label=label)
+        if len(i_bolo_stds) > 0:
+            ax1.errorbar(v_bolo_real[plot_selector], i_bolo_real[plot_selector], yerr=i_bolo_stds[plot_selector],
+                         label='error', marker='.', linestyle='None', alpha=0.25)
+        if len(v_bolo_real) > 2 and len(i_bolo_real[plot_selector]) > 0:
+            print(len(i_bolo_real[plot_selector]))
+            print(len(i_bolo_real))
+            pt_idx = np.where(i_bolo_real[plot_selector] == min(i_bolo_real[plot_selector]))[0][0]
+            pl_idx = np.where(v_bolo_real[plot_selector] == min(v_bolo_real[plot_selector]))[0][0]
+            pturn_pw = i_bolo_real[plot_selector][pt_idx] * v_bolo_real[plot_selector][pt_idx]
+            plast_pw = i_bolo_real[plot_selector][pl_idx] * v_bolo_real[plot_selector][pl_idx]
+            ax1.plot(v_bolo_real[plot_selector][pt_idx], i_bolo_real[plot_selector][pt_idx],
+                     '*', markersize=10.0, color='g', label='Pturn = {0:.2f} pW'.format(pturn_pw))
+            ax1.plot(v_bolo_real[plot_selector][pl_idx], i_bolo_real[plot_selector][pl_idx],
+                     '*', markersize=10.0, color='m', label='Plast = {0:.2f} pW'.format(plast_pw))
+        ax3.plot(v_bolo_real[plot_selector], r_bolo[plot_selector], 'b', label='Res {0:.4f} ($\Omega$)'.format(1.0 / fit_vals[0]))
+        ax4.plot(r_bolo[plot_selector], p_bolo[plot_selector], 'r', label='Power (pW)')
+        # Grab all the labels and combine them 
+        handles, labels = ax1.get_legend_handles_labels()
+        handles += ax3.get_legend_handles_labels()[0]
+        labels += ax3.get_legend_handles_labels()[1]
+        handles += ax4.get_legend_handles_labels()[0]
+        labels += ax4.get_legend_handles_labels()[1]
+        ax2.legend(handles, labels, numpoints=1, mode="expand", frameon=False, bbox_to_anchor=(0, 0.1, 1, 1))
+        #####################################
+        # For Saving
+        #####################################
+        self.x_data_real = v_bolo_real
+        self.x_stds_real = v_bolo_stds
         self.y_data_real = i_bolo_real
-        self.y_stds_real = i_bolo_std
-        #ax.errorbar(v_bias_real[selector], i_bolo_real[selector], xerr=v_bias_std[selector], yerr=i_bolo_std[selector], marker='.', linestyle='-', label=label)
-        fig = self.ivlib_plot_all_curves(v_bias_real, i_bolo_real, bolo_current_stds=i_bolo_std,
-                                         fit_clip=(fit_clip_lo, fit_clip_hi), plot_clip=(data_clip_lo, data_clip_hi),
-                                         sample_name=sample_name, t_bath=t_bath, t_load=t_load)
-        ax.set_xlabel('Bias Voltage ($\mu V$)', fontsize=14)
-        ax.set_ylabel('TES Current ($\mu A$)', fontsize=14)
-        ax.set_title(title, fontsize=14)
-        pl.legend(loc='best', fontsize=14)
+        self.y_stds_real = i_bolo_stds
         fig.savefig('temp_iv_all.png', transparent=True)
-        pl.close('all')
         image_to_display = QtGui.QPixmap('temp_iv_all.png')
         self.xy_scatter_label.setPixmap(image_to_display)
 
     def ivc_adjust_x_data(self):
         '''
         '''
-        x_data = []
-        x_stds = []
-        voltage_reduction_factor = float(self.x_correction_label.text())
-        x_data = np.asarray(self.x_data) * voltage_reduction_factor * 1e6 #uV
-        x_stds = np.asarray(self.x_stds) * voltage_reduction_factor * 1e6 #uV
-        return x_data, x_stds
+        voltage_reduction_factor = (self.x_correction_label.text().split(' ')[1])
+        if not self.gb_is_float(voltage_reduction_factor):
+            return None
+        voltage_reduction_factor = float(voltage_reduction_factor)
+        v_bolo_real = np.asarray(self.x_data) * voltage_reduction_factor * 1e6 #uV
+        v_bolo_stds = np.asarray(self.x_stds) * voltage_reduction_factor * 1e6 #uV
+        return v_bolo_real, v_bolo_stds
 
     def ivc_adjust_y_data(self):
         '''
         '''
-        y_data = []
-        y_stds = []
-        calibration_factor = float(self.squid_calibration_label.text().split(' ')[1])
-        y_data = np.asarray(self.y_data) * calibration_factor
-        y_stds = np.asarray(self.y_stds) * calibration_factor
-        return y_data, y_stds
+        i_bolo_real, i_bolo_stds, resistance = self.ivc_fit_and_remove_squid_offset()
+        return i_bolo_real, i_bolo_stds, resistance
 
     def ivc_fit_and_remove_squid_offset(self, polyfit_n=1):
         '''
         '''
-        calibration_factor = float(self.squid_calibration_label.text().split(' ')[1])
-        y_vector = np.asarray(copy(self.y_data)) * calibration_factor# calibrated to uA from V
+        if not self.gb_is_float(self.squid_calibration_label.text().split(' ')[1]):
+            return None
+        squid_calibration_factor = float(self.squid_calibration_label.text().split(' ')[1])
+        i_bolo_stds = np.asarray(self.y_stds) * squid_calibration_factor
+        scaled_y_vector = np.asarray(copy(self.y_data)) * squid_calibration_factor # in uA from V 
         scaled_x_vector = np.asarray(copy(self.x_data))
         scaled_x_vector *= float(self.x_correction_label.text().split(' ')[1])
-        scaled_x_vector *= 1e6 # This is now in uV
+        scaled_x_vector *= 1e6 # This is now in uV for the fit selector to make sense to user
         fit_clip_lo = float(self.fit_clip_lo_lineedit.text())
         fit_clip_hi = float(self.fit_clip_hi_lineedit.text())
         selector = np.logical_and(fit_clip_lo < scaled_x_vector, scaled_x_vector < fit_clip_hi)
         if len(scaled_x_vector[selector]) > 2:
-            fit_vals = np.polyfit(scaled_x_vector[selector], y_vector[selector], polyfit_n)
-            new_y_vector = y_vector - fit_vals[1]
-            if fit_vals[0] < 0:
-                new_y_vector = -1 * new_y_vector
+            try:
+                fit_vals = np.polyfit(scaled_x_vector[selector], scaled_y_vector[selector], polyfit_n)
+                resistance, offset = 1.0 / fit_vals[0], fit_vals[1]
+                i_bolo_real = scaled_y_vector - offset
+                if fit_vals[0] < 0:
+                    # invert the line if it's trend up toward zero due to polarity of squid readout
+                    i_bolo_real = -1 * i_bolo_real
+            except TypeError:
+                fit_vals = (np.nan, np.nan)
+                i_bolo_real = np.array(scaled_y_vector)
         else:
-            new_y_vector = np.array(y_vector)
-        return new_y_vector
+            i_bolo_real = np.array(scaled_y_vector)
+            fit_vals = (np.nan, np.nan)
+        return i_bolo_real, i_bolo_stds, fit_vals
 
-    def ivc_update_fit_data(self, voltage_factor):
+    def ivc_plot_all_curves(self, fig, bolo_voltage_bias, bolo_current, bolo_current_stds=None, fit_clip=None, plot_clip=None,
+                              label='', sample_name='', t_bath='275', t_load='300', pturn=True,
+                              left=0.1, right=0.98, top=0.9, bottom=0.13, hspace=0.8,
+                              show_plot=False):
         '''
-        Updates fit limits based on IV data
+        This function creates an x-y scatter plot with v_bolo on the x-axis and
+        bolo curent on the y-axis.  The resistance value is reported as text annotation
+        Inputs:
+            bolo_votlage_bias: bolo_voltage in Volts
+            bolo_current: bolo_current in Amps
         '''
-        fit_clip_hi = self.xdata[0] * float(voltage_factor) * 1e6 # uV
-        data_clip_lo = self.xdata[-1] * float(voltage_factor) * 1e6 + self.data_clip_offset # uV
-        data_clip_hi = fit_clip_hi # uV
-        fit_clip_lo = data_clip_lo + self.fit_clip_offset # uV
+        ax2.set_axis_off()
+        fit_selector = np.logical_and(fit_clip[0] < bolo_voltage_bias, bolo_voltage_bias < fit_clip[1])
+        plot_selector = np.logical_and(plot_clip[0] < bolo_voltage_bias, bolo_voltage_bias < plot_clip[1])
+        add_fit = False
+        fit_vals = (1, 1)
+        if len(bolo_voltage_bias[fit_selector]) > 2:
+            fit_vals = np.polyfit(bolo_voltage_bias[fit_selector], bolo_current[fit_selector], 1)
+            v_fit_x_vector = np.arange(fit_clip[0], fit_clip[1], 0.02)
+            selector_2 = np.logical_and(fit_clip[0] < v_fit_x_vector, v_fit_x_vector < fit_clip[1])
+            poly_fit = np.polyval(fit_vals, v_fit_x_vector[selector_2]) + fit_vals[0]
+            add_fit = True
+        resistance_vector = bolo_voltage_bias / bolo_current
+        power_vector = bolo_voltage_bias * bolo_current
+        ax1.plot(bolo_voltage_bias[plot_selector], bolo_current[plot_selector], '.', label=label)
+        if bolo_current_stds is not None:
+            ax1.errorbar(bolo_voltage_bias[plot_selector], bolo_current[plot_selector], yerr=bolo_current_stds[plot_selector],
+                         label='error', marker='.', linestyle='None', alpha=0.25)
+        if pturn and len(bolo_voltage_bias) > 2 and len(bolo_current[plot_selector]) > 0:
+            print(len(bolo_current[plot_selector]))
+            print(len(bolo_current))
+            pt_idx = np.where(bolo_current[plot_selector] == min(bolo_current[plot_selector]))[0][0]
+            pl_idx = np.where(bolo_voltage_bias[plot_selector] == min(bolo_voltage_bias[plot_selector]))[0][0]
+            pturn_pw = bolo_current[plot_selector][pt_idx] * bolo_voltage_bias[plot_selector][pt_idx]
+            plast_pw = bolo_current[plot_selector][pl_idx] * bolo_voltage_bias[plot_selector][pl_idx]
+            ax1.plot(bolo_voltage_bias[plot_selector][pt_idx], bolo_current[plot_selector][pt_idx],
+                     '*', markersize=10.0, color='g', label='Pturn = {0:.2f} pW'.format(pturn_pw))
+            ax1.plot(bolo_voltage_bias[plot_selector][pl_idx], bolo_current[plot_selector][pl_idx],
+                     '*', markersize=10.0, color='m', label='Plast = {0:.2f} pW'.format(plast_pw))
+        ax3.plot(bolo_voltage_bias[plot_selector], resistance_vector[plot_selector], 'b', label='Res {0:.4f} ($\Omega$)'.format(1.0 / fit_vals[0]))
+        #ax4.plot(bolo_voltage_bias[power_selector], power_vector[power_selector], resitance_vector[plot_selector], 'r', label='Power (pW)')
+        power_selector = np.logical_and(0 < power_vector, power_vector < 0.25 * np.max(power_vector))
+        ax4.plot(resistance_vector[plot_selector], power_vector[plot_selector], 'r', label='Power (pW)')
+        if add_fit:
+            ax1.plot(v_fit_x_vector[selector_2], poly_fit, label='Fit: {0:.5f}$\Omega$'.format(1.0 / fit_vals[0]))
+        # Label the axis
+        ax1.set_xlabel("Voltage ($\mu$V)", fontsize=12)
+        ax1.set_ylabel("Current ($\mu$A)", fontsize=12)
+        ax3.set_xlabel("Voltage ($\mu$V)", fontsize=12)
+        ax3.set_ylabel("Res ($\Omega$)", fontsize=12)
+        ax4.set_xlabel("Res ($\Omega$)", fontsize=12)
+        ax4.set_ylabel("Power ($pW$)", fontsize=12)
+        # Set the titles
+        ax1.set_title('IV of {0}'.format(title))
+        ax3.set_title('RV of {0}'.format(title))
+        ax4.set_title('PR of {0}'.format(title))
+        # Grab all the labels and combine them 
+        handles, labels = ax1.get_legend_handles_labels()
+        handles += ax3.get_legend_handles_labels()[0]
+        labels += ax3.get_legend_handles_labels()[1]
+        handles += ax4.get_legend_handles_labels()[0]
+        labels += ax4.get_legend_handles_labels()[1]
+        ax2.legend(handles, labels, numpoints=1, mode="expand", bbox_to_anchor=(0, 0.1, 1, 1))
+        xlim_range = max(plot_clip) - min(plot_clip)
+        ax1.set_xlim((plot_clip[0] - 0.1 * xlim_range, plot_clip[1] + 0.1 * xlim_range))
+        ax3.set_xlim((plot_clip[0] - 0.1 * xlim_range, plot_clip[1] + 0.1 * xlim_range))
+        return fig
 
-    def ivc_create_blank_fig(self, frac_screen_width=0.5, frac_screen_height=0.25,
-                             left=0.15, right=0.98, top=0.9, bottom=0.23, wspace=None,
-                             hspace=None, multiple_axes=False,
-                             aspect=None):
-        if frac_screen_width is None and frac_screen_height is None:
-            fig = pl.figure()
-        else:
-            width = (frac_screen_width * self.screen_resolution.width()) / self.monitor_dpi
-            height = (frac_screen_height * self.screen_resolution.height()) / self.monitor_dpi
-            fig = pl.figure(figsize=(width, height))
-        if not multiple_axes:
-            if aspect is None:
-                ax = fig.add_subplot(111)
-            else:
-                ax = fig.add_subplot(111, aspect=aspect)
-        else:
-            ax = None
-        fig.subplots_adjust(left=left, right=right, top=top, bottom=bottom, wspace=wspace, hspace=hspace)
-        ax.tick_params(axis='x', labelsize=10)
-        ax.tick_params(axis='y', labelsize=10)
-        return fig, ax
+
+

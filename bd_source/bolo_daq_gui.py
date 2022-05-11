@@ -11,45 +11,48 @@ import shutil
 import time
 import datetime
 import numpy as np
-import pylab as pl
-import matplotlib.pyplot as plt
 import time
 import threading
+
 from PyPDF2 import PdfFileMerger
 from pprint import pprint, pformat
 from datetime import datetime
 from copy import copy
 from PyQt5 import QtCore, QtGui, QtWidgets
 
+
 # Settings 
 from bd_settings.bd_global_settings import settings
 
+# Libraries
+from bd_lib.bolo_daq import BoloDAQ
+from bd_lib.bolo_serial import BoloSerial
+from bd_lib.fourier_transform_spectroscopy import FourierTransformSpectroscopy
+
 # Widgets
-from bd_tools.cosmic_rays import CosmicRays
-from bd_tools.beam_mapper import BeamMapper
+from bd_tools.com_port_utility import ComPortUtility
+from bd_tools.configure_ni_daq import ConfigureNIDAQ
+from bd_tools.configure_bolo_daq_gui import ConfigureBoloDAQGui
 from bd_tools.iv_collector import IVCollector
 from bd_tools.rt_collector import RTCollector
+from bd_tools.lakeshore_372 import LakeShore372
+
+from bd_tools.cosmic_rays import CosmicRays
+from bd_tools.beam_mapper import BeamMapper
 from bd_tools.fridge_cycle import FridgeCycle
 from bd_tools.difference_load_curves import DifferenceLoadCurves
 from bd_tools.data_plotter import DataPlotter
-from bd_tools.lakeshore_372 import LakeShore372
 from bd_tools.time_constant import TimeConstant
 from bd_tools.agilent_e3634a import AgilentE3634A
-from bd_tools.com_port_utility import ComPortUtility
-from bd_tools.configure_ni_daq import ConfigureNIDAQ
 from bd_tools.noise_analyzer import NoiseAnalyzer
+from bd_tools.dr_p_and_t_plotter import DilutionRefridgeratorPressureTemperatureLogPlotter
 from bd_tools.hewlett_packard_34401a import HewlettPackard34401A
-from bd_tools.configure_bolo_daq_gui import ConfigureBoloDAQGui
 from bd_tools.configure_stepper_motor import ConfigureStepperMotor
 from bd_tools.configure_sigma_koki import ConfigureSigmaKoki
 from bd_tools.polarization_efficiency import PolarizationEfficiency
 from bd_tools.fourier_transform_spectrometer import FourierTransformSpectrometer
 from bd_tools.stanford_research_systems_sr830_dsp import StanfordResearchSystemsSR830DSP
-# Libraries
-from bd_lib.fourier_transform_spectroscopy import FourierTransformSpectroscopy
-from bd_lib.bolo_daq import BoloDAQ
-from bd_lib.bolo_serial import BoloSerial
-#from bd_lib.iv_curves import IVCurveLib
+
 
 # Gui Biulder
 from GuiBuilder.gui_builder import GuiBuilder
@@ -84,11 +87,10 @@ class BoloDAQGui(QtWidgets.QMainWindow, GuiBuilder):
         self.central_widget.setLayout(grid)
         self.setCentralWidget(self.central_widget)
         self.tool_and_menu_bar_json_path = os.path.join('bd_settings', 'tool_and_menu_bars.json')
-        print(self.tool_and_menu_bar_json_path)
         self.gb_setup_menu_and_tool_bars(self.tool_and_menu_bar_json_path, icon_size=25)
         self.selected_files = []
         self.user_desktop_path = os.path.expanduser('~')
-        self.monitor_dpi = 120.0
+        self.monitor_dpi = 92
         self.today = datetime.now()
         self.today_str = datetime.strftime(self.today, '%Y_%m_%d')
         print(os.getlogin())
@@ -475,22 +477,41 @@ class BoloDAQGui(QtWidgets.QMainWindow, GuiBuilder):
         elif self.dewar == 'BlueForsDR1':
             com_port = self.com_ports_dict['Housekeeping Lakeshore']
             if not hasattr(self, 'ser_{0}'.format(com_port)) and okPressed:
-                serial_com = BoloSerial(com_port, device='Model372', splash_screen=self.status_bar)
+                try:
+                    serial_com = BoloSerial(com_port, device='Model372', splash_screen=self.status_bar)
+                except:
+                    response = self.gb_quick_message('Com port in use... Launch in data analysis mode?', add_yes=True, add_no=True)
+                    if response == QtWidgets.QMessageBox.Yes:
+                        serial_com = None
+                    else:
+                        return None
                 setattr(self, 'ser_{0}'.format(com_port), serial_com)
-                if not hasattr(self, 'ls_372_widget_{0}'.format(com_port)):
+                if not hasattr(self, 'ls_372_widget_{0}'.format(com_port)) and serial_com is not None:
                     ls_372_temp_widget = LakeShore372(serial_com, com_port, self.status_bar)
-                    setattr(self, 'ls_372_widget_{0}'.format(com_port), ls_372_temp_widget)
-            dialog = 'Select the comport for the Sample Lakeshore'
+                else:
+                    ls_372_temp_widget = None
+                setattr(self, 'ls_372_widget_{0}'.format(com_port), ls_372_temp_widget)
             com_port = self.com_ports_dict['Samples Lakeshore']
             if not hasattr(self, 'ser_{0}'.format(com_port)) and okPressed:
-                serial_com = BoloSerial(com_port, device='Model372', splash_screen=self.status_bar)
+                try:
+                    serial_com = BoloSerial(com_port, device='Model372', splash_screen=self.status_bar)
+                except:
+                    response = self.gb_quick_message('Com port in use... Launch in data analysis mode?', add_yes=True, add_no=True)
+                    if response == QtWidgets.QMessageBox.Yes:
+                        serial_com = None
+                    else:
+                        return None
                 setattr(self, 'ser_{0}'.format(com_port), serial_com)
-                if not hasattr(self, 'ls_372_widget_{0}'.format(com_port)):
+                if not hasattr(self, 'ls_372_widget_{0}'.format(com_port)) and serial_com is not None:
                     ls_372_samples_widget = LakeShore372(serial_com, com_port, self.status_bar)
-                    setattr(self, 'ls_372_widget_{0}'.format(com_port), ls_372_samples_widget)
+                else:
+                    ls_372_samples_widget = None
+                setattr(self, 'ls_372_widget_{0}'.format(com_port), ls_372_samples_widget)
         if not hasattr(self, 'rtc_widget'):
             if self.dewar == 'BlueForsDR1':
-                ls_372_samples_widget = getattr(self, 'ls_372_widget_{0}'.format(com_port))
+                print([x for x in dir(self) if x.startswith('ls')])
+                ls_372_samples_widget = getattr(self, 'ls_372_widget_COM{0}'.format(6))
+                ls_372_temp_widget = getattr(self, 'ls_372_widget_COM{0}'.format(4))
             self.rtc_widget = RTCollector(self.daq_settings, self.status_bar, self.screen_resolution, self.monitor_dpi, ls_372_temp_widget, ls_372_samples_widget, self.data_folder)
         else:
             self.daq_settings = self.bolo_daq.initialize_daqs()
@@ -516,6 +537,21 @@ class BoloDAQGui(QtWidgets.QMainWindow, GuiBuilder):
         self.central_widget.layout().addWidget(self.difference_load_curves_widget, 0, 0, 1, 1)
         self.status_bar.showMessage('Difference Load Curves')
         QtWidgets.QApplication.processEvents()
+
+    #################################################
+    # Plot DR Logs Sigma Koki Rotation Stage
+    #################################################
+
+    def bd_dr_p_and_t_plotter(self):
+        '''
+        '''
+        self.gb_initialize_panel('central_widget')
+        if not hasattr(self, 'dr_p_and_t_plotter_widget'):
+            dr_p_and_t_plotter_widget = DilutionRefridgeratorPressureTemperatureLogPlotter(self.status_bar, self.screen_resolution, self.monitor_dpi, self.data_folder)
+            setattr(self, 'dr_p_and_t_plotter_widget', dr_p_and_t_plotter_widget)
+        else:
+            dr_p_and_t_plotter_widget = getattr(self, 'dr_p_and_t_plotter_widget')
+        self.central_widget.layout().addWidget(dr_p_and_t_plotter_widget, 0, 0, 1, 1)
 
     #################################################
     # Configure Sigma Koki Rotation Stage
@@ -809,6 +845,9 @@ if __name__ == '__main__':
     qt_app.setFont(QtGui.QFont('SansSerif', 10))
     screen_resolution = qt_app.desktop().availableGeometry()
     screen_resolution = qt_app.desktop().screenGeometry()
+    pprint(screen_resolution)
+    pprint(screen_resolution)
+    pprint(screen_resolution)
     gui = BoloDAQGui(screen_resolution, qt_app)
     gui.show()
     exit(qt_app.exec_())

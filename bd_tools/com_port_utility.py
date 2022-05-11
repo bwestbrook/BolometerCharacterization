@@ -3,7 +3,6 @@ import serial
 import time
 import os
 import simplejson
-import pylab as pl
 import numpy as np
 from copy import copy
 from datetime import datetime

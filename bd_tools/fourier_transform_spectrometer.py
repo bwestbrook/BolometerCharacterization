@@ -664,11 +664,11 @@ class FourierTransformSpectrometer(QtWidgets.QWidget, GuiBuilder, FourierTransfo
         ax.set_xlabel('Samples', fontsize=10)
         ax.set_ylabel('($V$)', fontsize=10)
         ax.set_title('Data', fontsize=10)
-        pl.legend()
+        matplotlib.pylab.legend()
         fig.savefig('temp_files/temp_ts.png', transparent=True)
         image = QtGui.QPixmap('temp_files/temp_ts.png')
         self.time_stream_plot_label.setPixmap(image)
-        pl.close('all')
+        matplotlib.pylab.close('all')
 
     def fts_plot_all(self, fig=None):
         '''
@@ -741,7 +741,7 @@ class FourierTransformSpectrometer(QtWidgets.QWidget, GuiBuilder, FourierTransfo
         '''
         '''
         if plot_type == 'Single':
-            pl.close('all')
+            matplotlib.pylab.close('all')
         data_clip_lo = float(self.data_clip_lo_lineedit.text()) * 1e9
         data_clip_hi = float(self.data_clip_hi_lineedit.text()) * 1e9
         smoothing_factor = float(self.smoothing_factor_lineedit.text())
@@ -868,7 +868,7 @@ class FourierTransformSpectrometer(QtWidgets.QWidget, GuiBuilder, FourierTransfo
     def fts_plot_spectra(self):
         '''
         '''
-        pl.close('all')
+        matplotlib.pylab.close('all')
         mirror_interval = self.scan_settings_dict['mirror_interval']
         data_clip_lo = float(self.data_clip_lo_lineedit.text()) * 1e9
         data_clip_hi = float(self.data_clip_hi_lineedit.text()) * 1e9
@@ -894,7 +894,7 @@ class FourierTransformSpectrometer(QtWidgets.QWidget, GuiBuilder, FourierTransfo
     def fts_plot_int(self):
         '''
         '''
-        pl.close('all')
+        matplotlib.pylab.close('all')
         fig, ax = self.fts_create_blank_fig(n_axes=1)
         ax.set_xlabel('Mirror Position (steps)', fontsize=14)
         ax.set_ylabel('Bolometer Response (V)', fontsize=14)
@@ -907,11 +907,11 @@ class FourierTransformSpectrometer(QtWidgets.QWidget, GuiBuilder, FourierTransfo
                              left=0.08, right=0.98, top=0.95, bottom=0.08,
                              hspace=0.1, wspace=0.02, n_axes=2, aspect=None):
         if frac_screen_width is None and frac_screen_height is None:
-            fig = pl.figure()
+            fig = matplotlib.pylab.figure()
         else:
             width = (frac_screen_width * self.screen_resolution.width()) / self.monitor_dpi
             height = (frac_screen_height * self.screen_resolution.height()) / self.monitor_dpi
-            fig = pl.figure(figsize=(width, height))
+            fig = matplotlib.pylab.figure(figsize=(width, height))
         fig.subplots_adjust(left=left, right=right, top=top, bottom=bottom, hspace=hspace, wspace=wspace)
         if n_axes == 2:
             ax1 = fig.add_subplot(221, label='int')

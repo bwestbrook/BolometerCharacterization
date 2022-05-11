@@ -1,8 +1,8 @@
 import time
+import string
 import shutil
 import os
 import simplejson
-import pylab as pl
 import numpy as np
 from copy import copy
 from datetime import datetime
@@ -153,11 +153,13 @@ class ConfigureBoloDAQGui(QtWidgets.QWidget, GuiBuilder):
         setting = self.sender().whatsThis().split('_')[0]
         dict_to_modify = getattr(self, '{0}_dict'.format(setting))
         key_to_modify = getattr(self, '{0}_combobox'.format(setting.lower())).currentText()
-        new_value = getattr(self, '{0}_lineedit'.format(setting.lower())).text()
+        new_value = getattr(self, '{0}_lineedit'.format(setting.lower())).text().strip()
+        exclude = ['.', '\t', '\r', '\n']
+        new_value = ''.join(ch for ch in new_value if ch not in exclude)
         msg = 'Update "{0}"\nKey: {1}\nNew Value: "{2}"'.format(setting, key_to_modify, new_value)
         response = self.gb_quick_message(msg=msg, add_cancel=True, add_yes=True)
         if response == QtWidgets.QMessageBox.Yes:
-            dict_to_modify[key_to_modify] = new_value
+            dict_to_modify[key_to_modify] = new_value.strip()
             path = os.path.join('bd_settings', '{0}_settings.json'.format(setting))
             index = getattr(self, '{0}_combobox'.format(setting)).findText(key_to_modify)
             self.cbd_update_label(index)
