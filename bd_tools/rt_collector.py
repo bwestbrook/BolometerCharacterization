@@ -232,7 +232,7 @@ class RTCollector(QtWidgets.QWidget, GuiBuilder):
         self.i_lineedit.setText(str(i))
         self.layout().addWidget(self.i_lineedit, 1, 8, 1, 1)
         self.d_lineedit = self.gb_make_labeled_lineedit(label_text='D: ')
-        self.d_lineedit.setValidator(QtGui.QDoubleValidator(0, 300, 2, self.d_lineedit))
+        self.d_lineedit.setValidator(QtGui.QDoubleValidator(-300, 300, 2, self.d_lineedit))
         self.d_lineedit.setText(str(d))
         self.layout().addWidget(self.d_lineedit, 1, 9, 1, 1)
         self.meta_data['P I D Settings'] = (p, i, d)
@@ -930,9 +930,6 @@ class Collector(QRunnable):
                 final_plot_y_data = plot_y_data[drift_start_index:change_index]
                 final_plot_y_stds = plot_x_stds[drift_start_index:change_index]
             selector = np.where(np.logical_and(data_clip_lo < final_plot_x_data, final_plot_x_data < data_clip_hi))
-            print()
-            print(selected_directions)
-            print(color)
             ax_plot.errorbar(final_plot_x_data[selector], final_plot_y_data[selector],
                              xerr=final_plot_x_stds[selector], yerr=final_plot_y_stds[selector],
                              marker='x', ms=0.75, color=color, alpha=0.75,

@@ -704,9 +704,12 @@ class LS372TempControl(QRunnable):
         self.serial_com.bs_write(heater_value_query)
         QtWidgets.QApplication.processEvents()
         response = self.serial_com.bs_read()
-        if len(response) > 0:
-            heater_value = float(response)
-        else:
+        try:
+            if len(response) > 0:
+                heater_value = float(response)
+            else:
+                heater_value = np.nan
+        except ValueErorr:
             heater_value = np.nan
         return heater_value
 
@@ -716,7 +719,10 @@ class LS372TempControl(QRunnable):
         temp_set_point_query = 'setp? 0 '
         self.status_bar.showMessage('Sending Serial Command "{0}"'.format(temp_set_point_query))
         self.serial_com.bs_write(temp_set_point_query)
-        set_point = float(self.serial_com.bs_read())
+        try:
+            set_point = float(self.serial_com.bs_read())
+        except ValueError:
+            set_point = np.nan
         self.signals.temp_ready.emit(set_point)
         return set_point
 
