@@ -26,7 +26,6 @@ class IVCurveLib():
         ax2.set_axis_off()
         fit_selector = np.logical_and(fit_clip[0] < bolo_voltage_bias, bolo_voltage_bias < fit_clip[1])
         plot_selector = np.logical_and(plot_clip[0] < bolo_voltage_bias, bolo_voltage_bias < plot_clip[1])
-
         add_fit = False
         fit_vals = (1, 1)
         if len(bolo_voltage_bias[fit_selector]) > 2:
@@ -59,12 +58,12 @@ class IVCurveLib():
         if add_fit:
             ax1.plot(v_fit_x_vector[selector_2], poly_fit, label='Fit: {0:.5f}$\Omega$'.format(1.0 / fit_vals[0]))
         # Label the axis
-        ax1.set_xlabel("Voltage ($\mu$V)", fontsize=12)
-        ax1.set_ylabel("Current ($\mu$A)", fontsize=12)
-        ax3.set_xlabel("Voltage ($\mu$V)", fontsize=12)
-        ax3.set_ylabel("Res ($\Omega$)", fontsize=12)
-        ax4.set_xlabel("Res ($\Omega$)", fontsize=12)
-        ax4.set_ylabel("Power ($pW$)", fontsize=12)
+        ax1.set_xlabel("Voltage ($\mu$V)", fontsize=16)
+        ax1.set_ylabel("Current ($\mu$A)", fontsize=16)
+        ax3.set_xlabel("Voltage ($\mu$V)", fontsize=16)
+        ax3.set_ylabel("Res ($\Omega$)", fontsize=16)
+        ax4.set_xlabel("Res ($\Omega$)", fontsize=16)
+        ax4.set_ylabel("Power ($pW$)", fontsize=16)
         # Set the titles
         ax1.set_title('IV of {0}'.format(title))
         ax3.set_title('RV of {0}'.format(title))

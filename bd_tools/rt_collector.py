@@ -124,8 +124,7 @@ class RTCollector(QtWidgets.QWidget, GuiBuilder):
         '''
         self.gb_initialize_panel('self')
         self.rtc_rt_config()
-        if self.ls372_temp_widget is not None:
-            self.rtc_lakeshore_panel()
+        self.rtc_lakeshore_panel()
         self.layout().addWidget(self.rtc_plot_panel, 6, 0, 20, 10)
         self.gb_initialize_panel('rtc_plot_panel')
         self.rtc_make_plot_panel()
@@ -184,13 +183,15 @@ class RTCollector(QtWidgets.QWidget, GuiBuilder):
         for channel in range(1, 17):
             self.channel_combobox.addItem(str(channel))
         self.channel_combobox.addItem('SQUID')
-        self.ls372_samples_widget.channels.ls372_scan_channel(index=1)
         # Sample Name
         self.exc_mode_label = self.gb_make_labeled_label(label_text='Lakeshore_Info:')
         self.exc_mode_label.setText('0 0 0 0 0')
         self.layout().addWidget(self.exc_mode_label, 4, 0, 1, 1)
         self.sample_name_lineedit = self.gb_make_labeled_lineedit(label_text='Sample_Name:')
         self.layout().addWidget(self.sample_name_lineedit, 4, 1, 1, 2)
+        if self.ls372_samples_widget is None:
+            return
+        self.ls372_samples_widget.channels.ls372_scan_channel(index=1)
 
     #############################################
     # Lakeshore stuff for DR
@@ -209,7 +210,9 @@ class RTCollector(QtWidgets.QWidget, GuiBuilder):
         self.temp_set_point_high_lineedit = self.gb_make_labeled_lineedit(label_text='SP_high (mK):', lineedit_text='40')
         self.temp_set_point_high_lineedit.setValidator(QtGui.QDoubleValidator(0, 1200, 2, self.temp_set_point_high_lineedit))
         self.layout().addWidget(self.temp_set_point_high_lineedit, 1, 4, 1, 1)
-        ramp_on, ramp_value = self.ls372_temp_widget.temp_control.ls372_get_ramp()
+        ramp_on, ramp_value = True, ''
+        if self.ls372_temp_widget is not None:
+            ramp_on, ramp_value = self.ls372_temp_widget.temp_control.ls372_get_ramp()
         self.ramp_lineedit = self.gb_make_labeled_lineedit(label_text='Ramp (K/min): ')
         self.ramp_lineedit.setText('{0}'.format(ramp_value))
         self.ramp_lineedit.setValidator(QtGui.QDoubleValidator(0, 2, 3, self.ramp_lineedit))
@@ -222,7 +225,9 @@ class RTCollector(QtWidgets.QWidget, GuiBuilder):
         self.layout().addWidget(self.heater_config_label, 0, 7, 1, 4)
         self.heater_config_label.setAlignment(Qt.AlignCenter)
         # P I D
-        p, i, d = self.ls372_temp_widget.temp_control.ls372_get_pid()
+        p, i, d = 0, 0, 0
+        if self.ls372_temp_widget is not None:
+            p, i, d = self.ls372_temp_widget.temp_control.ls372_get_pid()
         self.p_lineedit = self.gb_make_labeled_lineedit(label_text='P: ')
         self.p_lineedit.setValidator(QtGui.QDoubleValidator(0, 300, 2, self.p_lineedit))
         self.p_lineedit.setText(str(p))
@@ -237,6 +242,8 @@ class RTCollector(QtWidgets.QWidget, GuiBuilder):
         self.layout().addWidget(self.d_lineedit, 1, 9, 1, 1)
         self.meta_data['P I D Settings'] = (p, i, d)
         # Heater Range
+        if self.ls372_temp_widget is None:
+            return None
         heater_value = self.ls372_temp_widget.temp_control.ls372_get_heater_value()
         current_range_index, current_range_value = self.ls372_temp_widget.temp_control.ls372_get_heater_range()
         self.heater_range_combobox = self.gb_make_labeled_combobox(label_text='Heater Range (mW)')
@@ -486,6 +493,12 @@ class RTCollector(QtWidgets.QWidget, GuiBuilder):
         self.transparent_plots_checkbox = QtWidgets.QCheckBox('Transparent?', self)
         self.rtc_plot_panel.layout().addWidget(self.transparent_plots_checkbox, 5, 3, 1, 1)
         self.transparent_plots_checkbox.setChecked(True)
+        self.load_data_pushbutton = QtWidgets.QPushButton('Load')
+        self.load_data_pushbutton.clicked.connect(self.rtc_load_data)
+        self.rtc_plot_panel.layout().addWidget(self.load_data_pushbutton, 5, 4, 1, 1)
+        self.plot_data_pushbutton = QtWidgets.QPushButton('Plot')
+        self.plot_data_pushbutton.clicked.connect(self.rtc_direct_plot)
+        self.rtc_plot_panel.layout().addWidget(self.plot_data_pushbutton, 5, 5, 1, 1)
         # Sample Clip
         self.sample_clip_lo_lineedit = self.gb_make_labeled_lineedit(label_text='Sample_Clip Lo')
         self.sample_clip_lo_lineedit.setText(str(0))
@@ -553,6 +566,7 @@ class RTCollector(QtWidgets.QWidget, GuiBuilder):
             self.sender().setText('Stop DAQ')
             self.started = True
             self.rtc_collecter()
+            self.sample_clip_lo_lineedit.setText('0')
         else:
             self.daq_collector.stop()
             self.sender().setText('Start DAQ')
@@ -585,8 +599,66 @@ class RTCollector(QtWidgets.QWidget, GuiBuilder):
             self.y_data_label.setText(y_data_text)
 
     ###################################################
-    # Saving and Plotting
+    # Loading Saving and Plotting
     ###################################################
+
+    def rtc_load_data(self):
+        '''
+        '''
+        save_path = QtWidgets.QFileDialog.getOpenFileName(self, 'Select Data File')[0]
+        self.status_bar.showMessage(save_path)
+        x_data, x_stds, y_data, y_stds, directions = [], [], [], [], []
+        lines = []
+        with open(save_path, 'r') as fh:
+            for line in fh.readlines():
+                items = line.split(',')
+                x = float(items[0].strip())
+                x_std = float(items[1].strip())
+                y = float(items[2].strip())
+                if len(items[3].split(' ')) > 1:
+                    y_std = float(items[3].split(' ')[1].strip())
+                    direction = items[3].split(' ')[2].strip()
+                    print(items[3].split(' '))
+                elif len(items) == 5:
+                    direction = items[4].strip()
+                else:
+                    direction = 'up'
+                x_data.append(x)
+                x_stds.append(x_std)
+                y_data.append(y)
+                y_stds.append(y_std)
+                directions.append(direction)
+                lines.append(line)
+                self.status_bar.showMessage(line)
+        self.rtc_update_data(
+            np.asarray(x_data),
+            np.asarray(x_stds),
+            np.asarray(y_data),
+            np.asarray(y_stds),
+            directions
+            )
+
+        self.x_data = x_data
+        self.x_stds = x_stds
+        self.y_data = y_data
+        self.y_stds = y_stds
+        self.directions = directions
+        self.rtc_direct_plot()
+
+
+    def rtc_direct_plot(self):
+        '''
+        '''
+        daq_collector = Collector(
+            self,
+            x_data=self.x_data,
+            x_stds=self.x_stds,
+            y_data=self.y_data,
+            y_stds=self.y_stds,
+            directions=self.directions
+            )
+        daq_collector.rtc_plot_xy()
+        self.rtc_plot_running_from_disk()
 
     def rtc_update_data(self, x_data, x_stds, y_data, y_stds, directions):
         '''
@@ -652,13 +724,13 @@ class RTCollector(QtWidgets.QWidget, GuiBuilder):
             png_save_path = save_path.replace('.txt', '.png')
             with open(save_path, 'w') as save_handle:
                 for i, x_data in enumerate(self.x_data):
-                    line = '{0:.5f}, {1:.5f}, {2:.5f}, {3:.5f} {4}\n'.format(self.x_data[i], self.x_stds[i], self.y_data[i], self.y_stds[i], self.directions[i])
+                    line = '{0:.5f}, {1:.5f}, {2:.5f}, {3:.5f}, {4}\n'.format(self.x_data[i], self.x_stds[i], self.y_data[i], self.y_stds[i], self.directions[i])
                     save_handle.write(line)
             x_data, x_stds = self.rtc_adjust_x_data()
             y_data, y_stds = self.rtc_adjust_y_data()
             with open(calibrated_save_path, 'w') as save_handle:
                 for i, x_i in enumerate(self.x_data):
-                    line = '{0:.5f}, {1:.5f}, {2:.5f}, {3:.5f} {4}\n'.format(x_data[i], x_stds[i], y_data[i], y_stds[i], self.directions[i])
+                    line = '{0:.5f}, {1:.5f}, {2:.5f}, {3:.5f}, {4}\n'.format(x_data[i], x_stds[i], y_data[i], y_stds[i], self.directions[i])
                     save_handle.write(line)
             response = self.gb_quick_message('Put data in good data folder?', add_yes=True, add_no=True)
             good_data_folder = os.path.join(self.data_folder, 'good_data')
@@ -692,7 +764,15 @@ class Collector(QRunnable):
     '''
     This collects the data and sends signals back to the code once the latest plots ready
     '''
-    def __init__(self, rtc):
+    def __init__(
+            self,
+            rtc,
+            x_data=[0],
+            x_stds=[0],
+            y_data=[0],
+            y_stds=[0],
+            directions=['down']
+            ):
         '''
         '''
         super(Collector, self).__init__()
@@ -700,9 +780,11 @@ class Collector(QRunnable):
         self.signals = CollectorSignals()
         self.monitor_dpi = 96
         self.rtc = rtc
-        self.x_data, self.x_stds = [0], [0]
-        self.y_data, self.y_stds = [0], [0]
-        self.directions = ['down']
+        self.x_data = x_data
+        self.x_stds = x_stds
+        self.y_data = y_data
+        self.y_stds = y_stds
+        self.directions = directions
 
     def add_daq(self, daq):
         '''
@@ -759,7 +841,6 @@ class Collector(QRunnable):
                 self.signals.check_heater.emit()
             i += 1
         self.signals.finished.emit(self.x_data, self.x_stds, self.y_data, self.y_stds, self.directions)
-
 
     def rtc_plot_running(self):
         '''
@@ -840,7 +921,6 @@ class Collector(QRunnable):
             labels[0] = label_str
             ax_x.legend(handles[:1], labels[:1], loc='best')
         fig_x.savefig('temp_x.png', transparent=self.transparent_plots)
-
         handles, labels = ax_y.get_legend_handles_labels()
         if len(handles) > 0:
             label_str = 'DAQ {0} Sample {1}'.format(self.x_channel, len(self.x_data))
@@ -860,7 +940,8 @@ class Collector(QRunnable):
             x_data, x_stds = self.rtc_adjust_x_data()
             fig = self.rtc_plot_drifts(fig, x_data, x_stds, y_data, y_stds)
             ax.set_xlabel('Temperature ($mK$)', fontsize=12)
-            ax.set_ylabel('Resistance ($m\Omega$)', fontsize=12)
+            #ax.set_ylabel('Resistance ($m\Omega$)', fontsize=12)
+            ax.set_ylabel('Arb Units', fontsize=12)
             fig.savefig('temp_xy.png', transparent=self.transparent_plots)
         else:
             self.y_data, self.y_stds = self.rtc_adjust_y_data()
@@ -869,7 +950,8 @@ class Collector(QRunnable):
             ax.tick_params(axis='x', labelsize=16)
             ax.tick_params(axis='y', labelsize=16)
             ax.set_xlabel('Temperature ($mK$)', fontsize=14)
-            ax.set_ylabel('Resistance ($m\Omega$)', fontsize=14)
+            #ax.set_ylabel('Resistance ($m\Omega$)', fontsize=14)
+            ax.set_ylabel('Arb Units', fontsize=12)
             fig.savefig('temp_xy.png', transparent=self.transparent_plots)
 
     def rtc_plot_drifts(self, fig, x_data, x_stds, y_data, y_stds):
@@ -903,7 +985,7 @@ class Collector(QRunnable):
         sample_clip_hi = int(self.rtc.sample_clip_hi_lineedit.text())
         data_clip_lo = float(self.rtc.data_clip_lo_lineedit.text())
         data_clip_hi = float(self.rtc.data_clip_hi_lineedit.text())
-        selected_directions = np.asarray(self.directions[sample_clip_lo:sample_clip_hi])
+        selected_directions = np.asarray(self.directions)[sample_clip_lo:sample_clip_hi]
         change_indicies = list(np.where(selected_directions[:-1] != selected_directions[1:])[0])
         change_indicies.append(-1)
         plot_x_data = x_data[sample_clip_lo:sample_clip_hi]

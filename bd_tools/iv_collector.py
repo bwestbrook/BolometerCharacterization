@@ -157,6 +157,8 @@ class IVCollector(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTransformSpe
         '''
         if len(self.warm_bias_resistor_lineedit.text()) == 0:
             return None
+        if int(self.warm_bias_resistor_lineedit.text()) == 0:
+            return None
         warm_bias_r = float(self.warm_bias_resistor_lineedit.text())
         cold_bias_r = float(self.cold_bias_resistor_combobox.currentText())
         x_correction_factor = cold_bias_r / warm_bias_r
@@ -179,10 +181,12 @@ class IVCollector(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTransformSpe
         self.warm_bias_resistor_lineedit.textChanged.connect(self.ivc_calc_x_correction)
         self.warm_bias_resistor_lineedit.setText('2000')
         self.warm_bias_resistor_lineedit.setValidator(QtGui.QDoubleValidator(0, 1e12, 2, self.warm_bias_resistor_lineedit))
+        self.warm_bias_resistor_lineedit.returnPressed.connect(self.ivc_plot_running)
         self.layout().addWidget(self.warm_bias_resistor_lineedit, 3, 1, 1, 1)
         # SQUID
-        self.squid_calibration_label = self.gb_make_labeled_label('Squid Conv (uA/V)')
-        self.layout().addWidget(self.squid_calibration_label, 5, 1, 1, 1)
+        self.squid_calibration_lineedit = self.gb_make_labeled_lineedit(label_text='Squid Conv (uA/V)')
+        self.squid_calibration_lineedit.returnPressed.connect(self.ivc_plot_running)
+        self.layout().addWidget(self.squid_calibration_lineedit, 5, 1, 1, 1)
         self.squid_select_combobox = self.gb_make_labeled_combobox(label_text='Select SQUID')
         for squid, calibration in self.squid_calibration_dict.items():
             self.squid_select_combobox.addItem('{0}'.format(squid))
@@ -193,25 +197,6 @@ class IVCollector(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTransformSpe
         self.layout().addWidget(self.squid_gain_select_combobox, 4, 1, 1, 1)
         self.squid_gain_select_combobox.setCurrentIndex(2)
         self.squid_gain_select_combobox.currentIndexChanged.connect(self.ivc_update_squid_calibration)
-
-        # Data Clip
-        self.data_clip_lo_lineedit = self.gb_make_labeled_lineedit(label_text='Data Clip Lo (uV)', lineedit_text='0.0')
-        self.data_clip_lo_lineedit.returnPressed.connect(self.ivc_plot_running)
-        self.data_clip_lo_lineedit.setValidator(QtGui.QDoubleValidator(0, 1e5, 2, self.data_clip_lo_lineedit))
-        self.layout().addWidget(self.data_clip_lo_lineedit, 6, 0, 1, 1)
-        self.data_clip_hi_lineedit = self.gb_make_labeled_lineedit(label_text='Data Clip Hi (uV)', lineedit_text='10.0')
-        self.data_clip_hi_lineedit.returnPressed.connect(self.ivc_plot_running)
-        self.data_clip_hi_lineedit.setValidator(QtGui.QDoubleValidator(0, 1e5, 2, self.data_clip_hi_lineedit))
-        self.layout().addWidget(self.data_clip_hi_lineedit, 6, 1, 1, 1)
-        # Fit Clip
-        self.fit_clip_lo_lineedit = self.gb_make_labeled_lineedit(label_text='Fit Clip Lo (uV)', lineedit_text='1.0')
-        self.fit_clip_lo_lineedit.returnPressed.connect(self.ivc_plot_running)
-        self.layout().addWidget(self.fit_clip_lo_lineedit, 7, 0, 1, 1)
-        self.fit_clip_lo_lineedit.setValidator(QtGui.QDoubleValidator(0, 1e5, 2, self.fit_clip_lo_lineedit))
-        self.fit_clip_hi_lineedit = self.gb_make_labeled_lineedit(label_text='Fit Clip Hi (uV)', lineedit_text='4.0')
-        self.fit_clip_hi_lineedit.setValidator(QtGui.QDoubleValidator(0, 1e5, 2, self.fit_clip_hi_lineedit))
-        self.fit_clip_hi_lineedit.returnPressed.connect(self.ivc_plot_running)
-        self.layout().addWidget(self.fit_clip_hi_lineedit, 7, 1, 1, 1)
         # Extra information
         self.t_bath_lineedit = self.gb_make_labeled_lineedit(label_text='T Bath (mK)')
         self.t_bath_lineedit.setText('275')
@@ -276,7 +261,7 @@ class IVCollector(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTransformSpe
         gain = self.squid_gains[self.squid_gain_select_combobox.currentText()]
         squid_key = self.squid_select_combobox.currentText()
         calibration_value = float(self.squid_calibration_dict[squid_key].split(' ')[0]) * gain
-        self.squid_calibration_label.setText('SQ_Correction: {0:.2f} uA/V'.format(calibration_value))
+        self.squid_calibration_lineedit.setText('{0:.2f}'.format(calibration_value))
         squid = squid_key.split('-')[1]
         for index in range(self.sample_name_combobox.count()):
             if squid in self.sample_name_combobox.itemText(index):
@@ -313,6 +298,25 @@ class IVCollector(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTransformSpe
         self.xy_scatter_label = QtWidgets.QLabel('', self)
         self.xy_scatter_label.setAttribute(QtCore.Qt.WA_TranslucentBackground)
         self.ivc_plot_panel.layout().addWidget(self.xy_scatter_label, 2, 0, 1, 2)
+
+        # Data Clip
+        self.data_clip_lo_lineedit = self.gb_make_labeled_lineedit(label_text='Data Clip Lo (uV)', lineedit_text='0.0')
+        self.data_clip_lo_lineedit.returnPressed.connect(self.ivc_plot_running)
+        self.data_clip_lo_lineedit.setValidator(QtGui.QDoubleValidator(0, 1e5, 2, self.data_clip_lo_lineedit))
+        self.ivc_plot_panel.layout().addWidget(self.data_clip_lo_lineedit, 6, 0, 1, 1)
+        self.data_clip_hi_lineedit = self.gb_make_labeled_lineedit(label_text='Data Clip Hi (uV)', lineedit_text='10.0')
+        self.data_clip_hi_lineedit.returnPressed.connect(self.ivc_plot_running)
+        self.data_clip_hi_lineedit.setValidator(QtGui.QDoubleValidator(0, 1e5, 2, self.data_clip_hi_lineedit))
+        self.ivc_plot_panel.layout().addWidget(self.data_clip_hi_lineedit, 6, 1, 1, 1)
+        # Fit Clip
+        self.fit_clip_lo_lineedit = self.gb_make_labeled_lineedit(label_text='Fit Clip Lo (uV)', lineedit_text='1.0')
+        self.fit_clip_lo_lineedit.returnPressed.connect(self.ivc_plot_running)
+        self.ivc_plot_panel.layout().addWidget(self.fit_clip_lo_lineedit, 7, 0, 1, 1)
+        self.fit_clip_lo_lineedit.setValidator(QtGui.QDoubleValidator(0, 1e5, 2, self.fit_clip_lo_lineedit))
+        self.fit_clip_hi_lineedit = self.gb_make_labeled_lineedit(label_text='Fit Clip Hi (uV)', lineedit_text='4.0')
+        self.fit_clip_hi_lineedit.setValidator(QtGui.QDoubleValidator(0, 1e5, 2, self.fit_clip_hi_lineedit))
+        self.fit_clip_hi_lineedit.returnPressed.connect(self.ivc_plot_running)
+        self.ivc_plot_panel.layout().addWidget(self.fit_clip_hi_lineedit, 7, 1, 1, 1)
 
 
     #########################################################
@@ -415,6 +419,7 @@ class IVCollector(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTransformSpe
         with open(save_path, 'r') as fh:
             lines = fh.readlines()
             for line in lines:
+                line = line.replace('\t', ', ')
                 x_data = float(line.split(', ')[0].strip())
                 x_std = float(line.split(', ')[1].strip())
                 y_data = float(line.split(', ')[2].strip())
@@ -466,14 +471,14 @@ class IVCollector(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTransformSpe
             top=0.88,
             frac_screen_height=0.15,
             frac_screen_width=0.3)
-        ax.set_xlabel('Sample', fontsize=12)
-        ax.set_ylabel('X ($V$)', fontsize=12)
+        ax.set_xlabel('Sample', fontsize=16)
+        ax.set_ylabel('X ($V$)', fontsize=16)
         label = 'DAQ {0}'.format(self.x_channel)
         if len(self.x_data) > 1:
             label = None
         ax.errorbar(range(len(self.x_data)), self.x_data, self.x_stds, marker='.', linestyle='None', label=label)
         if len(self.x_data) > 0:
-            ax.legend(loc='best', fontsize=12)
+            ax.legend(loc='best', fontsize=16)
         fig.savefig('temp_x.png', transparent=True)
         image_to_display = QtGui.QPixmap('temp_x.png')
         self.x_time_stream_label.setPixmap(image_to_display)
@@ -490,8 +495,8 @@ class IVCollector(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTransformSpe
             top=0.88,
             frac_screen_height=0.15,
             frac_screen_width=0.3)
-        ax.set_xlabel('Sample', fontsize=12)
-        ax.set_ylabel('Y ($V$)', fontsize=12)
+        ax.set_xlabel('Sample', fontsize=16)
+        ax.set_ylabel('Y ($V$)', fontsize=16)
         label = 'DAQ {0}'.format(self.y_channel)
         if len(self.x_data) > 1:
             label = None
@@ -527,30 +532,31 @@ class IVCollector(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTransformSpe
             left=0.18,
             right=0.95,
             bottom=0.25,
-            top=0.88,
-            frac_screen_height=0.5,
-            frac_screen_width=0.5,
-            hspace=0.3,
-            wspace=0.2)
+            top=0.8,
+            frac_screen_height=0.4,
+            frac_screen_width=0.4,
+            hspace=0.9,
+            wspace=0.25)
 
         ax1, ax2, ax3, ax4 = fig.get_axes()
 
-        ax1.set_xlabel("Voltage ($\mu$V)", fontsize=12)
-        ax1.set_ylabel("Current ($\mu$A)", fontsize=12)
-        ax3.set_xlabel("Voltage ($\mu$V)", fontsize=12)
-        ax3.set_ylabel("Res ($\Omega$)", fontsize=12)
-        ax4.set_xlabel("Res ($\Omega$)", fontsize=12)
-        ax4.set_ylabel("Power ($pW$)", fontsize=12)
+        ax1.set_xlabel("Voltage ($\mu$V)", fontsize=16)
+        ax1.set_ylabel("Current ($\mu$A)", fontsize=16)
+        ax3.set_xlabel("Voltage ($\mu$V)", fontsize=16)
+        ax3.set_ylabel("Res ($\Omega$)", fontsize=16)
+        ax4.set_xlabel("Res ($\Omega$)", fontsize=16)
+        ax4.set_ylabel("Power ($pW$)", fontsize=16)
 
         # Set the titles
         sample_name = self.sample_name_lineedit.text()
-        ax1.set_title('IV of {0}'.format(sample_name))
-        ax3.set_title('RV of {0}'.format(sample_name))
-        ax4.set_title('PR of {0}'.format(sample_name))
+        ax1.set_title('IV of {0}'.format(sample_name), fontsize=16)
+        ax3.set_title('RV of {0}'.format(sample_name), fontsize=16)
+        ax4.set_title('PR of {0}'.format(sample_name), fontsize=16)
         t_bath = self.t_bath_lineedit.text()
         t_load = self.t_load_lineedit.text()
         title = '{0}\n@{1}mK with {2}K Load'.format(sample_name, t_bath, t_load)
-        ax1.set_title(title, fontsize=14)
+        title = '{0}'.format(sample_name)
+        ax1.set_title(title, fontsize=16)
 
         #####################################
         # Data Plotting
@@ -568,7 +574,7 @@ class IVCollector(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTransformSpe
         p_bolo = v_bolo_real * i_bolo_real
         r_bolo = v_bolo_real / i_bolo_real
 
-        x_fit_vector = np.arange(fit_clip_lo, fit_clip_hi, 0.02)
+        x_fit_vector = np.arange(fit_clip_lo, fit_clip_hi, 0.005)
         y_fit_vector = np.polyval(fit_vals, x_fit_vector) - fit_vals[1]
         if fit_vals[0] < 0:
             y_fit_vector *= -1
@@ -596,7 +602,7 @@ class IVCollector(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTransformSpe
                      '*', markersize=10.0, color='g', label='Pturn = {0:.2f} pW'.format(pturn_pw))
             ax1.plot(v_bolo_real[plot_selector][pl_idx], i_bolo_real[plot_selector][pl_idx],
                      '*', markersize=10.0, color='m', label='Plast = {0:.2f} pW'.format(plast_pw))
-        ax3.plot(v_bolo_real[plot_selector], r_bolo[plot_selector], 'b', label='Res {0:.4f} ($\Omega$)'.format(1.0 / fit_vals[0]))
+        ax3.plot(v_bolo_real[plot_selector], r_bolo[plot_selector], 'b', label='Res {0:.2f} ($\Omega$)'.format(1.0 / fit_vals[0]))
         ax4.plot(r_bolo[plot_selector], p_bolo[plot_selector], 'r', label='Power (pW)')
         # Grab all the labels and combine them 
         handles, labels = ax1.get_legend_handles_labels()
@@ -604,7 +610,7 @@ class IVCollector(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTransformSpe
         labels += ax3.get_legend_handles_labels()[1]
         handles += ax4.get_legend_handles_labels()[0]
         labels += ax4.get_legend_handles_labels()[1]
-        ax2.legend(handles, labels, numpoints=1, mode="expand", frameon=False, bbox_to_anchor=(0, 0.1, 1, 1))
+        ax2.legend(handles, labels, numpoints=1, mode="expand", frameon=False, fontsize=16, bbox_to_anchor=(0, 0.1, 1, 1))
         #####################################
         # For Saving
         #####################################
@@ -612,7 +618,7 @@ class IVCollector(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTransformSpe
         self.x_stds_real = v_bolo_stds
         self.y_data_real = i_bolo_real
         self.y_stds_real = i_bolo_stds
-        fig.savefig('temp_iv_all.png', transparent=True)
+        fig.savefig('temp_iv_all.png', transparent=False)
         image_to_display = QtGui.QPixmap('temp_iv_all.png')
         self.xy_scatter_label.setPixmap(image_to_display)
 
@@ -631,14 +637,14 @@ class IVCollector(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTransformSpe
         '''
         '''
         i_bolo_real, i_bolo_stds, resistance = self.ivc_fit_and_remove_squid_offset()
-        return i_bolo_real, i_bolo_stds, resistance
+        return i_bolo_real, i_bolo_stds, np.abs(resistance)
 
     def ivc_fit_and_remove_squid_offset(self, polyfit_n=1):
         '''
         '''
-        if not self.gb_is_float(self.squid_calibration_label.text().split(' ')[1]):
+        if not self.gb_is_float(self.squid_calibration_lineedit.text()):
             return None
-        squid_calibration_factor = float(self.squid_calibration_label.text().split(' ')[1])
+        squid_calibration_factor = float(self.squid_calibration_lineedit.text())
         i_bolo_stds = np.asarray(self.y_stds) * squid_calibration_factor
         scaled_y_vector = np.asarray(copy(self.y_data)) * squid_calibration_factor # in uA from V 
         scaled_x_vector = np.asarray(copy(self.x_data))
@@ -709,12 +715,12 @@ class IVCollector(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTransformSpe
         if add_fit:
             ax1.plot(v_fit_x_vector[selector_2], poly_fit, label='Fit: {0:.5f}$\Omega$'.format(1.0 / fit_vals[0]))
         # Label the axis
-        ax1.set_xlabel("Voltage ($\mu$V)", fontsize=12)
-        ax1.set_ylabel("Current ($\mu$A)", fontsize=12)
-        ax3.set_xlabel("Voltage ($\mu$V)", fontsize=12)
-        ax3.set_ylabel("Res ($\Omega$)", fontsize=12)
-        ax4.set_xlabel("Res ($\Omega$)", fontsize=12)
-        ax4.set_ylabel("Power ($pW$)", fontsize=12)
+        ax1.set_xlabel("Voltage ($\mu$V)", fontsize=16)
+        ax1.set_ylabel("Current ($\mu$A)", fontsize=16)
+        ax3.set_xlabel("Voltage ($\mu$V)", fontsize=16)
+        ax3.set_ylabel("Res ($\Omega$)", fontsize=16)
+        ax4.set_xlabel("Res ($\Omega$)", fontsize=16)
+        ax4.set_ylabel("Power ($pW$)", fontsize=16)
         # Set the titles
         ax1.set_title('IV of {0}'.format(title))
         ax3.set_title('RV of {0}'.format(title))
