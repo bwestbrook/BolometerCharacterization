@@ -210,6 +210,9 @@ class RTCollector(QtWidgets.QWidget, GuiBuilder):
         self.temp_set_point_high_lineedit = self.gb_make_labeled_lineedit(label_text='SP_high (mK):', lineedit_text='40')
         self.temp_set_point_high_lineedit.setValidator(QtGui.QDoubleValidator(0, 1200, 2, self.temp_set_point_high_lineedit))
         self.layout().addWidget(self.temp_set_point_high_lineedit, 1, 4, 1, 1)
+        self.refresh_set_point_pushbutton = QtWidgets.QPushButton('Refresh Temp', self)
+        self.layout().addWidget(self.refresh_set_point_pushbutton, 1, 5, 1, 1)
+        self.refresh_set_point_pushbutton.clicked.connect(self.rtc_scan_temp)
         ramp_on, ramp_value = True, ''
         if self.ls372_temp_widget is not None:
             ramp_on, ramp_value = self.ls372_temp_widget.temp_control.ls372_get_ramp()
@@ -323,7 +326,7 @@ class RTCollector(QtWidgets.QWidget, GuiBuilder):
         heater_power = self.heater_resistance * heater_current ** 2 # in mW
         return heater_current, heater_power
 
-    def rtc_scan_temp(self, x_data, x_stds):
+    def rtc_scan_temp(self, clicked, x_data=[], x_stds=[]):
         '''
         '''
         if not self.gb_is_float(self.temp_set_point_low_lineedit.text()):
@@ -332,6 +335,8 @@ class RTCollector(QtWidgets.QWidget, GuiBuilder):
             return None
         x_data, x_stds = self.rtc_adjust_x_data(x_data, x_stds)
         if len(x_data) == 0:
+            x_data, x_stds = self.rtc_adjust_x_data(self.x_data, self.x_stds)
+        if len(x_data) == 0:
             return None
         current_temp = x_data[-1]
         low_set_point = float(self.temp_set_point_low_lineedit.text())
@@ -339,15 +344,16 @@ class RTCollector(QtWidgets.QWidget, GuiBuilder):
         if current_temp > high_set_point:
             self.drift_direction = 'down'
             new_target = low_set_point * 1e-3 #K
-            self.ls372_temp_widget.temp_control.set_run_function('ls372_set_temp_set_point', new_target)
-            self.qthreadpool.start(self.ls372_temp_widget.temp_control)
-            self.status_bar.showMessage('Setting temperature {0} to {1} mK'.format(self.drift_direction, low_set_point))
         elif current_temp < low_set_point:
             self.drift_direction = 'up'
             new_target = high_set_point * 1e-3 #K
-            self.ls372_temp_widget.temp_control.set_run_function('ls372_set_temp_set_point', new_target)
-            self.qthreadpool.start(self.ls372_temp_widget.temp_control)
-            self.status_bar.showMessage('Setting temperature {0} to {1} mK'.format(self.drift_direction, high_set_point))
+        elif self.drift_direction == 'up':
+            new_target = high_set_point * 1e-3 #K
+        elif self.drift_direction == 'down':
+            new_target = low_set_point * 1e-3 #K
+        self.ls372_temp_widget.temp_control.set_run_function('ls372_set_temp_set_point', new_target)
+        self.qthreadpool.start(self.ls372_temp_widget.temp_control)
+        self.status_bar.showMessage('Setting temperature {0} to {1} mK'.format(self.drift_direction, new_target * 1e-3))
 
     def rtc_edit_lakeshore_temp_control(self):
         '''
@@ -430,6 +436,11 @@ class RTCollector(QtWidgets.QWidget, GuiBuilder):
         # Y Voltage Factor 
         self.y_correction_lineedit = self.gb_make_labeled_lineedit(label_text='Resistance Factor:')
         self.layout().addWidget(self.y_correction_lineedit, 4, 3, 1, 2)
+        self.y_label_combobox = self.gb_make_labeled_combobox(label_text='Y label:')
+        y_labels = ['Resistance ($m\Omega$)', 'Arb Units']
+        for y_label in y_labels:
+            self.y_label_combobox.addItem(y_label)
+        self.layout().addWidget(self.y_label_combobox, 4, 5, 1, 2)
 
     def rtc_add_common_widgets(self):
         '''
@@ -618,7 +629,6 @@ class RTCollector(QtWidgets.QWidget, GuiBuilder):
                 if len(items[3].split(' ')) > 1:
                     y_std = float(items[3].split(' ')[1].strip())
                     direction = items[3].split(' ')[2].strip()
-                    print(items[3].split(' '))
                 elif len(items) == 5:
                     direction = items[4].strip()
                 else:
@@ -836,7 +846,7 @@ class Collector(QRunnable):
             self.rtc_plot_running()
             self.signals.data_ready.emit() #data_dict)
             if i % 15 == 0 and i % 60 != 0:
-                self.signals.check_scan.emit([self.x_data[-1]], [self.x_stds[-1]])
+                self.signals.check_scan.emit(False, [self.x_data[-1]], [self.x_stds[-1]])
             if i % 60 == 0:
                 self.signals.check_heater.emit()
             i += 1
@@ -935,13 +945,16 @@ class Collector(QRunnable):
             return None
         fig = self.rtc.xy_fig
         ax = fig.get_axes()[0]
+        if hasattr(self.rtc, 'y_label_combobox'):
+            y_label = self.rtc.y_label_combobox.currentText()
+        else:
+            y_label = 'NA'
         if running:
             y_data, y_stds = self.rtc_adjust_y_data()
             x_data, x_stds = self.rtc_adjust_x_data()
             fig = self.rtc_plot_drifts(fig, x_data, x_stds, y_data, y_stds)
             ax.set_xlabel('Temperature ($mK$)', fontsize=12)
-            #ax.set_ylabel('Resistance ($m\Omega$)', fontsize=12)
-            ax.set_ylabel('Arb Units', fontsize=12)
+            ax.set_ylabel(y_label, fontsize=12)
             fig.savefig('temp_xy.png', transparent=self.transparent_plots)
         else:
             self.y_data, self.y_stds = self.rtc_adjust_y_data()
@@ -950,8 +963,7 @@ class Collector(QRunnable):
             ax.tick_params(axis='x', labelsize=16)
             ax.tick_params(axis='y', labelsize=16)
             ax.set_xlabel('Temperature ($mK$)', fontsize=14)
-            #ax.set_ylabel('Resistance ($m\Omega$)', fontsize=14)
-            ax.set_ylabel('Arb Units', fontsize=12)
+            ax.set_ylabel(y_label, fontsize=12)
             fig.savefig('temp_xy.png', transparent=self.transparent_plots)
 
     def rtc_plot_drifts(self, fig, x_data, x_stds, y_data, y_stds):
@@ -1036,7 +1048,7 @@ class CollectorSignals(QObject):
     '''
 
     data_ready = pyqtSignal()
-    check_scan = pyqtSignal(list, list)
+    check_scan = pyqtSignal(bool, list, list)
     check_heater = pyqtSignal()
     finished = pyqtSignal(list, list, list, list, list)
     temp_ready = pyqtSignal(float)
