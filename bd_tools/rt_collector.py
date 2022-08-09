@@ -281,8 +281,11 @@ class RTCollector(QtWidgets.QWidget, GuiBuilder):
         '''
         if not hasattr(self, 'lakeshore_state_label'):
             return None
+        self.status_bar.showMessage('Getting Temp')
         current_temp = self.rtc_get_current_temp()
+        self.status_bar.showMessage('Getting Set Point')
         active_set_point = self.rtc_get_active_set_point()# mK
+        self.status_bar.showMessage('Getting Heater ')
         heater_current, heater_power = self.rtc_get_heater_state()
         lake_shore_state = 'Current temp {0:.3f}mK ::: Active Target {1:.3f}mK ::: Heater Power {2:.3f}mW'.format(current_temp, active_set_point * 1e3, heater_power * 1e3)
         if pid:

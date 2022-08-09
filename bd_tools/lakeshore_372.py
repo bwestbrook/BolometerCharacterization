@@ -742,9 +742,7 @@ class LS372TempControl(QRunnable):
         See page 171
         https://www.lakeshore.com/docs/default-source/product-downloads/372_manual.pdf?sfvrsn=176cd211_1
         '''
-        set_point = self.ls372_get_temp_set_point()
         set_thermometer_index_cmd = 'outmode 0, 5, {0}, 0, 0, 1, 0 '.format(index)
-        self.ls372_set_temp_set_point(set_point)
         self.status_bar.showMessage('Sending Serial Command "{0}"'.format(set_thermometer_index_cmd))
         self.serial_com.bs_write(set_thermometer_index_cmd)
         QtWidgets.QApplication.processEvents()
