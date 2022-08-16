@@ -450,7 +450,6 @@ class LakeShore372(QtWidgets.QWidget, GuiBuilder):
                 value = new_settings[header]
                 if header == 'exc_mode':
                     exc_mode = copy(value)
-                print(header)
                 #import ipdb;ipdb.set_trace()
                 if header == 'excitation':
                     if float(value) in self.lakeshore372_command_dict[header][exc_mode]:
@@ -625,7 +624,6 @@ class LS372TempControl(QRunnable):
         self.serial_com.bs_write(pid_query)
         QtWidgets.QApplication.processEvents()
         result = self.serial_com.bs_read()
-        print(result)
         if len(result) == 0:
             return -1, -1, -1
         else:
