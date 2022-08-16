@@ -111,13 +111,19 @@
                 "function": "bd_agilent_e3634a",
                 "icon": "power_supply.png"
             },
-            "04_HP 34401A": {
+            "04_Agilent ACG 100": {
+                "StatusTip": "Agilent ACG100",
+                "ToolTip": "Agilent ACG100 Configuration ",
+                "function": "bd_agilent_agc100",
+                "icon": "pressure_gauge.png"
+            },
+            "05_HP 34401A": {
                 "StatusTip": "Hewlett Packard 34401A",
                 "ToolTip": "HP 34401A Configuration ",
                 "function": "bd_hewlett_packard_34401a",
                 "icon": "power_supply.png"
             },
-            "05_Sigma Koki": {
+            "06_Sigma Koki": {
                 "StatusTip": "Sigma Koki",
                 "ToolTip": "Sigma Koki",
                 "function": "bd_sigma_koki",

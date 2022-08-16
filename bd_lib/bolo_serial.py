@@ -29,7 +29,10 @@ class BoloSerial(object):
                 },
             'Agilent E3634A': {
                 'baudrate': 9600,
-                #'parity': serial.PARITY_NONE,
+                'timeout': 2
+                },
+            'Agilent_AGC100': {
+                'baudrate': 115200,
                 'timeout': 2
                 },
             'Stepper': {
@@ -45,6 +48,10 @@ class BoloSerial(object):
                 'timeout': 3
                 },
             'SRS_SR830_DSP': {
+                'baudrate': 9600,
+                'timeout': 3
+                },
+            'Agilent-ACG-100': {
                 'baudrate': 9600,
                 'timeout': 3
                 }
@@ -69,13 +76,14 @@ class BoloSerial(object):
         self.ser.flushInput()
         self.ser.flushOutput()
 
-    def bs_write(self, string, encode=None, verbatim=False):
+    def bs_write(self, string, encode=None, verbatim=False, wait_time=1):
         """
         Properly terminates and encodes a message, then writes it to the port
         """
         if not string.endswith('\r\n') and not verbatim:
             string += '\r\n'
-        self.ser.write(string.encode('utf-8')) # unicode not supported for serial module in python 3
+        self.ser.write(string.encode('ascii')) # unicode not supported for serial module in python 3
+        time.sleep(wait_time)
         #self.ser.write(string.encode('ASCII')) # unicode not supported for serial module in python 3
 
     def bs_read(self, decode='latin-1'):
@@ -116,8 +124,8 @@ class BoloSerial(object):
         return is_stepper
 
 if __name__ == '__main__':
-    bs = BoloSerial('COM10', device='SRS_SR830_DSP')
-    bs.bs_write('*cls ')
-    idn = bs.bs_write_read('*idn? \n', verbatim=True)
-    print(idn)
+    device = 'Agilent-ACG-100'
+    bs = BoloSerial('COM3', device=device)
+    #bs.bs_write('*cls ')
+    idn = bs.bs_write_read('AYT')
     import ipdb;ipdb.set_trace()

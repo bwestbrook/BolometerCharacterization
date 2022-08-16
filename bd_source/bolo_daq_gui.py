@@ -20,7 +20,6 @@ from datetime import datetime
 from copy import copy
 from PyQt5 import QtCore, QtGui, QtWidgets
 
-
 # Settings 
 from bd_settings.bd_global_settings import settings
 
@@ -44,6 +43,7 @@ from bd_tools.difference_load_curves import DifferenceLoadCurves
 from bd_tools.data_plotter import DataPlotter
 from bd_tools.time_constant import TimeConstant
 from bd_tools.agilent_e3634a import AgilentE3634A
+from bd_tools.agilent_agc100 import AgilentAGC100
 from bd_tools.noise_analyzer import NoiseAnalyzer
 from bd_tools.dr_p_and_t_plotter import DilutionRefridgeratorPressureTemperatureLogPlotter
 from bd_tools.hewlett_packard_34401a import HewlettPackard34401A
@@ -52,7 +52,6 @@ from bd_tools.configure_sigma_koki import ConfigureSigmaKoki
 from bd_tools.polarization_efficiency import PolarizationEfficiency
 from bd_tools.fourier_transform_spectrometer import FourierTransformSpectrometer
 from bd_tools.stanford_research_systems_sr830_dsp import StanfordResearchSystemsSR830DSP
-
 
 # Gui Biulder
 from GuiBuilder.gui_builder import GuiBuilder
@@ -157,7 +156,11 @@ class BoloDAQGui(QtWidgets.QMainWindow, GuiBuilder):
         custom_widgets.append(q_progress_bar)
         self.progress_bar = q_progress_bar
         permanant_messages = ['BoloDAQ Benjamin Grey Westbrook 2020']
-        self.gb_add_status_bar(permanant_messages=permanant_messages , add_saved=True, custom_widgets=custom_widgets)
+        self.gb_add_status_bar(
+            permanant_messages=permanant_messages,
+            add_saved=True,
+            custom_widgets=custom_widgets
+            )
         self.status_bar.progress_bar = self.progress_bar
 
     def bd_close_main(self):
@@ -365,17 +368,39 @@ class BoloDAQGui(QtWidgets.QMainWindow, GuiBuilder):
         self.status_bar.showMessage('Setting up Hewlett Packard 34401A Controller')
         QtWidgets.QApplication.processEvents()
         dialog = 'Select the comport for the HP 34401A'
-        com_port, okPressed = self.gb_quick_static_info_gather(title='', dialog=dialog, items=['COM3'])
+        com_port = 'COM19'
+        okPressed = True
+        com_port = 'COM20'
+        okPressed = True
         if not hasattr(self, 'ser_{0}'.format(com_port)) and okPressed:
-            serial_com = BoloSerial(com_port, device='HP_34401A', splash_screen=self.status_bar)
-            setattr(self, 'ser_{0}'.format(com_port), serial_com)
             if not hasattr(self, 'hp_34401a_widget'):
-                self.hp_34401a_widget = HewlettPackard34401A(serial_com, com_port, self.status_bar, self.screen_resolution, self.monitor_dpi)
+                self.hp_34401a_widget = HewlettPackard34401A(self.status_bar, self.screen_resolution, self.monitor_dpi)
             self.central_widget.layout().addWidget(self.hp_34401a_widget, 0, 0, 1, 1)
         elif okPressed:
-            self.hp_34401a_widget.ae_update_serial_com(serial_com)
             self.central_widget.layout().addWidget(self.hp_34401a_widget, 0, 0, 1, 1)
         self.status_bar.showMessage('Hewlett Packard 34401A Controller')
+        QtWidgets.QApplication.processEvents()
+        self.resize(self.minimumSizeHint())
+
+    #################################################
+    # Pressure gague Agilent AGC 100
+    #################################################
+
+    def bd_agilent_agc100(self):
+        '''
+        '''
+        self.gb_initialize_panel('central_widget')
+        dialog = 'Select the comport for the Agilent E3634A'
+        com_port, okPressed = self.gb_quick_static_info_gather(title='', dialog=dialog, items=['COM5'])
+        if not hasattr(self, 'ser_{0}'.format(com_port)) and okPressed:
+            serial_com = BoloSerial(com_port, device='Agilent_AGC100', splash_screen=self.status_bar)
+            setattr(self, 'ser_{0}'.format(com_port), serial_com)
+            if not hasattr(self, 'agilent_agc100_widget'):
+                self.agilent_agc100_widget = AgilentAGC100(serial_com, self.status_bar, self.screen_resolution, self.monitor_dpi)
+            self.central_widget.layout().addWidget(self.agilent_agc100_widget, 0, 0, 1, 1)
+        elif okPressed:
+            self.central_widget.layout().addWidget(self.agilent_agc100_widget, 0, 0, 1, 1)
+        self.status_bar.showMessage('Agilent AGC100 Pressure Gauge')
         QtWidgets.QApplication.processEvents()
         self.resize(self.minimumSizeHint())
 
@@ -748,7 +773,7 @@ class BoloDAQGui(QtWidgets.QMainWindow, GuiBuilder):
         dialog = 'Select the comport for the SRS 830'
         #com_port, okPressed = self.gb_quick_static_info_gather(title='', dialog=dialog, items=['COM10'])
         com_port = self.com_ports_dict['SRS SR830DSP']
-        self.srs_sr830dsp_widget = None
+        #self.srs_sr830dsp_widget = None
         if not hasattr(self, 'ser_{0}'.format(com_port)) and com_port != 'None':
             if not hasattr(self, 'srs_sr830dsp_widget'):
                 self.status_bar.showMessage('Connecting to the SRS SR830 DSP')
@@ -768,6 +793,7 @@ class BoloDAQGui(QtWidgets.QMainWindow, GuiBuilder):
                     self.srs_sr830dsp_widget = None
         dialog = 'Select the comport for the stepper motor you wish to configure'
         for motor in ['FTS Mirror Motor']:
+            pprint(self.com_ports_dict)
             sm_com_port = self.com_ports_dict[motor]
             if not hasattr(self, 'csm_widget_{0}'.format(sm_com_port)) and okPressed:
                 if getattr(self, 'ser_{0}'.format(com_port)) is None:
@@ -783,8 +809,50 @@ class BoloDAQGui(QtWidgets.QMainWindow, GuiBuilder):
             #self.srs_sr830dsp_widget = None
             if motor == 'FTS Mirror Motor':
                 csm_mirror_widget = csm_widget
+        #for motor in ['FTS Mirror Motor']:
+        csm_input_widget = None
+        csm_output_widget = None
+        items = ['single mirror', 'input output']
+        run_mode, okPressed = self.gb_quick_static_info_gather(
+            title='',
+            dialog=dialog,
+            items=items)
+        if run_mode == 'single mirror':
+            motors = ['FTS Mirror Motor']
+        elif run_mode == 'input output':
+            motors = ['FTS Mirror Motor', 'FTS Input Polarizer', 'FTS Output Polarizer']
+        for motor in motors:
+            pprint(self.com_ports_dict)
+            sm_com_port = self.com_ports_dict[motor]
+            if not hasattr(self, 'csm_widget_{0}'.format(sm_com_port)) and okPressed:
+                if getattr(self, 'ser_{0}'.format(com_port)) is None:
+                    setattr(self, 'csm_widget_{0}'.format(sm_com_port), None)
+                    csm_widget = None
+                else:
+                    csm_widget = ConfigureStepperMotor(sm_com_port, self.status_bar)
+                setattr(self, 'csm_widget_{0}'.format(sm_com_port), csm_widget)
+            elif okPressed:
+                csm_widget = getattr(self, 'csm_widget_{0}'.format(sm_com_port))
+            else:
+                return None
+            #self.srs_sr830dsp_widget = None
+            if motor == 'FTS Mirror Motor':
+                csm_mirror_widget = csm_widget
+            elif motor == 'FTS Input Polarizer':
+                csm_input_widget = csm_widget
+            elif motor == 'FTS Output Polarizer':
+                csm_output_widget = csm_widget
         if not hasattr(self, 'fts_widget'):
-            self.fts_widget = FourierTransformSpectrometer(self.daq_settings, self.status_bar, self.screen_resolution, self.monitor_dpi, csm_mirror_widget, self.srs_sr830dsp_widget, self.data_folder)
+            self.fts_widget = FourierTransformSpectrometer(
+                self.daq_settings,
+                self.status_bar,
+                self.screen_resolution,
+                self.monitor_dpi,
+                csm_mirror_widget,
+                csm_input_widget,
+                csm_output_widget,
+                self.srs_sr830dsp_widget,
+                self.data_folder)
         sm_com_port = self.com_ports_dict['FTS Mirror Motor']
         if not hasattr(self, 'ser_{0}'.format(sm_com_port)):
             if hasattr(self, 'csm_widget_{0}'.format(sm_com_port)):

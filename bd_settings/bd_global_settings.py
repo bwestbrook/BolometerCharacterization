@@ -24,6 +24,7 @@ from .power_supply import power_supply_settings
 from .lakeshore372 import lakeshore372_settings
 
 
+
 settings = GenericClass()
 
 # Individual files for various panels

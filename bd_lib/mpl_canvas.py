@@ -8,9 +8,10 @@ class MplCanvas(FigureCanvasQTAgg):
     def __init__(self, parent, screen_resolution, monitor_dpi):
         '''
         '''
+        #fig = Figure()
         self.screen_resolution = screen_resolution
         self.dpi = monitor_dpi
-        super(MplCanvas, self).__init__()
+        #super(MplCanvas, self).__init__()
 
     def mplc_adjust_subplots(self,
             fig,
@@ -42,6 +43,7 @@ class MplCanvas(FigureCanvasQTAgg):
         width = (frac_screen_width * self.screen_resolution.width()) / self.dpi # in pixels
         height = (frac_screen_height * self.screen_resolution.height()) / self.dpi # in pixels
         fig = Figure(figsize=(width, height), dpi=self.dpi)
+        print(fig)
         return fig
 
     def mplc_create_basic_fig(self,
