@@ -42,9 +42,6 @@ class HewlettPackard34401A(QtWidgets.QWidget, GuiBuilder):
         '''
         welcome_label = QtWidgets.QLabel('Welcome to the Hewlett Packard 34401A Controller!', self)
         self.layout().addWidget(welcome_label, 0, 0, 1, 4)
-        #get_id_pushbutton = QtWidgets.QPushButton('Get ID', self)
-        #self.layout().addWidget(get_id_pushbutton, 1, 0, 1, 2)
-        #get_id_pushbutton.clicked.connect(self.hp_get_id)
         self.select_dev_combobox = self.gb_make_labeled_combobox(label_text='Select Dev')
         for device in range(1, 3):
             self.select_dev_combobox.addItem(str(device))
@@ -149,9 +146,6 @@ class HewlettPackard34401A(QtWidgets.QWidget, GuiBuilder):
         pl.close()
 
 
-
-
-
 class Communicator(QRunnable):
     '''
     '''
@@ -160,24 +154,10 @@ class Communicator(QRunnable):
         '''
         self.hp = hp
         self.serial_com_1 = hp.serial_com_hp1
-        self.serial_com_2 = hp.serial_com_hp1
+        self.serial_com_2 = hp.serial_com_hp2
         super(Communicator, self).__init__()
         self.signals = CommunicatorSignals()
 
-    def hp_get_id(self, clicked):
-        '''
-        '''
-        dev = self.select_dev_combobox.currentText()
-        self.hp_send_command('*CLS ')
-        idn = getattr(self, 'serial_com_{0}'.format(dev)).bs_write_read('*IDN? ')
-        message = 'ID {0}'.format(idn)
-        self.hp.status_bar.showMessage(message)
-
-    def hp_update_serial_com(self, serial_com):
-        '''
-        '''
-        self.serial_com = serial_com
-        self.hp_get_id()
 
     @pyqtSlot()
     def stop(self):
@@ -201,37 +181,29 @@ class Communicator(QRunnable):
     def hp_get_resistance(self, clicked, dev=None):
         '''
         '''
-        if dev is None:
-            dev = self.select_dev_combobox.currentText()
-        self.hp_send_command('*CLS ')
-        self.hp_send_command(':SYST:REM')
+        self.hp_send_command('*CLS ', dev)
+        self.hp_send_command(':SYST:REM', dev)
+        if int(dev) == 1:
+            serial_com = self.serial_com_1
+        elif int(dev) == 2:
+            serial_com = self.serial_com_2
         query = ":MEAS:RES? "
-        resistance = getattr(self, 'serial_com_{0}'.format(dev)).bs_write_read(query)
+        resistance = serial_com.bs_write_read(query)
         query = ":SYST:ERR?"
+        system_error = serial_com.bs_write_read(query)
         sys_error = getattr(self, 'serial_com_{0}'.format(dev)).bs_write_read(query)
         return resistance
 
-    def hp_send_command(self, msg):
+    def hp_send_command(self, msg, dev):
         '''
         '''
-        dev = self.hp.select_dev_combobox.currentText()
-        getattr(self, 'serial_com_{0}'.format(dev)).bs_write(msg)
-
-
-    def get_resistance(self):
-        '''
-        '''
-        resistance = self._query_mm(":MEAS:RES?\r\n")
-        if self._is_float(resistance):
-            resistance_str = '{0:.2f} Ohms'.format(float(resistance))
-        else:
-            resistance_str = resistance
-        if self._is_float(resistance):
-            return float(resistance), resistance_str
-        else:
-            self._send_mm_command("*CLS\r\n;")
-            time.sleep(0.5)
-            self.get_resistance()
+        if dev is None:
+            return None
+        if int(dev) == 1:
+            serial_com = self.serial_com_1
+        elif int(dev) == 2:
+            serial_com = self.serial_com_2
+        serial_com.bs_write(msg)
 
 class CommunicatorSignals(QObject):
     '''
