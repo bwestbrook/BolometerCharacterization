@@ -450,7 +450,6 @@ class LakeShore372(QtWidgets.QWidget, GuiBuilder):
                 value = new_settings[header]
                 if header == 'exc_mode':
                     exc_mode = copy(value)
-                print(header)
                 #import ipdb;ipdb.set_trace()
                 if header == 'excitation':
                     if float(value) in self.lakeshore372_command_dict[header][exc_mode]:
@@ -621,11 +620,10 @@ class LS372TempControl(QRunnable):
         '''
         result = self.serial_com.bs_read()
         pid_query = 'pid? '
-        self.status_bar.showMessage('Sending Serial Command "{0}"'.format(pid_query))
+        self.status_bar.showMessage('Getting PID params with serial cmd "{0}"'.format(pid_query))
         self.serial_com.bs_write(pid_query)
         QtWidgets.QApplication.processEvents()
         result = self.serial_com.bs_read()
-        print(result)
         if len(result) == 0:
             return -1, -1, -1
         else:
@@ -640,7 +638,7 @@ class LS372TempControl(QRunnable):
         '''
         result = self.serial_com.bs_read()
         set_pid_command = 'pid 0,{0},{1},{2} '.format(p, i, d)
-        self.status_bar.showMessage('Sending Serial Command "{0}"'.format(set_pid_command))
+        self.status_bar.showMessage('Setting PID params with serial cmd "{0}"'.format(set_pid_command))
         self.serial_com.bs_write(set_pid_command)
         QtWidgets.QApplication.processEvents()
         result = self.serial_com.bs_read()
@@ -651,7 +649,7 @@ class LS372TempControl(QRunnable):
         '''
         result = self.serial_com.bs_read()
         ramp_query = 'ramp? 0 '
-        self.status_bar.showMessage('Sending Serial Command "{0}"'.format(ramp_query))
+        self.status_bar.showMessage('Getting ramp with serial cmd "{0}"'.format(ramp_query))
         self.serial_com.bs_write(ramp_query)
         QtWidgets.QApplication.processEvents()
         response = self.serial_com.bs_read()
@@ -663,7 +661,7 @@ class LS372TempControl(QRunnable):
         '''
         result = self.serial_com.bs_read()
         set_ramp_command = 'ramp 0,1,{0} '.format(ramp)
-        self.status_bar.showMessage('Sending Serial Command "{0}"'.format(set_ramp_command))
+        self.status_bar.showMessage('Setting ramp with serial cmd "{0}"'.format(set_ramp_command))
         self.serial_com.bs_write(set_ramp_command)
         QtWidgets.QApplication.processEvents()
         result = self.serial_com.bs_read()
@@ -675,7 +673,7 @@ class LS372TempControl(QRunnable):
         '''
         result = self.serial_com.bs_read()
         heater_range_query = 'range? 0 '
-        self.status_bar.showMessage('Sending Serial Command "{0}"'.format(heater_range_query))
+        self.status_bar.showMessage('Getting heater value with serial cmd "{0}"'.format(heater_range_query))
         self.serial_com.bs_write(heater_range_query)
         QtWidgets.QApplication.processEvents()
         range_index = self.serial_com.bs_read()
@@ -687,7 +685,7 @@ class LS372TempControl(QRunnable):
         '''
         result = self.serial_com.bs_read()
         set_heater_range_command = 'range 0,{0} '.format(range_index)
-        self.status_bar.showMessage('Sending Serial Command "{0}"'.format(set_heater_range_command))
+        self.status_bar.showMessage('Setting heater range with serial cmd "{0}"'.format(set_heater_range_command))
         self.serial_com.bs_write(set_heater_range_command)
         QtWidgets.QApplication.processEvents()
         result = self.serial_com.bs_read()
@@ -696,11 +694,11 @@ class LS372TempControl(QRunnable):
         '''
         '''
         heater_set_command = 'htrset 0,120,0,0,2 ' # makes sure heater out is in amps not power
-        self.status_bar.showMessage('Sending Serial Command "{0}"'.format(heater_set_command))
+        self.status_bar.showMessage('Setting heater up with serial cmd "{0}"'.format(heater_set_command))
         self.serial_com.bs_write(heater_set_command)
         result = self.serial_com.bs_read()
         heater_value_query = 'htr? 0 '
-        self.status_bar.showMessage('Sending Serial Command "{0}"'.format(heater_value_query))
+        self.status_bar.showMessage('Getting heater value with serial cmd "{0}"'.format(heater_value_query))
         self.serial_com.bs_write(heater_value_query)
         QtWidgets.QApplication.processEvents()
         response = self.serial_com.bs_read()
@@ -717,7 +715,7 @@ class LS372TempControl(QRunnable):
         '''
         '''
         temp_set_point_query = 'setp? 0 '
-        self.status_bar.showMessage('Sending Serial Command "{0}"'.format(temp_set_point_query))
+        self.status_bar.showMessage('Getting set point with serial cmd"{0}"'.format(temp_set_point_query))
         self.serial_com.bs_write(temp_set_point_query)
         try:
             set_point = float(self.serial_com.bs_read())
@@ -730,7 +728,7 @@ class LS372TempControl(QRunnable):
         '''
         '''
         set_temp_set_point_command = 'setp 0, {0} '.format(set_point)
-        self.status_bar.showMessage('Sending Serial Command "{0}"'.format(set_temp_set_point_command))
+        self.status_bar.showMessage('Set set point with serial cmd "{0}"'.format(set_temp_set_point_command))
         self.serial_com.bs_write(set_temp_set_point_command)
         QtWidgets.QApplication.processEvents()
         result = self.serial_com.bs_read()
@@ -742,10 +740,8 @@ class LS372TempControl(QRunnable):
         See page 171
         https://www.lakeshore.com/docs/default-source/product-downloads/372_manual.pdf?sfvrsn=176cd211_1
         '''
-        set_point = self.ls372_get_temp_set_point()
         set_thermometer_index_cmd = 'outmode 0, 5, {0}, 0, 0, 1, 0 '.format(index)
-        self.ls372_set_temp_set_point(set_point)
-        self.status_bar.showMessage('Sending Serial Command "{0}"'.format(set_thermometer_index_cmd))
+        self.status_bar.showMessage('Set monitor channel with serial cmd "{0}"'.format(set_thermometer_index_cmd))
         self.serial_com.bs_write(set_thermometer_index_cmd)
         QtWidgets.QApplication.processEvents()
         result = self.serial_com.bs_read()
