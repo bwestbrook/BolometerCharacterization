@@ -536,7 +536,7 @@ class RTCollector(QtWidgets.QWidget, GuiBuilder):
     # Running
     #########################################################
 
-    def rtc_collecter(self, monitor=False):
+    def rtc_collector(self, monitor=False):
         '''
         '''
         device = self.rtc_daq_combobox.currentText()
@@ -579,7 +579,7 @@ class RTCollector(QtWidgets.QWidget, GuiBuilder):
         if 'Start' in self.sender().text():
             self.sender().setText('Stop DAQ')
             self.started = True
-            self.rtc_collecter()
+            self.rtc_collector()
             self.sample_clip_lo_lineedit.setText('0')
         else:
             self.daq_collector.stop()

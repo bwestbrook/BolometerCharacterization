@@ -373,8 +373,12 @@ class BoloDAQGui(QtWidgets.QMainWindow, GuiBuilder):
         com_port = 'COM20'
         okPressed = True
         if not hasattr(self, 'ser_{0}'.format(com_port)) and okPressed:
+            serial_com_hp1 = BoloSerial('COM19', device='HewlettPackard34401A', splash_screen=self.status_bar)
+            setattr(self, 'ser_{0}'.format('COM19'), serial_com_hp1)
+            serial_com_hp2 = BoloSerial('COM20', device='HewlettPackard34401A', splash_screen=self.status_bar)
+            setattr(self, 'ser_{0}'.format('COM20'), serial_com_hp2)
             if not hasattr(self, 'hp_34401a_widget'):
-                self.hp_34401a_widget = HewlettPackard34401A(self.status_bar, self.screen_resolution, self.monitor_dpi)
+                self.hp_34401a_widget = HewlettPackard34401A(serial_com_hp1, serial_com_hp2, self.status_bar, self.screen_resolution, self.monitor_dpi)
             self.central_widget.layout().addWidget(self.hp_34401a_widget, 0, 0, 1, 1)
         elif okPressed:
             self.central_widget.layout().addWidget(self.hp_34401a_widget, 0, 0, 1, 1)
@@ -391,7 +395,9 @@ class BoloDAQGui(QtWidgets.QMainWindow, GuiBuilder):
         '''
         self.gb_initialize_panel('central_widget')
         dialog = 'Select the comport for the Agilent E3634A'
-        com_port, okPressed = self.gb_quick_static_info_gather(title='', dialog=dialog, items=['COM5'])
+        #com_port, okPressed = self.gb_quick_static_info_gather(title='', dialog=dialog, items=['COM5'])
+        com_port = 'COM5'
+        okPressed = True
         if not hasattr(self, 'ser_{0}'.format(com_port)) and okPressed:
             serial_com = BoloSerial(com_port, device='Agilent_AGC100', splash_screen=self.status_bar)
             setattr(self, 'ser_{0}'.format(com_port), serial_com)
