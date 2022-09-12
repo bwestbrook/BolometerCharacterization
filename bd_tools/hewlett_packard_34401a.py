@@ -56,8 +56,11 @@ class HewlettPackard34401A(QtWidgets.QWidget, GuiBuilder):
         save_pushbutton = QtWidgets.QPushButton('Save ', self)
         self.layout().addWidget(save_pushbutton, 4, 2, 1, 2)
         save_pushbutton.clicked.connect(self.hp_save)
+        load_pushbutton = QtWidgets.QPushButton('Load', self)
+        self.layout().addWidget(load_pushbutton, 5, 0, 1, 4)
+        load_pushbutton.clicked.connect(self.hp_load_data)
         self.fig_label = QtWidgets.QLabel('', self)
-        self.layout().addWidget(self.fig_label, 5, 0, 1, 4)
+        self.layout().addWidget(self.fig_label, 6, 0, 1, 4)
 
 
     def hp_start_stop(self):
@@ -127,11 +130,43 @@ class HewlettPackard34401A(QtWidgets.QWidget, GuiBuilder):
                     self.resistances_2[i])
                 fh.write(line)
 
+    def hp_load_data(self):
+        '''
+        '''
+
+        save_path = QtWidgets.QFileDialog.getOpenFileName(self, 'Select Data File')[0]
+        print(save_path)
+        self.times_1 = []
+        self.times_2 = []
+        self.resistances_1 = []
+        self.resistances_2 = []
+        with open(save_path, 'r') as fh:
+            for i, line in enumerate(fh.readlines()):
+                time_stamp_1 = float(line.split(' ')[0].strip())
+
+                time_stamp_1 = datetime.fromtimestamp(time_stamp_1)
+                self.times_1.append(time_stamp_1)
+                resistance_1 = float(line.split(' ')[1].strip())
+                self.resistances_1.append(resistance_1)
+
+                time_stamp_2 = float(line.split(' ')[2].strip())
+                time_stamp_2 = datetime.fromtimestamp(time_stamp_2)
+                self.times_2.append(time_stamp_2)
+                resistance_2 = float(line.split(' ')[3].strip())
+                self.resistances_2.append(resistance_1)
+
+        print(len(self.times_1))
+        print(len(self.resistances_1))
+        print(len(self.times_2))
+        print(len(self.resistances_2))
+        #import ipdb;ipdb.set_trace()
+        self.hp_plot_resistances(False)
+
     def hp_plot_resistances(self, clicked, dev=None):
         '''
         '''
 
-        fig = pl.figure()
+        fig = pl.figure(figsize=(12,6))
         ax = fig.add_subplot(111)
         label_1 = self.label_1_lineedit.text()
         label_2 = self.label_2_lineedit.text()
@@ -143,7 +178,8 @@ class HewlettPackard34401A(QtWidgets.QWidget, GuiBuilder):
         image_to_display = QtGui.QPixmap(save_path)
         self.fig_label.setPixmap(image_to_display)
         QtWidgets.QApplication.processEvents()
-        pl.close()
+        pl.show()
+        #pl.close()
 
 
 class Communicator(QRunnable):
