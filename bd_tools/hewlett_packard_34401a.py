@@ -154,12 +154,6 @@ class HewlettPackard34401A(QtWidgets.QWidget, GuiBuilder):
                 self.times_2.append(time_stamp_2)
                 resistance_2 = float(line.split(' ')[3].strip())
                 self.resistances_2.append(resistance_1)
-
-        print(len(self.times_1))
-        print(len(self.resistances_1))
-        print(len(self.times_2))
-        print(len(self.resistances_2))
-        #import ipdb;ipdb.set_trace()
         self.hp_plot_resistances(False)
 
     def hp_plot_resistances(self, clicked, dev=None):
@@ -178,8 +172,8 @@ class HewlettPackard34401A(QtWidgets.QWidget, GuiBuilder):
         image_to_display = QtGui.QPixmap(save_path)
         self.fig_label.setPixmap(image_to_display)
         QtWidgets.QApplication.processEvents()
-        pl.show()
-        #pl.close()
+        #pl.show()
+        pl.close()
 
 
 class Communicator(QRunnable):
