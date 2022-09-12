@@ -43,7 +43,7 @@ from bd_tools.difference_load_curves import DifferenceLoadCurves
 from bd_tools.data_plotter import DataPlotter
 from bd_tools.time_constant import TimeConstant
 from bd_tools.agilent_e3634a import AgilentE3634A
-from bd_tools.agilent_agc100 import AgilentAGC100
+#from bd_tools.agilent_agc100 import AgilentAGC100
 from bd_tools.noise_analyzer import NoiseAnalyzer
 from bd_tools.dr_p_and_t_plotter import DilutionRefridgeratorPressureTemperatureLogPlotter
 from bd_tools.hewlett_packard_34401a import HewlettPackard34401A

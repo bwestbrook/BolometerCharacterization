@@ -76,7 +76,7 @@ class BoloSerial(object):
         self.ser.flushInput()
         self.ser.flushOutput()
 
-    def bs_write(self, string, encode=None, verbatim=False, wait_time=1):
+    def bs_write(self, string, encode=None, verbatim=False, wait_time=0.01):
         """
         Properly terminates and encodes a message, then writes it to the port
         """
