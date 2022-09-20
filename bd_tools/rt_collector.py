@@ -18,7 +18,15 @@ from GuiBuilder.gui_builder import GuiBuilder, GenericClass
 
 class RTCollector(QtWidgets.QWidget, GuiBuilder):
 
-    def __init__(self, daq_settings, status_bar, screen_resolution, monitor_dpi, ls372_temp_widget, ls372_samples_widget, data_folder):
+    def __init__(
+            self,
+            daq_settings,
+            status_bar,
+            screen_resolution,
+            monitor_dpi,
+            ls372_temp_widget,
+            ls372_samples_widget,
+            data_folder):
         '''
         '''
         super(RTCollector, self).__init__()
@@ -161,7 +169,7 @@ class RTCollector(QtWidgets.QWidget, GuiBuilder):
         for daq in range(0, 8):
             self.daq_y_combobox.addItem(str(daq))
         self.layout().addWidget(self.daq_y_combobox, 1, 2, 1, 1)
-        self.daq_y_combobox.setCurrentIndex(2)
+        self.daq_y_combobox.setCurrentIndex(1)
         self.rtc_daq_combobox.setCurrentIndex(1)
         self.int_time_lineedit = self.gb_make_labeled_lineedit(label_text='Int_Time (ms):')
         self.int_time_lineedit.setValidator(QtGui.QDoubleValidator(0, 1e5, 2, self.int_time_lineedit))
@@ -498,12 +506,12 @@ class RTCollector(QtWidgets.QWidget, GuiBuilder):
         self.data_clip_lo_lineedit.setValidator(QtGui.QDoubleValidator(0, 4000, 5, self.data_clip_lo_lineedit))
         self.rtc_plot_panel.layout().addWidget(self.data_clip_lo_lineedit, 4, 3, 1, 1)
         self.data_clip_hi_lineedit = self.gb_make_labeled_lineedit(label_text='Clip_Hi (mK)')
-        self.data_clip_hi_lineedit.setText(str(1000.0))
+        self.data_clip_hi_lineedit.setText(str(10000.0))
         self.data_clip_hi_lineedit.setValidator(QtGui.QDoubleValidator(0, 4000, 5, self.data_clip_hi_lineedit))
         self.rtc_plot_panel.layout().addWidget(self.data_clip_hi_lineedit, 4, 4, 1, 1)
         self.transparent_plots_checkbox = QtWidgets.QCheckBox('Transparent?', self)
         self.rtc_plot_panel.layout().addWidget(self.transparent_plots_checkbox, 5, 3, 1, 1)
-        self.transparent_plots_checkbox.setChecked(True)
+        self.transparent_plots_checkbox.setChecked(False)
         self.load_data_pushbutton = QtWidgets.QPushButton('Load')
         self.load_data_pushbutton.clicked.connect(self.rtc_load_data)
         self.rtc_plot_panel.layout().addWidget(self.load_data_pushbutton, 5, 4, 1, 1)
@@ -581,6 +589,9 @@ class RTCollector(QtWidgets.QWidget, GuiBuilder):
             self.started = True
             self.rtc_collector()
             self.sample_clip_lo_lineedit.setText('0')
+            self.sample_clip_hi_lineedit.setText('1000000')
+            self.data_clip_lo_lineedit.setText('0')
+            self.data_clip_hi_lineedit.setText('100000')
         else:
             self.daq_collector.stop()
             self.sender().setText('Start DAQ')

@@ -530,13 +530,13 @@ class IVCollector(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTransformSpe
         #####################################
         fig = self.mplc.mplc_create_iv_paneled_plot(
             name='xy_fig',
-            left=0.18,
+            left=0.1,
             right=0.95,
             bottom=0.25,
             top=0.8,
             frac_screen_height=0.4,
             frac_screen_width=0.4,
-            hspace=0.9,
+            hspace=0.99,
             wspace=0.25)
         fig.canvas = FigureCanvas(fig)
 
@@ -571,6 +571,9 @@ class IVCollector(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTransformSpe
 
         v_bolo_real, v_bolo_stds = self.ivc_adjust_x_data()
         i_bolo_real, i_bolo_stds, fit_vals = self.ivc_adjust_y_data()
+
+
+
         resistance = 1.0 / fit_vals[0] # in Ohms
 
         p_bolo = v_bolo_real * i_bolo_real
@@ -594,16 +597,39 @@ class IVCollector(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTransformSpe
             ax1.errorbar(v_bolo_real[plot_selector], i_bolo_real[plot_selector], yerr=i_bolo_stds[plot_selector],
                          label=None, marker='.', linestyle='None', alpha=0.25)
         if len(v_bolo_real) > 2 and len(i_bolo_real[plot_selector]) > 0:
-            print(len(i_bolo_real[plot_selector]))
-            print(len(i_bolo_real))
             pt_idx = np.where(i_bolo_real[plot_selector] == min(i_bolo_real[plot_selector]))[0][0]
             pl_idx = np.where(v_bolo_real[plot_selector] == min(v_bolo_real[plot_selector]))[0][0]
             pturn_pw = i_bolo_real[plot_selector][pt_idx] * v_bolo_real[plot_selector][pt_idx]
             plast_pw = i_bolo_real[plot_selector][pl_idx] * v_bolo_real[plot_selector][pl_idx]
-            ax1.plot(v_bolo_real[plot_selector][pt_idx], i_bolo_real[plot_selector][pt_idx],
-                     '*', markersize=10.0, color='g', label='Pturn = {0:.2f} pW'.format(pturn_pw))
-            ax1.plot(v_bolo_real[plot_selector][pl_idx], i_bolo_real[plot_selector][pl_idx],
-                     '*', markersize=10.0, color='m', label='Plast = {0:.2f} pW'.format(plast_pw))
+            v_0 = v_bolo_real[plot_selector][pt_idx]
+            v_1 = v_bolo_real[plot_selector][pt_idx - 1]
+            i_0 = i_bolo_real[plot_selector][pt_idx]
+            i_1 = i_bolo_real[plot_selector][pt_idx - 1]
+            r_0 = v_0 / i_0
+            r_1 = v_1 / i_1
+            print(v_0, v_1, i_0, i_1, r_1, r_0)
+            squid_inductance = 1e-9 #H
+            warm_bias_resistance = 20e3 #Ohms
+            derivative = (r_1 - r_0) / (i_1 - i_0)
+            beta = (i_0 / r_0 ) * derivative
+            beta_2 = -1 * (i_0 / r_0) * (v_0 / i_0 ** 2)
+            print('beta', beta)
+            print('beta_2', beta_2)
+            t_el = squid_inductance / (warm_bias_resistance + r_0 * (1 + beta_2))
+            print('t_el', t_el)
+            loopgain = 1
+            responsivity = -1 * (1 / v_0) * (squid_inductance / (t_el * r_0 * loopgain)) ** -1
+            print('S_i', responsivity)
+            ax1.plot(
+                v_bolo_real[plot_selector][pt_idx],
+                i_bolo_real[plot_selector][pt_idx],
+                '*', markersize=10.0, color='g',
+                label='Pturn = {0:.2f} pW $S_i$={1:.2f}e-6'.format(pturn_pw, responsivity * 1e6))
+            ax1.plot(
+                v_bolo_real[plot_selector][pl_idx],
+                i_bolo_real[plot_selector][pl_idx],
+                '*', markersize=10.0, color='m',
+                label='Plast = {0:.2f} pW'.format(plast_pw))
         ax3.plot(v_bolo_real[plot_selector], r_bolo[plot_selector], 'b', label='Res {0:.2f} ($\Omega$)'.format(1.0 / fit_vals[0]))
         ax4.plot(r_bolo[plot_selector], p_bolo[plot_selector], 'r', label='Power (pW)')
         # Grab all the labels and combine them 
@@ -612,7 +638,7 @@ class IVCollector(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTransformSpe
         labels += ax3.get_legend_handles_labels()[1]
         handles += ax4.get_legend_handles_labels()[0]
         labels += ax4.get_legend_handles_labels()[1]
-        ax2.legend(handles, labels, numpoints=1, mode="expand", frameon=False, fontsize=12, bbox_to_anchor=(0, 0.1, 1, 1))
+        ax2.legend(handles, labels, numpoints=1, mode="expand", frameon=True, fontsize=10, bbox_to_anchor=(0, 0.1, 1, 1))
         #####################################
         # For Saving
         #####################################
