@@ -1,6 +1,7 @@
 from matplotlib.figure import Figure
 import matplotlib.gridspec as gridspec
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg
+from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
 
 
 class MplCanvas(FigureCanvasQTAgg):
@@ -43,7 +44,6 @@ class MplCanvas(FigureCanvasQTAgg):
         width = (frac_screen_width * self.screen_resolution.width()) / self.dpi # in pixels
         height = (frac_screen_height * self.screen_resolution.height()) / self.dpi # in pixels
         fig = Figure(figsize=(width, height), dpi=self.dpi)
-        print(fig)
         return fig
 
     def mplc_create_basic_fig(self,
@@ -62,6 +62,7 @@ class MplCanvas(FigureCanvasQTAgg):
             name=name,
             frac_screen_width=frac_screen_width,
             frac_screen_height=frac_screen_height)
+        fig.canvas = FigureCanvas(fig)
         ax = fig.add_subplot(111)
         fig = self.mplc_adjust_subplots(
             fig=fig,

@@ -8,11 +8,14 @@ from copy import copy
 class IVCurveLib():
 
     def __init__(self):
+        '''
+        '''
         self.r_n_fraction = 0.75
         self.simulated_bands_folder = 'bd_filter_bands'
         self.dewar_transmission = 0.75
 
-    def ivlib_plot_all_curves(self, fig, bolo_voltage_bias, bolo_current, bolo_current_stds=None, fit_clip=None, plot_clip=None,
+    def ivlib_plot_all_curves(self, fig, bolo_voltage_bias, bolo_current, bolo_current_stds=None, 
+                              title=None, fit_clip=None, plot_clip=None,
                               label='', sample_name='', t_bath='275', t_load='300', pturn=True,
                               left=0.1, right=0.98, top=0.9, bottom=0.13, hspace=0.8,
                               show_plot=False):
@@ -23,6 +26,8 @@ class IVCurveLib():
             bolo_votlage_bias: bolo_voltage in Volts
             bolo_current: bolo_current in Amps
         '''
+
+        ax1, ax2, ax3, ax4 = fig.get_axes()
         ax2.set_axis_off()
         fit_selector = np.logical_and(fit_clip[0] < bolo_voltage_bias, bolo_voltage_bias < fit_clip[1])
         plot_selector = np.logical_and(plot_clip[0] < bolo_voltage_bias, bolo_voltage_bias < plot_clip[1])

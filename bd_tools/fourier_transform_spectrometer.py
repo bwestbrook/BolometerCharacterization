@@ -479,10 +479,10 @@ class FourierTransformSpectrometer(QtWidgets.QWidget, GuiBuilder, FourierTransfo
         '''
         if self.csm_mirror_widget is None:
             return None
-        start = self.start_position_lineedit.text()
-        end = self.end_position_lineedit.text()
-        mirror_interval = self.mirror_interval_lineedit.text()
-        pause_time = self.pause_time_lineedit.text()
+        start = int(self.start_position_lineedit.text())
+        end = int(self.end_position_lineedit.text())
+        mirror_interval = int(self.mirror_interval_lineedit.text())
+        pause_time = float(self.pause_time_lineedit.text())
         device = self.device_combobox.currentText()
         int_time = float(self.int_time_lineedit.text())
         sample_rate = float(self.sample_rate_lineedit.text())
@@ -522,7 +522,7 @@ class FourierTransformSpectrometer(QtWidgets.QWidget, GuiBuilder, FourierTransfo
                 time.sleep(pause_time * 1e-3)
                 if self.zero_lock_in_checkbox.isChecked():
                     self.srs_widget.srs_zero_lock_in_phase()
-                    time.sleep(0.5)
+                    time.sleep(pause_time * 1e-3)
                 # Gather Data and Append to Vector then plot
                 self.x_data.append(scan_position)
                 self.x_stds.append(1) # guesstimated < 1 step error in position
@@ -600,7 +600,7 @@ class FourierTransformSpectrometer(QtWidgets.QWidget, GuiBuilder, FourierTransfo
             self.gb_save_meta_data(if_save_path, 'if')
             fft_save_path = if_save_path.replace('if', 'fft')
             ss_save_path = if_save_path.replace('.if', '_meta.png')
-            mirror_interval = self.mirror_interval_lineedit.text()
+            mirror_interval = float(self.mirror_interval_lineedit.text())
             with open(if_save_path, 'w') as if_save_handle:
                 for i, x_data in enumerate(self.x_data):
                     line = '{0:.5f}, {1:.5f}, {2:.5f}, {3:.5f}\n'.format(self.x_data[i], self.x_stds[i], self.y_data[i], self.y_stds[i])
@@ -763,7 +763,7 @@ class FourierTransformSpectrometer(QtWidgets.QWidget, GuiBuilder, FourierTransfo
         data_clip_lo = float(self.data_clip_lo_lineedit.text()) * 1e9
         data_clip_hi = float(self.data_clip_hi_lineedit.text()) * 1e9
         smoothing_factor = float(self.smoothing_factor_lineedit.text())
-        mirror_interval = self.mirror_interval_lineedit.text()
+        mirror_interval = float(self.mirror_interval_lineedit.text())
         band = self.bands_combobox.currentText()
         if fig is None or type(fig) == bool:
             fig, ax1, ax2, ax3, ax4 = self.fts_create_blank_fig(frac_screen_width=0.4, frac_screen_height=0.4, wspace=0.2, hspace=0.4, bottom=0.18, left=0.15, top=0.9)
