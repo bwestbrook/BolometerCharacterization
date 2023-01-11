@@ -81,10 +81,10 @@ class HewlettPackard34401A(QtWidgets.QWidget, GuiBuilder):
         QtWidgets.QApplication.processEvents()
         if len(resistance_1) > 0:
             self.resistances_1.append(float(resistance_1))
-            self.times_1.append(time_stamp_1)
+            self.times_1.append(datetime.fromtimestamp(time_stamp_1))
         if len(resistance_2) > 0:
             self.resistances_2.append(float(resistance_2))
-            self.times_2.append(time_stamp_2)
+            self.times_2.append(datetime.fromtimestamp(time_stamp_2))
         self.hp_plot_resistances(False)
         status_line = 'Resistances: {0} {1} {2} {3}\n'.format(
                 self.times_1[-1],
@@ -135,7 +135,6 @@ class HewlettPackard34401A(QtWidgets.QWidget, GuiBuilder):
         '''
 
         save_path = QtWidgets.QFileDialog.getOpenFileName(self, 'Select Data File')[0]
-        print(save_path)
         self.times_1 = []
         self.times_2 = []
         self.resistances_1 = []
@@ -154,12 +153,6 @@ class HewlettPackard34401A(QtWidgets.QWidget, GuiBuilder):
                 self.times_2.append(time_stamp_2)
                 resistance_2 = float(line.split(' ')[3].strip())
                 self.resistances_2.append(resistance_1)
-
-        print(len(self.times_1))
-        print(len(self.resistances_1))
-        print(len(self.times_2))
-        print(len(self.resistances_2))
-        #import ipdb;ipdb.set_trace()
         self.hp_plot_resistances(False)
 
     def hp_plot_resistances(self, clicked, dev=None):
@@ -178,8 +171,8 @@ class HewlettPackard34401A(QtWidgets.QWidget, GuiBuilder):
         image_to_display = QtGui.QPixmap(save_path)
         self.fig_label.setPixmap(image_to_display)
         QtWidgets.QApplication.processEvents()
-        pl.show()
-        #pl.close()
+        #pl.show()
+        pl.close()
 
 
 class Communicator(QRunnable):

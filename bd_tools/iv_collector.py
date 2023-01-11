@@ -14,6 +14,7 @@ from bd_lib.saving_manager import SavingManager
 from bd_lib.fourier_transform_spectroscopy import FourierTransformSpectroscopy
 from PyQt5 import QtCore, QtGui, QtWidgets
 from GuiBuilder.gui_builder import GuiBuilder, GenericClass
+from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
 
 class IVCollector(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTransformSpectroscopy):
 
@@ -533,14 +534,14 @@ class IVCollector(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTransformSpe
             top=0.88,
             frac_screen_height=0.15,
             frac_screen_width=0.3)
-        ax.set_xlabel('Sample', fontsize=14)
-        ax.set_ylabel('X ($V$)', fontsize=14)
+        ax.set_xlabel('Sample', fontsize=12)
+        ax.set_ylabel('X ($V$)', fontsize=12)
         label = 'DAQ {0}'.format(self.x_channel)
         if len(self.x_data) > 1:
             label = None
         ax.errorbar(range(len(self.x_data)), self.x_data, self.x_stds, marker='.', linestyle='None', label=label)
         if len(self.x_data) > 0:
-            ax.legend(loc='best', fontsize=14)
+            ax.legend(loc='best', fontsize=12)
         fig.savefig('temp_x.png', transparent=True)
         image_to_display = QtGui.QPixmap('temp_x.png')
         self.x_time_stream_label.setPixmap(image_to_display)
@@ -557,8 +558,8 @@ class IVCollector(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTransformSpe
             top=0.88,
             frac_screen_height=0.15,
             frac_screen_width=0.3)
-        ax.set_xlabel('Sample', fontsize=14)
-        ax.set_ylabel('Y ($V$)', fontsize=14)
+        ax.set_xlabel('Sample', fontsize=12)
+        ax.set_ylabel('Y ($V$)', fontsize=12)
         label = 'DAQ {0}'.format(self.y_channel)
         if len(self.x_data) > 1:
             label = None
@@ -599,26 +600,27 @@ class IVCollector(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTransformSpe
             frac_screen_width=0.4,
             hspace=0.99,
             wspace=0.25)
+        fig.canvas = FigureCanvas(fig)
 
         ax1, ax2, ax3, ax4 = fig.get_axes()
 
-        ax1.set_xlabel("Voltage ($\mu$V)", fontsize=14)
-        ax1.set_ylabel("Current ($\mu$A)", fontsize=14)
-        ax3.set_xlabel("Voltage ($\mu$V)", fontsize=14)
-        ax3.set_ylabel("Res ($\Omega$)", fontsize=14)
-        ax4.set_xlabel("Res ($\Omega$)", fontsize=14)
-        ax4.set_ylabel("Power ($pW$)", fontsize=14)
+        ax1.set_xlabel("Voltage ($\mu$V)", fontsize=12)
+        ax1.set_ylabel("Current ($\mu$A)", fontsize=12)
+        ax3.set_xlabel("Voltage ($\mu$V)", fontsize=12)
+        ax3.set_ylabel("Res ($\Omega$)", fontsize=12)
+        ax4.set_xlabel("Res ($\Omega$)", fontsize=12)
+        ax4.set_ylabel("Power ($pW$)", fontsize=12)
 
         # Set the titles
         sample_name = self.sample_name_lineedit.text()
-        ax1.set_title('IV of {0}'.format(sample_name), fontsize=14)
-        ax3.set_title('RV of {0}'.format(sample_name), fontsize=14)
-        ax4.set_title('PR of {0}'.format(sample_name), fontsize=14)
+        ax1.set_title('IV of {0}'.format(sample_name), fontsize=16)
+        ax3.set_title('RV of {0}'.format(sample_name), fontsize=12)
+        ax4.set_title('PR of {0}'.format(sample_name), fontsize=12)
         t_bath = self.t_bath_lineedit.text()
         t_load = self.t_load_lineedit.text()
         title = '{0}\n@{1}mK with {2}K Load'.format(sample_name, t_bath, t_load)
         title = '{0}'.format(sample_name)
-        ax1.set_title(title, fontsize=14)
+        ax1.set_title(title, fontsize=12)
 
         #####################################
         # Data Plotting
@@ -655,7 +657,7 @@ class IVCollector(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTransformSpe
         ax1.plot(v_bolo_real[plot_selector], i_bolo_real[plot_selector], '.', label=label)
         if len(i_bolo_stds) > 0:
             ax1.errorbar(v_bolo_real[plot_selector], i_bolo_real[plot_selector], yerr=i_bolo_stds[plot_selector],
-                         label='error', marker='.', linestyle='None', alpha=0.25)
+                         label=None, marker='.', linestyle='None', alpha=0.25)
         if len(v_bolo_real) > 2 and len(i_bolo_real[plot_selector]) > 0:
             pt_idx = np.where(i_bolo_real[plot_selector] == min(i_bolo_real[plot_selector]))[0][0]
             pl_idx = np.where(v_bolo_real[plot_selector] == min(v_bolo_real[plot_selector]))[0][0]
@@ -759,7 +761,7 @@ class IVCollector(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTransformSpe
 
     def ivc_plot_all_curves(self, fig, bolo_voltage_bias, bolo_current, bolo_current_stds=None, fit_clip=None, plot_clip=None,
                               label='', sample_name='', t_bath='275', t_load='300', pturn=True,
-                              left=0.1, right=0.98, top=0.9, bottom=0.13, hspace=0.8,
+                              left=0.1, right=0.98, top=0.9, bottom=0.13, hspace=0.9,
                               show_plot=False):
         '''
         This function creates an x-y scatter plot with v_bolo on the x-axis and
@@ -784,7 +786,7 @@ class IVCollector(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTransformSpe
         ax1.plot(bolo_voltage_bias[plot_selector], bolo_current[plot_selector], '.', label=label)
         if bolo_current_stds is not None:
             ax1.errorbar(bolo_voltage_bias[plot_selector], bolo_current[plot_selector], yerr=bolo_current_stds[plot_selector],
-                         label='error', marker='.', linestyle='None', alpha=0.25)
+                         label=None, marker='.', linestyle='None', alpha=0.25)
         if pturn and len(bolo_voltage_bias) > 2 and len(bolo_current[plot_selector]) > 0:
             print(len(bolo_current[plot_selector]))
             print(len(bolo_current))
@@ -803,12 +805,12 @@ class IVCollector(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTransformSpe
         if add_fit:
             ax1.plot(v_fit_x_vector[selector_2], poly_fit, label='Fit: {0:.5f}$\Omega$'.format(1.0 / fit_vals[0]))
         # Label the axis
-        ax1.set_xlabel("Voltage ($\mu$V)", fontsize=16)
-        ax1.set_ylabel("Current ($\mu$A)", fontsize=16)
-        ax3.set_xlabel("Voltage ($\mu$V)", fontsize=16)
-        ax3.set_ylabel("Res ($\Omega$)", fontsize=16)
-        ax4.set_xlabel("Res ($\Omega$)", fontsize=16)
-        ax4.set_ylabel("Power ($pW$)", fontsize=16)
+        ax1.set_xlabel("Voltage ($\mu$V)", fontsize=12)
+        ax1.set_ylabel("Current ($\mu$A)", fontsize=12)
+        ax3.set_xlabel("Voltage ($\mu$V)", fontsize=12)
+        ax3.set_ylabel("Res ($\Omega$)", fontsize=12)
+        ax4.set_xlabel("Res ($\Omega$)", fontsize=12)
+        ax4.set_ylabel("Power ($pW$)", fontsize=12)
         # Set the titles
         ax1.set_title('IV of {0}'.format(title))
         ax3.set_title('RV of {0}'.format(title))

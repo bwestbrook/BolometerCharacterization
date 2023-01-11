@@ -484,7 +484,8 @@ class FourierTransformSpectroscopy():
         fft_vector = np.fft.fft(efficiency_vector)
         fft_psd_vector = np.abs(fft_vector) ** 2
         # convert to m then divide by speed of light to get lambda, 2 is nyquist sampling
-        resolution = 2 * mirror_interval * distance_per_point * 1e-9 / speed_of_light
+        print(type(mirror_interval))
+        resolution = 2 * float(mirror_interval) * distance_per_point * 1e-9 / speed_of_light
         fft_freq_vector = np.fft.fftfreq(fft_psd_vector.size, resolution)
         if quick_plot:
             pos_freq_selector = fft_freq_vector > 0
@@ -501,7 +502,7 @@ class FourierTransformSpectroscopy():
         total_steps = int(np.max(position_vector) - np.min(position_vector))
         total_distance = total_steps * distance_per_step
         resolution = ((3 * 10 ** 8) / total_distance) # Hz
-        resolution = mirror_interval * distance_per_step / (10 ** 12)
+        resolution = float(mirror_interval) * distance_per_step / (10 ** 12)
         print(resolution)
         print(resolution)
         print(resolution)

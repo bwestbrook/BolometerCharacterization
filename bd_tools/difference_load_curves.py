@@ -6,14 +6,18 @@ import subprocess
 import pylab as pl
 import numpy as np
 import scipy.optimize as opt
+from pprint import pprint
 from scipy.signal import medfilt2d
 from copy import copy
 from datetime import datetime
 from bd_lib.bolo_daq import BoloDAQ
+from bd_lib.mpl_canvas import MplCanvas
 from bd_lib.iv_curve_lib import IVCurveLib
 from bd_lib.fourier_transform_spectroscopy import FourierTransformSpectroscopy
 from PyQt5 import QtCore, QtGui, QtWidgets
 from GuiBuilder.gui_builder import GuiBuilder, GenericClass
+from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
+
 
 class DifferenceLoadCurves(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTransformSpectroscopy):
 
@@ -21,9 +25,10 @@ class DifferenceLoadCurves(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTra
         '''
         '''
         super(DifferenceLoadCurves, self).__init__()
+
+        self.mplc = MplCanvas(self, screen_resolution, monitor_dpi)
         self.bands = self.ftsy_get_bands()
         self.optical_elements_dict = self.ftsy_get_optical_elements()
-        #self.dewar_transmission = 1.0
         self.status_bar = status_bar
         self.daq_settings = daq_settings
         self.screen_resolution = screen_resolution
@@ -38,6 +43,8 @@ class DifferenceLoadCurves(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTra
         self.spectra_path = None
         self.dlc_configure_panel()
         self.resize(self.minimumSizeHint())
+        with open(os.path.join('bd_settings', 'squids_settings.json'), 'r') as fh:
+            self.squid_calibration_dict = simplejson.load(fh)
 
     #################################################################################
     # Gui Config
@@ -206,7 +213,11 @@ class DifferenceLoadCurves(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTra
             self.band_select_combobox.addItem(band)
         self.band_select_combobox.setCurrentIndex(1)
         self.band_select_combobox.activated.connect(self.dlc_load_spectra)
-        self.layout().addWidget(self.band_select_combobox, 2, 8, 1, 2)
+        self.layout().addWidget(self.band_select_combobox, 2, 8, 1, 1)
+        self.dewar_transmission_lineedit = self.gb_make_labeled_lineedit(label_text='Dewar Eff', lineedit_text='0.5')
+        self.dewar_transmission_lineedit.returnPressed.connect(self.dlc_load_spectra)
+        self.dewar_transmission_lineedit.setValidator(QtGui.QDoubleValidator(0.001, 1, 6, self.dewar_transmission_lineedit))
+        self.layout().addWidget(self.dewar_transmission_lineedit, 2, 9, 1, 1)
         self.frac_rn_lineedit = self.gb_make_labeled_lineedit(label_text='Frac Rn:')
         self.frac_rn_lineedit.returnPressed.connect(self.dlc_load_spectra)
         self.frac_rn_lineedit.setValidator(QtGui.QDoubleValidator(0, 1200, 2, self.frac_rn_lineedit))
@@ -291,6 +302,11 @@ class DifferenceLoadCurves(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTra
         '''
         '''
         fig, axes = self.dlc_create_differenced_load_curve_figure(frac_screen_width=frac_screen_width, frac_screen_height=frac_screen_height)
+        self.dewar_transmission = float(self.dewar_transmission_lineedit.text())
+        if self.dewar_transmission == 0:
+            self.gb_quick_message('Warning Dewar Transmission Set to 0, using 1.0', msg_type='Warning')
+            self.dewar_transmission = 1.0
+            self.dewar_transmission_lineedit.setText('1.0')
         # Gather Gui Data
         t_source_high = float(self.iv_1_t_load_lineedit.text())
         t_source_low = float(self.iv_2_t_load_lineedit.text())
@@ -483,7 +499,7 @@ class DifferenceLoadCurves(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTra
             self.iv_1_fit_clip_hi_lineedit.setText(meta_data['fit_clip_hi_lineedit'])
             x_correction = meta_data['x_correction_label'].split(' ')[1]
             self.iv_1_x_correction_lineedit.setText(x_correction)
-            y_correction = meta_data['squid_calibration_label'].split(' ')[1]
+            y_correction = self.squid_calibration_dict[meta_data['squid_select_combobox']]
             self.iv_1_y_correction_lineedit.setText(y_correction)
             self.iv_1_t_bath_lineedit.setText(meta_data['t_bath_lineedit'])
             self.iv_1_t_load_lineedit.setText(meta_data['t_load_lineedit'])
@@ -501,7 +517,7 @@ class DifferenceLoadCurves(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTra
         ax.set_title('Raw IV data')
         fig.savefig(temp_iv_1_path)
         image_to_display = QtGui.QPixmap(temp_iv_1_path)
-        self.iv_1_raw_plot_label.setPixmap(image_to_display)
+        #self.iv_1_raw_plot_label.setPixmap(image_to_display)
         pl.close('all')
         # Calibration with Fit
         fig, ax = self.dlc_create_blank_fig(frac_screen_height=0.2)
@@ -519,12 +535,24 @@ class DifferenceLoadCurves(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTra
         fig.savefig(temp_calibrated_iv_1_path)
         image_to_display = QtGui.QPixmap(temp_calibrated_iv_1_path)
         self.size = image_to_display.size()
-        self.iv_1_calibrated_plot_label.setPixmap(image_to_display)
+        #self.iv_1_calibrated_plot_label.setPixmap(image_to_display)
         pl.close('all')
         sample_name = self.sample_name_lineedit.text()
         t_bath = self.iv_1_t_bath_lineedit.text()
         t_load = self.iv_1_t_load_lineedit.text()
-        fig = self.ivlib_plot_all_curves(self.calibrated_bias_voltage, self.calibrated_squid_current, bolo_current_stds=None,
+
+        fig = self.mplc.mplc_create_iv_paneled_plot(
+            name='xy_fig',
+            left=0.18,
+            right=0.95,
+            bottom=0.25,
+            top=0.8,
+            frac_screen_height=0.4,
+            frac_screen_width=0.4,
+            hspace=0.9,
+            wspace=0.25)
+        fig.canvas = FigureCanvas(fig)
+        fig = self.ivlib_plot_all_curves(fig, self.calibrated_bias_voltage, self.calibrated_squid_current, bolo_current_stds=None,
                                          fit_clip=(fit_clip_lo, fit_clip_hi), plot_clip=(data_clip_lo, data_clip_hi),
                                          sample_name=sample_name, t_bath=t_bath, t_load=t_load)
         temp_paneled_iv_1_path = os.path.join('temp_files', 'temp_paneled_iv_1.png')
@@ -566,7 +594,7 @@ class DifferenceLoadCurves(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTra
             self.iv_2_fit_clip_hi_lineedit.setText(meta_data['fit_clip_hi_lineedit'])
             x_correction = meta_data['x_correction_label'].split(' ')[1]
             self.iv_2_x_correction_lineedit.setText(x_correction)
-            y_correction = meta_data['squid_calibration_label'].split(' ')[1]
+            y_correction = self.squid_calibration_dict[meta_data['squid_select_combobox']]
             self.iv_2_y_correction_lineedit.setText(y_correction)
             self.iv_2_t_bath_lineedit.setText(meta_data['t_bath_lineedit'])
             data_clip_lo = float(self.iv_2_data_clip_lo_lineedit.text())
@@ -575,6 +603,9 @@ class DifferenceLoadCurves(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTra
             self.iv_2_t_load_lineedit.setText(meta_data['t_load_lineedit'])
             self.sample_name_lineedit.setText(meta_data['sample_name_lineedit'])
         # Calibration with Fit
+        data_clip_lo = float(self.iv_2_data_clip_lo_lineedit.text())
+        data_clip_hi = float(self.iv_2_data_clip_hi_lineedit.text())
+        fig, ax = self.dlc_create_blank_fig(frac_screen_height=0.2)
         bias_voltage, squid_voltage = self.dlc_load_iv_data(iv_2_path)
         ax.plot(bias_voltage, squid_voltage, label='raw')
         temp_iv_2_path = os.path.join('temp_files', 'temp_iv_2.png')
@@ -583,7 +614,7 @@ class DifferenceLoadCurves(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTra
         ax.set_title('Raw IV data')
         fig.savefig(temp_iv_2_path)
         image_to_display = QtGui.QPixmap(temp_iv_2_path)
-        self.iv_2_raw_plot_label.setPixmap(image_to_display)
+        #self.iv_2_raw_plot_label.setPixmap(image_to_display)
         pl.close('all')
         # Calibration with Fit
         fig, ax = self.dlc_create_blank_fig(frac_screen_height=0.2)
@@ -600,12 +631,24 @@ class DifferenceLoadCurves(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTra
         fig.savefig(temp_calibrated_iv_2_path)
         image_to_display = QtGui.QPixmap(temp_calibrated_iv_2_path)
         self.size = image_to_display.size()
-        self.iv_2_calibrated_plot_label.setPixmap(image_to_display)
+        #self.iv_2_calibrated_plot_label.setPixmap(image_to_display)
         pl.close('all')
         sample_name = self.sample_name_lineedit.text()
         t_bath = self.iv_2_t_bath_lineedit.text()
         t_load = self.iv_2_t_load_lineedit.text()
-        fig = self.ivlib_plot_all_curves(self.calibrated_bias_voltage, self.calibrated_squid_current, bolo_current_stds=None,
+
+        fig = self.mplc.mplc_create_iv_paneled_plot(
+            name='xy_fig',
+            left=0.18,
+            right=0.95,
+            bottom=0.25,
+            top=0.8,
+            frac_screen_height=0.4,
+            frac_screen_width=0.4,
+            hspace=0.9,
+            wspace=0.25)
+        fig.canvas = FigureCanvas(fig)
+        fig = self.ivlib_plot_all_curves(fig, self.calibrated_bias_voltage, self.calibrated_squid_current, bolo_current_stds=None,
                                          fit_clip=(fit_clip_lo, fit_clip_hi), plot_clip=(data_clip_lo, data_clip_hi),
                                          sample_name=sample_name, t_bath=t_bath, t_load=t_load)
         temp_paneled_iv_2_path = os.path.join('temp_files', 'temp_paneled_iv_2.png')
@@ -696,7 +739,7 @@ class DifferenceLoadCurves(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTra
         pl.legend()
         fig.savefig(spectra_png_save_path)
         image_to_display = QtGui.QPixmap(spectra_png_save_path)
-        self.spectra_plot_raw_label.setPixmap(image_to_display)
+        #self.spectra_plot_raw_label.setPixmap(image_to_display)
         pl.close('all')
         fig, ax = self.dlc_create_blank_fig(left=0.1, frac_screen_width=0.4, frac_screen_height=0.2)
         fft_frequency_vector_processed, normalized_fft_vector_processed = self.dlc_load_spectra_data(spectra_path)
@@ -720,7 +763,7 @@ class DifferenceLoadCurves(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTra
         fig.savefig(spectra_png_save_path)
         image_to_display = QtGui.QPixmap(spectra_png_save_path)
         self.spectra_size = image_to_display.size()
-        self.spectra_plot_calibrated.setPixmap(image_to_display)
+        #self.spectra_plot_calibrated.setPixmap(image_to_display)
         pl.close('all')
         if self.spectra_path is not None and self.iv_1_path is not None and self.iv_2_path is not None:
             self.dlc_difference_load_curves()
