@@ -481,8 +481,27 @@ class BoloDAQGui(QtWidgets.QMainWindow, GuiBuilder):
         self.status_bar.showMessage('Loading IV Curves')
         QtWidgets.QApplication.processEvents()
         self.daq_settings = self.bolo_daq.initialize_daqs()
+        if self.dewar == '576':
+            ls_372_widget = None
+        elif self.dewar =='BlueForsDR1':
+            com_port = self.com_ports_dict['Housekeeping Lakeshore']
+            if not hasattr(self, 'ser_{0}'.format(com_port)):
+                try:
+                    serial_com = BoloSerial(com_port, device='Model372', splash_screen=self.status_bar)
+                except:
+                    response = self.gb_quick_message('Com port in use... Launch in data analysis mode?', add_yes=True, add_no=True)
+                    if response == QtWidgets.QMessageBox.Yes:
+                        serial_com = None
+                    else:
+                        return None
+                setattr(self, 'ser_{0}'.format(com_port), serial_com)
+                if not hasattr(self, 'ls_372_widget_{0}'.format(com_port)) and serial_com is not None:
+                    ls_372_widget = LakeShore372(serial_com, com_port, self.status_bar)
+                else:
+                    ls_372_widget = None
+                setattr(self, 'ls_372_widget_{0}'.format(com_port), ls_372_widget)
         if not hasattr(self, 'ivc_widget'):
-            self.ivc_widget = IVCollector(self.daq_settings, self.status_bar, self.screen_resolution, self.monitor_dpi, self.data_folder, self.dewar)
+            self.ivc_widget = IVCollector(self.daq_settings, self.status_bar, self.screen_resolution, self.monitor_dpi, self.data_folder, self.dewar, ls_372_widget)
         self.ivc_widget.ivc_update_samples()
         self.ivc_widget.ivc_update_daq_settings(self.daq_settings)
         self.central_widget.layout().addWidget(self.ivc_widget, 0, 0, 1, 1)

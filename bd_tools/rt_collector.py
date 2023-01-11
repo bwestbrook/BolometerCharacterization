@@ -115,6 +115,8 @@ class RTCollector(QtWidgets.QWidget, GuiBuilder):
             self.status_bar.messageChanged.connect(self.rtc_update_panel)
         self.qthreadpool = QThreadPool()
         self.resize(self.minimumSizeHint())
+        self.rtc_read_set_points()
+        self.rtc_set_first_set_point()
 
     #########################################################
     # GUI and Input Handling
@@ -212,10 +214,10 @@ class RTCollector(QtWidgets.QWidget, GuiBuilder):
         self.temp_display_label = QtWidgets.QLabel('Temperature Scanning', self)
         self.temp_display_label.setAlignment(Qt.AlignCenter)
         self.layout().addWidget(self.temp_display_label, 0, 3, 1, 2)
-        self.temp_set_point_low_lineedit = self.gb_make_labeled_lineedit(label_text='SP_low (mK):', lineedit_text='160')
+        self.temp_set_point_low_lineedit = self.gb_make_labeled_lineedit(label_text='SP_low (mK):', lineedit_text='140')
         self.temp_set_point_low_lineedit.setValidator(QtGui.QDoubleValidator(0, 1200, 2, self.temp_set_point_low_lineedit))
         self.layout().addWidget(self.temp_set_point_low_lineedit, 1, 3, 1, 1)
-        self.temp_set_point_high_lineedit = self.gb_make_labeled_lineedit(label_text='SP_high (mK):', lineedit_text='180')
+        self.temp_set_point_high_lineedit = self.gb_make_labeled_lineedit(label_text='SP_high (mK):', lineedit_text='150')
         self.temp_set_point_high_lineedit.setValidator(QtGui.QDoubleValidator(0, 1200, 2, self.temp_set_point_high_lineedit))
         self.layout().addWidget(self.temp_set_point_high_lineedit, 1, 4, 1, 1)
         self.refresh_set_point_pushbutton = QtWidgets.QPushButton('Refresh Temp', self)
@@ -281,7 +283,7 @@ class RTCollector(QtWidgets.QWidget, GuiBuilder):
         self.rtc_get_lakeshore_channel_info()
         self.thermometer_combobox.setCurrentIndex(0)
         self.thermometer_combobox.currentIndexChanged.connect(self.rtc_scan_new_lakeshore_channel)
-        self.thermometer_combobox.setCurrentIndex(1)
+        self.thermometer_combobox.setCurrentIndex(2)
         self.rtc_get_lakeshore_temp_control()
 
     def rtc_get_lakeshore_temp_control(self, pid=True, set_point=True):
@@ -578,12 +580,40 @@ class RTCollector(QtWidgets.QWidget, GuiBuilder):
             if len(self.x_data) > 1:
                 i += 1
 
+    def rtc_set_first_set_point(self):
+        '''
+        '''
+        temperature = float(self.temp_set_point_high_lineedit.text()) * 1e-3 #K
+        self.ls372_temp_widget.temp_control.ls372_set_ramp(0.1, use_ramp=0)
+        self.ls372_temp_widget.temp_control.ls372_set_temp_set_point(temperature)
+        self.rtc_set_ramp()
+
+
+    def rtc_read_set_points(self):
+        '''
+        '''
+        rt_set_points_path = os.path.join('bd_resources', 'rt_set_points.txt')
+        with open(rt_set_points_path, 'r') as fh:
+            set_low, set_high = fh.read().split(', ')
+        self.temp_set_point_low_lineedit.setText(set_low)
+        self.temp_set_point_high_lineedit.setText(set_high)
+
+    def rtc_write_set_points(self):
+        '''
+        '''
+        set_low = self.temp_set_point_low_lineedit.text()
+        set_high = self.temp_set_point_high_lineedit.text()
+        rt_set_points_path = os.path.join('bd_resources', 'rt_set_points.txt')
+        with open(rt_set_points_path, 'w') as fh:
+            fh.write('{0}, {1}'.format(set_low, set_high))
+
     def rtc_start_stop(self):
         '''
         '''
         if self.heater_range_combobox.currentText() == '0.0000':
             self.gb_quick_message('Heater range is set to zero cannot regulate temp!', msg_type='Warning')
             return None
+        self.rtc_write_set_points()
         if 'Start' in self.sender().text():
             self.sender().setText('Stop DAQ')
             self.started = True
@@ -754,6 +784,16 @@ class RTCollector(QtWidgets.QWidget, GuiBuilder):
         if self.sender().text() == 'Save' or save_path is None:
             save_path = self.rtc_index_file_name()
             save_path = QtWidgets.QFileDialog.getSaveFileName(self, 'Data Save Location', save_path, filter=',*.txt,*.dat')[0]
+        print('saving', self.x_data)
+        if len(self.x_data) == 0:
+            self.gb_quick_message('Warning! data error setting trace in terminal', msg_type='Warning')
+            self.x_data = self.daq_collector.x_data
+            self.x_stds = self.daq_collector.x_stds
+            self.y_data = self.daq_collector.y_data
+            self.y_stds = self.daq_collector.y_stds
+            self.directions = self.daq_collector.directions
+            #import ipdb;ipdb.set_trace()
+
         if len(save_path) > 0:
             ss_save_path = save_path.replace('.txt', '_meta.png')
             screen = QtWidgets.QApplication.primaryScreen()
@@ -761,6 +801,7 @@ class RTCollector(QtWidgets.QWidget, GuiBuilder):
             screenshot.save(ss_save_path, 'png')
             calibrated_save_path = save_path.replace('.txt', '_calibrated.txt')
             png_save_path = save_path.replace('.txt', '.png')
+            shutil.copy(os.path.join('temp_files', 'temp_xy.png'), png_save_path)
             with open(save_path, 'w') as save_handle:
                 for i, x_data in enumerate(self.x_data):
                     line = '{0:.5f}, {1:.5f}, {2:.5f}, {3:.5f}, {4}\n'.format(self.x_data[i], self.x_stds[i], self.y_data[i], self.y_stds[i], self.directions[i])
@@ -768,7 +809,7 @@ class RTCollector(QtWidgets.QWidget, GuiBuilder):
             x_data, x_stds = self.rtc_adjust_x_data()
             y_data, y_stds = self.rtc_adjust_y_data()
             with open(calibrated_save_path, 'w') as save_handle:
-                for i, x_i in enumerate(self.x_data):
+                for i, x_i in enumerate(x_data):
                     line = '{0:.5f}, {1:.5f}, {2:.5f}, {3:.5f}, {4}\n'.format(x_data[i], x_stds[i], y_data[i], y_stds[i], self.directions[i])
                     save_handle.write(line)
             response = self.gb_quick_message('Put data in good data folder?', add_yes=True, add_no=True)
@@ -776,16 +817,24 @@ class RTCollector(QtWidgets.QWidget, GuiBuilder):
             if not os.path.exists(good_data_folder):
                 os.makedirs(good_data_folder)
             if response == QtWidgets.QMessageBox.Yes:
+                # Copy files
+                #Data
                 good_data_save_path = os.path.join(good_data_folder, os.path.basename(save_path))
-                good_data_save_png_path = good_data_save_path.replace('txt', 'png')
-                good_data_meta_png_path = good_data_save_path.replace('.txt', '_meta.png')
-                good_calibrated_data_save_path = os.path.join(good_data_folder, os.path.basename(calibrated_save_path))
-                #self.rtc_plot_xy(file_name=good_data_save_path.replace('txt', 'png'))
-                save_path = os.path.join('temp_files', 'temp_xy.png')
-                shutil.copy(save_path, good_data_save_png_path)
                 shutil.copy(save_path, good_data_save_path)
+                #Json
+                json_save_path = save_path.replace('txt', 'json')
+                good_data_json_save_path = good_data_save_path.replace('txt', 'json')
+                shutil.copy(json_save_path, good_data_json_save_path)
+                #PNG
+                png_save_path = os.path.join('temp_files', 'temp_xy.png')
+                good_data_png_save_path = good_data_save_path.replace('txt', 'png')
+                shutil.copy(png_save_path, good_data_png_save_path)
+                #Calibrated Data
+                good_calibrated_data_save_path = os.path.join(good_data_folder, os.path.basename(calibrated_save_path))
                 shutil.copy(calibrated_save_path, good_calibrated_data_save_path)
-                shutil.copy(ss_save_path, good_data_meta_png_path)
+                #Calibrated Data
+                good_data_meta_save_path = good_data_save_path.replace('.txt', '_meta.png')
+                shutil.copy(ss_save_path, good_data_meta_save_path)
             else:
                 save_path = os.path.join('temp_files', 'temp_xy.png')
                 shutil.copy(save_path, png_save_path)
