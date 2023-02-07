@@ -96,11 +96,11 @@ class BoloDAQGui(QtWidgets.QMainWindow, GuiBuilder):
         if os.getlogin() == 'BoloTester':
             self.data_folder = os.path.join('Data', '{0}'.format(self.today_str))
             self.dewar = '576'
-        elif os.getlogin() == 'Bluefors_PC':
+        elif os.getlogin() == ['Bluefors_PC', 'BoloTesterDR']:
             self.data_folder = os.path.join('S:', 'Daily_Data', '{0}'.format(self.today_str))
             self.dewar = 'BlueForsDR1'
         else:
-            self.gb_quick_message('Computer not recgonized', message_type='Warning')
+            self.gb_quick_message('Computer not recgonized', msg_type='Warning')
             os._exit(0)
         if not os.path.exists(self.data_folder):
             os.makedirs(self.data_folder)
