@@ -3,7 +3,7 @@ import os
 import pandas as pd
 import numpy as np
 import matplotlib
-#matplotlib.use('TkAgg')
+matplotlib.use('TkAgg')
 import pylab as pl
 import datetime
 from PyQt5 import QtCore, QtGui, QtWidgets
@@ -43,6 +43,12 @@ class DilutionRefridgeratorPressureTemperatureLogPlotter(QtWidgets.QWidget, GuiB
             'CH5': 'Mixture Tank',
             'CH6': 'Service Manifold',
             }
+        self.date_format = '%Y-%m-%d'
+        self.time_format = '%H:%M:%S'
+        self.today = datetime.datetime.now()
+        self.yesterday = self.today - datetime.timedelta(days=1)
+        self.today_str = datetime.datetime.strftime(self.today, self.date_format)
+        self.yesterday_str = datetime.datetime.strftime(self.yesterday, self.date_format)
         if status_bar is not None:
             self.status_bar = status_bar
             self.screen_resolution = screen_resolution
@@ -59,9 +65,9 @@ class DilutionRefridgeratorPressureTemperatureLogPlotter(QtWidgets.QWidget, GuiB
         '''
         '''
         #Range
-        self.start_date_lineedit = self.gb_make_labeled_lineedit(label_text='Start Date (YY-MM-DD)', lineedit_text='22-04-15')
+        self.start_date_lineedit = self.gb_make_labeled_lineedit(label_text='Start Date (YY-MM-DD)', lineedit_text=self.yesterday_str)
         self.layout().addWidget(self.start_date_lineedit, 1, 0, 1, 3)
-        self.end_date_lineedit = self.gb_make_labeled_lineedit(label_text='End Date (YY-MM-DD)', lineedit_text='22-04-18')
+        self.end_date_lineedit = self.gb_make_labeled_lineedit(label_text='End Date (YY-MM-DD)', lineedit_text=self.today_str)
         self.layout().addWidget(self.end_date_lineedit, 1, 3, 1, 3)
         self.start_time_lineedit = self.gb_make_labeled_lineedit(label_text='Start Time (HH:MM:SS)', lineedit_text='00:00:00')
         self.layout().addWidget(self.start_time_lineedit, 2, 0, 1, 3)
@@ -120,27 +126,28 @@ class DilutionRefridgeratorPressureTemperatureLogPlotter(QtWidgets.QWidget, GuiB
         '''
         start_date_str = self.start_date_lineedit.text()
         start_time_str = self.start_time_lineedit.text()
-        start_date = datetime.datetime.strptime(start_date_str, '%y-%m-%d')
-        start_time = datetime.datetime.strptime(start_time_str, '%H:%M:%S')
+        start_date = datetime.datetime.strptime(start_date_str, self.date_format)
+        start_time = datetime.datetime.strptime(start_time_str, self.time_format)
         start_date = start_date + datetime.timedelta(hours=start_time.hour)
         start_date = start_date + datetime.timedelta(minutes=start_time.minute)
         start_date = start_date + datetime.timedelta(seconds=start_time.second)
-        start_date_str = datetime.datetime.strftime(start_date, '%y-%m-%d %H:%M:%S')
-
+        start_date_str = datetime.datetime.strftime(start_date, '{0} {1}'.format(self.date_format, self.time_format))
         end_date_str = self.end_date_lineedit.text()
         end_time_str = self.end_time_lineedit.text()
-        end_date = datetime.datetime.strptime(end_date_str, '%y-%m-%d')
-        end_time = datetime.datetime.strptime(end_time_str, '%H:%M:%S')
+        end_date = datetime.datetime.strptime(end_date_str, self.date_format)
+        end_time = datetime.datetime.strptime(end_time_str, self.time_format)
         end_date = end_date + datetime.timedelta(hours=end_time.hour)
         end_date = end_date + datetime.timedelta(minutes=end_time.minute)
         end_date = end_date + datetime.timedelta(seconds=end_time.second)
-        end_date_str = datetime.datetime.strftime(end_date, '%y-%m-%d %H:%M:%S')
+        end_date_str = datetime.datetime.strftime(end_date, '{0} {1}'.format(self.date_format, self.time_format))
         dates = (start_date, end_date)
+        date_strs = (start_date_str, end_date_str)
         elapsed_days = end_date - start_date
         days = []
         for i in range(elapsed_days.days + 1):
             date = start_date + datetime.timedelta(days=i)
             day = datetime.datetime.strftime(date, '%y-%m-%d')
+            date_str = datetime.datetime.strftime(date, '%y-%m-%d')
             days.append(day)
         return dates, date_strs, days
 
@@ -183,9 +190,7 @@ class DilutionRefridgeratorPressureTemperatureLogPlotter(QtWidgets.QWidget, GuiB
                 date = start_date + datetime.timedelta(days=i)
                 day = datetime.datetime.strftime(date, '%y-%m-%d')
                 days.append(day)
-            print(days)
             dates = (start_date, end_date)
-            import ipdb;ipdb.set_trace()
         if desample_p is None:
             desample_p = int(self.desample_p_lineedit.text())
         if desample_p_ticks is None:
@@ -397,5 +402,5 @@ if __name__ == '__main__':
         desample_p_ticks=desample_p_ticks,
         desample_t=desample_t,
         desample_t_ticks=desample_t_ticks)
-    exit(qt_app.exec_())
+    #exit(qt_app.exec_())
 

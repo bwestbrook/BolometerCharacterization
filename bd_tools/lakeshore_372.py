@@ -895,6 +895,7 @@ class LS372AnalogOutputs(QObject):
         setattr(analog_output_object, 'powerup_enable', str(outmode_config.split(',')[2]))
         setattr(analog_output_object, 'filter_on', str(outmode_config.split(',')[4]))
         setattr(analog_output_object, 'delay', int(outmode_config.split(',')[5]))
+        pprint(analog_output_object)
         return analog_output_object
 
     def ls372_monitor_channel_aux_analog(self, channel, analog_output_object):

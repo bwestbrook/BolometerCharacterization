@@ -71,6 +71,7 @@ class RTCollector(QtWidgets.QWidget, GuiBuilder):
         self.daq = BoloDAQ()
         self.ls372_temp_widget = ls372_temp_widget
         self.ls372_samples_widget = ls372_samples_widget
+
         self.heater_resistance = 120.
         self.drift_direction = 'down'
         self.thermometer_index = 0
@@ -351,10 +352,10 @@ class RTCollector(QtWidgets.QWidget, GuiBuilder):
         current_temp = x_data[-1]
         low_set_point = float(self.temp_set_point_low_lineedit.text())
         high_set_point = float(self.temp_set_point_high_lineedit.text())
-        if current_temp > high_set_point:
+        if current_temp > high_set_point - 1:
             self.drift_direction = 'down'
             new_target = low_set_point * 1e-3 #K
-        elif current_temp < low_set_point:
+        elif current_temp < low_set_point + 1:
             self.drift_direction = 'up'
             new_target = high_set_point * 1e-3 #K
         elif self.drift_direction == 'up':
@@ -583,6 +584,8 @@ class RTCollector(QtWidgets.QWidget, GuiBuilder):
     def rtc_set_first_set_point(self):
         '''
         '''
+        if not hasattr(self.ls372_temp_widget, 'temp_control'):
+            return None
         temperature = float(self.temp_set_point_high_lineedit.text()) * 1e-3 #K
         self.ls372_temp_widget.temp_control.ls372_set_ramp(0.1, use_ramp=0)
         self.ls372_temp_widget.temp_control.ls372_set_temp_set_point(temperature)
@@ -682,8 +685,8 @@ class RTCollector(QtWidgets.QWidget, GuiBuilder):
                 x_std = float(items[1].strip())
                 y = float(items[2].strip())
                 if len(items[3].split(' ')) > 1:
-                    y_std = float(items[3].split(' ')[1].strip())
-                    direction = items[3].split(' ')[2].strip()
+                    y_std = float(items[3].strip())
+                    direction = items[4].strip()
                 elif len(items) == 5:
                     direction = items[4].strip()
                 else:
@@ -738,13 +741,15 @@ class RTCollector(QtWidgets.QWidget, GuiBuilder):
         '''
         '''
         thermometer = self.thermometer_combobox.currentText()
+        high_value = self.ls372_temp_widget.analog_outputs.analog_output_aux.high_value * 100
+        # high_value 00 #0 to 10K is 0 to 1V
         if thermometer in self.lakeshore_thermometers:
             if len(x_data) > 0:
-                x_data = np.asarray(x_data) * 100
-                x_stds = np.asarray(x_stds) * 100
+                x_data = np.asarray(x_data) * high_value
+                x_stds = np.asarray(x_stds) * high_value
             else:
-                x_data = np.asarray(self.x_data) * 100
-                x_stds = np.asarray(self.x_stds) * 100
+                x_data = np.asarray(self.x_data) * high_value
+                x_stds = np.asarray(self.x_stds) * high_value
         self.x_data_real = x_data
         self.x_stds_real = x_stds
         return x_data, x_stds
@@ -939,13 +944,16 @@ class Collector(QRunnable):
         self.rtc_plot_xy(running=True)
 
 
-
     def rtc_adjust_x_data_point(self, x):
         '''
         '''
         thermometer = self.rtc.thermometer_combobox.currentText()
+        if not hasattr(self.rtc.ls372_temp_widget, 'analog_outputs'):
+            high_value = 1e2
+        else:
+            high_value = self.rtc.ls372_temp_widget.analog_outputs.analog_output_aux.high_value * 100
         if thermometer in self.rtc.lakeshore_thermometers:
-            adjusted_x = x * 100
+            adjusted_x = x * high_value
         return adjusted_x
 
     def rtc_adjust_x_data(self):
@@ -954,9 +962,14 @@ class Collector(QRunnable):
         x_data = []
         x_stds = []
         thermometer = self.rtc.thermometer_combobox.currentText()
+        if not hasattr(self.rtc.ls372_temp_widget, 'analog_outputs'):
+            high_value = 1e2
+        else:
+            high_value = self.rtc.ls372_temp_widget.analog_outputs.analog_output_aux.high_value * 100
+        # high_value 00 #0 to 10K is 0 to 1V
         if thermometer in self.rtc.lakeshore_thermometers:
-            x_data = np.asarray(self.x_data) * 100
-            x_stds = np.asarray(self.x_stds) * 100
+            x_data = np.asarray(self.x_data) * high_value
+            x_stds = np.asarray(self.x_stds) * high_value
         self.x_data_real = x_data
         self.x_stds_real = x_stds
         return x_data, x_stds
@@ -1099,6 +1112,8 @@ class Collector(QRunnable):
     def rtc_plot_drifts(self, fig, x_data, x_stds, y_data, y_stds):
         '''
         '''
+        if len(self.x_data) == 0:
+            return fig
         if not self.rtc.gb_is_float(self.rtc.sample_clip_lo_lineedit.text()):
             return fig
         if not self.rtc.gb_is_float(self.rtc.sample_clip_hi_lineedit.text()):
