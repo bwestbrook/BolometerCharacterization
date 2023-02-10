@@ -527,11 +527,11 @@ class RTCollector(QtWidgets.QWidget, GuiBuilder):
         # Sample Clip
         self.sample_clip_lo_lineedit = self.gb_make_labeled_lineedit(label_text='Sample_Clip Lo')
         self.sample_clip_lo_lineedit.setText(str(0))
-        self.sample_clip_lo_lineedit.setValidator(QtGui.QIntValidator(0, 1e8, self.sample_clip_lo_lineedit))
+        self.sample_clip_lo_lineedit.setValidator(QtGui.QIntValidator(0, 1000000, self.sample_clip_lo_lineedit))
         self.rtc_plot_panel.layout().addWidget(self.sample_clip_lo_lineedit, 4, 5, 1, 1)
         self.sample_clip_hi_lineedit = self.gb_make_labeled_lineedit(label_text='Sample_Clip Hi')
         self.sample_clip_hi_lineedit.setText(str(1000000))
-        self.sample_clip_hi_lineedit.setValidator(QtGui.QIntValidator(0, 1e8, self.sample_clip_hi_lineedit))
+        self.sample_clip_hi_lineedit.setValidator(QtGui.QIntValidator(0, 1000000, self.sample_clip_hi_lineedit))
         self.rtc_plot_panel.layout().addWidget(self.sample_clip_hi_lineedit, 4, 6, 1, 1)
         #Actions
         self.data_clip_lo_lineedit.returnPressed.connect(self.rtc_plot_running_from_disk)

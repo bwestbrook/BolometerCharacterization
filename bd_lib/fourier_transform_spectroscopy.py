@@ -3,7 +3,8 @@ import numpy as np
 import scipy.fftpack
 from pprint import pprint
 from copy import copy, deepcopy
-from scipy.signal import blackman, hanning
+from scipy.signal import blackman
+#, hanning
 
 class FourierTransformSpectroscopy():
     '''

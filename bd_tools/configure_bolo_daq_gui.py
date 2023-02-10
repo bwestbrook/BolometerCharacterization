@@ -13,7 +13,7 @@ from GuiBuilder.gui_builder import GuiBuilder, GenericClass
 
 class ConfigureBoloDAQGui(QtWidgets.QWidget, GuiBuilder):
 
-    def __init__(self, daq_settings, status_bar, screen_resolution, monitor_dpi):
+    def __init__(self, daq_settings, status_bar, screen_resolution, monitor_dpi, login):
         '''
         '''
         super(ConfigureBoloDAQGui, self).__init__()
@@ -23,9 +23,10 @@ class ConfigureBoloDAQGui(QtWidgets.QWidget, GuiBuilder):
         self.monitor_dpi = monitor_dpi
         grid = QtWidgets.QGridLayout()
         self.setLayout(grid)
+        self.login = login
         self.today = datetime.now()
         self.today_str = datetime.strftime(self.today, '%Y_%m_%d')
-        for i, config in enumerate(['samples', 'squids', 'comports']):
+        for i, config in enumerate(['samples', 'squids']):
             path = os.path.join('bd_settings', '{0}_settings.json'.format(config))
             if os.path.exists(path):
                 with open(path, 'r') as fh:
@@ -57,7 +58,7 @@ class ConfigureBoloDAQGui(QtWidgets.QWidget, GuiBuilder):
         self.layout().addWidget(loaded_column_header_label, 1, 2, 1, 1)
         loaded_column_header_label = QtWidgets.QLabel('Controls', self)
         self.layout().addWidget(loaded_column_header_label, 1, 3, 1, 1)
-        for i, config in enumerate(['Samples', 'SQUIDs', 'COMPORTS']):
+        for i, config in enumerate(['Samples', 'SQUIDs']):
             header_label = QtWidgets.QLabel('{0}: '.format(config), self)
             self.layout().addWidget(header_label, i + 2, 0, 1, 1)
             combobox = QtWidgets.QComboBox(self)
@@ -98,7 +99,7 @@ class ConfigureBoloDAQGui(QtWidgets.QWidget, GuiBuilder):
             save_pushbutton.clicked.connect(self.cbd_save_dict)
             load_pushbutton.clicked.connect(self.cbd_load_dict)
             j += 1
-        self.cbd_populate_combobox('comports')
+        #self.cbd_populate_combobox('comports')
         self.cbd_populate_combobox('squids')
         self.cbd_populate_combobox('samples')
 
@@ -113,7 +114,7 @@ class ConfigureBoloDAQGui(QtWidgets.QWidget, GuiBuilder):
         for i in range(combobox.count()):
             existing_items.append(combobox.itemText(i))
         if setting == 'samples':
-            items = [x for x in dict_to_edit.keys()]
+            items = [x for x in sorted(dict_to_edit.keys())]
         else:
             items = dict_to_edit.keys()
         for item in sorted(items):
@@ -219,7 +220,16 @@ class ConfigureBoloDAQGui(QtWidgets.QWidget, GuiBuilder):
         combobox = getattr(self, '{0}_combobox'.format(setting))
         lineedit = getattr(self, '{0}_lineedit'.format(setting))
         if combobox.itemText(index) in dict_to_edit:
-            value = dict_to_edit[combobox.itemText(index)]
+            print(setting)
+            print(setting)
+            print(dict_to_edit)
+            if setting == 'comports':
+                try:
+                    value = dict_to_edit[self.login][combobox.itemText(index)]
+                except:
+                    import ipdb;ipdb.set_trace()
+            else:
+                value = dict_to_edit[combobox.itemText(index)]
             if setting == 'squids':
                 lineedit.setText('{0} (uA/V)'.format(value))
             else:

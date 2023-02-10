@@ -14,7 +14,7 @@ from bd_lib.cosmic_ray_analyzer import CosmicRayAnalyzer
 
 class CosmicRays(QtWidgets.QWidget, GuiBuilder):
 
-    def __init__(self, daq_settings, status_bar, screen_resolution, monitor_dpi):
+    def __init__(self, daq_settings, status_bar, screen_resolution, monitor_dpi, data_folder):
         '''
         '''
         super(CosmicRays, self).__init__()
@@ -37,7 +37,7 @@ class CosmicRays(QtWidgets.QWidget, GuiBuilder):
         self.setLayout(grid)
         self.today = datetime.now()
         self.today_str = datetime.strftime(self.today, '%Y_%m_%d')
-        self.data_folder = os.path.join('S:', 'Daily_Data', '{0}'.format(self.today_str))
+        self.data_folder = data_folder
         self.n_samples = 4
         self.gains = ['1.0', '10.0', '100.0']
         self.cr_daq_panel()
