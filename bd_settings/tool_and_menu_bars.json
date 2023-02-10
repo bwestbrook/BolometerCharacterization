@@ -24,21 +24,21 @@
                 "icon": "fourier.png"
             },
             "04_Pol Efficieny": {
-                "Shortcut": "6",
+                "Shortcut": "4",
                 "StatusTip": "Polarization Efficiency",
                 "ToolTip": "Pol Eff",
                 "function": "bd_polarization_efficiency",
                 "icon": "poleff.png"
             },
             "05_Beam Map": {
-                "Shortcut": "4",
+                "Shortcut": "5",
                 "StatusTip": "Beam Map",
                 "ToolTip": "Beam Map",
                 "function": "bd_beam_mapper",
                 "icon": "beammap.png"
             },
             "06_Cosmic Rays": {
-                "Shortcut": "5",
+                "Shortcut": "6",
                 "StatusTip": "Cosmic Rays",
                 "ToolTip": "Cosmic Rays",
                 "function": "bd_cosmic_rays",
@@ -58,22 +58,26 @@
                 "function": "bd_data_plotter",
                 "icon": "data.png"
             },
-            "08_Difference Load Curves": {
-                "Shortcut": "8",
+            "09_Histogram Plotter": {
+                "Shortcut": "9",
+                "StatusTip": "Histogram Plotter",
+                "ToolTip": "Histogram Plotter",
+                "function": "bd_histogram_plotter",
+                "icon": "data.png"
+            },
+            "10_Difference Load Curves": {
                 "StatusTip": "Difference Load Curves",
                 "ToolTip": "Difference Load Curves",
                 "function": "bd_difference_load_curves",
                 "icon": "data.png"
             },
-            "09_Fridge Cycle 576": {
-                "Shortcut": "9",
+            "11_Fridge Cycle 576": {
                 "StatusTip": "Fridge Cycle 576",
                 "ToolTip": "Fridge Cycle 576",
                 "function": "bd_fridge_cycle",
                 "icon": "snowflake.png"
             },
-            "10_Noise Analyzer": {
-                "Shortcut": "7",
+            "12_Noise Analyzer": {
                 "StatusTip": "Noise Analyzer",
                 "ToolTip": "Noise Analyzer",
                 "function": "bd_noise_analyzer",

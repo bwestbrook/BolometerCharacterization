@@ -41,6 +41,7 @@ from bd_tools.beam_mapper import BeamMapper
 from bd_tools.fridge_cycle import FridgeCycle
 from bd_tools.difference_load_curves import DifferenceLoadCurves
 from bd_tools.data_plotter import DataPlotter
+from bd_tools.histogram_plotter import HistogramPlotter
 from bd_tools.time_constant import TimeConstant
 from bd_tools.agilent_e3634a import AgilentE3634A
 #from bd_tools.agilent_agc100 import AgilentAGC100
@@ -92,14 +93,20 @@ class BoloDAQGui(QtWidgets.QMainWindow, GuiBuilder):
         self.monitor_dpi = 92
         self.today = datetime.now()
         self.today_str = datetime.strftime(self.today, '%Y_%m_%d')
-        print(os.getlogin())
-        if os.getlogin() == 'BoloTester':
+        self.login = os.getlogin()
+        if self.login == 'BoloTester':
             self.data_folder = os.path.join('Data', '{0}'.format(self.today_str))
             self.dewar = '576'
-        elif os.getlogin() in ['Bluefors_PC', 'BoloTesterDR']:
-            self.data_folder = os.path.join('S:', 'Daily_Data', '{0}'.format(self.today_str))
+        elif self.login in ['Bluefors_PC']:
             self.data_folder = os.path.join('Data', '{0}'.format(self.today_str))
             self.dewar = 'BlueForsDR1'
+            self.samples_com_port = 'COM6'
+            self.housekeeping_com_port = 'COM4'
+        elif self.login in ['BolometerTesterDR']:
+            self.data_folder = os.path.join('D:', 'Daily_Data', '{0}'.format(self.today_str))
+            self.dewar = 'BlueForsDR1'
+            self.samples_com_port = 'COM3'
+            self.housekeeping_com_port = 'COM5'
         else:
             self.gb_quick_message('Computer not recgonized', msg_type='Warning')
             os._exit(0)
@@ -276,6 +283,23 @@ class BoloDAQGui(QtWidgets.QMainWindow, GuiBuilder):
         self.showNormal()
 
     #################################################
+    # Histogram Plotter 
+    #################################################
+
+    def bd_histogram_plotter(self):
+        '''
+        '''
+        self.gb_initialize_panel('central_widget')
+        self.status_bar.showMessage('Launching Histogram Plotter')
+        QtWidgets.QApplication.processEvents()
+        if not hasattr(self, 'histogram_plotter'):
+            self.histogram_plotter_widget = HistogramPlotter(self.status_bar, self.screen_resolution, self.monitor_dpi, self.data_folder)
+        self.central_widget.layout().addWidget(self.histogram_plotter_widget, 0, 0, 1, 1)
+        self.status_bar.showMessage('Histogram Plotter')
+        QtWidgets.QApplication.processEvents()
+        self.showNormal()
+
+    #################################################
     # Data Plotter 
     #################################################
 
@@ -303,7 +327,7 @@ class BoloDAQGui(QtWidgets.QMainWindow, GuiBuilder):
         self.status_bar.showMessage('Launching Bolo DAQ GUI Settings')
         QtWidgets.QApplication.processEvents()
         if not hasattr(self, 'configure_bolo_daq_gui_widget'):
-            self.configure_bolo_daq_gui_widget = ConfigureBoloDAQGui(self.daq_settings, self.status_bar, self.screen_resolution, self.monitor_dpi)
+            self.configure_bolo_daq_gui_widget = ConfigureBoloDAQGui(self.daq_settings, self.status_bar, self.screen_resolution, self.monitor_dpi, self.login)
         self.central_widget.layout().addWidget(self.configure_bolo_daq_gui_widget, 0, 0, 1, 1)
         self.status_bar.showMessage('Bolo DAQ GUI Settings')
         QtWidgets.QApplication.processEvents()
@@ -447,7 +471,8 @@ class BoloDAQGui(QtWidgets.QMainWindow, GuiBuilder):
         self.status_bar.showMessage('Setting Up Lakeshore 372 Controller')
         QtWidgets.QApplication.processEvents()
         dialog = 'Select the comport for the Lakeshore'
-        com_port, okPressed = self.gb_quick_static_info_gather(title='', dialog=dialog, items=['COM6', 'COM4'])
+        coms = [self.samples_com_port, self.housekeeping_com_port]
+        com_port, okPressed = self.gb_quick_static_info_gather(title='', dialog=dialog, items=coms)
         if not hasattr(self, 'ser_{0}'.format(com_port)) and okPressed:
             serial_com = BoloSerial(com_port, device='Model372', splash_screen=self.status_bar)
             setattr(self, 'ser_{0}'.format(com_port), serial_com)
@@ -485,7 +510,7 @@ class BoloDAQGui(QtWidgets.QMainWindow, GuiBuilder):
         if self.dewar == '576':
             ls_372_widget = None
         elif self.dewar =='BlueForsDR1':
-            com_port = self.com_ports_dict['Housekeeping Lakeshore']
+            com_port = self.com_ports_dict[self.login]['Housekeeping Lakeshore']
             if not hasattr(self, 'ser_{0}'.format(com_port)):
                 try:
                     serial_com = BoloSerial(com_port, device='Model372', splash_screen=self.status_bar)
@@ -501,6 +526,8 @@ class BoloDAQGui(QtWidgets.QMainWindow, GuiBuilder):
                 else:
                     ls_372_widget = None
                 setattr(self, 'ls_372_widget_{0}'.format(com_port), ls_372_widget)
+            else:
+                ls_372_widget = getattr(self, 'ls_372_widget_{0}'.format(com_port))
         if not hasattr(self, 'ivc_widget'):
             self.ivc_widget = IVCollector(self.daq_settings, self.status_bar, self.screen_resolution, self.monitor_dpi, self.data_folder, self.dewar, ls_372_widget)
         self.ivc_widget.ivc_update_samples()
@@ -527,7 +554,7 @@ class BoloDAQGui(QtWidgets.QMainWindow, GuiBuilder):
             ls_372_samples_widget = None
             ls_372_temp_widget = None
         elif self.dewar == 'BlueForsDR1':
-            com_port = self.com_ports_dict['Housekeeping Lakeshore']
+            com_port = self.com_ports_dict[self.login]['Housekeeping Lakeshore']
             if not hasattr(self, 'ser_{0}'.format(com_port)) and okPressed:
                 try:
                     serial_com = BoloSerial(com_port, device='Model372', splash_screen=self.status_bar)
@@ -543,7 +570,7 @@ class BoloDAQGui(QtWidgets.QMainWindow, GuiBuilder):
                 else:
                     ls_372_temp_widget = None
                 setattr(self, 'ls_372_widget_{0}'.format(com_port), ls_372_temp_widget)
-            com_port = self.com_ports_dict['Samples Lakeshore']
+            com_port = self.com_ports_dict[self.login]['Samples Lakeshore']
             if not hasattr(self, 'ser_{0}'.format(com_port)) and okPressed:
                 try:
                     serial_com = BoloSerial(com_port, device='Model372', splash_screen=self.status_bar)
@@ -560,10 +587,12 @@ class BoloDAQGui(QtWidgets.QMainWindow, GuiBuilder):
                     ls_372_samples_widget = None
                 setattr(self, 'ls_372_widget_{0}'.format(com_port), ls_372_samples_widget)
         if not hasattr(self, 'rtc_widget'):
-            if self.dewar == 'BlueForsDR1':
-                print([x for x in dir(self) if x.startswith('ls')])
+            if self.login == 'Bluefors_PC':
                 ls_372_samples_widget = getattr(self, 'ls_372_widget_COM{0}'.format(6))
                 ls_372_temp_widget = getattr(self, 'ls_372_widget_COM{0}'.format(4))
+            elif self.login == 'BolometerTesterDR':
+                ls_372_samples_widget = getattr(self, 'ls_372_widget_COM{0}'.format(3))
+                ls_372_temp_widget = getattr(self, 'ls_372_widget_COM{0}'.format(5))
             self.rtc_widget = RTCollector(self.daq_settings, self.status_bar, self.screen_resolution, self.monitor_dpi, ls_372_temp_widget, ls_372_samples_widget, self.data_folder)
         else:
             self.daq_settings = self.bolo_daq.initialize_daqs()
@@ -683,7 +712,7 @@ class BoloDAQGui(QtWidgets.QMainWindow, GuiBuilder):
         '''
         self.gb_initialize_panel('central_widget')
         if not hasattr(self, 'cosmic_ray_widget'):
-            self.cosmic_ray_widget = CosmicRays(self.daq_settings, self.status_bar, self.screen_resolution, self.monitor_dpi)
+            self.cosmic_ray_widget = CosmicRays(self.daq_settings, self.status_bar, self.screen_resolution, self.monitor_dpi, self.data_folder)
         else:
             self.daq_settings = self.bolo_daq.initialize_daqs()
             self.cosmic_ray_widget.cr_update_daq_settings(self.daq_settings)
@@ -799,7 +828,7 @@ class BoloDAQGui(QtWidgets.QMainWindow, GuiBuilder):
         QtWidgets.QApplication.processEvents()
         dialog = 'Select the comport for the SRS 830'
         #com_port, okPressed = self.gb_quick_static_info_gather(title='', dialog=dialog, items=['COM10'])
-        com_port = self.com_ports_dict['SRS SR830DSP']
+        com_port = self.com_ports_dict[self.login]['SRS SR830DSP']
         #self.srs_sr830dsp_widget = None
         if not hasattr(self, 'ser_{0}'.format(com_port)) and com_port != 'None':
             if not hasattr(self, 'srs_sr830dsp_widget'):
@@ -820,8 +849,7 @@ class BoloDAQGui(QtWidgets.QMainWindow, GuiBuilder):
                     self.srs_sr830dsp_widget = None
         dialog = 'Select the comport for the stepper motor you wish to configure'
         for motor in ['FTS Mirror Motor']:
-            pprint(self.com_ports_dict)
-            sm_com_port = self.com_ports_dict[motor]
+            sm_com_port = self.com_ports_dict[self.login][motor]
             if not hasattr(self, 'csm_widget_{0}'.format(sm_com_port)) and okPressed:
                 if getattr(self, 'ser_{0}'.format(com_port)) is None:
                     setattr(self, 'csm_widget_{0}'.format(sm_com_port), None)
@@ -850,7 +878,7 @@ class BoloDAQGui(QtWidgets.QMainWindow, GuiBuilder):
             motors = ['FTS Mirror Motor', 'FTS Input Polarizer', 'FTS Output Polarizer']
         for motor in motors:
             pprint(self.com_ports_dict)
-            sm_com_port = self.com_ports_dict[motor]
+            sm_com_port = self.com_ports_dict[self.login][motor]
             if not hasattr(self, 'csm_widget_{0}'.format(sm_com_port)) and okPressed:
                 if getattr(self, 'ser_{0}'.format(com_port)) is None:
                     setattr(self, 'csm_widget_{0}'.format(sm_com_port), None)
@@ -880,7 +908,7 @@ class BoloDAQGui(QtWidgets.QMainWindow, GuiBuilder):
                 csm_output_widget,
                 self.srs_sr830dsp_widget,
                 self.data_folder)
-        sm_com_port = self.com_ports_dict['FTS Mirror Motor']
+        sm_com_port = self.com_ports_dict[self.login]['FTS Mirror Motor']
         if not hasattr(self, 'ser_{0}'.format(sm_com_port)):
             if hasattr(self, 'csm_widget_{0}'.format(sm_com_port)):
                 csm_widget = getattr(self, 'csm_widget_{0}'.format(sm_com_port))

@@ -125,7 +125,7 @@ class BoloSerial(object):
 
 if __name__ == '__main__':
     device = 'Agilent-ACG-100'
+    import ipdb;ipdb.set_trace()
     bs = BoloSerial('COM3', device=device)
     #bs.bs_write('*cls ')
     idn = bs.bs_write_read('AYT')
-    import ipdb;ipdb.set_trace()

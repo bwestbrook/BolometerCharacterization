@@ -3,7 +3,7 @@ import numpy as np
 import numpy.polynomial.polynomial as poly
 from scipy import signal
 from scipy import optimize
-from scipy import math
+#from scipy import math
 from scipy.fftpack import rfft, irfft, fftfreq, ifft, fft
 from scipy.signal import argrelextrema
 from scipy.signal import find_peaks_cwt
@@ -16,7 +16,8 @@ from pprint import pprint
 from statistics import median_low
 from matplotlib import cm
 from matplotlib import mlab
-from math import exp, expm1
+
+#from math import exp, expm1
 import sys
 import bisect
 
@@ -106,14 +107,14 @@ class CosmicRayAnalyzer():
         relsc = 100. / 7.
         phs = 0.4975
         if(x < 0.5):
-            return 1 / (1 + math.exp(-xsc * relsc * (x - phs)))
+            return 1 / (1 + np.exp(-xsc * relsc * (x - phs)))
         else:
-            return math.exp(-xsc * (x - 0.499848))
+            return np.exp(-xsc * (x - 0.499848))
 
     def filtertempl(self, x):
         '''
         '''
-        return 1 - math.exp(-(10. * x))
+        return 1 - np.exp(-(10. * x))
 
 
     ###########################################################################
