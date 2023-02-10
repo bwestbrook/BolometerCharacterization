@@ -346,7 +346,10 @@ class IVCollector(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTransformSpe
         '''
         '''
         channel_readout_info = self.ls_372_widget.channels.ls372_get_channel_value(6, reading='kelvin') # 6 is MXC
-        temperature = '{0:.3f}'.format(float(channel_readout_info) * 1e3) # mK
+        if self.gb_is_float(channel_readout_info):
+            temperature = '{0:.3f}'.format(float(channel_readout_info) * 1e3) # mK
+        else:
+            temperature = '300'
         self.t_bath_lineedit.setText(temperature)
 
     def ivc_set_t_bath(self):
