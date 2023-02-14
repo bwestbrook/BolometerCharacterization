@@ -139,7 +139,6 @@ class RTCollector(QtWidgets.QWidget, GuiBuilder):
         self.layout().addWidget(self.rtc_plot_panel, 6, 0, 20, 10)
         self.gb_initialize_panel('rtc_plot_panel')
         self.rtc_make_plot_panel()
-        self.rtc_add_common_widgets()
         self.rtc_daq_panel()
         self.layout().setRowMinimumHeight(6, int(0.38 * self.screen_resolution.height()))
         daq_collector = Collector(self)
@@ -284,7 +283,7 @@ class RTCollector(QtWidgets.QWidget, GuiBuilder):
         self.rtc_get_lakeshore_channel_info()
         self.thermometer_combobox.setCurrentIndex(0)
         self.thermometer_combobox.currentIndexChanged.connect(self.rtc_scan_new_lakeshore_channel)
-        self.thermometer_combobox.setCurrentIndex(2)
+        self.thermometer_combobox.setCurrentIndex(1)
         self.rtc_get_lakeshore_temp_control()
 
     def rtc_get_lakeshore_temp_control(self, pid=True, set_point=True):
@@ -419,11 +418,13 @@ class RTCollector(QtWidgets.QWidget, GuiBuilder):
         resistance_range = self.ls372_samples_widget.lakeshore372_command_dict['resistance_range'][channel_object.__dict__['resistance_range']]
         exc_info = '{0:.2f} {1} {2:.0f} (mOhms)'.format(excitation * 1e6, self.unit_dict[exc_mode], resistance_range * 1e3)
         self.exc_mode_label.setText(exc_info)
-        high_value = self.ls372_samples_widget.analog_outputs.analog_output_aux.high_value # 10V = this value in K
-        low_value = self.ls372_samples_widget.analog_outputs.analog_output_aux.low_value # 0V = this value in K
-        y_correction_factor = (high_value - low_value) / 10 # divide out scaling of lakeshore
-        y_correction_factor *= 1e3 # convet back to mV
+        high_value = self.ls372_samples_widget.analog_outputs.analog_output_aux.high_value # 10V = this value in K or Ohms
+        low_value = self.ls372_samples_widget.analog_outputs.analog_output_aux.low_value # 0V = this value in K or Ohms
+        y_correction_factor = (high_value - low_value) / 10# divide out scaling of lakeshore
+        y_correction_factor *= 1e3 # convet back to mOhm
         self.y_correction_lineedit.setText(str(y_correction_factor))
+        self.y_correction_high_value_label.setText('{0:.1f}Ohms=10V'.format(high_value))
+        self.y_correction_low_value_label.setText('{0:.1f}Ohms=0V'.format(low_value))
 
     def rtc_edit_lakeshore_aux_ouput(self):
         '''
@@ -443,25 +444,20 @@ class RTCollector(QtWidgets.QWidget, GuiBuilder):
         for thermometer in self.thermometers:
             self.thermometer_combobox.addItem(thermometer)
         self.layout().addWidget(self.thermometer_combobox, 3, 3, 1, 2)
-        self.thermometer_combobox.setCurrentIndex(2)
-        # Y Voltage Factor 
-        self.y_correction_lineedit = self.gb_make_labeled_lineedit(label_text='Resistance Factor:', lineedit_text='100')
-        self.layout().addWidget(self.y_correction_lineedit, 4, 3, 1, 2)
+        self.thermometer_combobox.setCurrentIndex(1)
         self.y_label_combobox = self.gb_make_labeled_combobox(label_text='Y label:')
         y_labels = ['Resistance ($m\Omega$)', 'Arb Units']
         for y_label in y_labels:
             self.y_label_combobox.addItem(y_label)
-        self.layout().addWidget(self.y_label_combobox, 4, 5, 1, 2)
+        self.layout().addWidget(self.y_label_combobox, 4, 3, 1, 2)
+        # Y Voltage Factor 
+        self.y_correction_lineedit = self.gb_make_labeled_lineedit(label_text='Resistance Factor:', lineedit_text='100')
+        self.layout().addWidget(self.y_correction_lineedit, 4, 5, 1, 1)
+        self.y_correction_low_value_label = self.gb_make_labeled_label(label_text='')
+        self.layout().addWidget(self.y_correction_low_value_label, 4, 7, 1, 1)
+        self.y_correction_high_value_label = self.gb_make_labeled_label(label_text='')
+        self.layout().addWidget(self.y_correction_high_value_label, 4, 8, 1, 1)
 
-    def rtc_add_common_widgets(self):
-        '''
-        '''
-        # Buttons
-        self.start_pushbutton = QtWidgets.QPushButton('Start', self)
-        self.start_pushbutton.clicked.connect(self.rtc_start_stop)
-        self.layout().addWidget(self.start_pushbutton, 5, 0, 1, 10)
-        self.start_pushbutton.resize(self.start_pushbutton.minimumSizeHint())
-        self.rtc_update_sample_name()
 
     def rtc_update_sample_name(self):
         '''
@@ -513,17 +509,39 @@ class RTCollector(QtWidgets.QWidget, GuiBuilder):
         self.data_clip_hi_lineedit.setValidator(QtGui.QDoubleValidator(0, 4000, 5, self.data_clip_hi_lineedit))
         self.rtc_plot_panel.layout().addWidget(self.data_clip_hi_lineedit, 4, 4, 1, 1)
         self.transparent_plots_checkbox = QtWidgets.QCheckBox('Transparent?', self)
-        self.rtc_plot_panel.layout().addWidget(self.transparent_plots_checkbox, 5, 3, 1, 1)
+        self.rtc_plot_panel.layout().addWidget(self.transparent_plots_checkbox, 5, 0, 1, 2)
         self.transparent_plots_checkbox.setChecked(False)
+
+        # Rn Dat Clip
+        self.data_clip_rn_lo_lineedit = self.gb_make_labeled_lineedit(label_text='Clip_Rn_Lo (mK)')
+        self.data_clip_rn_lo_lineedit.setText(str(0.0))
+        self.data_clip_rn_lo_lineedit.setValidator(QtGui.QDoubleValidator(0.1, 4000, 5, self.data_clip_rn_lo_lineedit))
+        self.rtc_plot_panel.layout().addWidget(self.data_clip_rn_lo_lineedit, 5, 3, 1, 1)
+        self.data_clip_rn_hi_lineedit = self.gb_make_labeled_lineedit(label_text='Clip_Rn_Hi (mK)')
+        self.data_clip_rn_hi_lineedit.setText(str(1000.0))
+        self.data_clip_rn_hi_lineedit.setValidator(QtGui.QDoubleValidator(0.1, 4000, 5, self.data_clip_rn_hi_lineedit))
+        self.rtc_plot_panel.layout().addWidget(self.data_clip_rn_hi_lineedit, 5, 4, 1, 1)
+
+
+
+        # Buttons
+        self.start_pushbutton = QtWidgets.QPushButton('Start', self)
+        self.start_pushbutton.clicked.connect(self.rtc_start_stop)
+        self.rtc_plot_panel.layout().addWidget(self.start_pushbutton, 6, 3, 1, 1)
+        self.start_pushbutton.resize(self.start_pushbutton.minimumSizeHint())
+        self.rtc_update_sample_name()
         self.load_data_pushbutton = QtWidgets.QPushButton('Load')
         self.load_data_pushbutton.clicked.connect(self.rtc_load_data)
-        self.rtc_plot_panel.layout().addWidget(self.load_data_pushbutton, 5, 4, 1, 1)
+        self.rtc_plot_panel.layout().addWidget(self.load_data_pushbutton, 6, 4, 1, 1)
         self.plot_data_pushbutton = QtWidgets.QPushButton('Plot')
         self.plot_data_pushbutton.clicked.connect(self.rtc_direct_plot)
-        self.rtc_plot_panel.layout().addWidget(self.plot_data_pushbutton, 5, 5, 1, 1)
+        self.rtc_plot_panel.layout().addWidget(self.plot_data_pushbutton, 6, 5, 1, 1)
         self.save_data_pushbutton = QtWidgets.QPushButton('Save')
         self.save_data_pushbutton.clicked.connect(self.rtc_save_plot)
-        self.rtc_plot_panel.layout().addWidget(self.save_data_pushbutton, 5, 6, 1, 1)
+        self.rtc_plot_panel.layout().addWidget(self.save_data_pushbutton, 6, 6, 1, 1)
+
+
+
         # Sample Clip
         self.sample_clip_lo_lineedit = self.gb_make_labeled_lineedit(label_text='Sample_Clip Lo')
         self.sample_clip_lo_lineedit.setText(str(0))
@@ -1080,34 +1098,56 @@ class Collector(QRunnable):
     def rtc_get_rn_and_tc(self):
         '''
         '''
+        sample_clip_lo = int(self.rtc.sample_clip_lo_lineedit.text())
+        sample_clip_hi = int(self.rtc.sample_clip_hi_lineedit.text())
+        data_clip_lo = float(self.rtc.data_clip_lo_lineedit.text())
+        data_clip_hi = float(self.rtc.data_clip_hi_lineedit.text())
+        if self.rtc.gb_is_float(self.rtc.data_clip_rn_lo_lineedit.text()):
+            data_clip_rn_lo = float(self.rtc.data_clip_rn_lo_lineedit.text()) * 1e-3 #K
+        else:
+            data_clip_rn_lo = 0.0
+        if self.rtc.gb_is_float(self.rtc.data_clip_rn_hi_lineedit.text()):
+            data_clip_rn_hi = float(self.rtc.data_clip_rn_hi_lineedit.text()) * 1e-3 #K
+        else:
+            data_clip_rn_hi = 1000.0
         excitation = self.rtc.exc_mode_label.text().split(' ')[0]
         unit = self.rtc.exc_mode_label.text().split(' ')[1]
         ramp_value = self.rtc.ramp_lineedit.text().replace('+', '')
         thermometer = self.rtc.thermometer_combobox.currentText()
-        if self.rtc.y_label_combobox.currentText() == 'Arb Units':
-            offset_array = np.asarray(self.y_data) - np.min(self.y_data)
+        y_data = np.asarray(self.y_data[sample_clip_lo:sample_clip_hi])
+        x_data = np.asarray(self.x_data[sample_clip_lo:sample_clip_hi])
+        x_data_selector = np.where(np.logical_and(data_clip_lo < x_data, x_data < data_clip_hi))
+        y_data = y_data[x_data_selector]
+        x_data = x_data[x_data_selector]
+        if len(x_data) == 0:
+            normal_resistance = np.nan
+            transition_temperature = np.nan
+            half_rn = np.nan
+        elif self.rtc.y_label_combobox.currentText() == 'Arb Units':
+            offset_array = np.asarray(y_data) - np.min(y_data)
+            rn_data_selector = np.where(np.logical_and(data_clip_rn_lo < x_data, x_data < data_clip_rn_hi))
+            normal_resistance = np.mean(y_data[rn_data_selector])
             normal_resistance = np.max(offset_array)
             half_rn = 0.5 * normal_resistance
-            print()
-            print(normal_resistance, half_rn)
             tc_idx = (np.abs(offset_array - half_rn)).argmin()
-            transition_temperature = np.asarray(self.x_data)[tc_idx]
+            transition_temperature = np.asarray(x_data)[tc_idx]
             transition_temperature = self.rtc_adjust_x_data_point(transition_temperature)
             #scan_info = '$R_n$: NA\n'
         else:
-            normal_resistance = np.max(self.y_data)
+            rn_data_selector = np.where(np.logical_and(data_clip_rn_lo < x_data, x_data < data_clip_rn_hi))
+            normal_resistance = np.mean(y_data[rn_data_selector])
             half_rn = 0.5 * normal_resistance
-            tc_idx = (np.abs(np.asarray(self.y_data) - half_rn)).argmin()
-            transition_temperature = np.asarray(self.x_data)[tc_idx]
+            tc_idx = (np.abs(np.asarray(y_data) - half_rn)).argmin()
+            transition_temperature = np.asarray(x_data)[tc_idx]
             transition_temperature = self.rtc_adjust_x_data_point(transition_temperature)
             normal_resistance = self.rtc_adjust_y_data_point(normal_resistance)
-            half_rn = self.rtc_adjust_y_data_point(self.y_data[tc_idx])
+            half_rn = self.rtc_adjust_y_data_point(y_data[tc_idx])
         scan_info = '$R_n$ (m$\Omega$): {0:.2f}\n'.format(normal_resistance)
         scan_info += '$T_c$ (mK): {0:.2f}\n'.format(transition_temperature)
         scan_info += 'Exc: {0:.2f} {1}\n'.format(float(excitation), unit)
         scan_info += 'Ramp: {0} K/min\n'.format(ramp_value)
         scan_info += 'Sensor: {0}\n'.format(thermometer)
-        return transition_temperature, half_rn, scan_info
+        return transition_temperature, normal_resistance, half_rn, scan_info
 
     def rtc_plot_drifts(self, fig, x_data, x_stds, y_data, y_stds):
         '''
@@ -1129,11 +1169,19 @@ class Collector(QRunnable):
         ax_legend.set_axis_off()
         sample_name = self.rtc.sample_name_lineedit.text()
         # Analyze Tc
-        transition_temperature, half_rn, label = self.rtc_get_rn_and_tc()
+        transition_temperature, normal_resistance, half_rn, label = self.rtc_get_rn_and_tc()
         sample_clip_lo = int(self.rtc.sample_clip_lo_lineedit.text())
         sample_clip_hi = int(self.rtc.sample_clip_hi_lineedit.text())
         data_clip_lo = float(self.rtc.data_clip_lo_lineedit.text())
         data_clip_hi = float(self.rtc.data_clip_hi_lineedit.text())
+        if self.rtc.gb_is_float(self.rtc.data_clip_rn_lo_lineedit.text()):
+            data_clip_rn_lo = float(self.rtc.data_clip_rn_lo_lineedit.text())
+        else:
+            data_clip_rn_lo = 0.0
+        if self.rtc.gb_is_float(self.rtc.data_clip_rn_hi_lineedit.text()):
+            data_clip_rn_hi = float(self.rtc.data_clip_rn_hi_lineedit.text())
+        else:
+            data_clip_rn_hi = 1000.0
         selected_directions = np.asarray(self.directions)[sample_clip_lo:sample_clip_hi]
         change_indicies = list(np.where(selected_directions[:-1] != selected_directions[1:])[0])
         change_indicies.append(-1)
@@ -1161,6 +1209,16 @@ class Collector(QRunnable):
                 final_plot_y_data = plot_y_data[drift_start_index:change_index]
                 final_plot_y_stds = plot_x_stds[drift_start_index:change_index]
             selector = np.where(np.logical_and(data_clip_lo < final_plot_x_data, final_plot_x_data < data_clip_hi))
+
+            rn_selector = np.where(np.logical_and(data_clip_rn_lo < final_plot_x_data, final_plot_x_data < data_clip_rn_hi))
+            #print(final_plot_x_data[rn_selector], np.ones(len(final_plot_x_data[rn_selector])) * normal_resistance, normal_resistance)
+            hndls, lbls = ax_plot.get_legend_handles_labels()
+            if '$R_n$' in lbls:
+                ax_plot.plot(final_plot_x_data[rn_selector], np.ones(len(final_plot_x_data[rn_selector])) * normal_resistance,
+                             color='k', lw=5, alpha=0.4)
+            else:
+                ax_plot.plot(final_plot_x_data[rn_selector], np.ones(len(final_plot_x_data[rn_selector])) * normal_resistance,
+                             color='k', lw=5, alpha=0.4, label='$R_n$')
             ax_plot.errorbar(final_plot_x_data[selector], final_plot_y_data[selector],
                              xerr=final_plot_x_stds[selector], yerr=final_plot_y_stds[selector],
                              marker='x', ms=0.75, color=color, alpha=0.75,
