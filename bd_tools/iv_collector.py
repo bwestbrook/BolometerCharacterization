@@ -428,7 +428,6 @@ class IVCollector(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTransformSpe
             y_std = data_dict[self.y_channel]['std']
             if x_mean < 0:
                 x_mean *= -1
-                x_std *= -1
                 x_min *= -1
                 x_max *= -1
             self.x_data.append(x_mean)
@@ -539,7 +538,11 @@ class IVCollector(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTransformSpe
         label = 'DAQ {0}'.format(self.x_channel)
         if len(self.x_data) > 1:
             label = None
-        ax.errorbar(range(len(self.x_data)), self.x_data, self.x_stds, marker='.', linestyle='None', label=label)
+        print(self.x_data)
+        try:
+            ax.errorbar(range(len(self.x_data)), self.x_data, self.x_stds, marker='.', linestyle='None', label=label)
+        except ValueError:
+            import ipdb;ipdb.set_trace()
         if len(self.x_data) > 0:
             ax.legend(loc='best', fontsize=12)
         fig.savefig('temp_x.png', transparent=True)
