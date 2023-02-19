@@ -210,6 +210,11 @@ class RTCollector(QtWidgets.QWidget, GuiBuilder):
     def rtc_lakeshore_panel(self):
         '''
         '''
+        # Get Settings First
+        self.housekeeping_low_value = self.ls372_temp_widget.analog_outputs.analog_output_aux.low_value # 0V = this value in K or Ohms
+        self.housekeeping_high_value = self.ls372_temp_widget.analog_outputs.analog_output_aux.high_value # 10V = this value in K or Ohms
+        self.samples_low_value = self.ls372_samples_widget.analog_outputs.analog_output_aux.low_value # 0V = this value in K or Ohms
+        self.samples_high_value = self.ls372_samples_widget.analog_outputs.analog_output_aux.high_value # 10V = this value in K or Ohms
         # Temp Control
         self.temp_display_label = QtWidgets.QLabel('Temperature Scanning', self)
         self.temp_display_label.setAlignment(Qt.AlignCenter)
@@ -418,13 +423,11 @@ class RTCollector(QtWidgets.QWidget, GuiBuilder):
         resistance_range = self.ls372_samples_widget.lakeshore372_command_dict['resistance_range'][channel_object.__dict__['resistance_range']]
         exc_info = '{0:.2f} {1} {2:.0f} (mOhms)'.format(excitation * 1e6, self.unit_dict[exc_mode], resistance_range * 1e3)
         self.exc_mode_label.setText(exc_info)
-        high_value = self.ls372_samples_widget.analog_outputs.analog_output_aux.high_value # 10V = this value in K or Ohms
-        low_value = self.ls372_samples_widget.analog_outputs.analog_output_aux.low_value # 0V = this value in K or Ohms
-        y_correction_factor = (high_value - low_value) / 10# divide out scaling of lakeshore
+        y_correction_factor = (self.samples_high_value - self.samples_low_value) / 10 # divide out scaling of lakeshore
         y_correction_factor *= 1e3 # convet back to mOhm
         self.y_correction_lineedit.setText(str(y_correction_factor))
-        self.y_correction_high_value_label.setText('{0:.1f}Ohms=10V'.format(high_value))
-        self.y_correction_low_value_label.setText('{0:.1f}Ohms=0V'.format(low_value))
+        #self.y_correction_high_value_label.setText('{0:.1f}Ohms=10V'.format(high_value))
+        #self.y_correction_low_value_label.setText('{0:.1f}Ohms=0V'.format(low_value))
 
     def rtc_edit_lakeshore_aux_ouput(self):
         '''
@@ -639,10 +642,12 @@ class RTCollector(QtWidgets.QWidget, GuiBuilder):
             self.sender().setText('Stop DAQ')
             self.started = True
             self.rtc_collector()
+            self.data_clip_rn_lo_lineedit.setText('0')
+            self.data_clip_rn_hi_lineedit.setText('10000')
             self.sample_clip_lo_lineedit.setText('0')
             self.sample_clip_hi_lineedit.setText('1000000')
             self.data_clip_lo_lineedit.setText('0')
-            self.data_clip_hi_lineedit.setText('100000')
+            self.data_clip_hi_lineedit.setText('10000.0')
         else:
             self.daq_collector.stop()
             self.sender().setText('Start DAQ')
@@ -670,10 +675,14 @@ class RTCollector(QtWidgets.QWidget, GuiBuilder):
         image_to_display = QtGui.QPixmap(save_path)
         self.y_time_stream_label.setPixmap(image_to_display)
         if hasattr(self, 'daq_collector'):
-            x_data_text = 'X Data: {0:.4f} ::: X STD: {1:.4f} (raw)\n'.format(self.daq_collector.x_data[-1], self.daq_collector.x_stds[-1])
+            x_data_text = 'X Data: {0:.4f} ::: X STD: {1:.4f} (raw) [{2}=0V {3}K=10V]\n'.format(
+                self.daq_collector.x_data[-1], self.daq_collector.x_stds[-1],
+                self.housekeeping_low_value, self.housekeeping_high_value)
             x_data_text += 'X Data: {0:.2f} (mK)::: X STD: {1:.2f} (mK)\n'.format(self.daq_collector.x_data_real[-1], self.daq_collector.x_stds_real[-1])
             self.x_data_label.setText(x_data_text)
-            y_data_text = 'Y Data: {0:.4f} ::: Y STD: {1:.4f} (raw)\n'.format(self.daq_collector.y_data[-1], self.daq_collector.y_stds[-1])
+            y_data_text = 'Y Data: {0:.4f} ::: Y STD: {1:.4f} (raw) [{2}=0V {3}Ohms=10V]\n'.format(
+                self.daq_collector.y_data[-1], self.daq_collector.y_stds[-1],
+                self.samples_low_value, self.samples_high_value)
             y_data_text += 'Y Data: {0:.2f} (mOhms)::: Y STD: {1:.2f} (mOhms)\n'.format(self.daq_collector.y_data_real[-1], self.daq_collector.y_stds_real[-1])
             self.y_data_label.setText(y_data_text)
 
@@ -759,8 +768,7 @@ class RTCollector(QtWidgets.QWidget, GuiBuilder):
         '''
         '''
         thermometer = self.thermometer_combobox.currentText()
-        high_value = self.ls372_temp_widget.analog_outputs.analog_output_aux.high_value * 100
-        # high_value 00 #0 to 10K is 0 to 1V
+        high_value = self.housekeeping_high_value * 100
         if thermometer in self.lakeshore_thermometers:
             if len(x_data) > 0:
                 x_data = np.asarray(x_data) * high_value
@@ -969,10 +977,11 @@ class Collector(QRunnable):
         if not hasattr(self.rtc.ls372_temp_widget, 'analog_outputs'):
             high_value = 1e2
         else:
-            high_value = self.rtc.ls372_temp_widget.analog_outputs.analog_output_aux.high_value * 100
+            high_value = self.rtc.housekeeping_high_value
         if thermometer in self.rtc.lakeshore_thermometers:
             adjusted_x = x * high_value
         return adjusted_x
+
 
     def rtc_adjust_x_data(self):
         '''
@@ -983,7 +992,7 @@ class Collector(QRunnable):
         if not hasattr(self.rtc.ls372_temp_widget, 'analog_outputs'):
             high_value = 1e2
         else:
-            high_value = self.rtc.ls372_temp_widget.analog_outputs.analog_output_aux.high_value * 100
+            high_value = self.rtc.housekeeping_high_value * 1e2
         # high_value 00 #0 to 10K is 0 to 1V
         if thermometer in self.rtc.lakeshore_thermometers:
             x_data = np.asarray(self.x_data) * high_value
@@ -1102,12 +1111,18 @@ class Collector(QRunnable):
         sample_clip_hi = int(self.rtc.sample_clip_hi_lineedit.text())
         data_clip_lo = float(self.rtc.data_clip_lo_lineedit.text())
         data_clip_hi = float(self.rtc.data_clip_hi_lineedit.text())
+        print(sample_clip_lo)
+        print(sample_clip_hi)
+        print(data_clip_lo)
+        print(data_clip_hi)
+        x_data, x_stds = self.rtc_adjust_x_data()
+        #y_data, y_stds = self.rtc_adjust_y_data()
         if self.rtc.gb_is_float(self.rtc.data_clip_rn_lo_lineedit.text()):
-            data_clip_rn_lo = float(self.rtc.data_clip_rn_lo_lineedit.text()) * 1e-3 #K
+            data_clip_rn_lo = float(self.rtc.data_clip_rn_lo_lineedit.text())
         else:
             data_clip_rn_lo = 0.0
         if self.rtc.gb_is_float(self.rtc.data_clip_rn_hi_lineedit.text()):
-            data_clip_rn_hi = float(self.rtc.data_clip_rn_hi_lineedit.text()) * 1e-3 #K
+            data_clip_rn_hi = float(self.rtc.data_clip_rn_hi_lineedit.text())
         else:
             data_clip_rn_hi = 1000.0
         excitation = self.rtc.exc_mode_label.text().split(' ')[0]
@@ -1115,7 +1130,7 @@ class Collector(QRunnable):
         ramp_value = self.rtc.ramp_lineedit.text().replace('+', '')
         thermometer = self.rtc.thermometer_combobox.currentText()
         y_data = np.asarray(self.y_data[sample_clip_lo:sample_clip_hi])
-        x_data = np.asarray(self.x_data[sample_clip_lo:sample_clip_hi])
+        x_data = np.asarray(x_data[sample_clip_lo:sample_clip_hi])
         x_data_selector = np.where(np.logical_and(data_clip_lo < x_data, x_data < data_clip_hi))
         y_data = y_data[x_data_selector]
         x_data = x_data[x_data_selector]
