@@ -77,12 +77,18 @@ class HistogramPlotter(QtWidgets.QWidget, GuiBuilder):
             return None
         with open(file_path, 'r') as fh:
             data_dict = json.load(fh)
-        for label, data in self.data_dict.items():
+        float_data = []
+        self.data_dict = {}
+        for label, data in data_dict.items():
             for datum in data:
                 if not self.gb_is_float(datum):
                     self.gb_quick_message('Please only load jsons with floats for data in the lists')
                     return None
-        self.data_dict = data_dict
+                if label in self.data_dict:
+                    self.data_dict[label].append(datum)
+                else:
+                    self.data_dict[label] = [datum]
+                print(self.data_dict)
         self.hp_load_labels()
         self.input_data_display_label.setText(str(self.data_dict))
         #self.hp_plot()
@@ -107,7 +113,10 @@ class HistogramPlotter(QtWidgets.QWidget, GuiBuilder):
         current_label = self.load_data_label_combobox.currentText()
         if len(current_label) == 0:
             return None
-        current_data = self.data_dict[current_label]
+        if current_label not in self.data_dict:
+            current_data = []
+        else:
+            current_data = self.data_dict[current_label]
         self.modify_data_lineedit.setText(str(current_data))
 
     def hp_modify_data(self):
@@ -164,16 +173,22 @@ class HistogramPlotter(QtWidgets.QWidget, GuiBuilder):
             font_size = int(self.font_size_lineedit.text())
         x_label = self.x_label_lineedit.text()
         title = self.title_lineedit.text()
+        all_data = []
         for label, data in self.data_dict.items():
             std = np.std(data)
-            label = '{0} {1:.2f} mK'.format(label, std)
+            mean = np.mean(data)
+            label = '{0} ({1:.2f}|{2:.3f}) $\Omega$'.format(label, mean, std)
             pl.hist(data, label=label)
+            for datum in data:
+                all_data.append(datum)
+        std = np.std(all_data)
+        mean = np.mean(all_data)
+        label = '{0} ({1:.2f}|{2:.3f}) $\Omega$'.format('All', mean, std)
+        pl.hist(all_data, alpha=0.2, label=label)
+
         pl.xlabel(x_label, fontsize=font_size)
         pl.ylabel('Count', fontsize=font_size)
         pl.title(title, fontsize=font_size)
         pl.legend()
         pl.show()
-
-
-
 

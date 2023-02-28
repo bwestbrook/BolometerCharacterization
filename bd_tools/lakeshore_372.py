@@ -747,6 +747,24 @@ class LS372TempControl(QRunnable):
         result = self.communicator.read()
         self.status_bar.showMessage('Set Analog 2 to Monitor Channel {0}'.format(index))
 
+
+    def ls372_set_analog_low_high_value(self, channel, data_source, low_value, high_value):
+        '''
+        ANALOG <analog channel>,<polarity>, <mode>, <input/channel>, <data source>, <high value>, <low value>, <manual value>[term]
+        Format n,n,n,nn,n, ±nnn.nnnE±nn, ±nn
+        '''
+        #import ipdb;ipdb.set_trace()
+        if data_source == 'kelvin':
+            data_source = 1
+        elif data_source =='ohms':
+            data_source = 2
+        set_high_value_cmd = 'analog 2, 0, 1, {0}, {1}, {2}, {3} '.format(channel, data_source, high_value, low_value)
+        self.status_bar.showMessage('Set monitor channel with serial cmd "{0}"'.format(set_high_value_cmd))
+        self.communicator.write(set_high_value_cmd)
+        QtWidgets.QApplication.processEvents()
+        result = self.communicator.read()
+        self.status_bar.showMessage('Set Analog 2 to Monitor Channel {0} with {1} and {2}-{3}V'.format(channel, data_source, low_value, high_value))
+
 class LS372Channels(QObject):
 
     def __init__(self, serial_com, status_bar):
@@ -771,7 +789,6 @@ class LS372Channels(QObject):
         '''
         self.communicator.write("inset? {0}".format(index))
         input_setup_config = self.communicator.read()
-        print(input_setup_config)
         setattr(channel_object, 'channel', index)
         setattr(channel_object, 'enabled', str(input_setup_config.split(',')[0]))
         setattr(channel_object, 'dwell', float(input_setup_config.split(',')[1]))

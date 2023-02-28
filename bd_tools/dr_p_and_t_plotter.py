@@ -6,6 +6,7 @@ import matplotlib
 matplotlib.use('TkAgg')
 import pylab as pl
 import datetime
+from pprint import pprint
 from PyQt5 import QtCore, QtGui, QtWidgets
 from GuiBuilder.gui_builder import GuiBuilder, GenericClass
 
@@ -215,11 +216,19 @@ class DilutionRefridgeratorPressureTemperatureLogPlotter(QtWidgets.QWidget, GuiB
         '''
         '''
         selector = []
+        pprint(small_data)
         for time_stamp_str in small_data['Time']:
-            if time_stamp_str.startswith(' '):
+            print(time_stamp_str)
+            if self.gb_is_float(time_stamp_str):
+                time_stamp_str = None
+            elif time_stamp_str.startswith(' '):
                 time_stamp_str = time_stamp_str[1:]
-            time_stamp = datetime.datetime.strptime(time_stamp_str, '%d-%m-%y %H:%M:%S')
-            if dates[0] < time_stamp < dates[1]:
+            if time_stamp_str is not None:
+                time_stamp = datetime.datetime.strptime(time_stamp_str, '%d-%m-%y %H:%M:%S')
+            if time_stamp_str is None:
+                selector.append(False)
+                valid = False
+            elif dates[0] < time_stamp < dates[1]:
                 selector.append(True)
                 valid = True
             else:
