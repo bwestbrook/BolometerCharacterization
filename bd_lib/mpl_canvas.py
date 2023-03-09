@@ -135,6 +135,37 @@ class MplCanvas(FigureCanvasQTAgg):
             hspace=hspace)
         return fig
 
+    def mplc_create_cr_paneled_plot(self,
+            name='Plot',
+            axes_names=['CH 1', 'CH 2'],
+            left=None,
+            right=None,
+            top=None,
+            bottom=None,
+            frac_screen_width=0.5,
+            frac_screen_height=0.5,
+            wspace=None,
+            hspace=None):
+        '''
+        '''
+        fig = self.mplc_create_blank_fig(
+            name=name,
+            frac_screen_width=frac_screen_width,
+            frac_screen_height=frac_screen_height)
+        ax1 = fig.add_subplot(221)
+        ax2 = fig.add_subplot(222)
+        ax3 = fig.add_subplot(223)
+        ax4 = fig.add_subplot(224)
+        fig = self.mplc_adjust_subplots(
+            fig=fig,
+            left=left,
+            right=right,
+            top=top,
+            bottom=bottom,
+            wspace=wspace,
+            hspace=hspace)
+        return fig
+
     def mplc_create_iv_paneled_plot(self,
             name='Plot',
             axes_names=['CH 1', 'CH 2'],

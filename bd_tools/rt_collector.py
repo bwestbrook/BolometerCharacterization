@@ -384,7 +384,7 @@ class RTCollector(QtWidgets.QWidget, GuiBuilder):
             x_data, x_stds = self.rtc_adjust_x_data(self.x_data, self.x_stds)
         if len(x_data) == 0:
             return None
-        current_temp = x_data[-1]
+        current_temp = x_data[-1] * 1e3 #mK
         low_set_point = float(self.temp_set_point_low_lineedit.text())
         high_set_point = float(self.temp_set_point_high_lineedit.text())
         if current_temp > high_set_point - 1:
@@ -854,13 +854,13 @@ class RTCollector(QtWidgets.QWidget, GuiBuilder):
         slope = (high_value - low_value) / 1e1 # K / V
         if thermometer in self.lakeshore_thermometers:
             if len(x_data) > 0:
-                x_data = self.rtc_get_linear_value(np.asarray(self.x_data), slope, low_value)
+                x_data = self.rtc_get_linear_value(np.asarray(x_data), slope, low_value)
                 x_stds = np.asarray(x_stds) * slope
             else:
-                x_data = self.rtc_get_linear_value(np.asarray(self.x_data), slope, low_value)
+                x_data = self.rtc_get_linear_value(np.asarray(x_data), slope, low_value)
                 x_stds = np.asarray(self.x_stds) * slope
-        self.x_data_real = x_data #mK
-        self.x_stds_real = x_stds #mK
+        self.x_data_real = x_data #K
+        self.x_stds_real = x_stds #K
         return x_data, x_stds
 
     def rtc_adjust_y_data(self):

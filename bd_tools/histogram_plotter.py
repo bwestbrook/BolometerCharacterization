@@ -90,7 +90,7 @@ class HistogramPlotter(QtWidgets.QWidget, GuiBuilder):
                     self.data_dict[label] = [datum]
                 print(self.data_dict)
         self.hp_load_labels()
-        self.input_data_display_label.setText(str(self.data_dict))
+        self.input_data_display_label.setText(str(self.data_dict)[0:100])
         #self.hp_plot()
 
     def hp_load_labels(self):
@@ -177,18 +177,20 @@ class HistogramPlotter(QtWidgets.QWidget, GuiBuilder):
         for label, data in self.data_dict.items():
             std = np.std(data)
             mean = np.mean(data)
-            label = '{0} ({1:.2f}|{2:.3f}) $\Omega$'.format(label, mean, std)
+            label = '{0} (avg: {1:.2f} | std: {2:.3f}) $\Omega$'.format(label, mean, std)
             pl.hist(data, label=label)
             for datum in data:
                 all_data.append(datum)
         std = np.std(all_data)
         mean = np.mean(all_data)
-        label = '{0} ({1:.2f}|{2:.3f}) $\Omega$'.format('All', mean, std)
+        label = '{0} (avg: {1:.2f} | std: {2:.3f}) $\Omega$'.format('All', mean, std)
+        pl.xticks(fontsize=font_size)
+        pl.yticks(fontsize=font_size)
         pl.hist(all_data, alpha=0.2, label=label)
 
         pl.xlabel(x_label, fontsize=font_size)
         pl.ylabel('Count', fontsize=font_size)
         pl.title(title, fontsize=font_size)
-        pl.legend()
+        pl.legend(fontsize=font_size)
         pl.show()
 

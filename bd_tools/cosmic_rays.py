@@ -117,7 +117,7 @@ class CosmicRays(QtWidgets.QWidget, GuiBuilder):
         self.layout().addWidget(self.data_set_name_lineedit, 8, 0, 1, 3)
         # Plot
         self.running_plot_label = QtWidgets.QLabel('', self)
-        self.layout().addWidget(self.running_plot_label, 10, 0, 1, 5)
+        self.layout().addWidget(self.running_plot_label, 0, 5, 10, 1)
         # Analysis
         # Data Panel Ch 1
         # Buttons
@@ -249,20 +249,27 @@ class CosmicRays(QtWidgets.QWidget, GuiBuilder):
         '''
 
         axes_names = ['Ch {0}'.format(i + 1) for i in range(self.n_samples)]
-        fig =self.mplc.mplc_create_horizontal_array_fig(
+        fig =self.mplc.mplc_create_cr_paneled_plot(
             name='Cosmic Rays',
-            axes_names=axes_names,
-            left=0.05,
+            left=0.15,
             right=0.98,
             top=0.95,
             bottom=0.2,
-            frac_screen_width=0.8,
-            frac_screen_height=0.3,
-            wspace=0.15,
-            hspace=0.05)
+            frac_screen_width=0.5,
+            frac_screen_height=0.6,
+            wspace=0.25,
+            hspace=0.25)
         axes = fig.get_axes()
+        axes[0].set_ylabel('V')
+        axes[2].set_ylabel('V')
+        axes[2].set_xlabel('Sample')
+        axes[3].set_xlabel('Sample')
+        title = self.data_set_name_lineedit.text()
+        fig.suptitle(title)
         for i in range(1, self.n_samples + 1):
             axes[i - 1].plot(getattr(self, 'data_{0}'.format(i)))
+            ax_title = getattr(self, 'sample_name_{0}_lineedit'.format(i)).text()
+            axes[i - 1].set_title(ax_title)
         if running:
             temp_png_path = os.path.join('temp_files', 'temp_cr.png')
             fig.savefig(temp_png_path)

@@ -63,21 +63,27 @@
                 "StatusTip": "Histogram Plotter",
                 "ToolTip": "Histogram Plotter",
                 "function": "bd_histogram_plotter",
-                "icon": "data.png"
+                "icon": "histogram.png"
             },
             "10_Difference Load Curves": {
                 "StatusTip": "Difference Load Curves",
                 "ToolTip": "Difference Load Curves",
                 "function": "bd_difference_load_curves",
-                "icon": "data.png"
+                "icon": "load_curves.png"
             },
-            "11_Fridge Cycle 576": {
+            "11_Cosmic Ray Data Viewer": {
+                "StatusTip": "Cosmic Ray Data Viewer",
+                "ToolTip": "Cosmic Ray Data Viewer",
+                "function": "bd_cosmic_ray_viewer",
+                "icon": "load_curves.png"
+            },
+            "12_Fridge Cycle 576": {
                 "StatusTip": "Fridge Cycle 576",
                 "ToolTip": "Fridge Cycle 576",
                 "function": "bd_fridge_cycle",
                 "icon": "snowflake.png"
             },
-            "12_Noise Analyzer": {
+            "13_Noise Analyzer": {
                 "StatusTip": "Noise Analyzer",
                 "ToolTip": "Noise Analyzer",
                 "function": "bd_noise_analyzer",
