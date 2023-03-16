@@ -99,6 +99,7 @@ class AgilentAGC100(QtWidgets.QWidget, GuiBuilder):
         ax.set_title('Pressure Log of ACG 100')
         ax.set_xlabel('Time Stamp')
         ax.set_ylabel('Pressure (mBar)')
+        print(self.times, self.pressures)
         pl.semilogy(self.times, self.pressures)
         save_path = os.path.join('temp_files', 'temp_pressures.png')
         fig.savefig(save_path)

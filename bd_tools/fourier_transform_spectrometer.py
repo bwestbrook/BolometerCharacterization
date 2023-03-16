@@ -380,19 +380,19 @@ class FourierTransformSpectrometer(QtWidgets.QWidget, GuiBuilder, FourierTransfo
     def fts_reset_zero(self):
         '''
         '''
-        if not hasattr(self.csm_widget, 'com_port'):
+        if not hasattr(self.csm_mirror_widget, 'com_port'):
             return None
-        self.csm_widget.csm_reset_zero()
+        self.csm_mirror_widget.csm_reset_zero()
         self.set_position_lineedit.setText('0')
 
     def fts_set_position(self):
         '''
         '''
-        if not hasattr(self.csm_widget, 'com_port'):
+        if not hasattr(self.csm_mirror_widget, 'com_port'):
             return None
         position = int(self.set_position_lineedit.text())
         print('adfa', position)
-        self.csm_widget.csm_set_position(position=position, verbose=True)
+        self.csm_mirror_widget.csm_set_position(position=position, verbose=True)
 
     def fts_update_scan_params(self):
         '''

@@ -1,5 +1,6 @@
 import os
 import numpy as np
+import pylab as pl
 import scipy.fftpack
 from pprint import pprint
 from copy import copy, deepcopy
@@ -103,6 +104,9 @@ class FourierTransformSpectroscopy():
         freq_idx = self.bands[band]['Freq Column']
         trans_idx = self.bands[band]['Transmission Column']
         header_lines = self.bands[band]['Header Lines']
+        print(freq_idx, trans_idx)
+        print(freq_idx, trans_idx)
+        print(freq_idx, trans_idx)
         with open(data_path, 'r') as file_handle:
             lines = file_handle.readlines()
             frequency_vector = np.zeros([])
@@ -692,17 +696,19 @@ class BeamSplitter():
 
 if __name__ == '__main__':
     ftsy = FourierTransformSpectroscopy()
-    band = '150'
+    band = 'SO40'
     data_clip_lo = 0
-    data_clip_hi = 300 * 1e9
-    t_source_low = 77
-    t_source_high = 295
+    data_clip_hi = 80 * 1e9
+    t_source_low = 9
+    t_source_high = 14
     fft_frequency_vector_simulated, fft_vector_simulated = ftsy.ftsy_load_simulated_band(data_clip_lo, data_clip_hi, band)
     simulated_delta_power, simulated_integrated_bandwidth = ftsy.ftsy_compute_delta_power_and_bandwidth_at_window(fft_frequency_vector_simulated * 1e9, fft_vector_simulated,
                                                                                                                   data_clip_lo=data_clip_lo, data_clip_hi=data_clip_hi,
                                                                                                                   t_source_low=t_source_low, t_source_high=t_source_high)
-    label = '{0} {1:.2f}pW {2:.2f}GHz'.format(band, simulated_delta_power * 1e12, simulated_integrated_bandwidth * 1e-9)
+    label = 'Chop {0:.2f}K to {1:.1f}K\n{2:.2f}pW {3:.2f}GHz'.format(t_source_low, t_source_high, simulated_delta_power * 1e12, simulated_integrated_bandwidth * 1e-9)
+    title = 'Band pass and Power for {0} {1}K to {2}K'.format(band, t_source_low, t_source_high)
     pl.plot(fft_frequency_vector_simulated, fft_vector_simulated, label=label)
+    pl.title(title)
     pl.legend()
     pl.show()
     #fourier = Fourier()
