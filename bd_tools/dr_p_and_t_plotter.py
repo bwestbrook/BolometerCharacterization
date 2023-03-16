@@ -6,6 +6,7 @@ import matplotlib
 matplotlib.use('TkAgg')
 import pylab as pl
 import datetime
+from pprint import pprint
 from PyQt5 import QtCore, QtGui, QtWidgets
 from GuiBuilder.gui_builder import GuiBuilder, GenericClass
 
@@ -25,6 +26,7 @@ class DilutionRefridgeratorPressureTemperatureLogPlotter(QtWidgets.QWidget, GuiB
             'Still': 'CH5 T',
             'MC': 'CH6 T',
             'CP': 'CH8 T',
+            'X110595': 'CH10 T',
             }
         self.pressures_to_plot_2 = [
             'Vacuum Can',
@@ -42,6 +44,12 @@ class DilutionRefridgeratorPressureTemperatureLogPlotter(QtWidgets.QWidget, GuiB
             'CH5': 'Mixture Tank',
             'CH6': 'Service Manifold',
             }
+        self.date_format = '%Y-%m-%d'
+        self.time_format = '%H:%M:%S'
+        self.today = datetime.datetime.now()
+        self.yesterday = self.today - datetime.timedelta(days=1)
+        self.today_str = datetime.datetime.strftime(self.today, self.date_format)
+        self.yesterday_str = datetime.datetime.strftime(self.yesterday, self.date_format)
         if status_bar is not None:
             self.status_bar = status_bar
             self.screen_resolution = screen_resolution
@@ -58,9 +66,9 @@ class DilutionRefridgeratorPressureTemperatureLogPlotter(QtWidgets.QWidget, GuiB
         '''
         '''
         #Range
-        self.start_date_lineedit = self.gb_make_labeled_lineedit(label_text='Start Date (YY-MM-DD)', lineedit_text='22-04-15')
+        self.start_date_lineedit = self.gb_make_labeled_lineedit(label_text='Start Date (YY-MM-DD)', lineedit_text=self.yesterday_str)
         self.layout().addWidget(self.start_date_lineedit, 1, 0, 1, 3)
-        self.end_date_lineedit = self.gb_make_labeled_lineedit(label_text='End Date (YY-MM-DD)', lineedit_text='22-04-18')
+        self.end_date_lineedit = self.gb_make_labeled_lineedit(label_text='End Date (YY-MM-DD)', lineedit_text=self.today_str)
         self.layout().addWidget(self.end_date_lineedit, 1, 3, 1, 3)
         self.start_time_lineedit = self.gb_make_labeled_lineedit(label_text='Start Time (HH:MM:SS)', lineedit_text='00:00:00')
         self.layout().addWidget(self.start_time_lineedit, 2, 0, 1, 3)
@@ -119,21 +127,20 @@ class DilutionRefridgeratorPressureTemperatureLogPlotter(QtWidgets.QWidget, GuiB
         '''
         start_date_str = self.start_date_lineedit.text()
         start_time_str = self.start_time_lineedit.text()
-        start_date = datetime.datetime.strptime(start_date_str, '%y-%m-%d')
-        start_time = datetime.datetime.strptime(start_time_str, '%H:%M:%S')
+        start_date = datetime.datetime.strptime(start_date_str, self.date_format)
+        start_time = datetime.datetime.strptime(start_time_str, self.time_format)
         start_date = start_date + datetime.timedelta(hours=start_time.hour)
         start_date = start_date + datetime.timedelta(minutes=start_time.minute)
         start_date = start_date + datetime.timedelta(seconds=start_time.second)
-        start_date_str = datetime.datetime.strftime(start_date, '%y-%m-%d %H:%M:%S')
-
+        start_date_str = datetime.datetime.strftime(start_date, '{0} {1}'.format(self.date_format, self.time_format))
         end_date_str = self.end_date_lineedit.text()
         end_time_str = self.end_time_lineedit.text()
-        end_date = datetime.datetime.strptime(end_date_str, '%y-%m-%d')
-        end_time = datetime.datetime.strptime(end_time_str, '%H:%M:%S')
+        end_date = datetime.datetime.strptime(end_date_str, self.date_format)
+        end_time = datetime.datetime.strptime(end_time_str, self.time_format)
         end_date = end_date + datetime.timedelta(hours=end_time.hour)
         end_date = end_date + datetime.timedelta(minutes=end_time.minute)
         end_date = end_date + datetime.timedelta(seconds=end_time.second)
-        end_date_str = datetime.datetime.strftime(end_date, '%y-%m-%d %H:%M:%S')
+        end_date_str = datetime.datetime.strftime(end_date, '{0} {1}'.format(self.date_format, self.time_format))
         dates = (start_date, end_date)
         date_strs = (start_date_str, end_date_str)
         elapsed_days = end_date - start_date
@@ -141,6 +148,7 @@ class DilutionRefridgeratorPressureTemperatureLogPlotter(QtWidgets.QWidget, GuiB
         for i in range(elapsed_days.days + 1):
             date = start_date + datetime.timedelta(days=i)
             day = datetime.datetime.strftime(date, '%y-%m-%d')
+            date_str = datetime.datetime.strftime(date, '%y-%m-%d')
             days.append(day)
         return dates, date_strs, days
 
@@ -166,12 +174,24 @@ class DilutionRefridgeratorPressureTemperatureLogPlotter(QtWidgets.QWidget, GuiB
         return pressure_fig, temperature_fig
 
     def lp_plot_all_dates(self, clicked=True, dates=None,
+                          plot_type='log',
                           desample_p=None, desample_p_ticks=None,
                           desample_t=None, desample_t_ticks=None):
         '''
         '''
         if dates is None:
             dates, date_strs, days = self.lp_get_dates()
+        else:
+            date_strs = (dates[0], dates[1])
+            start_date = datetime.datetime.strptime(dates[0], '%y-%m-%d')
+            end_date = datetime.datetime.strptime(dates[1], '%y-%m-%d')
+            elapsed_days = end_date - start_date
+            days = []
+            for i in range(elapsed_days.days + 1):
+                date = start_date + datetime.timedelta(days=i)
+                day = datetime.datetime.strftime(date, '%y-%m-%d')
+                days.append(day)
+            dates = (start_date, end_date)
         if desample_p is None:
             desample_p = int(self.desample_p_lineedit.text())
         if desample_p_ticks is None:
@@ -185,6 +205,7 @@ class DilutionRefridgeratorPressureTemperatureLogPlotter(QtWidgets.QWidget, GuiB
             all_data_frames = self.lp_get_data(day, all_data_frames)
         pressure_fig, temperature_fig = self.lp_make_plot(all_data_frames, dates, date_strs,
                                                           plot_pressure=True,
+                                                          plot_type=plot_type,
                                                           plot_temperature=True,
                                                           desample_p=desample_p,
                                                           desample_p_ticks=desample_p_ticks,
@@ -195,11 +216,19 @@ class DilutionRefridgeratorPressureTemperatureLogPlotter(QtWidgets.QWidget, GuiB
         '''
         '''
         selector = []
+        pprint(small_data)
         for time_stamp_str in small_data['Time']:
-            if time_stamp_str.startswith(' '):
+            print(time_stamp_str)
+            if self.gb_is_float(time_stamp_str):
+                time_stamp_str = None
+            elif time_stamp_str.startswith(' '):
                 time_stamp_str = time_stamp_str[1:]
-            time_stamp = datetime.datetime.strptime(time_stamp_str, '%d-%m-%y %H:%M:%S')
-            if dates[0] < time_stamp < dates[1]:
+            if time_stamp_str is not None:
+                time_stamp = datetime.datetime.strptime(time_stamp_str, '%d-%m-%y %H:%M:%S')
+            if time_stamp_str is None:
+                selector.append(False)
+                valid = False
+            elif dates[0] < time_stamp < dates[1]:
                 selector.append(True)
                 valid = True
             else:
@@ -211,16 +240,19 @@ class DilutionRefridgeratorPressureTemperatureLogPlotter(QtWidgets.QWidget, GuiB
 
     def lp_make_plot(self, all_data_frames, dates, date_strs,
                      plot_pressure=True, plot_temperature=True,
+                     plot_type = None,
                      desample_p=5, desample_p_ticks=20,
                      desample_t=5, desample_t_ticks=20):
         '''
         '''
         pressure_fig, temperature_fig = self.lp_make_blank_figures(date_strs)
-        plot_type = self.plot_type_combobox.currentText()
+        print(all_data_frames)
+        if plot_type is None:
+            plot_type = self.plot_type_combobox.currentText()
         if plot_pressure:
             pressure_ax = pressure_fig.axes[0]
             for ch_key, name in self.pressures_to_plot.items():
-                if getattr(self, 'p_{0}_select_checkbox'.format(ch_key)).isChecked():
+                #if getattr(self, 'p_{0}_select_checkbox'.format(ch_key)).isChecked():
                     data = all_data_frames[name]
                     small_data = data.iloc[1::desample_p, :] #take every nth
                     index = ch_key.replace('CH', '')
@@ -236,22 +268,23 @@ class DilutionRefridgeratorPressureTemperatureLogPlotter(QtWidgets.QWidget, GuiB
                     xtick_labels = [str(x) for x in xticks]
                     pressure_ax.set_xticks(xticks)
                     pressure_ax.set_xticklabels(xtick_labels, rotation=45, fontsize=10)
-            if self.plot_flow_checkbox.isChecked():
-                data = all_data_frames['flow']
-                small_data = data.iloc[1::desample_p, :] #take every nth
-                #selector = self.lp_make_plot_selector(small_data, dates)
-                flows = [x[1] for x in small_data['Time']['Time'].values]
-                #import ipdb;ipdb.set_trace()
-                pressure_ax.plot(flows, label='Flow')
+            #if self.plot_flow_checkbox.isChecked():
+                #data = all_data_frames['flow']
+                #small_data = data.iloc[1::desample_p, :] #take every nth
+                ##selector = self.lp_make_plot_selector(small_data, dates)
+                #flows = [x[1] for x in small_data['Time']['Time'].values]
+                ##import ipdb;ipdb.set_trace()
+                #pressure_ax.plot(flows, label='Flow')
             pressure_ax.legend(loc='best')
         if plot_temperature:
             temperature_ax = temperature_fig.axes[0]
             for ch_key, name in self.temps_to_plot.items():
-                data = all_data_frames[ch_key]
-                small_data = data.iloc[1::desample_t, :] #take every nth
-                label = '{0}'.format(ch_key)
-                selector = self.lp_make_plot_selector(small_data, dates)
-                if getattr(self, 't_{0}_select_checkbox'.format(ch_key)).isChecked():
+                try:
+                    data = all_data_frames[ch_key]
+                    small_data = data.iloc[1::desample_t, :] #take every nth
+                    label = '{0}'.format(ch_key)
+                    selector = self.lp_make_plot_selector(small_data, dates)
+                    #if getattr(self, 't_{0}_select_checkbox'.format(ch_key)).isChecked():
                     if plot_type == 'log':
                         temperature_ax.semilogy(small_data['Time'][selector], small_data['Value'][selector], label=label)
                     else:
@@ -261,12 +294,14 @@ class DilutionRefridgeratorPressureTemperatureLogPlotter(QtWidgets.QWidget, GuiB
                     temperature_ax.set_xticks(xticks)
                     temperature_ax.set_xticklabels(xtick_labels, rotation=45, fontsize=10)
                     temperature_ax.legend(loc='best')
+                except KeyError:
+                    pass
         pressure_fig.savefig(os.path.join('temp_files', 'pressure_log.png'))
         image = QtGui.QPixmap(os.path.join('temp_files', 'pressure_log.png'))
-        self.pressure_plot_label.setPixmap(image)
+        #self.pressure_plot_label.setPixmap(image)
         temperature_fig.savefig(os.path.join('temp_files', 'temperature_log.png'))
         image = QtGui.QPixmap(os.path.join('temp_files', 'temperature_log.png'))
-        self.temperature_plot_label.setPixmap(image)
+        #self.temperature_plot_label.setPixmap(image)
         pl.show()
         pl.close('all')
         return pressure_fig, temperature_fig
@@ -357,23 +392,24 @@ if __name__ == '__main__':
     lp = DilutionRefridgeratorPressureTemperatureLogPlotter(status_bar, screen_resolution, monitor_dpi, data_folder)
     lp.show()
     #file_names = ['samples_20200814_log.csv']
-    dates = ['20-07-25', '20-07-26']
-    dates = ['20-07-24', '20-07-25', '20-07-26']
+    dates = ['20-07-25']
+    dates = ['20-07-24', '20-07-26']
     dates = ['20-07-26']
     dates = ['20-08-14']
     dates = ['20-08-04']
-    dates = ['22-02-08', '22-02-09', '22-02-10']
+    dates = ['22-02-08','22-02-10']
     dates = ['22-02-08']
-    dates = ['22-02-07', '22-02-08', '22-02-09', '22-02-10']
+    dates = ['22-02-07', '22-02-10']
     desample_p = 3
     desample_p_ticks = 100
     desample_t = 5
     desample_t_ticks = 200
     lp.lp_plot_all_dates(
         dates=dates,
+        plot_type='log',
         desample_p=desample_p,
         desample_p_ticks=desample_p_ticks,
         desample_t=desample_t,
         desample_t_ticks=desample_t_ticks)
-    exit(qt_app.exec_())
+    #exit(qt_app.exec_())
 

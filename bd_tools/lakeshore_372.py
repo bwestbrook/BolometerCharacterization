@@ -584,7 +584,7 @@ class LS372TempControl(QRunnable):
         super(LS372TempControl, self).__init__()
         self.signals = Signals()
         self.channel_indicies = [str(x) for x in range(1, 17)]
-        self.serial_com = serial_com
+        self.communicator = Communicator(serial_com)
         self.status_bar = status_bar
         self.setAutoDelete(False)
         self.ls372_heater_range_dict = {
@@ -618,12 +618,12 @@ class LS372TempControl(QRunnable):
     def ls372_get_pid(self):
         '''
         '''
-        result = self.serial_com.bs_read()
+        result = self.communicator.read()
         pid_query = 'pid? '
         self.status_bar.showMessage('Getting PID params with serial cmd "{0}"'.format(pid_query))
-        self.serial_com.bs_write(pid_query)
+        self.communicator.write(pid_query)
         QtWidgets.QApplication.processEvents()
-        result = self.serial_com.bs_read()
+        result = self.communicator.read()
         if len(result) == 0:
             return -1, -1, -1
         else:
@@ -636,72 +636,72 @@ class LS372TempControl(QRunnable):
     def ls372_set_pid(self, p=0.0, i=0.0, d=0.0):
         '''
         '''
-        result = self.serial_com.bs_read()
+        result = self.communicator.read()
         set_pid_command = 'pid 0,{0},{1},{2} '.format(p, i, d)
         self.status_bar.showMessage('Setting PID params with serial cmd "{0}"'.format(set_pid_command))
-        self.serial_com.bs_write(set_pid_command)
+        self.communicator.write(set_pid_command)
         QtWidgets.QApplication.processEvents()
-        result = self.serial_com.bs_read()
+        result = self.communicator.read()
         return p, i, d
 
     def ls372_get_ramp(self):
         '''
         '''
-        result = self.serial_com.bs_read()
+        result = self.communicator.read()
         ramp_query = 'ramp? 0 '
         self.status_bar.showMessage('Getting ramp with serial cmd "{0}"'.format(ramp_query))
-        self.serial_com.bs_write(ramp_query)
+        self.communicator.write(ramp_query)
         QtWidgets.QApplication.processEvents()
-        response = self.serial_com.bs_read()
+        response = self.communicator.read()
         ramp_on, ramp_value = response.split(',')
         return ramp_on, ramp_value
 
-    def ls372_set_ramp(self, ramp):
+    def ls372_set_ramp(self, ramp, use_ramp=1):
         '''
         '''
-        result = self.serial_com.bs_read()
-        set_ramp_command = 'ramp 0,1,{0} '.format(ramp)
+        result = self.communicator.read()
+        set_ramp_command = 'ramp 0,{0},{1} '.format(use_ramp, ramp)
         self.status_bar.showMessage('Setting ramp with serial cmd "{0}"'.format(set_ramp_command))
-        self.serial_com.bs_write(set_ramp_command)
+        self.communicator.write(set_ramp_command)
         QtWidgets.QApplication.processEvents()
-        result = self.serial_com.bs_read()
+        result = self.communicator.read()
         self.status_bar.showMessage('Set Ramp To "{0}" K/min'.format(ramp))
         return ramp
 
     def ls372_get_heater_range(self):
         '''
         '''
-        result = self.serial_com.bs_read()
+        result = self.communicator.read()
         heater_range_query = 'range? 0 '
         self.status_bar.showMessage('Getting heater value with serial cmd "{0}"'.format(heater_range_query))
-        self.serial_com.bs_write(heater_range_query)
+        self.communicator.write(heater_range_query)
         QtWidgets.QApplication.processEvents()
-        range_index = self.serial_com.bs_read()
+        range_index = self.communicator.read()
         range_value = self.ls372_heater_range_dict[range_index]
         return range_index, range_value
 
     def ls372_set_heater_range(self, range_index):
         '''
         '''
-        result = self.serial_com.bs_read()
+        result = self.communicator.read()
         set_heater_range_command = 'range 0,{0} '.format(range_index)
         self.status_bar.showMessage('Setting heater range with serial cmd "{0}"'.format(set_heater_range_command))
-        self.serial_com.bs_write(set_heater_range_command)
+        self.communicator.write(set_heater_range_command)
         QtWidgets.QApplication.processEvents()
-        result = self.serial_com.bs_read()
+        result = self.communicator.read()
 
     def ls372_get_heater_value(self):
         '''
         '''
         heater_set_command = 'htrset 0,120,0,0,2 ' # makes sure heater out is in amps not power
         self.status_bar.showMessage('Setting heater up with serial cmd "{0}"'.format(heater_set_command))
-        self.serial_com.bs_write(heater_set_command)
-        result = self.serial_com.bs_read()
+        self.communicator.write(heater_set_command)
+        result = self.communicator.read()
         heater_value_query = 'htr? 0 '
         self.status_bar.showMessage('Getting heater value with serial cmd "{0}"'.format(heater_value_query))
-        self.serial_com.bs_write(heater_value_query)
+        self.communicator.write(heater_value_query)
         QtWidgets.QApplication.processEvents()
-        response = self.serial_com.bs_read()
+        response = self.communicator.read()
         try:
             if len(response) > 0:
                 heater_value = float(response)
@@ -716,9 +716,9 @@ class LS372TempControl(QRunnable):
         '''
         temp_set_point_query = 'setp? 0 '
         self.status_bar.showMessage('Getting set point with serial cmd"{0}"'.format(temp_set_point_query))
-        self.serial_com.bs_write(temp_set_point_query)
+        self.communicator.write(temp_set_point_query)
         try:
-            set_point = float(self.serial_com.bs_read())
+            set_point = float(self.communicator.read())
         except ValueError:
             set_point = np.nan
         self.signals.temp_ready.emit(set_point)
@@ -729,9 +729,9 @@ class LS372TempControl(QRunnable):
         '''
         set_temp_set_point_command = 'setp 0, {0} '.format(set_point)
         self.status_bar.showMessage('Set set point with serial cmd "{0}"'.format(set_temp_set_point_command))
-        self.serial_com.bs_write(set_temp_set_point_command)
+        self.communicator.write(set_temp_set_point_command)
         QtWidgets.QApplication.processEvents()
-        result = self.serial_com.bs_read()
+        result = self.communicator.read()
         self.status_bar.showMessage('Set Temp Set Point To "{0}" K'.format(set_point))
         return set_point
 
@@ -742,10 +742,28 @@ class LS372TempControl(QRunnable):
         '''
         set_thermometer_index_cmd = 'outmode 0, 5, {0}, 0, 0, 1, 0 '.format(index)
         self.status_bar.showMessage('Set monitor channel with serial cmd "{0}"'.format(set_thermometer_index_cmd))
-        self.serial_com.bs_write(set_thermometer_index_cmd)
+        self.communicator.write(set_thermometer_index_cmd)
         QtWidgets.QApplication.processEvents()
-        result = self.serial_com.bs_read()
+        result = self.communicator.read()
         self.status_bar.showMessage('Set Analog 2 to Monitor Channel {0}'.format(index))
+
+
+    def ls372_set_analog_low_high_value(self, channel, data_source, low_value, high_value):
+        '''
+        ANALOG <analog channel>,<polarity>, <mode>, <input/channel>, <data source>, <high value>, <low value>, <manual value>[term]
+        Format n,n,n,nn,n, ±nnn.nnnE±nn, ±nn
+        '''
+        #import ipdb;ipdb.set_trace()
+        if data_source == 'kelvin':
+            data_source = 1
+        elif data_source =='ohms':
+            data_source = 2
+        set_high_value_cmd = 'analog 2, 0, 1, {0}, {1}, {2}, {3} '.format(channel, data_source, high_value, low_value)
+        self.status_bar.showMessage('Set monitor channel with serial cmd "{0}"'.format(set_high_value_cmd))
+        self.communicator.write(set_high_value_cmd)
+        QtWidgets.QApplication.processEvents()
+        result = self.communicator.read()
+        self.status_bar.showMessage('Set Analog 2 to Monitor Channel {0} with {1} and {2}-{3}V'.format(channel, data_source, low_value, high_value))
 
 class LS372Channels(QObject):
 
@@ -753,8 +771,8 @@ class LS372Channels(QObject):
         '''
         '''
         super(LS372Channels, self).__init__()
+        self.communicator = Communicator(serial_com)
         self.channel_indicies = [str(x) for x in range(1, 17)]
-        self.serial_com = serial_com
         self.status_bar = status_bar
         self.ls372_update_channels()
 
@@ -769,24 +787,24 @@ class LS372Channels(QObject):
     def ls372_update_input_channel_settings(self, index, channel_object):
         '''
         '''
-        self.serial_com.bs_write("inset? {0}".format(index))
-        input_setup_config = self.serial_com.bs_read()
+        self.communicator.write("inset? {0}".format(index))
+        input_setup_config = self.communicator.read()
         setattr(channel_object, 'channel', index)
         setattr(channel_object, 'enabled', str(input_setup_config.split(',')[0]))
         setattr(channel_object, 'dwell', float(input_setup_config.split(',')[1]))
         setattr(channel_object, 'pause', float(input_setup_config.split(',')[2]))
         setattr(channel_object, 'curve_number', int(input_setup_config.split(',')[3]))
         setattr(channel_object, 'curve_tempco', int(input_setup_config.split(',')[4]))
-        self.serial_com.bs_write("intype? {0}".format(index))
-        input_config = self.serial_com.bs_read()
+        self.communicator.write("intype? {0}".format(index))
+        input_config = self.communicator.read()
         setattr(channel_object, 'exc_mode', str(input_config.split(',')[0]))
         setattr(channel_object, 'excitation', str(input_config.split(',')[1]))
         setattr(channel_object, 'autorange', str(input_config.split(',')[2]))
         setattr(channel_object, 'resistance_range', str(input_config.split(',')[3]))
         setattr(channel_object, 'cs_shunt', int(input_config.split(',')[4]))
         setattr(channel_object, 'units', str(input_config.split(',')[5]))
-        self.serial_com.bs_write("filter? {0}".format(index))
-        filter_setup_config = self.serial_com.bs_read()
+        self.communicator.write("filter? {0}".format(index))
+        filter_setup_config = self.communicator.read()
         setattr(channel_object, 'filter_on', str(filter_setup_config.split(',')[0]))
         setattr(channel_object, 'filter_settle_time', float(filter_setup_config.split(',')[1]))
         setattr(channel_object, 'filter_window', float(filter_setup_config.split(',')[2]))
@@ -795,16 +813,14 @@ class LS372Channels(QObject):
     def ls372_get_channel_value(self, index, reading='resistance'):
         '''
         '''
-        #self.serial_com.bs_write('scan {0},0 '. format(index))
-        #scan_status = self.serial_com.bs_read()
-        self.serial_com.bs_write('rdgst? {0} '. format(index))
-        sensor_status = self.serial_com.bs_read()
+        self.communicator.write('rdgst? {0} '. format(index))
+        sensor_status = self.communicator.read()
         if reading == 'resistance':
-            self.serial_com.bs_write('rdgr? {0} '. format(index))
-            sensor_value = self.serial_com.bs_read()
+            self.communicator.write('rdgr? {0} '. format(index))
+            sensor_value = self.communicator.read()
         elif reading == 'kelvin':
-            self.serial_com.bs_write('krdg? {0} '. format(index))
-            sensor_value = self.serial_com.bs_read()
+            self.communicator.write('krdg? {0} '. format(index))
+            sensor_value = self.communicator.read()
         if sensor_status == '000':
             channel_readout_info = sensor_value
         else:
@@ -816,8 +832,8 @@ class LS372Channels(QObject):
         '''
         scan_cmd = 'scan {0},{1} '.format(index, autoscan)
         self.status_bar.showMessage('Sending Serial Command "{0}"'.format(scan_cmd))
-        self.serial_com.bs_write(scan_cmd)
-        self.serial_com.bs_read()
+        self.communicator.write(scan_cmd)
+        self.communicator.read()
 
     def ls372_write_new_channel_settings(self, set_to_channel, new_settings, channel_object):
         '''
@@ -833,8 +849,8 @@ class LS372Channels(QObject):
                                                                   )
         self.status_bar.showMessage('Sending Serial Command "{0}"'.format(intype_cmd))
         QtWidgets.QApplication.processEvents()
-        self.serial_com.bs_write(intype_cmd)
-        result = self.serial_com.bs_read()
+        self.communicator.write(intype_cmd)
+        result = self.communicator.read()
         inset_cmd = 'inset {0},{1},{2},{3},{4},{5} '.format(set_to_channel,
                                                             new_settings['enabled'],
                                                             new_settings['dwell'],
@@ -844,8 +860,8 @@ class LS372Channels(QObject):
                                                             )
         self.status_bar.showMessage('Sending Serial Command "{0}"'.format(inset_cmd))
         QtWidgets.QApplication.processEvents()
-        self.serial_com.bs_write(inset_cmd)
-        result = self.serial_com.bs_read()
+        self.communicator.write(inset_cmd)
+        result = self.communicator.read()
         filter_cmd = 'filter {0},{1},{2},{3} '.format(set_to_channel,
                                                       new_settings['filter_on'],
                                                       new_settings['filter_settle_time'],
@@ -853,8 +869,8 @@ class LS372Channels(QObject):
                                                       )
         self.status_bar.showMessage('Sending Serial Command "{0}"'.format(filter_cmd))
         QtWidgets.QApplication.processEvents()
-        self.serial_com.bs_write(filter_cmd)
-        result = self.serial_com.bs_read()
+        self.communicator.write(filter_cmd)
+        result = self.communicator.read()
 
 class LS372AnalogOutputs(QObject):
 
@@ -864,8 +880,8 @@ class LS372AnalogOutputs(QObject):
         super(LS372AnalogOutputs, self).__init__()
         self.analog_output_indicies = [str(x) for x in range(1, 4)]
         self.analog_output_indicies = ['sample', 'warmup', 'aux']
-        self.serial_com = serial_com
         self.status_bar = status_bar
+        self.communicator = Communicator(serial_com)
         self.ls372_update_analog_outputs()
 
     def ls372_update_analog_outputs(self):
@@ -880,8 +896,8 @@ class LS372AnalogOutputs(QObject):
         '''
         '''
         # Checking the set up
-        self.serial_com.bs_write( "analog? {0}".format(index))
-        analog_output_config = self.serial_com.bs_read()
+        self.communicator.write( "analog? {0}".format(index))
+        analog_output_config = self.communicator.read()
         setattr(analog_output_object, 'analog_output', analog_output)
         setattr(analog_output_object, 'polarity', str(analog_output_config.split(',')[0]))
         setattr(analog_output_object, 'analog_mode', str(analog_output_config.split(',')[1]))
@@ -891,11 +907,12 @@ class LS372AnalogOutputs(QObject):
         setattr(analog_output_object, 'low_value', float(analog_output_config.split(',')[5]))
         setattr(analog_output_object, 'manual_value', float(analog_output_config.split(',')[6]))
         # Checking the set up
-        self.serial_com.bs_write( "outmode? {0}".format(index))
-        outmode_config = self.serial_com.bs_read()
+        self.communicator.write( "outmode? {0}".format(index))
+        outmode_config = self.communicator.read()
         setattr(analog_output_object, 'powerup_enable', str(outmode_config.split(',')[2]))
         setattr(analog_output_object, 'filter_on', str(outmode_config.split(',')[4]))
         setattr(analog_output_object, 'delay', int(outmode_config.split(',')[5]))
+        pprint(analog_output_object)
         return analog_output_object
 
     def ls372_monitor_channel_aux_analog(self, channel, analog_output_object):
@@ -911,8 +928,8 @@ class LS372AnalogOutputs(QObject):
                                                                        analog_output_object.manual_value,
                                                                        )
         self.status_bar.showMessage('Sending Serial Command "{0}"'.format(monitor_cmd))
-        self.serial_com.bs_write(monitor_cmd)
-        self.serial_com.bs_read()
+        self.communicator.write(monitor_cmd)
+        self.communicator.read()
 
     def ls372_write_analog_output_settings(self, set_to_channel, new_settings, channel_object):
         '''
@@ -934,8 +951,8 @@ class LS372AnalogOutputs(QObject):
                                                                       )
         self.status_bar.showMessage('Sending Serial Command "{0}"'.format(analog_cmd))
         QtWidgets.QApplication.processEvents()
-        self.serial_com.bs_write(analog_cmd)
-        result = self.serial_com.bs_read()
+        self.communicator.write(analog_cmd)
+        result = self.communicator.read()
         outmode_cmd = 'outmode {0},{1},{2},{3},{4},{5},{6} '.format(set_to_channel,
                                                                     new_settings['analog_mode'],
                                                                     new_settings['input_channel'],
@@ -945,9 +962,33 @@ class LS372AnalogOutputs(QObject):
                                                                     new_settings['delay'],
                                                                     )
         self.status_bar.showMessage('Sending Serial Command "{0}"'.format(outmode_cmd))
-        self.serial_com.bs_write(outmode_cmd)
+        self.communicator.write(outmode_cmd)
         QtWidgets.QApplication.processEvents()
-        result = self.serial_com.bs_read()
+        result = self.communicator.read()
+
+class Communicator(QRunnable):
+    '''
+    Handles serial communication in background
+    '''
+    def __init__(self, serial_com):
+        '''
+        '''
+        self.signals = Signals()
+        self.serial_com = serial_com
+
+
+    def write(self, cmd):
+        '''
+        '''
+        self.serial_com.bs_write(cmd)
+
+    def read(self):
+        '''
+        '''
+        out = self.serial_com.bs_read()
+        return out.rstrip()
+
+
 
 class Signals(QObject):
     '''
