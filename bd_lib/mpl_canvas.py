@@ -153,8 +153,8 @@ class MplCanvas(FigureCanvasQTAgg):
             frac_screen_width=frac_screen_width,
             frac_screen_height=frac_screen_height)
         ax1 = fig.add_subplot(221)
-        ax2 = fig.add_subplot(222)
-        ax3 = fig.add_subplot(223)
+        ax2 = fig.add_subplot(223)
+        ax3 = fig.add_subplot(222)
         ax4 = fig.add_subplot(224)
         fig = self.mplc_adjust_subplots(
             fig=fig,

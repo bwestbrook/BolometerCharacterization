@@ -251,10 +251,10 @@ class CosmicRays(QtWidgets.QWidget, GuiBuilder):
         axes_names = ['Ch {0}'.format(i + 1) for i in range(self.n_samples)]
         fig =self.mplc.mplc_create_cr_paneled_plot(
             name='Cosmic Rays',
-            left=0.15,
+            left=0.08,
             right=0.98,
             top=0.95,
-            bottom=0.2,
+            bottom=0.08,
             frac_screen_width=0.5,
             frac_screen_height=0.6,
             wspace=0.25,
@@ -263,7 +263,7 @@ class CosmicRays(QtWidgets.QWidget, GuiBuilder):
         axes[0].set_ylabel('V')
         axes[2].set_ylabel('V')
         axes[2].set_xlabel('Sample')
-        axes[3].set_xlabel('Sample')
+        axes[2].set_xlabel('Sample')
         title = self.data_set_name_lineedit.text()
         fig.suptitle(title)
         for i in range(1, self.n_samples + 1):

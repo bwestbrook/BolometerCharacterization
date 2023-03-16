@@ -75,7 +75,7 @@
                 "StatusTip": "Cosmic Ray Data Viewer",
                 "ToolTip": "Cosmic Ray Data Viewer",
                 "function": "bd_cosmic_ray_viewer",
-                "icon": "load_curves.png"
+                "icon": "cosmic_ray_viewer.png"
             },
             "12_Fridge Cycle 576": {
                 "StatusTip": "Fridge Cycle 576",

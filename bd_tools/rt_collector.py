@@ -67,19 +67,17 @@ class RTCollector(QtWidgets.QWidget, GuiBuilder):
         self.xy_fig = self.mplc.mplc_create_fig_with_legend_axes(
                 name='xy_fig',
                 left=0.12,
-                right=0.95,
+                right=0.91,
                 bottom=0.2,
                 top=0.9,
                 frac_screen_height=0.35,
                 frac_screen_width=0.35,
                 wspace=0.1,
                 hspace=0.25)
-
         self.meta_data = {}
         self.daq = BoloDAQ()
         self.ls372_temp_widget = ls372_temp_widget
         self.ls372_samples_widget = ls372_samples_widget
-
         self.heater_resistance = 120.
         self.drift_direction = 'down'
         self.thermometer_index = 0

@@ -1,10 +1,13 @@
 import os
 import pylab as pl
 import numpy as np
+import pandas as pd
 import matplotlib.pyplot as plt
 from copy import copy
 from pprint import pprint
+from scipy.optimize import curve_fit
 from PyQt5 import QtCore, QtGui, QtWidgets
+from bd_lib.mpl_canvas import MplCanvas
 from GuiBuilder.gui_builder import GuiBuilder, GenericClass
 
 class DataPlotter(QtWidgets.QWidget, GuiBuilder):
@@ -14,6 +17,7 @@ class DataPlotter(QtWidgets.QWidget, GuiBuilder):
         self.data_folder = data_folder
         self.screen_resolution = screen_resolution
         self.monitor_dpi = monitor_dpi
+        self.mplc = MplCanvas(self, screen_resolution, monitor_dpi)
         grid = QtWidgets.QGridLayout()
         self.setLayout(grid)
         self.plot_count = 0
@@ -23,370 +27,310 @@ class DataPlotter(QtWidgets.QWidget, GuiBuilder):
             'y_data',
             'yerr',
             ]
-        self.dp_controls()
-        self.dp_plot_input()
         self.loaded_file_data_rows = []
         self.include_in_plot_list = []
-        self.data_type_plot_dict = {
-            'IV': {
-                'x_label_lineedit_1': 'Voltage ($\mu$V)',
-                'y_label_lineedit_1': 'Current ($\mu$A)',
-                'x_label_lineedit_2': '',
-                'y_label_lineedit_2': ''
-                },
-            'RT': {
-                'x_label_lineedit_1': 'Temperature ($m K$)',
-                'y_label_lineedit_1': 'Resistance ($m \Omega$)',
-                'x_label_lineedit_2': '',
-                'y_label_lineedit_2': ''
-                },
-            'Beam Map': {
-                'x_label_lineedit_1': 'X Position ($m m$)',
-                'y_label_lineedit_1': 'Y Position ($m m$)',
-                'x_label_lineedit_2': '',
-                'y_label_lineedit_2': ''
-                },
-            'FTS': {
-                'x_label_lineedit_1': 'X Position ($m m$)',
-                'y_label_lineedit_1': 'Response ($V$)',
-                'x_label_lineedit_2': 'Frequency ($GHz$)',
-                'y_label_lineedit_2': 'Response ($V$)',
-                },
-            'Cosmic Rays': {
-                'x_label_lineedit_1': 'Time ($s$)',
-                'y_label_lineedit_1': 'SQUID Output ($V$)',
-                'x_label_lineedit_2': 'Time ($s$)',
-                'y_label_lineedit_2': 'SQUID Output ($V$)',
-                },
-            'Custom': {
-                'x_label_lineedit_1': '',
-                'y_label_lineedit_1': '',
-                'x_label_lineedit_2': '',
-                'y_label_lineedit_2': '',
-                },
-            }
-        self.dp_tab_bar()
+        self.fit_types = {
+                'Polynomial': 'p[0]*X**[N-1] + ...',
+                'Exponential': 'A*eB*x + C',
+                'Sinusoid': 'A*sin(B*x) + C',
+                }
+        self.dp_controls()
+        self.dp_plot_input()
 
     ########################
     # Gui Setup 
     ########################
 
-    def dp_tab_bar(self):
-        '''
-        '''
-        self.data_type_tab_bar = QtWidgets.QTabBar(self)
-        for data_type in self.data_type_plot_dict:
-            self.data_type_tab_bar.addTab(data_type)
-        self.data_type_tab_bar.currentChanged.connect(self.dp_update_input)
-        self.layout().addWidget(self.data_type_tab_bar, 0, 0, 1, 8)
-        self.data_type_tab_bar.setCurrentIndex(1)
-        self.data_type_tab_bar.setCurrentIndex(0)
-
     def dp_controls(self):
         '''
         '''
         load_pushbutton = QtWidgets.QPushButton('Load', self)
-        load_pushbutton.setFixedHeight(load_pushbutton.sizeHint().height() * 5)
-        self.layout().addWidget(load_pushbutton, 1, 6, 3, 1)
+        self.layout().addWidget(load_pushbutton, 0, 0, 1, 1)
         load_pushbutton.clicked.connect(self.dp_load_data)
-        plot_pushbutton = QtWidgets.QPushButton('Plot', self)
-        plot_pushbutton.setFixedHeight(plot_pushbutton.sizeHint().height() * 5)
-        self.layout().addWidget(plot_pushbutton, 1, 7, 3, 1)
+        plot_pushbutton = QtWidgets.QPushButton('Replot', self)
+        self.layout().addWidget(plot_pushbutton, 0, 1, 1, 1)
         plot_pushbutton.clicked.connect(self.dp_plot)
 
     def dp_plot_input(self):
         '''
         '''
+        # Title
+        self.title_lineedit = self.gb_make_labeled_lineedit(label_text='Title')
+        self.layout().addWidget(self.title_lineedit, 1, 0, 1, 4)
+        self.title_lineedit.returnPressed.connect(self.dp_plot)
         # X label 1
-        x_header_label_1 = QtWidgets.QLabel('X Label 1', self)
-        self.layout().addWidget(x_header_label_1, 1, 0, 1, 1)
-        self.x_label_lineedit_1 = QtWidgets.QLineEdit('', self)
-        self.layout().addWidget(self.x_label_lineedit_1, 1, 1, 1, 2)
+        self.x_label_lineedit_1 = self.gb_make_labeled_lineedit(label_text='X Label 1')
+        self.layout().addWidget(self.x_label_lineedit_1, 2, 0, 1, 1)
+        self.x_label_lineedit_1.returnPressed.connect(self.dp_plot)
         # X label 2
-        x_header_label_2 = QtWidgets.QLabel('X Label 2', self)
-        self.layout().addWidget(x_header_label_2, 1, 3, 1, 1)
-        self.x_label_lineedit_2 = QtWidgets.QLineEdit('', self)
-        self.layout().addWidget(self.x_label_lineedit_2, 1, 4, 1, 2)
-        y_header_label_1 = QtWidgets.QLabel('Y Label 1', self)
-        self.layout().addWidget(y_header_label_1, 2, 0, 1, 1)
-        self.y_label_lineedit_1 = QtWidgets.QLineEdit('', self)
-        self.layout().addWidget(self.y_label_lineedit_1, 2, 1, 1, 2)
-        y_header_label_2 = QtWidgets.QLabel('Y Label 2', self)
-        self.layout().addWidget(y_header_label_2, 2, 3, 1, 1)
-        self.y_label_lineedit_2 = QtWidgets.QLineEdit('', self)
-        self.layout().addWidget(self.y_label_lineedit_2, 2, 4, 1, 2)
-        title_header_label = QtWidgets.QLabel('Title', self)
-        self.layout().addWidget(title_header_label, 3, 0, 1, 1)
-        self.title_lineedit = QtWidgets.QLineEdit('', self)
-        self.layout().addWidget(self.title_lineedit, 3, 1, 1, 5)
+        self.x_label_lineedit_2 = self.gb_make_labeled_lineedit(label_text='X Label 2')
+        self.layout().addWidget(self.x_label_lineedit_2, 2, 1, 1, 1)
+        self.x_label_lineedit_2.returnPressed.connect(self.dp_plot)
+        # Y label 1
+        self.y_label_lineedit_1 = self.gb_make_labeled_lineedit(label_text='Y Label 1')
+        self.layout().addWidget(self.y_label_lineedit_1, 2, 2, 1, 1)
+        self.y_label_lineedit_1.returnPressed.connect(self.dp_plot)
+        # Y label 2
+        self.y_label_lineedit_2 = self.gb_make_labeled_lineedit(label_text='Y Label 2')
+        self.layout().addWidget(self.y_label_lineedit_2, 2, 3, 1, 1)
+        self.y_label_lineedit_2.returnPressed.connect(self.dp_plot)
 
-    ########################
-    # Information Handling 
-    ########################
+        #### Plotting Option
+        self.fontsize_lineedit = self.gb_make_labeled_lineedit(label_text='fontsize', lineedit_text='16')
+        self.fontsize_lineedit.setValidator(QtGui.QIntValidator(2, 36, self.fontsize_lineedit))
+        self.layout().addWidget(self.fontsize_lineedit, 3, 0, 1, 1)
+        self.fontsize_lineedit.returnPressed.connect(self.dp_plot)
+        self.ticksize_lineedit = self.gb_make_labeled_lineedit(label_text='ticksize', lineedit_text='14')
+        self.ticksize_lineedit.setValidator(QtGui.QIntValidator(2, 36, self.ticksize_lineedit))
+        self.ticksize_lineedit.returnPressed.connect(self.dp_plot)
+        self.layout().addWidget(self.ticksize_lineedit, 3, 1, 1, 1)
+        self.legend_checkbox = QtWidgets.QCheckBox('Legend?')
+        self.legend_checkbox.setChecked(True)
+        self.layout().addWidget(self.legend_checkbox, 3, 2, 1, 1)
+        self.legend_checkbox.clicked.connect(self.dp_plot)
+        self.transparent_checkbox = QtWidgets.QCheckBox('Transparent?')
+        self.layout().addWidget(self.transparent_checkbox, 3, 3, 1, 1)
+        self.transparent_checkbox.setChecked(True)
+        self.transparent_checkbox.clicked.connect(self.dp_plot)
 
-    def dp_update_input(self):
-        '''
-        '''
-        data_type = self.data_type_tab_bar.tabText(self.data_type_tab_bar.currentIndex())
-        for widget, text in self.data_type_plot_dict[data_type].items():
-            getattr(self, widget).setText(text)
-        self.title_lineedit.setText('')
-        if hasattr(self, 'data'):
-            if data_type in ('RT', 'IV'):
-                for column in range(self.data.shape[1]):
-                    getattr(self, 'column_{0}_data_type'.format(column)).setCurrentIndex(column)
+        #Subplot
+        self.left_lineedit = self.gb_make_labeled_lineedit(label_text='Left', lineedit_text='0.1')
+        self.left_lineedit.setValidator(QtGui.QDoubleValidator(0, 1, 4, self.left_lineedit))
+        self.layout().addWidget(self.left_lineedit, 4, 0, 1, 1)
+        self.left_lineedit.returnPressed.connect(self.dp_plot)
+        self.right_lineedit = self.gb_make_labeled_lineedit(label_text='Right', lineedit_text='0.9')
+        self.right_lineedit.setValidator(QtGui.QDoubleValidator(0, 1, 4, self.right_lineedit))
+        self.layout().addWidget(self.right_lineedit, 4, 1, 1, 1)
+        self.right_lineedit.returnPressed.connect(self.dp_plot)
+        self.top_lineedit = self.gb_make_labeled_lineedit(label_text='Top', lineedit_text='0.9')
+        self.top_lineedit.setValidator(QtGui.QDoubleValidator(0, 1, 4, self.top_lineedit))
+        self.layout().addWidget(self.top_lineedit, 4, 2, 1, 1)
+        self.top_lineedit.returnPressed.connect(self.dp_plot)
+        self.bottom_lineedit = self.gb_make_labeled_lineedit(label_text='Bottom', lineedit_text='0.1')
+        self.bottom_lineedit.setValidator(QtGui.QDoubleValidator(0, 1, 4, self.bottom_lineedit))
+        self.layout().addWidget(self.bottom_lineedit, 4, 3, 1, 1)
+        self.bottom_lineedit.returnPressed.connect(self.dp_plot)
+
+        # Fig Size
+        self.frac_screen_width_lineedit = self.gb_make_labeled_lineedit(label_text='Frac Screen Width', lineedit_text='0.5')
+        self.frac_screen_width_lineedit.setValidator(QtGui.QDoubleValidator(0, 1, 4, self.frac_screen_width_lineedit))
+        self.layout().addWidget(self.frac_screen_width_lineedit, 5, 0, 1, 1)
+        self.frac_screen_width_lineedit.returnPressed.connect(self.dp_plot)
+        self.frac_screen_height_lineedit = self.gb_make_labeled_lineedit(label_text='Frac Screen Height', lineedit_text='0.5')
+        self.frac_screen_height_lineedit.setValidator(QtGui.QDoubleValidator(0, 1, 4, self.frac_screen_height_lineedit))
+        self.layout().addWidget(self.frac_screen_height_lineedit, 5, 1, 1, 1)
+        self.frac_screen_height_lineedit.returnPressed.connect(self.dp_plot)
+
+        #Data Clip
+        self.data_clip_lo_lineedit = self.gb_make_labeled_lineedit(label_text='Data Clip Lo', lineedit_text='0')
+        self.data_clip_lo_lineedit.setValidator(QtGui.QDoubleValidator(0, 1e8, 4, self.data_clip_lo_lineedit))
+        self.layout().addWidget(self.data_clip_lo_lineedit, 6, 0, 1, 1)
+        self.data_clip_hi_lineedit = self.gb_make_labeled_lineedit(label_text='Data Clip Hi', lineedit_text='1e8')
+        self.data_clip_hi_lineedit.setValidator(QtGui.QDoubleValidator(0, 1e8, 4, self.data_clip_hi_lineedit))
+        self.layout().addWidget(self.data_clip_hi_lineedit, 6, 1, 1, 1)
+        self.data_clip_lo_lineedit.returnPressed.connect(self.dp_plot)
+        self.data_clip_hi_lineedit.returnPressed.connect(self.dp_plot)
+
+        self.sample_clip_lo_lineedit = self.gb_make_labeled_lineedit(label_text='Sample Clip Lo', lineedit_text='0')
+        self.sample_clip_lo_lineedit.setValidator(QtGui.QIntValidator(0, 1000000, self.sample_clip_lo_lineedit))
+        self.layout().addWidget(self.sample_clip_lo_lineedit, 6, 2, 1, 1)
+        self.sample_clip_hi_lineedit = self.gb_make_labeled_lineedit(label_text='Sample Clip Hi', lineedit_text='10000')
+        self.sample_clip_hi_lineedit.setValidator(QtGui.QIntValidator(0, 1000000, self.sample_clip_hi_lineedit))
+        self.layout().addWidget(self.sample_clip_hi_lineedit, 6, 3, 1, 1)
+        self.sample_clip_lo_lineedit.returnPressed.connect(self.dp_plot)
+        self.sample_clip_hi_lineedit.returnPressed.connect(self.dp_plot)
+
+        #Add Fit 
+        self.fit_select_combobox = self.gb_make_labeled_combobox(label_text='Fit Type')
+        self.layout().addWidget(self.fit_select_combobox, 7, 0, 1, 1)
+        for fit in self.fit_types:
+            self.fit_select_combobox.addItem(fit)
+        self.fit_select_combobox.currentIndexChanged.connect(self.dp_update_polyfit)
+        self.fit_select_combobox.currentIndexChanged.connect(self.dp_plot)
+        self.poly_fit_degree_combobox = self.gb_make_labeled_combobox(label_text='Poly Fit N')
+        for i in range(100):
+            self.poly_fit_degree_combobox.addItem(str(i))
+        self.layout().addWidget(self.poly_fit_degree_combobox, 7, 1, 1, 1)
+        self.poly_fit_degree_combobox.currentIndexChanged.connect(self.dp_plot)
+        self.poly_fit_degree_combobox.setCurrentIndex(2)
+        self.fit_select_checkbox = QtWidgets.QCheckBox('Add Fit?')
+        self.fit_select_checkbox.setChecked(True)
+        self.fit_select_checkbox.clicked.connect(self.dp_plot)
+        self.layout().addWidget(self.fit_select_checkbox, 7, 2, 1, 1)
+        self.fit_type_label = QtWidgets.QLabel()
+        self.layout().addWidget(self.fit_type_label, 8, 0, 1, 1)
+        self.fit_value_label = QtWidgets.QLabel()
+        self.layout().addWidget(self.fit_value_label, 8, 2, 1, 1)
+
+        # Pane to Plot
+        self.plot_label = QtWidgets.QLabel()
+        self.layout().addWidget(self.plot_label, 0, 5, 9, 1)
 
     ########################
     # Loading and Plotting 
     ########################
 
-    def dp_update_include_in_plot_list(self):
+
+    def dp_update_polyfit(self):
         '''
         '''
-        data_row = self.sender().text().split(' ')[0]
-        if self.sender().isChecked():
-            self.include_in_plot_list.append(data_row)
+        fit_type = self.fit_select_combobox.currentText()
+        self.fit_type_label.setText(self.fit_types[fit_type])
+        if fit_type == 'Polynomial':
+            self.poly_fit_degree_combobox.setDisabled(False)
         else:
-            self.include_in_plot_list.remove(data_row)
+            self.poly_fit_degree_combobox.setDisabled(True)
 
     def dp_load_data(self):
         '''
         '''
-        data_type = self.data_type_tab_bar.tabText(self.data_type_tab_bar.currentIndex())
         file_path = QtWidgets.QFileDialog.getOpenFileName(self, 'Select Data File')[0]
         if len(file_path) > 0:
-            for data_row in range(100):
-                load_panel_widget = QtWidgets.QWidget()
-                grid = QtWidgets.QGridLayout()
-                load_panel_widget.setLayout(grid)
-                if hasattr(self, 'load_panel_widget_{0}'.format(data_row)):
-                    pass
+            if file_path.endswith('json'):
+                df = pd.read_json(file_path)
+                if df.shape[1] == 1:
+                    x_label = df.keys()[0]
+                    self.x_label_lineedit_1.setText(x_label)
+                    x_data = np.asarray(df.index)
+                    y_data = df[df.keys()[0]].values
+                    x_err = np.zeros(len(x_data))
+                    y_err = np.zeros(len(y_data))
+                elif df.shape[1] == 2:
+                    x_data = df[df.keys()[0]].values
+                    y_data = df[df.keys()[1]].values
+                    x_err = np.zeros(len(x_data))
+                    y_err = np.zeros(len(y_data))
+                elif df.shape[1] == 4:
+                    x_data = df[df.keys()[0]].values
+                    x_err = df[df.keys()[1]].values
+                    y_data = df[df.keys()[2]].values
+                    y_err = df[df.keys()[3]].values
                 else:
-                    setattr(self, 'load_panel_widget_{0}'.format(data_row), load_panel_widget)
-                    break
-            self.layout().addWidget(load_panel_widget, data_row + 7, 0, 1, 8)
-            try:
-                data = np.loadtxt(file_path, dtype=np.float, delimiter=',')
-            except ValueError:
-                data = np.loadtxt(file_path, dtype=np.float, delimiter='\t')
-            self.loaded_file_data_rows.append(data_row)
-            setattr(self, 'data_{0}'.format(data_row), data)
+                    self.gb_quick_message('Please load a json with (1) TOD, (2) XY, (4) XY with Errror data file', msg_type='Warning')
+                    x_data = []
+                    x_err = []
+                    y_data = []
+                    y_err = []
+                data_dict = {
+                    'x_data': x_data,
+                    'x_err': x_err,
+                    'y_data': y_data,
+                    'y_err': y_err}
+                self.df = pd.DataFrame.from_dict(data_dict)
+            elif file_path.endswith('txt') or file_path.endswith('dat'):
+                import ipdb;ipdb.set_trace()
+            else:
+                self.gb_quick_message('Please load a json or a data file (txt/dat)', msg_type='Warning')
+        self.dp_plot()
+
+    def dp_get_fit(self):
+        '''
+        '''
+        sample_clip_lo = int(self.sample_clip_lo_lineedit.text())
+        sample_clip_hi = int(self.sample_clip_hi_lineedit.text())
+        data_clip_lo = float(self.data_clip_lo_lineedit.text())
+        data_clip_hi = float(self.data_clip_hi_lineedit.text())
+        if self.df.shape[1] == 2:
+            x_data = self.df[self.df.keys()[0]].values[sample_clip_lo:sample_clip_hi]
+            y_data = self.df[self.df.keys()[1]].values[sample_clip_lo:sample_clip_hi]
+        elif self.df.shape[1] == 4:
+            x_data = self.df[self.df.keys()[0]].values[sample_clip_lo:sample_clip_hi]
+            y_data = self.df[self.df.keys()[2]].values[sample_clip_lo:sample_clip_hi]
         else:
+            self.gb_quick_message('Please load a data with 2 or 4 columns', msg_type='Warning')
+        data_selector = np.logical_and(data_clip_lo < x_data, x_data < data_clip_hi)
+        x_data = x_data[data_selector]
+        y_data = y_data[data_selector]
+        x_fits = np.linspace(np.min(x_data), np.max(x_data), 100)
+        if self.fit_select_combobox.currentText() == 'Polynomial':
+            #Basic Poly Fit
+            poly_fit_deg = int(self.poly_fit_degree_combobox.currentText())
+            p_fits = np.polyfit(x_data, y_data, poly_fit_deg)
+            y_fits = np.polyval(p_fits, x_fits)
+            self.fit_value_label.setText(str(p_fits))
+        elif self.fit_select_combobox.currentText() == 'Exponential':
+            popt, pcov = curve_fit(self.dp_exponential, x_data, y_data)
+            y_fits = self.dp_exponential(x_fits, *popt)
+            self.fit_value_label.setText(str(popt))
+        elif self.fit_select_combobox.currentText() == 'Sinusoid':
+            popt, pcov = curve_fit(self.dp_sinusoid, x_data, y_data)
+            y_fits = self.dp_sinusoid(x_fits, *popt)
+            self.fit_value_label.setText(str(popt))
+        return x_fits, y_fits
+
+    def dp_exponential(self, x, A, B, C):
+        '''
+        '''
+        y = A * np.exp(B * x) + C
+        return y
+
+    def dp_sinusoid(self, x, A, B, C):
+        '''
+        '''
+        y = A * np.exp(B * x) + C
+        return y
+
+
+    def dp_plot(self):
+        '''
+        '''
+        if not hasattr(self, 'df'):
             return None
-        if data_type == 'Beam Map':
-            import ipdb;ipdb.set_trace()
-        else:
-            j = 0
-            for column in range(8):
-                data_type_combobox = QtWidgets.QComboBox(self)
-                data_type_combobox.addItem('')
-                for data_type in self.data_types:
-                    data_type_combobox.addItem(data_type)
-                setattr(self, 'data_{0}_column_{1}_data_type'.format(data_row, column), data_type_combobox)
-                load_panel_widget.layout().addWidget(data_type_combobox, 1, column, 1, 1)
-                if j < 4:
-                    getattr(self, 'data_{0}_column_{1}_data_type'.format(data_row, column)).setCurrentIndex(j + 1)
-                j += 1
-                data_multiply_lineedit = QtWidgets.QLineEdit('1.0', self)
-                data_multiply_lineedit.setValidator(QtGui.QDoubleValidator(-1e24, 1e24, 8, data_multiply_lineedit))
-                setattr(self, 'data_{0}_multiply_column_{1}'.format(data_row, column), data_multiply_lineedit)
-                load_panel_widget.layout().addWidget(data_multiply_lineedit, 2, column, 1, 1)
-            for column in range(data.shape[1]):
-                data_preview = ''.join(['{0:.6f}\n'.format(x) for x in data.T[column]])
-                column_textedit = QtWidgets.QTextEdit('', self)
-                column_textedit.setReadOnly(True)
-                if load_panel_widget.layout().itemAtPosition(6, column) is not None:
-                    load_panel_widget.layout().itemAtPosition(6, column).widget().setParent(None)
-                column_textedit.setText(data_preview)
-                load_panel_widget.layout().addWidget(column_textedit, 3, column, 1, 1)
-            self.dp_add_file_plot_options(load_panel_widget, file_path, data_row)
-
-    def dp_add_file_plot_options(self, load_panel_widget, file_path, data_row):
-        '''
-        '''
-        setattr(self, 'load_data_label_{0}'.format(data_row), load_panel_widget)
-        # Data Labeling and Identifying
-        basename = os.path.basename(file_path).replace('.txt', '').replace('.dat', '')
-        self.title_lineedit.setText(basename)
-        loaded_data_label = QtWidgets.QLabel('No Data Loaded', load_panel_widget)
-        loaded_data_label.setAlignment(QtCore.Qt.AlignCenter)
-        load_panel_widget.layout().addWidget(loaded_data_label, 0, 0, 1, 8)
-        loaded_data_info_string = '::: Data #: {0} ::: Full File Path {1} :::'.format(data_row, file_path)
-        loaded_data_label.setText(loaded_data_info_string)
-        loaded_data_label.setStyleSheet('QLabel {color: blue}')
-        loaded_data_label.setFont(self.size_14_font)
-        data_row_label_header_label = QtWidgets.QLabel('Data Label:', load_panel_widget)
-        load_panel_widget.layout().addWidget(data_row_label_header_label, 5, 1, 1, 1)
-        data_row_label_lineedit = QtWidgets.QLineEdit('', self)
-        data_row_label_lineedit.setText(basename)
-        load_panel_widget.layout().addWidget(data_row_label_lineedit, 5, 2, 1, 3)
-        setattr(self, 'data_row_plot_label_{0}'.format(data_row), data_row_label_lineedit)
-        # Include in Plot
-        self.include_in_plot_checkbox = QtWidgets.QCheckBox('{0} ::: Include in plot?'.format(data_row), load_panel_widget)
-        load_panel_widget.layout().addWidget(self.include_in_plot_checkbox, 5, 0, 1, 1)
-        self.include_in_plot_checkbox.clicked.connect(self.dp_update_include_in_plot_list)
-        self.include_in_plot_checkbox.click()
-        # Divide by
-        divide_by_header_label = QtWidgets.QLabel('Divide Y by:', load_panel_widget)
-        load_panel_widget.layout().addWidget(divide_by_header_label, 4, 1, 1, 1)
-        divide_by_combobox = QtWidgets.QComboBox(load_panel_widget)
-        load_panel_widget.layout().addWidget(divide_by_combobox, 4, 2, 1, 1)
-        divide_by_combobox.addItem('')
-        for data_row in self.loaded_file_data_rows:
-            divide_by_combobox.addItem(str(data_row))
-        setattr(self, 'divide_by_{0}_combobox'.format(data_row), divide_by_combobox)
-        # Data Scaling
-        scale_x_pushbutton = QtWidgets.QPushButton('{0} ::: Scale X'.format(data_row), load_panel_widget)
-        load_panel_widget.layout().addWidget(scale_x_pushbutton, 4, 0, 1, 1)
-        scale_y_pushbutton = QtWidgets.QPushButton('{0} ::: Scale Y'.format(data_row), load_panel_widget)
-        load_panel_widget.layout().addWidget(scale_y_pushbutton, 4, 3, 1, 1)
-        # Data Clipping
-        data_clip_lo_header_label = QtWidgets.QLabel('Data Clip Lo (%):', load_panel_widget)
-        load_panel_widget.layout().addWidget(data_clip_lo_header_label, 4, 4, 1, 1)
-        data_clip_lo_lineedit = QtWidgets.QLineEdit('0.0', load_panel_widget)
-        load_panel_widget.layout().addWidget(data_clip_lo_lineedit, 4, 5, 1, 1)
-        setattr(self, 'data_clip_{0}_lo_lineedit'.format(data_row), data_clip_lo_lineedit)
-        data_clip_hi_header_label = QtWidgets.QLabel('Data Clip Hi (%):', load_panel_widget)
-        load_panel_widget.layout().addWidget(data_clip_hi_header_label, 4, 6, 1, 1)
-        data_clip_hi_lineedit = QtWidgets.QLineEdit('0.0', load_panel_widget)
-        load_panel_widget.layout().addWidget(data_clip_hi_lineedit, 4, 7, 1, 1)
-        setattr(self, 'data_clip_{0}_hi_lineedit'.format(data_row), data_clip_hi_lineedit)
-        # Close 
-        close_file_pushbutton = QtWidgets.QPushButton('Close File {0}'.format(data_row), self)
-        close_file_pushbutton.clicked.connect(self.dp_close_open_file)
-        load_panel_widget.layout().addWidget(close_file_pushbutton, 7, 0, 1, 8)
-        self.dp_update_input()
-
-    def dp_close_open_file(self):
-        '''
-        '''
-        data_row = self.sender().text().split(' ')[-1]
-        getattr(self, 'load_panel_widget_{0}'.format(data_row)).setParent(None)
-        getattr(self, 'load_panel_widget_{0}'.format(data_row))
-        self.loaded_file_data_rows.remove(int(data_row))
-
-    def dp_get_and_check_data(self):
-        '''
-        '''
-        data_dict = {}
-        for data_row in self.loaded_file_data_rows:
-            data = getattr(self, 'data_{0}'.format(data_row))
-            data_dict[data_row] = {}
-            for data_type in self.data_types:
-                for column in range(data.shape[1]):
-                    column_data_type = getattr(self, 'data_{0}_column_{1}_data_type'.format(data_row, column)).currentText()
-                    data_multiply_value = float(getattr(self, 'data_{0}_multiply_column_{1}'.format(data_row, column)).text())
-                    if column_data_type == data_type:
-                        row_data_type = '{0}_{1}'.format(data_type, data_row)
-                        setattr(self, row_data_type, data.T[column] * data_multiply_value)
-                        data_dict[data_row].update({data_type: data.T[column] * data_multiply_value})
-                        label = getattr(self, 'data_row_plot_label_{0}'.format(data_row)).text()
-                        data_clip_lo = float(getattr(self, 'data_clip_{0}_lo_lineedit'.format(data_row)).text()) / 100.0
-                        data_clip_hi = float(getattr(self, 'data_clip_{0}_hi_lineedit'.format(data_row)).text()) / 100.0
-                        divide_by = getattr(self, 'divide_by_{0}_combobox'.format(data_row)).currentText()
-                        plot_dict = {
-                            'label': label,
-                            'data_clip_lo': data_clip_lo,
-                            'data_clip_hi': data_clip_hi,
-                            'divide_by': divide_by
-                            }
-                        data_dict[data_row].update(plot_dict)
-            if ('x_data' in data_dict[data_row] and 'y_data' in data_dict[data_row]) and not ('xerr' in data_dict[data_row] and 'yerr' in data_dict[data_row]):
-                data_dict[data_row]['xerr'] = None
-                data_dict[data_row]['yerr'] = None
-            elif ('x_data' in data_dict[data_row] and 'y_data' in data_dict[data_row]) and 'xerr' not in data_dict[data_row]:
-                data_dict[data_row]['xerr'] = None
-            elif ('x_data' in data_dict[data_row] and 'y_data' in data_dict[data_row]) and 'yerr' not in data_dict[data_row]:
-                data_dict[data_row]['yerr'] = None
-            #elif len(data_dict) == len(self.data_types):
-                #self.gb_quick_message('Please check your data input!', msg_type='Warning')
-                #return {}
-        return data_dict
-
-    def dp_plot(self, clicked=True, sample_rate=5000.):
-        '''
-        '''
-        x_label_1 = self.x_label_lineedit_1.text()
-        y_label_1 = self.y_label_lineedit_1.text()
+        x_label = self.x_label_lineedit_1.text()
+        y_label = self.y_label_lineedit_1.text()
         x_label_2 = self.x_label_lineedit_2.text()
         y_label_2 = self.y_label_lineedit_2.text()
         title = self.title_lineedit.text()
-        fig, ax = self.db_create_blank_fig(frac_screen_width=0.5, frac_screen_height=0.5)
-        data_dict = self.dp_get_and_check_data()
-        data_type = self.data_type_tab_bar.tabText(self.data_type_tab_bar.currentIndex())
-        pprint(data_dict)
-        if len(data_dict) > 0:
-            for data_row in self.loaded_file_data_rows:
-                if str(data_row) in self.include_in_plot_list:
-                    # Divide the data  
-                    divide_by = data_dict[data_row]['divide_by']
-                    print(len(divide_by), divide_by)
-                    if len(divide_by) > 0:
-                        if len(data_dict[data_row]['y_data']) == len(data_dict[int(divide_by)]['y_data']):
-                            print
-                            y_data = np.asarray(data_dict[data_row]['y_data']) / np.asarray(data_dict[int(divide_by)]['y_data'])
-                            y_data = list(y_data)
-                        else:
-                            y_data = data_dict[data_row]['y_data']
-                            self.gb_quick_message('Cannot deivide data with different lengths', msg_type='Warning')
-                    else:
-                        y_data = data_dict[data_row]['y_data']
-                    # Clip the data
-                    data_clip_lo = data_dict[data_row]['data_clip_lo']
-                    data_clip_hi = data_dict[data_row]['data_clip_hi']
-                    lo_index = int(len(data_dict[data_row]['x_data']) * data_clip_lo)
-                    hi_index = int(len(data_dict[data_row]['x_data']) * (1 - data_clip_hi))
-                    if data_type == 'Cosmic Rays':
-                        x_data = np.arange(len(data_dict[data_row]['x_data'][lo_index:hi_index]))
-                        x_data = x_data / sample_rate
-                        #import ipd#b;ipdb.set_trace()
-                        y1_data = data_dict[data_row]['x_data'][lo_index:hi_index]
-                        y2_data = data_dict[data_row]['y_data'][lo_index:hi_index]
-                        label = 'Sample 1'
-                        ax.errorbar(x_data, y1_data, marker='.', linestyle='-', lw=5, label=label)
-                        label = 'Sample 2'
-                        ax.errorbar(x_data, y2_data, marker='.', linestyle='-', lw=5, label=label)
-                    else:
-                        x_data = data_dict[data_row]['x_data'][lo_index:hi_index]
-                        if data_dict[data_row]['xerr'] is None:
-                            xerr = None
-                        else:
-                            xerr = data_dict[data_row]['xerr'][lo_index:hi_index]
-                        y_data = y_data[lo_index:hi_index]
-                        if data_dict[data_row]['yerr'] is None:
-                            yerr = None
-                        else:
-                            yerr = data_dict[data_row]['yerr'][lo_index:hi_index]
-                        label = data_dict[data_row]['label']
-                        ax.errorbar(x_data, y_data, xerr=xerr, yerr=yerr, marker='.', linestyle='-', lw=5, label=label)
-            ax.set_xlabel(x_label_1, fontsize=16)
-            ax.set_ylabel(y_label_1, fontsize=16)
-            ax.set_title(title, fontsize=16)
-            pl.legend(fontsize=16, loc='best')
-        fig.save('temp.png')
-        pl.close()
+        fontsize = int(self.fontsize_lineedit.text())
+        ticksize = int(self.ticksize_lineedit.text())
+        left = float(self.left_lineedit.text())
+        right = float(self.right_lineedit.text())
+        top = float(self.top_lineedit.text())
+        bottom = float(self.bottom_lineedit.text())
+        frac_screen_width = float(self.frac_screen_width_lineedit.text())
+        frac_screen_height = float(self.frac_screen_height_lineedit.text())
+        fig, ax = self.mplc.mplc_create_basic_fig(
+                left=left,
+                right=right,
+                bottom=bottom,
+                top=top,
+                frac_screen_height=frac_screen_height,
+                frac_screen_width=frac_screen_width)
+        if len(x_label_2) > 0:
+            axx2 = ax.twiny()
+            axx2.set_xlabel(x_label_2)
+        if len(y_label_2) > 0:
+            axy2 = ax.twinx()
+            axy2.set_ylabel(y_label_2)
+        sample_clip_lo = int(self.sample_clip_lo_lineedit.text())
+        sample_clip_hi = int(self.sample_clip_hi_lineedit.text())
+        data_clip_lo = float(self.data_clip_lo_lineedit.text())
+        data_clip_hi = float(self.data_clip_hi_lineedit.text())
+        x_data = self.df['x_data'][sample_clip_lo:sample_clip_hi]
+        y_data = self.df['y_data'][sample_clip_lo:sample_clip_hi]
+        xerr = self.df['x_err'][sample_clip_lo:sample_clip_hi]
+        yerr = self.df['y_err'][sample_clip_lo:sample_clip_hi]
+        data_selector = np.logical_and(data_clip_lo < x_data, x_data < data_clip_hi)
+        x_data = x_data[data_selector]
+        xerr = xerr[data_selector]
+        y_data = y_data[data_selector]
+        yerr = yerr[data_selector]
+
+        ax.errorbar(x_data, y_data, xerr=xerr, yerr=yerr)
+        ax.tick_params(axis='both', labelsize=ticksize)
+        ax.set_xlabel(x_label, fontsize=fontsize)
+        ax.set_ylabel(y_label, fontsize=fontsize)
+        ax.set_title(title, fontsize=fontsize)
+        temp_save_path = os.path.join('temp_files', 'temp_custom_xy.png')
+        if self.fit_select_checkbox.isChecked():
+            x_fits, y_fits = self.dp_get_fit()
+            ax.plot(x_fits, y_fits, label='{0} Fit'.format(self.fit_select_combobox.currentText()))
+        if self.legend_checkbox.isChecked():
+            handles, labels = ax.get_legend_handles_labels()
+            ax.legend(handles, labels, numpoints=1, mode="expand", frameon=True, fontsize=10, bbox_to_anchor=(0, 0.1, 1, 1))
+        fig.savefig(temp_save_path, transparent=self.transparent_checkbox.isChecked())
+        image_to_display = QtGui.QPixmap(temp_save_path)
+        self.plot_label.setPixmap(image_to_display)
 
 
-    def db_create_blank_fig(self, frac_screen_width=0.5, frac_screen_height=0.25,
-                             left=0.07, right=0.98, top=0.95, bottom=0.12, multiple_axes=False,
-                             aspect=None):
-        '''
-        '''
-        if frac_screen_width is None and frac_screen_height is None:
-            fig = pl.figure()
-        else:
-            width = (frac_screen_width * self.screen_resolution.width()) / self.monitor_dpi
-            height = (frac_screen_height * self.screen_resolution.height()) / self.monitor_dpi
-            fig = pl.figure(figsize=(width, height))
-        self.plot_count += 1
-        if not multiple_axes:
-            if aspect is None:
-                ax = fig.add_subplot(111, label='plot_{0}'.format(self.plot_count))
-            else:
-                ax = fig.add_subplot(111, aspect=aspect, label='plot_{0}'.format(self.plot_count))
-        else:
-            ax = None
-        fig.subplots_adjust(left=left, right=right, top=top, bottom=bottom)
-        ax.tick_params(axis='x', labelsize=16)
-        ax.tick_params(axis='y', labelsize=16)
-        return fig, ax
+
