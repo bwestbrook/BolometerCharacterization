@@ -30,6 +30,7 @@ class RTCollector(QtWidgets.QWidget, GuiBuilder):
         '''
         '''
         super(RTCollector, self).__init__()
+
         self.status_bar = status_bar
         self.daq_settings = daq_settings
         self.screen_resolution = screen_resolution
@@ -124,6 +125,9 @@ class RTCollector(QtWidgets.QWidget, GuiBuilder):
         self.resize(self.minimumSizeHint())
         self.rtc_read_set_points()
         self.rtc_set_first_set_point()
+        with open(os.path.join('bd_resources', 'rt_collector_tool_tips.json'), 'r') as fh:
+            tool_tips_dict = simplejson.load(fh)
+        self.gb_add_tool_tips(self, tool_tips_dict)
 
     #########################################################
     # GUI and Input Handling

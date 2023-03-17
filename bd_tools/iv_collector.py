@@ -71,6 +71,9 @@ class IVCollector(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTransformSpe
         self.qthreadpool = QtCore.QThreadPool()
         self.ivc_get_t_bath()
         self.ivc_get_t_load()
+        with open(os.path.join('bd_resources', 'iv_collector_tool_tips.json'), 'r') as fh:
+            tool_tips_dict = simplejson.load(fh)
+        self.gb_add_tool_tips(self, tool_tips_dict)
 
     #########################################################
     # GUI and Input Handling
@@ -345,6 +348,8 @@ class IVCollector(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTransformSpe
     def ivc_get_t_bath(self):
         '''
         '''
+        if not hasattr(self.ls_372_widget, 'channels'):
+            return None
         channel_readout_info = self.ls_372_widget.channels.ls372_get_channel_value(6, reading='kelvin') # 6 is MXC
         if self.gb_is_float(channel_readout_info):
             temperature = '{0:.3f}'.format(float(channel_readout_info) * 1e3) # mK
@@ -362,6 +367,8 @@ class IVCollector(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTransformSpe
     def ivc_get_t_load(self):
         '''
         '''
+        if not hasattr(self.ls_372_widget, 'channels'):
+            return None
         channel_readout_info = self.ls_372_widget.channels.ls372_get_channel_value(5, reading='kelvin') # 5 is 50K
         temperature = '{0:.3f}'.format(float(channel_readout_info) * 1e3) # mK
         self.t_load_lineedit.setText(temperature)
