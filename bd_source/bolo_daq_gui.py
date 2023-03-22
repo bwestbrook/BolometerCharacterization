@@ -42,6 +42,7 @@ from bd_tools.beam_mapper import BeamMapper
 from bd_tools.fridge_cycle import FridgeCycle
 from bd_tools.difference_load_curves import DifferenceLoadCurves
 from bd_tools.data_plotter import DataPlotter
+from bd_tools.wafer_yield import WaferYield
 from bd_tools.histogram_plotter import HistogramPlotter
 from bd_tools.time_constant import TimeConstant
 from bd_tools.agilent_e3634a import AgilentE3634A
@@ -296,7 +297,24 @@ class BoloDAQGui(QtWidgets.QMainWindow, GuiBuilder):
         if not hasattr(self, 'cosmic_ray_viewer_widget'):
             self.cosmic_ray_viewer_widget = CosmicRayViewer(self.status_bar, self.screen_resolution, self.monitor_dpi, self.data_folder)
         self.central_widget.layout().addWidget(self.cosmic_ray_viewer_widget, 0, 0, 1, 1)
-        self.status_bar.showMessage('Histogram Plotter')
+        self.status_bar.showMessage('Cosmic Ray View')
+        QtWidgets.QApplication.processEvents()
+        self.showNormal()
+
+    #################################################
+    # Wafer Yield 
+    #################################################
+
+    def bd_wafer_yield(self):
+        '''
+        '''
+        self.gb_initialize_panel('central_widget')
+        self.status_bar.showMessage('Launching Wafer Yield')
+        QtWidgets.QApplication.processEvents()
+        if not hasattr(self, 'wafer_yield_widget'):
+            self.wafer_yield_widget = WaferYield(self.status_bar, self.screen_resolution, self.monitor_dpi)
+        self.central_widget.layout().addWidget(self.wafer_yield_widget, 0, 0, 1, 1)
+        self.status_bar.showMessage('Wafer Yield Widget')
         QtWidgets.QApplication.processEvents()
         self.showNormal()
 

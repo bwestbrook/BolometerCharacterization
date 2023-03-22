@@ -77,17 +77,23 @@
                 "function": "bd_cosmic_ray_viewer",
                 "icon": "cosmic_ray_viewer.png"
             },
-            "12_Fridge Cycle 576": {
-                "StatusTip": "Fridge Cycle 576",
-                "ToolTip": "Fridge Cycle 576",
-                "function": "bd_fridge_cycle",
-                "icon": "snowflake.png"
-            },
-            "13_Noise Analyzer": {
+            "12_Noise Analyzer": {
                 "StatusTip": "Noise Analyzer",
                 "ToolTip": "Noise Analyzer",
                 "function": "bd_noise_analyzer",
                 "icon": "noise_analyzer.png"
+            },
+            "13_Wafer Yield": {
+                "StatusTip": "Wafer Yield",
+                "ToolTip": "Wafer Yield ",
+                "function": "bd_wafer_yield",
+                "icon": "wafer.png"
+            },
+            "14_Fridge Cycle 576": {
+                "StatusTip": "Fridge Cycle 576",
+                "ToolTip": "Fridge Cycle 576",
+                "function": "bd_fridge_cycle",
+                "icon": "snowflake.png"
             }
         }
     },
