@@ -26,7 +26,7 @@ class CosmicRays(QtWidgets.QWidget, GuiBuilder):
         self.monitor_dpi = monitor_dpi
         self.analysis_options_dict = {
             '01 poly-detrend': {
-                'defaultUse': True,
+                'defaultUse': False,
                 'filterParams': {
                     'Order': 1,
                 }
