@@ -542,7 +542,7 @@ class IVCollector(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTransformSpe
             bottom=0.25,
             top=0.88,
             frac_screen_height=0.15,
-            frac_screen_width=0.3)
+            frac_screen_width=0.25)
         ax.set_xlabel('Sample', fontsize=12)
         ax.set_ylabel('X ($V$)', fontsize=12)
         label = 'DAQ {0}'.format(self.x_channel)
@@ -570,7 +570,7 @@ class IVCollector(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTransformSpe
             bottom=0.25,
             top=0.88,
             frac_screen_height=0.15,
-            frac_screen_width=0.3)
+            frac_screen_width=0.25)
         ax.set_xlabel('Sample', fontsize=12)
         ax.set_ylabel('Y ($V$)', fontsize=12)
         label = 'DAQ {0}'.format(self.y_channel)

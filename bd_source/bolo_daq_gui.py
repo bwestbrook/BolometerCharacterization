@@ -913,7 +913,6 @@ class BoloDAQGui(QtWidgets.QMainWindow, GuiBuilder):
         elif run_mode == 'input output':
             motors = ['FTS Mirror Motor', 'FTS Input Polarizer', 'FTS Output Polarizer']
         for motor in motors:
-            pprint(self.com_ports_dict)
             sm_com_port = self.com_ports_dict[self.login][motor]
             if not hasattr(self, 'csm_widget_{0}'.format(sm_com_port)) and okPressed:
                 if getattr(self, 'ser_{0}'.format(com_port)) is None:
@@ -1029,9 +1028,6 @@ if __name__ == '__main__':
     qt_app.setFont(QtGui.QFont('SansSerif', 10))
     screen_resolution = qt_app.desktop().availableGeometry()
     screen_resolution = qt_app.desktop().screenGeometry()
-    pprint(screen_resolution)
-    pprint(screen_resolution)
-    pprint(screen_resolution)
     gui = BoloDAQGui(screen_resolution, qt_app)
     gui.show()
     exit(qt_app.exec_())
