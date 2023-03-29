@@ -111,14 +111,17 @@ class RTCollector(QtWidgets.QWidget, GuiBuilder):
         self.active_daq_dict = {
                 1: {
                     'active': True,
+                    'plot': True,
                     'name': '',
                 },
                 2: {
                     'active': False,
+                    'plot': False,
                     'name': '',
                 },
                 3:{
                     'active': False,
+                    'plot': False,
                     'name': '',
                 }
                 }
@@ -655,15 +658,33 @@ class RTCollector(QtWidgets.QWidget, GuiBuilder):
         self.save_data_pushbutton = QtWidgets.QPushButton('Save')
         self.save_data_pushbutton.clicked.connect(self.rtc_save_plot)
         self.rtc_plot_panel.layout().addWidget(self.save_data_pushbutton, 4, 8, 1, 1)
+        self.plot_y_combobox = self.gb_make_labeled_combobox(label_text='Plot?')
+        for daq in self.active_daq_dict:
+            self.plot_y_combobox.addItem(str(daq))
+        self.plot_y_combobox.currentIndexChanged.connect(self.rtc_configure_y_plot_channels)
+        self.rtc_plot_panel.layout().addWidget(self.plot_y_combobox, 5, 7, 1, 1)
+        self.plot_y_active_checkbox = QtWidgets.QCheckBox('plot')
+        self.plot_y_active_checkbox.stateChanged.connect(self.rtc_update_active_plot_y_checkbox)
+        self.rtc_plot_panel.layout().addWidget(self.plot_y_active_checkbox, 5, 8, 1, 1)
         self.transparent_plots_checkbox = QtWidgets.QCheckBox('Transparent?', self)
-        self.rtc_plot_panel.layout().addWidget(self.transparent_plots_checkbox, 5, 7, 1, 1)
+        self.rtc_plot_panel.layout().addWidget(self.transparent_plots_checkbox, 6, 7, 1, 1)
         self.transparent_plots_checkbox.setChecked(False)
-
-
 
     #########################################################
     # Running
     #########################################################
+
+    def rtc_update_active_plot_y_checkbox(self):
+        '''
+        '''
+        plot_daq = int(self.plot_y_combobox.currentText())
+        self.active_daq_dict[plot_daq]['plot'] = self.sender().isChecked()
+
+    def rtc_configure_y_plot_channels(self):
+        '''
+        '''
+        plot_daq = int(self.plot_y_combobox.currentText())
+        self.plot_y_active_checkbox.setChecked(self.active_daq_dict[plot_daq]['plot'])
 
     def rtc_update_active_y_checkbox(self):
         '''
@@ -1249,12 +1270,13 @@ class Collector(QRunnable):
         if running:
             x_data, x_stds = self.rtc_adjust_x_data()
             for daq in self.daq.signal_channels[1:]:
-                y_data, y_stds = self.rtc_adjust_y_data(daq)
-                if np.mean(y_data) > 1e3:
-                    y_data *= 1e-3
-                    y_stds *= 1e-3
-                    y_label = y_label.replace('$m','$')
-                fig = self.rtc_plot_drifts(fig, x_data, x_stds, y_data, y_stds, daq)
+                if self.rtc.active_daq_dict[daq]['plot']:
+                    y_data, y_stds = self.rtc_adjust_y_data(daq)
+                    if np.mean(y_data) > 1e3:
+                        y_data *= 1e-3
+                        y_stds *= 1e-3
+                        y_label = y_label.replace('$m','$')
+                    fig = self.rtc_plot_drifts(fig, x_data, x_stds, y_data, y_stds, daq)
             ax.set_xlabel('Temperature ($mK$)', fontsize=12)
             ax.set_ylabel(y_label, fontsize=12)
             save_path = os.path.join('temp_files', 'temp_xy.png')
