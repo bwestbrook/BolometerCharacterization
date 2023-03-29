@@ -883,11 +883,17 @@ class BoloDAQGui(QtWidgets.QMainWindow, GuiBuilder):
                     self.srs_sr830dsp_widget = StanfordResearchSystemsSR830DSP(serial_com, com_port, self.status_bar, self.screen_resolution, self.monitor_dpi)
                 else:
                     self.srs_sr830dsp_widget = None
+        else:
+            self.srs_sr830dsp_widget = None
         dialog = 'Select the comport for the stepper motor you wish to configure'
         for motor in ['FTS Mirror Motor']:
             sm_com_port = self.com_ports_dict[self.login][motor]
+            pprint(self.com_ports_dict)
             if not hasattr(self, 'csm_widget_{0}'.format(sm_com_port)) and okPressed:
-                if getattr(self, 'ser_{0}'.format(com_port)) is None:
+                if not hasattr(self, 'ser_{0}'.format(sm_com_port)):
+                    setattr(self, 'csm_widget_{0}'.format(sm_com_port), None)
+                    csm_widget = None
+                elif getattr(self, 'ser_{0}'.format(sm_com_port)) is None:
                     setattr(self, 'csm_widget_{0}'.format(sm_com_port), None)
                     csm_widget = None
                 else:

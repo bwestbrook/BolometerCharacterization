@@ -124,7 +124,7 @@ class RTCollector(QtWidgets.QWidget, GuiBuilder):
                     'plot': False,
                     'name': '',
                 }
-                }
+            }
         grid = QtWidgets.QGridLayout()
         self.setLayout(grid)
         self.rtc_plot_panel = QtWidgets.QWidget(self)
