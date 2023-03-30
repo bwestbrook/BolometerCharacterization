@@ -61,6 +61,9 @@ class CosmicRayViewer(QtWidgets.QWidget, GuiBuilder):
         self.butterworth_filter_checkbox = QtWidgets.QCheckBox('Filter')
         self.butterworth_filter_checkbox.clicked.connect(self.crv_plot)
         self.layout().addWidget(self.butterworth_filter_checkbox, 3, 2, 1, 1)
+        self.subtract_mean_checkbox = QtWidgets.QCheckBox('Subtract Mean?')
+        self.subtract_mean_checkbox.clicked.connect(self.crv_plot)
+        self.layout().addWidget(self.subtract_mean_checkbox, 3, 3, 1, 1)
         # Plots
         self.main_plot_label = QtWidgets.QLabel()
         self.layout().addWidget(self.main_plot_label, 5, 0, 1, 3)
@@ -134,7 +137,8 @@ class CosmicRayViewer(QtWidgets.QWidget, GuiBuilder):
         n_filter_poles = int(self.n_filter_poles_lineedit.text())
         for i in range(4):
             ch_voltage = df[df.columns[i]].values
-            ch_voltage -= np.mean(ch_voltage)
+            if self.subtract_mean_checkbox.isChecked():
+                ch_voltage -= np.mean(ch_voltage)
             sos = signal.butter(n_filter_poles, cutoff_frequency, 'hp', output = 'sos', fs=5000)
             filtered = signal.sosfilt(sos, ch_voltage)
             if self.butterworth_filter_checkbox.isChecked():
@@ -151,7 +155,6 @@ class CosmicRayViewer(QtWidgets.QWidget, GuiBuilder):
         '''
         if self.gb_is_float(self.font_size_lineedit.text()):
             font_size = int(self.font_size_lineedit.text())
-
         width = (frac_screen_width * self.screen_resolution.width()) / self.monitor_dpi # in pixels
         height = (frac_screen_height * self.screen_resolution.height()) / self.monitor_dpi # in pixels
         title = self.title_lineedit.text()
@@ -176,8 +179,9 @@ class CosmicRayViewer(QtWidgets.QWidget, GuiBuilder):
         n_filter_poles = float(self.n_filter_poles_lineedit.text())
         cutoff_frequency = float(self.butterworth_filter_lineedit.text())
         for i in range(4):
-            ch_voltage = df[df.columns[i]].values 
-            ch_voltage -= np.mean(ch_voltage)
+            ch_voltage = df[df.columns[i]].values
+            if self.subtract_mean_checkbox.isChecked():
+                ch_voltage -= np.mean(ch_voltage)
             axes[i].plot(ch_voltage)
             sos = signal.butter(n_filter_poles, cutoff_frequency, 'hp', output = 'sos', fs=5000)
             filtered = signal.sosfilt(sos, ch_voltage)
