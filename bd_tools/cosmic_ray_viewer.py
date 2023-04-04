@@ -1,5 +1,6 @@
 import os
 import json
+import shutil
 import pylab as pl
 import numpy as np
 import pandas as pd
@@ -35,14 +36,20 @@ class CosmicRayViewer(QtWidgets.QWidget, GuiBuilder):
         self.load_data_push_button.clicked.connect(self.crv_load_data)
         self.layout().addWidget(self.load_data_push_button, 0, 0, 1, 1)
         self.data_set_combobox = self.gb_make_labeled_combobox('Data Set:')
-        self.layout().addWidget(self.data_set_combobox, 0, 1, 1, 2)
+        self.layout().addWidget(self.data_set_combobox, 0, 1, 1, 1)
         self.data_set_combobox.currentIndexChanged.connect(self.crv_plot)
+        self.active_data_label = QtWidgets.QLabel()
+        self.layout().addWidget(self.active_data_label, 0, 2, 1, 1)
         self.prev_pushbutton = QtWidgets.QPushButton('Prev')
-        self.layout().addWidget(self.prev_pushbutton, 1, 1, 1, 1)
+        self.layout().addWidget(self.prev_pushbutton, 1, 0, 1, 1)
         self.next_pushbutton = QtWidgets.QPushButton('Next')
-        self.layout().addWidget(self.next_pushbutton, 1, 2, 1, 1)
+        self.layout().addWidget(self.next_pushbutton, 1, 1, 1, 1)
         self.next_pushbutton.clicked.connect(self.crv_change_file)
         self.prev_pushbutton.clicked.connect(self.crv_change_file)
+        self.jump_to_lineedit = self.gb_make_labeled_lineedit(label_text='JumpTo')
+        self.jump_to_lineedit.setValidator(QtGui.QIntValidator(0, self.data_set_combobox.count(), self.jump_to_lineedit))
+        self.layout().addWidget(self.jump_to_lineedit, 1, 2, 1, 1)
+        self.jump_to_lineedit.returnPressed.connect(self.crv_jump_to_data_set)
         self.plot_data_push_button = QtWidgets.QPushButton('Plot Data')
         self.plot_data_push_button.clicked.connect(self.crv_plot_pl)
         self.layout().addWidget(self.plot_data_push_button, 2, 0, 1, 1)
@@ -84,6 +91,21 @@ class CosmicRayViewer(QtWidgets.QWidget, GuiBuilder):
                 current_index -= 1
         self.data_set_combobox.setCurrentIndex(current_index)
 
+    def crv_jump_to_data_set(self):
+        '''
+        '''
+        if not self.gb_is_float(self.jump_to_lineedit.text()):
+            return None
+        data_set_index = int(self.jump_to_lineedit.text()) - 1
+        if data_set_index < 0:
+            self.gb_quick_message('Please enter a data set starting at 1!')
+        elif data_set_index >= self.data_set_combobox.count():
+            self.gb_quick_message('Please enter a data set starting less than the data set size {0}!'.format(self.data_set_combobox.count()))
+        else:
+            self.data_set_combobox.setCurrentIndex(data_set_index)
+
+
+
     def crv_load_data(self):
         '''
         '''
@@ -96,6 +118,7 @@ class CosmicRayViewer(QtWidgets.QWidget, GuiBuilder):
             if 'txt' in file_name:
                 file_path = os.path.join(data_folder, file_name)
                 self.data_set_combobox.addItem(file_path)
+        self.jump_to_lineedit.setValidator(QtGui.QIntValidator(0, self.data_set_combobox.count(), self.jump_to_lineedit))
         self.crv_plot()
 
     def crv_load(self):
@@ -108,10 +131,26 @@ class CosmicRayViewer(QtWidgets.QWidget, GuiBuilder):
             df = pd.read_csv(file_path)
         return df
 
-
     def crv_plot(self):
         '''
         '''
+        file_path = self.data_set_combobox.currentText().replace('txt', 'png')
+        if len(file_path) == 0:
+            return None
+        active_data_text = '{0}/{1}'.format(self.data_set_combobox.currentIndex() + 1, self.data_set_combobox.count())
+        self.active_data_label.setText(active_data_text)
+        self.jump_to_lineedit.setValidator(QtGui.QIntValidator(1, self.data_set_combobox.count(), self.jump_to_lineedit))
+        temp_png_path = os.path.join('temp_files', 'temp_cr.png')
+        shutil.copy(file_path, temp_png_path)
+        image_to_display = QtGui.QPixmap(temp_png_path)
+        self.main_plot_label.setPixmap(image_to_display)
+
+    def crv_plot2(self):
+        '''
+        '''
+        active_data_text = '{0}/{1}'.format(self.data_set_combobox.currentIndex() + 1, self.data_set_combobox.count())
+        self.active_data_label.setText(active_data_text)
+        self.jump_to_lineedit.setValidator(QtGui.QIntValidator(1, self.data_set_combobox.count(), self.jump_to_lineedit))
         df = self.crv_load()
         if df is None:
             return None
@@ -161,8 +200,8 @@ class CosmicRayViewer(QtWidgets.QWidget, GuiBuilder):
         df = self.crv_load()
         fig = pl.figure(figsize=(width, height))
         ax1 = fig.add_subplot(221)
-        ax2 = fig.add_subplot(222)
-        ax3 = fig.add_subplot(223)
+        ax2 = fig.add_subplot(223)
+        ax3 = fig.add_subplot(222)
         ax4 = fig.add_subplot(224)
         fig.subplots_adjust(
             left=0.08,

@@ -1,6 +1,7 @@
 import time
 import shutil
 import os
+
 import simplejson
 import numpy as np
 import pickle as pkl
@@ -15,7 +16,6 @@ from bd_lib.fourier_transform_spectroscopy import FourierTransformSpectroscopy
 from PyQt5 import QtCore, QtGui, QtWidgets
 from GuiBuilder.gui_builder import GuiBuilder, GenericClass
 from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
-
 class IVCollector(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTransformSpectroscopy):
 
     def __init__(self, daq_settings, status_bar, screen_resolution, monitor_dpi, data_folder, dewar, ls_372_widget):
@@ -71,6 +71,7 @@ class IVCollector(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTransformSpe
         with open(os.path.join('bd_resources', 'iv_collector_tool_tips.json'), 'r') as fh:
             tool_tips_dict = simplejson.load(fh)
         self.gb_add_tool_tips(self, tool_tips_dict)
+        self.ivc_read_set_points()
 
     #########################################################
     # GUI and Input Handling
@@ -107,6 +108,8 @@ class IVCollector(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTransformSpe
         self.squid_select_combobox.currentIndexChanged.connect(self.ivc_update_squid_calibration)
         self.squid_select_combobox.setCurrentIndex(1)
         self.squid_select_combobox.setCurrentIndex(0)
+        if self.ls_372_widget is not None:
+            self.ivc_monitor_t_bath(n_trials=1)
 
     def ivc_display_daq_settings(self):
         '''
@@ -339,11 +342,11 @@ class IVCollector(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTransformSpe
     # Temperature regulation
     #########################################################
 
-    def ivc_monitor_t_bath(self):
+    def ivc_monitor_t_bath(self, n_trials=20):
         '''
         '''
         t_baths = []
-        for i in range(20):
+        for i in range(n_trials):
             channel_readout_info = self.ls_372_widget.channels.ls372_get_channel_value(6, reading='kelvin') # 6 is MXC
             if self.gb_is_float(channel_readout_info):
                 temp_std = np.std(t_baths)
@@ -411,11 +414,14 @@ class IVCollector(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTransformSpe
         '''
         '''
         if 'Start' in self.sender().text():
+            if self.ls_372_widget is not None:
+                self.ivc_monitor_t_bath(n_trials=1)
             self.data_clip_lo_lineedit.setText('0')
             self.sender().setText('Stop DAQ')
             self.started = True
             self.ivc_collecter()
         else:
+            self.ivc_write_fit_points()
             self.sender().setText('Start DAQ')
             self.started = False
             save_path = self.ivc_index_file_name()
@@ -479,6 +485,33 @@ class IVCollector(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTransformSpe
     ###################################################
     # Saving and Plotting
     ###################################################
+
+    def ivc_write_fit_points(self):
+        '''
+        '''
+        widgets = [
+            'data_clip_lo_lineedit',
+            'data_clip_hi_lineedit',
+            'fit_clip_lo_lineedit',
+            'fit_clip_hi_lineedit',
+            'warm_bias_resistor_lineedit'
+            ]
+        fit_points_dict = {}
+        for widget in widgets:
+            value = getattr(self, widget).text()
+            fit_points_dict[widget] = value
+        rt_set_points_path = os.path.join('bd_resources', 'iv_set_points.json')
+        with open(rt_set_points_path, 'w') as fh:
+            simplejson.dump(fit_points_dict, fh, indent=4, sort_keys=True)
+
+    def ivc_read_set_points(self):
+        '''
+        '''
+        rt_set_points_path = os.path.join('bd_resources', 'iv_set_points.json')
+        with open(rt_set_points_path, 'r') as fh:
+            fit_points_dict = simplejson.load(fh)
+        for widget,value in fit_points_dict.items():
+            getattr(self, widget).setText(str(value))
 
     def ivc_index_file_name(self):
         '''
@@ -667,7 +700,6 @@ class IVCollector(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTransformSpe
         i_bolo_real, i_bolo_stds, fit_vals = self.ivc_adjust_y_data()
 
 
-
         resistance = 1.0 / fit_vals[0] # in Ohms
 
         p_bolo = v_bolo_real * i_bolo_real
@@ -685,6 +717,7 @@ class IVCollector(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTransformSpe
         if len(self.x_data) > 1:
             label = None
 
+        rlast = np.nan
         ax1.plot(x_fit_vector[fit_selector], y_fit_vector[fit_selector], '-', lw=3, color='r', label='fit')
         ax1.plot(v_bolo_real[plot_selector], i_bolo_real[plot_selector], '.', label=label)
         if len(i_bolo_stds) > 0:
@@ -695,6 +728,7 @@ class IVCollector(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTransformSpe
             pl_idx = np.where(v_bolo_real[plot_selector] == min(v_bolo_real[plot_selector]))[0][0]
             pturn_pw = i_bolo_real[plot_selector][pt_idx] * v_bolo_real[plot_selector][pt_idx]
             plast_pw = i_bolo_real[plot_selector][pl_idx] * v_bolo_real[plot_selector][pl_idx]
+            rlast = np.min(v_bolo_real[plot_selector] / i_bolo_real[plot_selector])
             v_0 = v_bolo_real[plot_selector][pt_idx]
             v_1 = v_bolo_real[plot_selector][pt_idx - 1]
             i_0 = i_bolo_real[plot_selector][pt_idx]
@@ -719,7 +753,9 @@ class IVCollector(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTransformSpe
                 i_bolo_real[plot_selector][pl_idx],
                 '*', markersize=10.0, color='m',
                 label='Plast = {0:.2f} pW'.format(plast_pw))
-        ax3.plot(v_bolo_real[plot_selector], r_bolo[plot_selector], 'b', label='Res {0:.2f} ($\Omega$)'.format(1.0 / fit_vals[0]))
+        resistance = 1.0 / fit_vals[0]
+        frac_rn = rlast / resistance * 1e2 # as pct
+        ax3.plot(v_bolo_real[plot_selector], r_bolo[plot_selector], 'b', label='Res {0:.2f} ($\Omega$) {1:.2f}%'.format(resistance, frac_rn))
         ax4.plot(r_bolo[plot_selector], p_bolo[plot_selector], 'r', label='Power (pW)')
         # Grab all the labels and combine them 
         handles, labels = ax1.get_legend_handles_labels()
@@ -815,8 +851,6 @@ class IVCollector(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTransformSpe
             ax1.errorbar(bolo_voltage_bias[plot_selector], bolo_current[plot_selector], yerr=bolo_current_stds[plot_selector],
                          label=None, marker='.', linestyle='None', alpha=0.25)
         if pturn and len(bolo_voltage_bias) > 2 and len(bolo_current[plot_selector]) > 0:
-            print(len(bolo_current[plot_selector]))
-            print(len(bolo_current))
             pt_idx = np.where(bolo_current[plot_selector] == min(bolo_current[plot_selector]))[0][0]
             pl_idx = np.where(bolo_voltage_bias[plot_selector] == min(bolo_voltage_bias[plot_selector]))[0][0]
             pturn_pw = bolo_current[plot_selector][pt_idx] * bolo_voltage_bias[plot_selector][pt_idx]

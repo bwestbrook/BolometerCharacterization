@@ -253,6 +253,7 @@ class CosmicRays(QtWidgets.QWidget, GuiBuilder):
     def cr_analyze(self, data):
         '''
         '''
+        filtered_data = data
         for i, option in enumerate(self.analysis_options_dict):
             checkbox_unique_name = 'filter_{0}_checkbox'.format(option)
             checkbox = QtWidgets.QCheckBox(option)
