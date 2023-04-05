@@ -660,10 +660,12 @@ class RTCollector(QtWidgets.QWidget, GuiBuilder, FourierTransformSpectroscopy):
         self.rtc_plot_panel.layout().addWidget(self.data_clip_rn_hi_lineedit, 2, 8, 1, 1)
 
         # Clip Actions
-        self.data_clip_lo_lineedit.returnPressed.connect(self.rtc_plot_running_from_disk)
-        self.data_clip_hi_lineedit.returnPressed.connect(self.rtc_plot_running_from_disk)
-        self.sample_clip_lo_lineedit.returnPressed.connect(self.rtc_plot_running_from_disk)
-        self.sample_clip_hi_lineedit.returnPressed.connect(self.rtc_plot_running_from_disk)
+        self.data_clip_lo_lineedit.returnPressed.connect(self.rtc_direct_plot)
+        self.data_clip_hi_lineedit.returnPressed.connect(self.rtc_direct_plot)
+        self.data_clip_rn_lo_lineedit.returnPressed.connect(self.rtc_direct_plot)
+        self.data_clip_rn_hi_lineedit.returnPressed.connect(self.rtc_direct_plot)
+        self.sample_clip_lo_lineedit.returnPressed.connect(self.rtc_direct_plot)
+        self.sample_clip_hi_lineedit.returnPressed.connect(self.rtc_direct_plot)
 
         # Buttons and Controls
         self.start_pushbutton = QtWidgets.QPushButton('Start', self)
@@ -692,6 +694,7 @@ class RTCollector(QtWidgets.QWidget, GuiBuilder, FourierTransformSpectroscopy):
         self.transparent_plots_checkbox = QtWidgets.QCheckBox('Transparent?', self)
         self.rtc_plot_panel.layout().addWidget(self.transparent_plots_checkbox, 6, 7, 1, 1)
         self.transparent_plots_checkbox.setChecked(False)
+        self.transparent_plots_checkbox.clicked.connect(self.rtc_direct_plot)
         self.smoothing_factor_combobox = self.gb_make_labeled_combobox(label_text='Smoothing Factor')
         for i in np.arange(0, 1, 0.005):
             self.smoothing_factor_combobox.addItem(str(i))
@@ -872,6 +875,37 @@ class RTCollector(QtWidgets.QWidget, GuiBuilder, FourierTransformSpectroscopy):
         new_path = new_path + '.png'
         shutil.copy(save_path, new_path)
 
+    def rtc_load_old_data(self, save_path):
+        '''
+        '''
+        x_data = []
+        x_stds = []
+        y_data = []
+        y_stds = []
+        directions = []
+        with open(save_path, 'r') as fh:
+            for line in fh.readlines():
+                x_data.append(float(line.split(',')[0].strip()))
+                x_stds.append(float(line.split(',')[1].strip()))
+                y_data.append(float(line.split(',')[2].strip()))
+                y_stds.append(float(line.split(',')[3].strip()))
+                if len(line.split(',')) == 5:
+                    directions.append(line.split(',')[4].strip())
+        init_data = {
+                0: {
+                     'data': x_data,
+                     'stds': x_stds,
+                     'directions': directions,
+                    },
+                1: {
+                     'data': y_data,
+                     'stds': y_stds,
+                     'directions': directions
+                    }
+                }
+        self.daq_collector.all_data_df = pd.DataFrame.from_dict(init_data)
+        self.all_data_df = self.daq_collector.all_data_df
+
     def rtc_load_data(self):
         '''
         '''
@@ -882,8 +916,11 @@ class RTCollector(QtWidgets.QWidget, GuiBuilder, FourierTransformSpectroscopy):
         self.status_bar.showMessage(save_path)
         self.rtc_update_calibration_ranges()
         with open(save_path, 'r') as fh:
-            self.daq_collector.all_data_df = pd.read_json(fh)
-            self.all_data_df = self.daq_collector.all_data_df
+            try:
+                self.daq_collector.all_data_df = pd.read_json(fh)
+                self.all_data_df = self.daq_collector.all_data_df
+            except ValueError:
+                self.rtc_load_old_data(save_path)
             if not 'directions' in self.daq_collector.all_data_df.T.keys():
                 self.directions = ['up'] * len(self.daq_collector.all_data_df[0]['data'])
             self.rtc_update_calibration_ranges()
@@ -906,6 +943,7 @@ class RTCollector(QtWidgets.QWidget, GuiBuilder, FourierTransformSpectroscopy):
             self,
             self.all_data_df
             )
+        self.rtc_update_calibration_ranges()
         self.daq_collector.rtc_plot_x_and_y()
         self.daq_collector.rtc_plot_xy(running=True)
         self.rtc_plot_running_from_disk()
@@ -928,7 +966,6 @@ class RTCollector(QtWidgets.QWidget, GuiBuilder, FourierTransformSpectroscopy):
         thermometer = self.thermometer_combobox.currentText()
         low_value = self.housekeeping_low_value
         high_value = self.housekeeping_high_value
-        print('adfadfd', low_value, high_value)
         slope = (high_value - low_value) / 1e1 # K / V
         if thermometer in self.lakeshore_thermometers:
             if len(x_data) > 0:
@@ -1304,7 +1341,6 @@ class Collector(QRunnable):
                         y_data *= 1e-3
                         y_stds *= 1e-3
                         y_label = y_label.replace('$m','$')
-                    print('plotting daq', daq, x_data, y_data)
                     fig = self.rtc_plot_drifts(fig, x_data, x_stds, y_data, y_stds, daq)
                     ax.set_xlabel('Temperature ($mK$)', fontsize=12)
                     ax.set_ylabel(y_label, fontsize=12)
@@ -1361,7 +1397,6 @@ class Collector(QRunnable):
             half_rn = np.nan
         elif self.rtc.y_label_combobox.currentText() == 'Arb Units':
             y_data = np.asarray(y_data) - np.min(y_data)
-            print(y_data)
             rn_data_selector = np.where(np.logical_and(data_clip_rn_lo < x_data, x_data < data_clip_rn_hi))
             normal_resistance = np.mean(y_data[rn_data_selector])
             half_rn = 0.5 * normal_resistance
