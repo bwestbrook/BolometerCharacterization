@@ -189,7 +189,7 @@ class DataPlotter(QtWidgets.QWidget, GuiBuilder):
         '''
         file_path = QtWidgets.QFileDialog.getOpenFileName(self, 'Select Data File')[0]
         if len(file_path) > 0:
-            if file_path.endswith('json'):
+            if file_path.endswith('json') or file_path.endswith('txt'):
                 df = pd.read_json(file_path)
                 if df.shape[1] == 1:
                     x_label = df.keys()[0]
@@ -313,11 +313,20 @@ class DataPlotter(QtWidgets.QWidget, GuiBuilder):
         y_data = self.df['y_data'][sample_clip_lo:sample_clip_hi]
         xerr = self.df['x_err'][sample_clip_lo:sample_clip_hi]
         yerr = self.df['y_err'][sample_clip_lo:sample_clip_hi]
-        data_selector = np.logical_and(data_clip_lo < x_data, x_data < data_clip_hi)
-        x_data = x_data[data_selector]
-        xerr = xerr[data_selector]
-        y_data = y_data[data_selector]
-        yerr = yerr[data_selector]
+        #import ipdb;ipdb.set_trace()
+        #self.qthreadpool.start(daq.run)
+        try:
+            data_selector = np.logical_and(data_clip_lo < np.asarray(x_data), np.asarray(x_data) < data_clip_hi)
+            x_data = x_data[data_selector]
+            xerr = xerr[data_selector]
+            y_data = y_data[data_selector]
+            yerr = yerr[data_selector]
+        except TypeError:
+            data_selector = np.logical_and(data_clip_lo < np.asarray(x_data[0]), np.asarray(x_data[0]) < data_clip_hi)
+            x_data = x_data[0][data_selector]
+            xerr = x_data[1][data_selector]
+            y_data = y_data[0][data_selector]
+            yerr = y_data[1][data_selector]
 
         ax.errorbar(x_data, y_data, xerr=xerr, yerr=yerr)
         ax.tick_params(axis='both', labelsize=ticksize)

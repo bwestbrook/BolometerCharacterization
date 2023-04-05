@@ -13,10 +13,11 @@ from PyQt5 import QtGui, QtWidgets
 from PyQt5.QtCore import *
 from bd_lib.saving_manager import SavingManager
 from bd_lib.mpl_canvas import MplCanvas
+from bd_lib.fourier_transform_spectroscopy import FourierTransformSpectroscopy
 from GuiBuilder.gui_builder import GuiBuilder, GenericClass
 # Import Last
 
-class RTCollector(QtWidgets.QWidget, GuiBuilder):
+class RTCollector(QtWidgets.QWidget, GuiBuilder, FourierTransformSpectroscopy):
 
     def __init__(
             self,
@@ -30,7 +31,6 @@ class RTCollector(QtWidgets.QWidget, GuiBuilder):
         '''
         '''
         super(RTCollector, self).__init__()
-
         self.status_bar = status_bar
         self.daq_settings = daq_settings
         self.screen_resolution = screen_resolution
@@ -62,22 +62,22 @@ class RTCollector(QtWidgets.QWidget, GuiBuilder):
                 name='x_fig',
                 left=0.16,
                 right=0.98,
-                wspace=0.45,
-                hspace=0.2,
-                bottom=0.25,
-                top=0.88,
-                frac_screen_height=0.15,
-                frac_screen_width=0.23)
+                wspace=0.92,
+                hspace=0.4,
+                bottom=0.2,
+                top=0.93,
+                frac_screen_height=0.2,
+                frac_screen_width=0.26)
         self.y_fig = self.mplc.mplc_create_two_pane_plot(
                 name='y_fig',
                 left=0.16,
                 right=0.98,
-                wspace=0.45,
-                hspace=0.2,
-                bottom=0.25,
-                top=0.88,
-                frac_screen_height=0.15,
-                frac_screen_width=0.23)
+                wspace=0.92,
+                hspace=0.4,
+                bottom=0.2,
+                top=0.93,
+                frac_screen_height=0.2,
+                frac_screen_width=0.26)
         self.xy_fig = self.mplc.mplc_create_fig_with_legend_axes(
                 name='xy_fig',
                 left=0.12,
@@ -85,7 +85,7 @@ class RTCollector(QtWidgets.QWidget, GuiBuilder):
                 bottom=0.2,
                 top=0.9,
                 frac_screen_height=0.35,
-                frac_screen_width=0.35,
+                frac_screen_width=0.33,
                 wspace=0.1,
                 hspace=0.1)
         self.meta_data = {}
@@ -115,11 +115,11 @@ class RTCollector(QtWidgets.QWidget, GuiBuilder):
         self.thermometers = {
                 'X... (576)': 0,
                 'PT100 (MXC)': 6,
-                'X110595 (Cu Box)': 10
+                'X110595 (Cu Box)': 9
                 }
         self.lakeshore_thermometers = {
                 'PT100 (MXC)': 6,
-                'X110595 (Cu Box)': 10
+                'X110595 (Cu Box)': 9
                 }
         self.active_daq_dict = {
                 1: {
@@ -145,8 +145,9 @@ class RTCollector(QtWidgets.QWidget, GuiBuilder):
         self.rtc_plot_panel.setLayout(grid_2)
         self.today = datetime.now()
         self.today_str = datetime.strftime(self.today, '%Y_%m_%d')
-        self.data_folder = data_folder
-        self.saving_manager = SavingManager(self, self.data_folder, self.rtc_save, 'RT')
+        self.data_folder = os.path.join(data_folder, 'RT_Curves')
+        if not os.path.exists(self.data_folder):
+            os.makedirs(self.data_folder)
         self.daq_collector = Collector(self, self.all_data_df)
         self.rtc_populate()
         if self.ls372_temp_widget is not None:
@@ -362,6 +363,8 @@ class RTCollector(QtWidgets.QWidget, GuiBuilder):
     def rtc_set_ramp(self):
         '''
         '''
+        if self.ls372_temp_widget is None:
+            return None
         new_ramp = float(self.ramp_lineedit.text())
         self.ls372_temp_widget.temp_control.set_run_function('ls372_set_ramp', new_ramp)
         self.qthreadpool.start(self.ls372_temp_widget.temp_control)
@@ -370,6 +373,8 @@ class RTCollector(QtWidgets.QWidget, GuiBuilder):
     def rtc_set_new_housekeeping_low_high_value(self):
         '''
         '''
+        if self.ls372_temp_widget is None:
+            return None
         low_value = float(self.new_housekeeping_low_value_lineedit.text())
         high_value = float(self.new_housekeeping_high_value_lineedit.text())
         data_source = 'kelvin'
@@ -380,6 +385,8 @@ class RTCollector(QtWidgets.QWidget, GuiBuilder):
     def rtc_set_new_samples_low_high_value(self):
         '''
         '''
+        if self.ls372_samples_widget is None:
+            return None
         channel = self.channel_combobox.currentText()
         low_value = float(self.new_samples_low_value_lineedit.text())
         high_value = float(self.new_samples_high_value_lineedit.text())
@@ -459,6 +466,8 @@ class RTCollector(QtWidgets.QWidget, GuiBuilder):
     def rtc_scan_new_lakeshore_channel(self):
         '''
         '''
+        if self.ls372_temp_widget is None:
+            return None
         thermometer = self.thermometer_combobox.currentText()
         self.thermometer_index = self.thermometers[thermometer]
         self.ls372_temp_widget.ls372_scan_channel(index=self.thermometer_index)
@@ -467,6 +476,8 @@ class RTCollector(QtWidgets.QWidget, GuiBuilder):
     def rtc_edit_lakeshore_channel(self):
         '''
         '''
+        if self.ls372_samples_widget is None:
+            return None
         channel = self.channel_combobox.currentText()
         ls_name = 'LS{0}'.format(channel.zfill(2))
         self.ls372_samples_widget.ls372_edit_channel(clicked=True, index=channel)
@@ -568,7 +579,6 @@ class RTCollector(QtWidgets.QWidget, GuiBuilder):
         self.new_housekeeping_low_value_lineedit = self.gb_make_labeled_lineedit(label_text='Low Value (K=0V):')
         self.new_housekeeping_low_value_lineedit.setValidator(QtGui.QDoubleValidator(0, 10, 2, self.new_housekeeping_low_value_lineedit))
         self.rtc_plot_panel.layout().addWidget(self.new_housekeeping_low_value_lineedit, 0, 1, 1, 1)
-        print(self.housekeeping_low_value)
         self.new_housekeeping_low_value_lineedit.setText(str(self.housekeeping_low_value))
 
         self.set_new_housekeeping_low_value_pushbutton = QtWidgets.QPushButton('Set Low')
@@ -606,7 +616,6 @@ class RTCollector(QtWidgets.QWidget, GuiBuilder):
         self.set_new_samples_low_value_pushbutton.clicked.connect(self.rtc_set_new_samples_low_high_value)
         self.new_samples_low_value_lineedit.setText(str(self.samples_low_value))
 
-
         self.new_samples_high_value_lineedit = self.gb_make_labeled_lineedit(label_text='High Value (Ohms=10V):')
         self.new_samples_high_value_lineedit.setValidator(QtGui.QDoubleValidator(0, 10, 2, self.new_samples_high_value_lineedit))
         self.rtc_plot_panel.layout().addWidget(self.new_samples_high_value_lineedit, 5, 1, 1, 1)
@@ -619,7 +628,6 @@ class RTCollector(QtWidgets.QWidget, GuiBuilder):
         self.xy_scatter_label = QtWidgets.QLabel('', self)
         self.xy_scatter_label.setAttribute(Qt.WA_TranslucentBackground)
         self.rtc_plot_panel.layout().addWidget(self.xy_scatter_label, 0, 3, 6, 4)
-
 
         # Sample Clip
         self.sample_clip_lo_lineedit = self.gb_make_labeled_lineedit(label_text='Sample_Clip Lo')
@@ -637,7 +645,7 @@ class RTCollector(QtWidgets.QWidget, GuiBuilder):
         self.data_clip_lo_lineedit.setValidator(QtGui.QDoubleValidator(0, 4000, 5, self.data_clip_lo_lineedit))
         self.rtc_plot_panel.layout().addWidget(self.data_clip_lo_lineedit, 1, 7, 1, 1)
         self.data_clip_hi_lineedit = self.gb_make_labeled_lineedit(label_text='Clip_Hi (mK)')
-        self.data_clip_hi_lineedit.setText(str(10000.0))
+        self.data_clip_hi_lineedit.setText(str(100000.0))
         self.data_clip_hi_lineedit.setValidator(QtGui.QDoubleValidator(0, 4000, 5, self.data_clip_hi_lineedit))
         self.rtc_plot_panel.layout().addWidget(self.data_clip_hi_lineedit, 1, 8, 1, 1)
 
@@ -678,11 +686,17 @@ class RTCollector(QtWidgets.QWidget, GuiBuilder):
         self.plot_y_combobox.currentIndexChanged.connect(self.rtc_configure_y_plot_channels)
         self.rtc_plot_panel.layout().addWidget(self.plot_y_combobox, 5, 7, 1, 1)
         self.plot_y_active_checkbox = QtWidgets.QCheckBox('plot')
+        self.plot_y_active_checkbox.setChecked(True)
         self.plot_y_active_checkbox.stateChanged.connect(self.rtc_update_active_plot_y_checkbox)
         self.rtc_plot_panel.layout().addWidget(self.plot_y_active_checkbox, 5, 8, 1, 1)
         self.transparent_plots_checkbox = QtWidgets.QCheckBox('Transparent?', self)
         self.rtc_plot_panel.layout().addWidget(self.transparent_plots_checkbox, 6, 7, 1, 1)
         self.transparent_plots_checkbox.setChecked(False)
+        self.smoothing_factor_combobox = self.gb_make_labeled_combobox(label_text='Smoothing Factor')
+        for i in np.arange(0, 1, 0.005):
+            self.smoothing_factor_combobox.addItem(str(i))
+        self.rtc_plot_panel.layout().addWidget(self.smoothing_factor_combobox, 6, 8, 1, 1)
+        self.smoothing_factor_combobox.currentIndexChanged.connect(self.rtc_direct_plot)
 
     #########################################################
     # Running
@@ -800,7 +814,6 @@ class RTCollector(QtWidgets.QWidget, GuiBuilder):
         '''
         if self.heater_range_combobox.currentText() == '0.0000':
             self.gb_quick_message('Heater range is set to zero cannot regulate temp!', msg_type='Warning')
-            return None
         self.rtc_write_set_points()
         if 'Start' in self.sender().text():
             self.sender().setText('Stop DAQ')
@@ -818,8 +831,7 @@ class RTCollector(QtWidgets.QWidget, GuiBuilder):
             self.started = False
             self.meta_data['n_samples'] = len(self.x_data)
             save_path = self.rtc_index_file_name()
-            with open(save_path.replace('txt', 'json'), 'w') as json_handle:
-                simplejson.dump(self.meta_data, json_handle)
+            self.gb_save_meta_data(save_path, 'txt')
             self.rtc_save(save_path)
             QtWidgets.QApplication.processEvents()
             self.qthreadpool.clear()
@@ -864,23 +876,38 @@ class RTCollector(QtWidgets.QWidget, GuiBuilder):
         '''
         '''
         save_path = QtWidgets.QFileDialog.getOpenFileName(self, 'Select Data File')[0]
+        if len(save_path) == 0:
+            return None
+        self.meta_dict = self.gb_load_meta_data(save_path, 'txt')
         self.status_bar.showMessage(save_path)
+        self.rtc_update_calibration_ranges()
         with open(save_path, 'r') as fh:
             self.daq_collector.all_data_df = pd.read_json(fh)
-            print(self.daq_collector.all_data_df)
+            self.all_data_df = self.daq_collector.all_data_df
+            if not 'directions' in self.daq_collector.all_data_df.T.keys():
+                self.directions = ['up'] * len(self.daq_collector.all_data_df[0]['data'])
+            self.rtc_update_calibration_ranges()
             self.daq_collector.rtc_plot_x_and_y()
-            print('done x and y')
             self.daq_collector.rtc_plot_xy(running=True)
-            print('done xy')
             self.rtc_plot_running_from_disk()
+
+    def rtc_update_calibration_ranges(self):
+        '''
+        '''
+        self.samples_low_value = float(self.new_samples_low_value_lineedit.text())
+        self.samples_high_value = float(self.new_samples_high_value_lineedit.text())
+        self.housekeeping_low_value = float(self.new_housekeeping_low_value_lineedit.text())
+        self.housekeeping_high_value = float(self.new_housekeeping_high_value_lineedit.text())
 
     def rtc_direct_plot(self):
         '''
         '''
-        daq_collector = Collector(
+        self.daq_collector = Collector(
             self,
+            self.all_data_df
             )
-        daq_collector.rtc_plot_xy()
+        self.daq_collector.rtc_plot_x_and_y()
+        self.daq_collector.rtc_plot_xy(running=True)
         self.rtc_plot_running_from_disk()
 
     def rtc_update_data(self, all_data_df, directions):
@@ -901,6 +928,7 @@ class RTCollector(QtWidgets.QWidget, GuiBuilder):
         thermometer = self.thermometer_combobox.currentText()
         low_value = self.housekeeping_low_value
         high_value = self.housekeeping_high_value
+        print('adfadfd', low_value, high_value)
         slope = (high_value - low_value) / 1e1 # K / V
         if thermometer in self.lakeshore_thermometers:
             if len(x_data) > 0:
@@ -919,8 +947,12 @@ class RTCollector(QtWidgets.QWidget, GuiBuilder):
         y_data = []
         y_stds = []
         if self.y_label_combobox.currentText() == 'Arb Units':
-            y_data = np.asarray(self.y_data) - np.min(self.y_data)
-            y_stds = np.asarray(self.y_stds)
+            for daq in self.daq_collector.daq.signal_channels[1:]:
+                y_data = np.asarray(self.daq_collector.all_data_df[daq]['data'])
+                y_data = y_data - np.min(y_data)
+                y_stds = np.asarray(self.daq_collector.all_data_df[daq]['stds'])
+                self.daq_collector.all_data_df[daq]['data'] = y_data
+                self.daq_collector.all_data_df[daq]['stds'] = y_stds
         else:
             voltage_reduction_factor = float(self.y_correction_lineedit.text())
             low_value = self.samples_low_value
@@ -1105,12 +1137,8 @@ class Collector(QRunnable):
         '''
         '''
         thermometer = self.rtc.thermometer_combobox.currentText()
-        if not hasattr(self.rtc.ls372_temp_widget, 'analog_outputs'):
-            high_value = 1e2
-            low_value = 0
-        else:
-            low_value = self.rtc.housekeeping_low_value
-            high_value = self.rtc.housekeeping_high_value
+        low_value = self.rtc.housekeeping_low_value
+        high_value = self.rtc.housekeeping_high_value
         if thermometer in self.rtc.lakeshore_thermometers:
             slope = (high_value - low_value) / 1e1 # Y range / 10V
             adjusted_x = self.rtc.rtc_get_linear_value(x, slope, low_value)#
@@ -1125,14 +1153,8 @@ class Collector(QRunnable):
         x_data = []
         x_stds = []
         thermometer = self.rtc.thermometer_combobox.currentText()
-        if not hasattr(self.rtc.ls372_temp_widget, 'analog_outputs'):
-            high_value = 1e2
-            low_value = 0
-        else:
-            low_value = self.rtc.housekeeping_low_value
-            high_value = self.rtc.housekeeping_high_value
-        # high_value 00 #0 to 10K is 0 to 1V
-
+        low_value = self.rtc.housekeeping_low_value
+        high_value = self.rtc.housekeeping_high_value
         if thermometer in self.rtc.lakeshore_thermometers:
             slope = (high_value - low_value) / 1e1 # Y range / 10V
             x_data = self.rtc.rtc_get_linear_value(np.asarray(self.all_data_df[0]['data']), slope, low_value) * 1e3 #mK
@@ -1167,9 +1189,6 @@ class Collector(QRunnable):
             y_stds = np.asarray(self.all_data_df[daq]['stds']) * slope * 1e3 #mOhms
         self.y_data_real = y_data
         self.y_stds_real = y_stds
-        print(y_data)
-        print(y_data)
-        print(y_data)
         return y_data, y_stds
 
     def rtc_plot_x_and_y(self):
@@ -1181,22 +1200,34 @@ class Collector(QRunnable):
         change_indicies.append(-1)
         fig_x = self.rtc.x_fig
         ax_x = fig_x.get_axes()[0]
-        ax2_x = fig_x.get_axes()[1]
+        ax_x_twinx = fig_x.get_axes()[1]
+        ax_x.set_yticks(np.linspace(ax_x.get_ybound()[0], ax_x.get_ybound()[1], 4))
+        ax_x_twinx.set_yticks(np.linspace(ax_x_twinx.get_ybound()[0], ax_x_twinx.get_ybound()[1], 4))
+        ax2_x = fig_x.get_axes()[2]
         ax_x.cla()
+        ax_x_twinx.cla()
         ax2_x.cla()
         ax2_x.plot([0, 10], [self.rtc.housekeeping_low_value, self.rtc.housekeeping_high_value], 'k', alpha=0.5)
         ax2_x.set_xlabel('(V)', fontsize=8)
         ax2_x.set_ylabel('(K)', fontsize=8)
-        ax_x.set_ylabel('X ($V$)', fontsize=8)
+        ax_x.set_xlabel('Sample', fontsize=8)
+        ax_x.set_ylabel('X_DAQ_OUT ($V$)', fontsize=8)
+        ax_x_twinx.set_ylabel('(mK)', fontsize=8)
         fig_y = self.rtc.y_fig
         ax_y = fig_y.get_axes()[0]
-        ax2_y = fig_y.get_axes()[1]
+        ax_y_twinx = fig_y.get_axes()[1]
+        ax_y.set_yticks(np.linspace(ax_y.get_ybound()[0], ax_y.get_ybound()[1], 4))
+        #ax_y_twinx.set_yticks(np.linspace(ax_y_twinx.get_ybound()[0], ax_y_twinx.get_ybound()[1], 4))
+        ax2_y = fig_y.get_axes()[2]
         ax_y.cla()
+        ax_y_twinx.cla()
         ax2_y.cla()
         ax2_y.plot([0, 10], [self.rtc.samples_low_value, self.rtc.samples_high_value], 'k', alpha=0.5)
         ax2_y.set_xlabel('(V)', fontsize=8)
         ax2_y.set_ylabel('($\Omega$)', fontsize=8)
-        ax_y.set_ylabel('Y ($V$)', fontsize=8)
+        ax_y.set_xlabel('Sample', fontsize=8)
+        ax_y.set_ylabel('Y_DAQ_OUT ($V$)', fontsize=8)
+        ax_y_twinx.set_ylabel('(m$\Omega$)', fontsize=8)
         label = None
         if hasattr(self, 'daq') and len(self.all_data_df[0]['data']) > 1:
             label_str = 'DAQ {0} Sample {1}'.format(self.x_channel, len(self.all_data_df[0]['data']))
@@ -1215,14 +1246,27 @@ class Collector(QRunnable):
                     yerr=self.all_data_df[0]['stds'][drift_start_index:drift_end_index],
                     marker='.', ms=0.5, color=color, alpha=0.75,
                     linestyle='None', label=label)
+            x_data, x_stds = self.rtc.rtc_adjust_x_data(
+                    self.all_data_df[0]['data'][drift_start_index:drift_end_index],
+                    self.all_data_df[0]['stds'][drift_start_index:drift_end_index])
+            ax_x_twinx.plot(range(len(x_data)), np.asarray(x_data) * 1e3, #mK
+                    marker='x', ms=0.5, color=color, alpha=0.0,
+                    linestyle='None', label=label)
             scaled_x_point = self.rtc_adjust_x_data_point(self.all_data_df[0]['data'][-1])
             ax2_x.plot(self.all_data_df[0]['data'][-1], scaled_x_point, '*', ms=3)
             for y_channel in self.all_data_df.keys()[1:]:
+                y_data = self.all_data_df[y_channel]['data'][drift_start_index:drift_end_index]
+                yerr = self.all_data_df[y_channel]['stds'][drift_start_index:drift_end_index]
                 ax_y.errorbar(
-                        range(len(self.all_data_df[0]['data']))[drift_start_index:drift_end_index],
-                        self.all_data_df[y_channel]['data'][drift_start_index:drift_end_index],
-                        yerr=self.all_data_df[y_channel]['stds'][drift_start_index:drift_end_index],
+                        range(len(y_data)),
+                        y_data, yerr=yerr,
                         marker='.', ms=0.5, color=self.colors[y_channel - 1], alpha=0.75,
+                        linestyle='None', label=str(y_channel))
+                temp_y_data, temp_y_stds = self.rtc_adjust_y_data(y_channel)
+                ax_y_twinx.plot(
+                        range(len(temp_y_data[drift_start_index:drift_end_index])),
+                        temp_y_data[drift_start_index:drift_end_index],
+                        marker='x', ms=0.5, color=self.colors[y_channel - 1], alpha=0.0,
                         linestyle='None', label=str(y_channel))
                 scaled_y_point = self.rtc_adjust_y_data_point(self.all_data_df[y_channel]['data'][-1]) * 1e-3 #back to K
                 ax2_y.plot(self.all_data_df[y_channel]['data'][-1], scaled_y_point, '*', color=self.colors[y_channel - 1], ms=3)
@@ -1251,19 +1295,20 @@ class Collector(QRunnable):
         ax = fig.get_axes()[0]
         ax.cla()
         y_label = self.rtc.y_label_combobox.currentText()
-        print('plotting xy', running, self.all_data_df)
         if running:
             x_data, x_stds = self.rtc_adjust_x_data()
-            for daq in self.all_data_df.keys()[1:]:
+            for i, daq in enumerate(self.all_data_df.keys()[1:]):
                 if self.rtc.active_daq_dict[daq]['plot']:
                     y_data, y_stds = self.rtc_adjust_y_data(daq)
                     if np.mean(y_data) > 1e3:
                         y_data *= 1e-3
                         y_stds *= 1e-3
                         y_label = y_label.replace('$m','$')
+                    print('plotting daq', daq, x_data, y_data)
                     fig = self.rtc_plot_drifts(fig, x_data, x_stds, y_data, y_stds, daq)
-            ax.set_xlabel('Temperature ($mK$)', fontsize=12)
-            ax.set_ylabel(y_label, fontsize=12)
+                    ax.set_xlabel('Temperature ($mK$)', fontsize=12)
+                    ax.set_ylabel(y_label, fontsize=12)
+                    #import ipdb;ipdb.set_trace()
             save_path = os.path.join('temp_files', 'temp_xy.png')
             fig.savefig(save_path, transparent=self.transparent_plots)
         else:
@@ -1301,6 +1346,11 @@ class Collector(QRunnable):
         ramp_value = self.rtc.ramp_lineedit.text().replace('+', '')
         thermometer = self.rtc.thermometer_combobox.currentText()
         y_data = np.asarray(self.all_data_df[daq]['data'][sample_clip_lo:sample_clip_hi])
+        smoothing_factor = 0.1
+        if hasattr(self.rtc, 'smoothing_factor_combobox'):
+            smoothing_factor = float(self.rtc.smoothing_factor_combobox.currentText())
+            if smoothing_factor > 0:
+                y_data = self.rtc.ftsy_running_mean(y_data, smoothing_factor=smoothing_factor)
         x_data = np.asarray(x_data[sample_clip_lo:sample_clip_hi])
         x_data_selector = np.where(np.logical_and(data_clip_lo < x_data, x_data < data_clip_hi))
         y_data = y_data[x_data_selector]
@@ -1310,12 +1360,12 @@ class Collector(QRunnable):
             transition_temperature = np.nan
             half_rn = np.nan
         elif self.rtc.y_label_combobox.currentText() == 'Arb Units':
-            offset_array = np.asarray(y_data) - np.min(y_data)
+            y_data = np.asarray(y_data) - np.min(y_data)
+            print(y_data)
             rn_data_selector = np.where(np.logical_and(data_clip_rn_lo < x_data, x_data < data_clip_rn_hi))
             normal_resistance = np.mean(y_data[rn_data_selector])
-            normal_resistance = np.max(offset_array)
             half_rn = 0.5 * normal_resistance
-            tc_idx = (np.abs(offset_array - half_rn)).argmin()
+            tc_idx = (np.abs(y_data - half_rn)).argmin()
             transition_temperature = np.asarray(x_data)[tc_idx]
         else:
             rn_data_selector = np.where(np.logical_and(data_clip_rn_lo < x_data, x_data < data_clip_rn_hi))
@@ -1371,6 +1421,11 @@ class Collector(QRunnable):
         selected_directions = np.asarray(self.directions)[sample_clip_lo:sample_clip_hi]
         change_indicies = list(np.where(selected_directions[:-1] != selected_directions[1:])[0])
         change_indicies.append(-1)
+        smoothing_factor = 0.1
+        if hasattr(self.rtc, 'smoothing_factor_combobox'):
+            smoothing_factor = float(self.rtc.smoothing_factor_combobox.currentText())
+            if smoothing_factor > 0:
+                y_data = self.rtc.ftsy_running_mean(y_data, smoothing_factor=smoothing_factor)
         plot_x_data = x_data[sample_clip_lo:sample_clip_hi]
         plot_x_stds = x_stds[sample_clip_lo:sample_clip_hi]
         plot_y_data = y_data[sample_clip_lo:sample_clip_hi]
@@ -1387,12 +1442,12 @@ class Collector(QRunnable):
                 final_plot_x_data = plot_x_data[drift_start_index:]
                 final_plot_x_stds = plot_x_stds[drift_start_index:]
                 final_plot_y_data = plot_y_data[drift_start_index:]
-                final_plot_y_stds = plot_x_stds[drift_start_index:]
+                final_plot_y_stds = plot_y_stds[drift_start_index:]
             else:
                 final_plot_x_data = plot_x_data[drift_start_index:change_index]
                 final_plot_x_stds = plot_x_stds[drift_start_index:change_index]
                 final_plot_y_data = plot_y_data[drift_start_index:change_index]
-                final_plot_y_stds = plot_x_stds[drift_start_index:change_index]
+                final_plot_y_stds = plot_y_stds[drift_start_index:change_index]
             selector = np.where(np.logical_and(data_clip_lo < final_plot_x_data, final_plot_x_data < data_clip_hi))
 
             rn_selector = np.where(np.logical_and(data_clip_rn_lo < final_plot_x_data, final_plot_x_data < data_clip_rn_hi))
@@ -1423,8 +1478,6 @@ class Collector(QRunnable):
         if len(self.all_data_df.keys()[1:]) > 1:
             sample_name = 'Multi Channel RT'
         ax_plot.set_title(sample_name, fontsize=14)
-        print(self.all_data_df)
-        print('done xy plot')
         return fig
 
 
