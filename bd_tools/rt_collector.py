@@ -919,10 +919,14 @@ class RTCollector(QtWidgets.QWidget, GuiBuilder, FourierTransformSpectroscopy):
             try:
                 self.daq_collector.all_data_df = pd.read_json(fh)
                 self.all_data_df = self.daq_collector.all_data_df
+                print(self.all_data_df)
+                print(self.all_data_df.T.keys())
             except ValueError:
                 self.rtc_load_old_data(save_path)
             if not 'directions' in self.daq_collector.all_data_df.T.keys():
-                self.directions = ['up'] * len(self.daq_collector.all_data_df[0]['data'])
+                self.daq_collector.directions = ['up'] * len(self.daq_collector.all_data_df[0]['data'])
+            else:
+                self.daq_collector.directions = self.daq_collector.all_data_df[0]['directions']
             self.rtc_update_calibration_ranges()
             self.daq_collector.rtc_plot_x_and_y()
             self.daq_collector.rtc_plot_xy(running=True)
@@ -1124,7 +1128,7 @@ class Collector(QRunnable):
         self.rtc.y_fig.get_axes()[1].cla()
         self.rtc.xy_fig.get_axes()[0].cla()
         self.x_data, self.x_stds = [], []
-        basic_dict = {'data': np.asarray([]), 'stds': np.asarray([])}
+        basic_dict = {'data': np.asarray([]), 'stds': np.asarray([]), 'directions': np.asarray([])}
         data_frame_dict = {}
         for signal_channel in self.daq.signal_channels:
             data_frame_dict[signal_channel] = basic_dict
