@@ -4,6 +4,7 @@ import simplejson
 import numpy as np
 from copy import copy
 from datetime import datetime
+from scipy import signal
 
 from pprint import pprint
 from bd_lib.bolo_daq import BoloDAQ
@@ -25,20 +26,20 @@ class CosmicRays(QtWidgets.QWidget, GuiBuilder):
         self.screen_resolution = screen_resolution
         self.monitor_dpi = monitor_dpi
         self.analysis_options_dict = {
-            '01 poly-detrend': {
+            '01 POLY': {
                 'defaultUse': False,
                 'filterParams': {
                     'Order': 1,
                 }
             },
-            '02 butterworth-lp': {
+            '02 BW-LP': {
                 'defaultUse': False,
                 'filterParams': {
                     'N Poles': 1,
                     'Cuttoff Freq': 10.0
                 },
             },
-            '03 butterworth-hp': {
+            '03 BW-HP': {
                 'defaultUse': True,
                 'filterParams': {
                     'N Poles': 1,
@@ -124,8 +125,9 @@ class CosmicRays(QtWidgets.QWidget, GuiBuilder):
         # Filtering Options
         for i, option in enumerate(self.analysis_options_dict):
             checkbox_unique_name = 'filter_{0}_checkbox'.format(option)
-            checkbox = QtWidgets.QCheckBox(option)
+            checkbox = QtWidgets.QCheckBox(option.split(' ')[1])
             checkbox.setChecked(self.analysis_options_dict[option]['defaultUse'])
+            checkbox.clicked.connect(self.cr_update_options)
             setattr(self, checkbox_unique_name, checkbox)
             self.layout().addWidget(checkbox, 9, i, 1, 1)
             for j, filter_param in enumerate(self.analysis_options_dict[option]['filterParams']):
@@ -137,6 +139,9 @@ class CosmicRays(QtWidgets.QWidget, GuiBuilder):
                 setattr(self, lineedit_unique_name, lineedit)
                 self.layout().addWidget(lineedit, 10 + j, i, 1, 1)
         # Buttons
+        self.plot_filter_only_checkbox = QtWidgets.QCheckBox('Plot Raw Data')
+        self.plot_filter_only_checkbox.setChecked(True)
+        self.layout().addWidget(self.plot_filter_only_checkbox, 9, 3, 1, 1)
         start_pushbutton = QtWidgets.QPushButton('Start', self)
         start_pushbutton.clicked.connect(self.cr_start_stop)
         self.layout().addWidget(start_pushbutton, 12, 0, 1, 3)
@@ -216,6 +221,12 @@ class CosmicRays(QtWidgets.QWidget, GuiBuilder):
             signal_channels.append(getattr(self, 'daq_{0}_combobox'.format(sample)).currentText())
         return squids, gains, biases, signal_channels, scan_time
 
+    def cr_update_options(self):
+        '''
+        '''
+        if self.sender().text() in self.analysis_options_dict:
+            self.analysis_options_dict[self.sender().text()]['defaultUse'] = self.sender().isChecked()
+
     def cr_scan_file_name(self):
         '''
         '''
@@ -253,11 +264,11 @@ class CosmicRays(QtWidgets.QWidget, GuiBuilder):
     def cr_analyze(self, data):
         '''
         '''
+        filters = []
         filtered_data = data
         for i, option in enumerate(self.analysis_options_dict):
             checkbox_unique_name = 'filter_{0}_checkbox'.format(option)
-            checkbox = QtWidgets.QCheckBox(option)
-            checkbox.setChecked(self.analysis_options_dict[option]['defaultUse'])
+            checkbox = getattr(self, checkbox_unique_name)
             for j, filter_param in enumerate(self.analysis_options_dict[option]['filterParams']):
                 lineedit = self.gb_make_labeled_lineedit(
                         label_text=filter_param,
@@ -271,18 +282,21 @@ class CosmicRays(QtWidgets.QWidget, GuiBuilder):
                     n_filter_poles = int(lineedit.text())
                 elif filter_param == 'Cuttoff Freq':
                     cutoff_frequency = float(lineedit.text())
-            if option == '01 poly-detrend':
+            if option == '01 POLY' and checkbox.isChecked():
                 x_fits = np.asarray(range(len(data)))
                 p_fits = np.polyfit(x_fits, data, order)
                 y_fits = np.polyval(p_fits, x_fits)
                 filtered_data = np.asarray(data) - y_fits
-            elif option == '02 butterworth-hp':
+                filters.append(option)
+            elif option == '02 BW-LP' and checkbox.isChecked():
                 sos = signal.butter(n_filter_poles, cutoff_frequency, 'hp', output = 'sos', fs=5000)
                 filtered = signal.sosfilt(sos, data)
-            elif option == '03 butterworth-lp':
+                filters.append(option)
+            elif option == '03 BW-HP' and checkbox.isChecked():
                 sos = signal.butter(n_filter_poles, cutoff_frequency, 'lp', output = 'sos', fs=5000)
                 filtered = signal.sosfilt(sos, data)
-        return filtered_data
+                filters.append(option)
+        return filtered_data, filters
 
 
     def cr_plot(self, running=False, save_path=None):
@@ -309,10 +323,18 @@ class CosmicRays(QtWidgets.QWidget, GuiBuilder):
         fig.suptitle(title)
         for i in range(1, self.n_samples + 1):
             data = getattr(self, 'data_{0}'.format(i))
-            filtered_data = self.cr_analyze(data)
+            filtered_data, filters = self.cr_analyze(data)
             ax_title = getattr(self, 'sample_name_{0}_lineedit'.format(i)).text()
-            axes[i - 1].plot(data, label='Raw Data {0}'.format(ax_title))
-            axes[i - 1].plot(filtered_data, label='Filtered')
+            #import ipdb;ipdb.set_trace()
+            filter_label = ''
+            for filter_type in filters:
+                filter_label += filter_type.split(' ')[1]
+                filter_label += '+\n'
+            filter_label = filter_label[:-2]
+            if self.plot_filter_only_checkbox.isChecked():
+                axes[i - 1].plot(data, label='Raw Data {0}'.format(ax_title))
+            if len(filters) > 0:
+                axes[i - 1].plot(filtered_data, label=filter_label)
             axes[i - 1].set_title(ax_title)
             handles, labels = axes[i - 1].get_legend_handles_labels()
             axes[i - 1].legend(handles, labels, numpoints=1, frameon=True, fontsize=10, loc='best')
