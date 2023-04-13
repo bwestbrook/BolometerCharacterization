@@ -31,21 +31,30 @@ class RTCollector(QtWidgets.QWidget, GuiBuilder, FourierTransformSpectroscopy):
         '''
         '''
         super(RTCollector, self).__init__()
+        self.today = datetime.now()
+        self.start_time = datetime.now()
         self.status_bar = status_bar
         self.daq_settings = daq_settings
         self.screen_resolution = screen_resolution
         self.monitor_dpi = monitor_dpi
         self.mplc = MplCanvas(self, screen_resolution, monitor_dpi)
+        time.sleep(0.05)
+        time_delta = datetime.now() - self.today
+        time_delta = time_delta.microseconds
         self.init_data = {
                 0: {
                      'data': [0],
                      'stds': [0],
-                     'directions': ['up']
+                     'directions': ['up'],
+                     'time_deltas': [time_delta],
+                     'temp_deltas': [1.0]
                     },
                 1: {
                      'data': [0],
                      'stds': [0],
-                     'directions': ['up']
+                     'directions': ['up'],
+                     'time_deltas': [time_delta],
+                     'temp_deltas': [1.0]
                     }
                 }
         self.all_data_df = pd.DataFrame.from_dict(self.init_data)
@@ -60,9 +69,9 @@ class RTCollector(QtWidgets.QWidget, GuiBuilder, FourierTransformSpectroscopy):
         self.directions = ['down']
         self.x_fig = self.mplc.mplc_create_two_pane_plot(
                 name='x_fig',
-                left=0.16,
-                right=0.98,
-                wspace=0.92,
+                left=0.12,
+                right=0.93,
+                wspace=0.8,
                 hspace=0.4,
                 bottom=0.2,
                 top=0.93,
@@ -70,9 +79,9 @@ class RTCollector(QtWidgets.QWidget, GuiBuilder, FourierTransformSpectroscopy):
                 frac_screen_width=0.26)
         self.y_fig = self.mplc.mplc_create_two_pane_plot(
                 name='y_fig',
-                left=0.16,
-                right=0.98,
-                wspace=0.92,
+                left=0.12,
+                right=0.93,
+                wspace=0.8,
                 hspace=0.4,
                 bottom=0.2,
                 top=0.93,
@@ -143,7 +152,6 @@ class RTCollector(QtWidgets.QWidget, GuiBuilder, FourierTransformSpectroscopy):
         self.rtc_plot_panel = QtWidgets.QWidget(self)
         grid_2 = QtWidgets.QGridLayout()
         self.rtc_plot_panel.setLayout(grid_2)
-        self.today = datetime.now()
         self.today_str = datetime.strftime(self.today, '%Y_%m_%d')
         self.data_folder = os.path.join(data_folder, 'RT_Curves')
         if not os.path.exists(self.data_folder):
@@ -337,7 +345,7 @@ class RTCollector(QtWidgets.QWidget, GuiBuilder, FourierTransformSpectroscopy):
         self.rtc_get_lakeshore_channel_info()
         self.thermometer_combobox.setCurrentIndex(0)
         self.thermometer_combobox.currentIndexChanged.connect(self.rtc_scan_new_lakeshore_channel)
-        self.thermometer_combobox.setCurrentIndex(1)
+        self.thermometer_combobox.setCurrentIndex(2)
         self.rtc_get_lakeshore_temp_control()
 
     def rtc_get_lakeshore_temp_control(self, pid=True, set_point=True):
@@ -526,7 +534,7 @@ class RTCollector(QtWidgets.QWidget, GuiBuilder, FourierTransformSpectroscopy):
         for thermometer in self.thermometers:
             self.thermometer_combobox.addItem(thermometer)
         self.layout().addWidget(self.thermometer_combobox, 3, 3, 1, 2)
-        self.thermometer_combobox.setCurrentIndex(1)
+        self.thermometer_combobox.setCurrentIndex(2)
         self.y_label_combobox = self.gb_make_labeled_combobox(label_text='Y label:')
         y_labels = ['Resistance ($m\Omega$)', 'Arb Units']
         for y_label in y_labels:
@@ -819,6 +827,7 @@ class RTCollector(QtWidgets.QWidget, GuiBuilder, FourierTransformSpectroscopy):
             self.gb_quick_message('Heater range is set to zero cannot regulate temp!', msg_type='Warning')
         self.rtc_write_set_points()
         if 'Start' in self.sender().text():
+            self.start_time = datetime.now()
             self.sender().setText('Stop DAQ')
             self.started = True
             self.rtc_collector()
@@ -850,18 +859,25 @@ class RTCollector(QtWidgets.QWidget, GuiBuilder, FourierTransformSpectroscopy):
         self.x_time_stream_label.setPixmap(image_to_display)
         save_path = os.path.join('temp_files', 'temp_y.png')
         image_to_display = QtGui.QPixmap(save_path)
+        now = datetime.now()
+        time_delta = self.start_time - now
+        time_delta_seconds = time_delta.total_seconds()
         self.y_time_stream_label.setPixmap(image_to_display)
         if hasattr(self, 'daq_collector') and self.daq_collector.all_data_df is not None and hasattr(self.daq_collector, 'x_data_real') and hasattr(self.daq_collector, 'y_data_real'):
+            rate = float(len(self.daq_collector.all_data_df[0]['data'])) / time_delta_seconds
             x_data_text = 'X Data: {0:.4f} ::: X STD: {1:.4f} (raw) [{2}K=0V {3}K=10V]\n'.format(
                 self.daq_collector.all_data_df[0]['data'][-1], self.daq_collector.all_data_df[0]['stds'][-1],
                 self.housekeeping_low_value, self.housekeeping_high_value)
-            x_data_text += 'X Data: {0:.2f} (mK)::: X STD: {1:.2f} (mK)\n'.format(self.daq_collector.x_data_real[-1], self.daq_collector.x_stds_real[-1])
+            x_data_text += 'X Data: {0:.2f} (mK)::: X STD: {1:.2f} (mK)'.format(self.daq_collector.x_data_real[-1], self.daq_collector.x_stds_real[-1])
+            x_data_text += ' {0:.2f} minutes:{1:.2f}'.format(time_delta_seconds / 60.0, rate)
             self.x_data_label.setText(x_data_text)
             y_data_text = 'Y Data: {0:.4f} ::: Y STD: {1:.4f} (raw) [{2}Ohms=0V {3}Ohms=10V]\n'.format(
+
                 self.daq_collector.all_data_df[1]['data'][-1], self.daq_collector.all_data_df[1]['stds'][-1],
                 self.samples_low_value, self.samples_high_value)
-            y_data_text += 'Y Data: {0:.2f} (mOhms)::: Y STD: {1:.2f} (mOhms)\n'.format(self.daq_collector.y_data_real[-1], self.daq_collector.y_stds_real[-1])
-            self.y_data_label.setText(y_data_text)
+            if len(self.daq_collector.y_data_real) > 0:
+                y_data_text += 'Y Data: {0:.2f} (mOhms)::: Y STD: {1:.2f} (mOhms)\n'.format(self.daq_collector.y_data_real[-1], self.daq_collector.y_stds_real[-1])
+                self.y_data_label.setText(y_data_text)
 
     ###################################################
     # Loading Saving and Plotting
@@ -1128,13 +1144,18 @@ class Collector(QRunnable):
         self.rtc.y_fig.get_axes()[1].cla()
         self.rtc.xy_fig.get_axes()[0].cla()
         self.x_data, self.x_stds = [], []
-        basic_dict = {'data': np.asarray([]), 'stds': np.asarray([]), 'directions': np.asarray([])}
+        basic_dict = {
+                'data': np.asarray([]), 'stds': np.asarray([]),
+                'time_deltas': np.asarray([]), 'temp_deltas': np.asarray([]),
+                'directions': np.asarray([])}
         data_frame_dict = {}
         for signal_channel in self.daq.signal_channels:
             data_frame_dict[signal_channel] = basic_dict
         self.all_data_df = pd.DataFrame.from_dict(data_frame_dict)
         self.y_data, self.y_stds = [], []
         self.directions = []
+        self.time_deltas = []
+        self.temp_deltas = []
         self.x_channel = signal_channels[0]
         self.int_time = self.daq.int_time
         self.sample_rate = self.daq.sample_rate
@@ -1146,6 +1167,14 @@ class Collector(QRunnable):
             data_point_df = pd.DataFrame.from_dict(data_dict)
             self.transparent_plots = self.rtc.transparent_plots_checkbox.isChecked()
             self.directions.append(self.rtc.drift_direction)
+            if len(self.directions) > 1:
+                last_time = self.rtc.start_time
+                time_now = datetime.now()
+                time_delta = time_now - last_time
+                time_delta = time_delta.microseconds
+                temp_delta = self.all_data_df[0]['data'] - data_point_df[0]['mean']
+                self.time_deltas.append(time_delta)
+                self.temp_deltas.append(temp_delta[0])
             for signal_channel in self.daq.signal_channels:
                 mean = data_point_df[signal_channel]['mean']
                 std = data_point_df[signal_channel]['std']
@@ -1158,6 +1187,9 @@ class Collector(QRunnable):
                         len(self.all_data_df[signal_channel]['stds']),
                         std)
                 self.all_data_df[signal_channel]['directions'] = self.directions
+                self.all_data_df[signal_channel]['time_deltas'] = self.time_deltas
+                self.all_data_df[signal_channel]['temp_deltas'] = self.temp_deltas
+            last_time = datetime.now()
             self.rtc_plot_running()
             self.signals.data_ready.emit() #data_dict)
             if i % 15 == 0 and i % 60 != 0:
@@ -1202,7 +1234,7 @@ class Collector(QRunnable):
             x_stds = np.asarray(self.all_data_df[0]['data']) * slope
         self.x_data_real = x_data #mK
         self.x_stds_real = x_stds #mK
-        return x_data, x_stds
+        return x_data[:-1], x_stds[:-1]
 
     def rtc_adjust_y_data_point(self, y):
         '''
@@ -1228,9 +1260,9 @@ class Collector(QRunnable):
             slope = (high_value - low_value) / 10 # K/ V
             y_data = self.rtc.rtc_get_linear_value(np.asarray(self.all_data_df[daq]['data']), slope, low_value) * 1e3 #mOhms
             y_stds = np.asarray(self.all_data_df[daq]['stds']) * slope * 1e3 #mOhms
-        self.y_data_real = y_data
-        self.y_stds_real = y_stds
-        return y_data, y_stds
+        self.y_data_real = y_data[:-1]
+        self.y_stds_real = y_stds[:-1]
+        return y_data[:-1], y_stds[:-1]
 
     def rtc_plot_x_and_y(self):
         '''
@@ -1281,6 +1313,13 @@ class Collector(QRunnable):
             if len(self.directions) > 0:
                 if self.directions[change_index] == 'down':
                     color = 'b'
+            #try:
+                ##rate = np.asarray(self.all_data_df[0]['temp_deltas'][drift_start_index:drift_end_index]) / np.asarray(self.all_data_df[0]['time_deltas'][drift_start_index:drift_end_index]) * 1e6 # back to seconds 
+                #print(rate[-1], 'mK/s')
+            #except:
+                #import ipdb;ipdb.set_trace()
+            #ax_x.errorbar(range(len(rate)), rate, label='rate')
+
             ax_x.errorbar(
                     range(len(self.all_data_df[0]['data']))[drift_start_index:drift_end_index],
                     self.all_data_df[0]['data'][drift_start_index:drift_end_index],
@@ -1298,16 +1337,23 @@ class Collector(QRunnable):
             for y_channel in self.all_data_df.keys()[1:]:
                 y_data = self.all_data_df[y_channel]['data'][drift_start_index:drift_end_index]
                 yerr = self.all_data_df[y_channel]['stds'][drift_start_index:drift_end_index]
+                if self.directions[change_index] == 'down':
+                    color = self.colors[y_channel + 2]
+                else:
+                    color = self.colors[y_channel - 1]
                 ax_y.errorbar(
-                        range(len(y_data)),
+                        range(drift_start_index, drift_start_index + len(y_data)),
                         y_data, yerr=yerr,
-                        marker='.', ms=0.5, color=self.colors[y_channel - 1], alpha=0.75,
+                        marker='.', ms=0.5, color=color, alpha=0.75,
                         linestyle='None', label=str(y_channel))
                 temp_y_data, temp_y_stds = self.rtc_adjust_y_data(y_channel)
+                temp_x_data = range(drift_start_index, drift_start_index + len(y_data) - 1)
+                if len(temp_x_data) != len(temp_y_data):
+                    temp_x_data = range(drift_start_index, drift_start_index + len(y_data))
                 ax_y_twinx.plot(
-                        range(len(temp_y_data[drift_start_index:drift_end_index])),
-                        temp_y_data[drift_start_index:drift_end_index],
-                        marker='x', ms=0.5, color=self.colors[y_channel - 1], alpha=0.0,
+                        temp_x_data,
+                        temp_y_data[drift_start_index:drift_start_index + len(temp_x_data)],
+                        marker='x', ms=0.5, color=color, alpha=0.0,
                         linestyle='None', label=str(y_channel))
                 scaled_y_point = self.rtc_adjust_y_data_point(self.all_data_df[y_channel]['data'][-1]) * 1e-3 #back to K
                 ax2_y.plot(self.all_data_df[y_channel]['data'][-1], scaled_y_point, '*', color=self.colors[y_channel - 1], ms=3)

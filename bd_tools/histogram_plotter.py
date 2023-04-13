@@ -20,8 +20,14 @@ class HistogramPlotter(QtWidgets.QWidget, GuiBuilder):
         self.monitor_dpi = monitor_dpi
         grid = QtWidgets.QGridLayout()
         self.setLayout(grid)
-        self.hp_data_input_panel()
         self.data_dict = {}
+        self.units = [
+            'm$\Omega$',
+            '$\Omega$',
+            'mK',
+            ''
+                ]
+        self.hp_data_input_panel()
 
 
     def hp_data_input_panel(self):
@@ -40,6 +46,8 @@ class HistogramPlotter(QtWidgets.QWidget, GuiBuilder):
         self.layout().addWidget(self.input_data_label_lineedit, 1, 1, 1, 1)
         self.input_data_lineedit = self.gb_make_labeled_lineedit(label_text='Data')
         self.layout().addWidget(self.input_data_lineedit, 1, 2, 1, 1)
+        self.plot_all_checkbox = QtWidgets.QCheckBox('Plot All?')
+        self.layout().addWidget(self.plot_all_checkbox, 1, 3, 1, 1)
 
         # Modify existing data on the fly
         self.modify_data_push_button = QtWidgets.QPushButton('Modify Data')
@@ -65,6 +73,10 @@ class HistogramPlotter(QtWidgets.QWidget, GuiBuilder):
         self.layout().addWidget(self.title_lineedit, 4, 2, 1, 1)
         self.font_size_lineedit = self.gb_make_labeled_lineedit(label_text='Font Size', lineedit_text='12')
         self.layout().addWidget(self.font_size_lineedit, 4, 3, 1, 1)
+        self.unit_combobox = self.gb_make_labeled_combobox(label_text='Units', add_lineedit=True)
+        for unit in self.units:
+            self.unit_combobox.addItem(unit)
+        self.layout().addWidget(self.unit_combobox, 4, 4, 1, 1)
         # pritn the data
         self.input_data_display_label = self.gb_make_labeled_label(label_text='Loaded Data')
         self.layout().addWidget(self.input_data_display_label, 5, 0, 1, 3)
@@ -88,7 +100,6 @@ class HistogramPlotter(QtWidgets.QWidget, GuiBuilder):
                     self.data_dict[label].append(datum)
                 else:
                     self.data_dict[label] = [datum]
-                print(self.data_dict)
         self.hp_load_labels()
         self.input_data_display_label.setText(str(self.data_dict)[0:100])
         #self.hp_plot()
@@ -173,24 +184,26 @@ class HistogramPlotter(QtWidgets.QWidget, GuiBuilder):
             font_size = int(self.font_size_lineedit.text())
         x_label = self.x_label_lineedit.text()
         title = self.title_lineedit.text()
+        unit = self.unit_combobox.currentText()
         all_data = []
         for label, data in self.data_dict.items():
             std = np.std(data)
             mean = np.mean(data)
-            label = '{0} (avg: {1:.2f} | std: {2:.3f}) $\Omega$'.format(label, mean, std)
+            label = '{0} {1:.2f} +/- {2:.2f} {3} [N={4}]'.format(label, mean, std, unit, len(data))
             pl.hist(data, label=label)
             for datum in data:
                 all_data.append(datum)
         std = np.std(all_data)
         mean = np.mean(all_data)
-        label = '{0} (avg: {1:.2f} | std: {2:.3f}) $\Omega$'.format('All', mean, std)
         pl.xticks(fontsize=font_size)
         pl.yticks(fontsize=font_size)
-        pl.hist(all_data, alpha=0.2, label=label)
-
+        if self.plot_all_checkbox.isChecked():
+            label = 'All'
+            label = '{0} {1:.2f} +/- {2:.2f} {3} [N={4}]'.format(label, mean, std, unit, len(data))
+            pl.hist(all_data, alpha=0.2, label=label)
         pl.xlabel(x_label, fontsize=font_size)
         pl.ylabel('Count', fontsize=font_size)
         pl.title(title, fontsize=font_size)
-        pl.legend(fontsize=font_size)
+        pl.legend(fontsize=font_size, loc='best')
         pl.show()
 

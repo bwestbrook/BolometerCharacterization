@@ -930,6 +930,48 @@ class LS372AnalogOutputs(QObject):
         self.communicator.write(monitor_cmd)
         self.communicator.read()
 
+    def ls372_set_open_loop_heater(self, set_to_channel, new_settings, channel_object):
+        '''
+            HTRSET<output>,<heater resistance>,<heater limit/max current>,<max user current>,<current/power>[term]
+            Format n,nnn.nnn,n,+nnn.nnn,n
+            <output> Specifies which output to configure: 0 = sample heater,
+            1 = output 1 (warm-up heater)
+            <heater resistance> Sample heater: heater load in ohms 1 to 2,000
+            Output 1 (warm-up heater): Heater resistance setting:
+            1 = 25 ), 2 = 50 )
+            <max current> Specifies the maximum heater output current for the
+            warm-up heater
+            Warm-up heater: 0 = User specified, 1 = 0.45 A (5 W at
+            25 ), 10 W at 50 )), 2 = 2 = 0.63 A (10 W at 25 ))
+            <max user current> Specifies the maximum heater output current if max
+            current is set to User Specified (warm-up heater only)
+            <current/power> Specifies whether the heater output displays in current or
+            in power. Valid entries: 1 = current, 2 = power.
+        '''
+        outmode_cmd = 'outmode {0},{1},{2},{3},{4},{5},{6} '.format(set_to_channel,
+                                                                    new_settings['analog_mode'],
+                                                                    new_settings['input_channel'],
+                                                                    new_settings['powerup_enable'],
+                                                                    new_settings['polarity'],
+                                                                    new_settings['filter_on'],
+                                                                    new_settings['delay'],
+                                                                    )
+        self.status_bar.showMessage('Sending Serial Command "{0}"'.format(outmode_cmd))
+        self.communicator.write(outmode_cmd)
+        QtWidgets.QApplication.processEvents()
+        heater_set_cmd = 'HTRSET {0},{1},{2},{3},{4} '.format(set_to_channel, 120, 0, 0, 2)
+        QtWidgets.QApplication.processEvents()
+        self.status_bar.showMessage('Sending Serial Command "{0}"'.format(heater_set_cmd))
+        self.communicator.write(heater_set_cmd)
+        result = self.communicator.read()
+        QtWidgets.QApplication.processEvents()
+        mout_set_cmd = 'MOUT {0},{1} '.format(set_to_channel, new_settings['power'])
+        QtWidgets.QApplication.processEvents()
+        self.status_bar.showMessage('Sending Serial Command "{0}"'.format(mout_set_cmd))
+        self.communicator.write(mout_set_cmd)
+        result = self.communicator.read()
+
+
     def ls372_write_analog_output_settings(self, set_to_channel, new_settings, channel_object):
         '''
         '''
