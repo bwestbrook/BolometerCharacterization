@@ -4,6 +4,7 @@ import os
 import simplejson
 import pickle as pkl
 import numpy as np
+import pylab as pl
 import pandas as pd
 from copy import copy
 from datetime import datetime
@@ -26,7 +27,8 @@ class RTCollector(QtWidgets.QWidget, GuiBuilder):
             monitor_dpi,
             ls372_temp_widget,
             ls372_samples_widget,
-            data_folder):
+            data_folder,
+            dewar):
         '''
         '''
         super(RTCollector, self).__init__()
@@ -107,6 +109,7 @@ class RTCollector(QtWidgets.QWidget, GuiBuilder):
                 'PT100 (MXC)': 6,
                 'X110595 (Cu Box)': 10
                 }
+        self.dewar = dewar
         grid = QtWidgets.QGridLayout()
         self.setLayout(grid)
         self.rtc_plot_panel = QtWidgets.QWidget(self)
@@ -178,7 +181,7 @@ class RTCollector(QtWidgets.QWidget, GuiBuilder):
             self.daq_y_combobox.addItem(str(daq))
         self.layout().addWidget(self.daq_y_combobox, 1, 2, 1, 1)
         self.daq_y_combobox.setCurrentIndex(1)
-        self.rtc_daq_combobox.setCurrentIndex(1)
+        self.rtc_daq_combobox.setCurrentIndex(0)
         self.int_time_lineedit = self.gb_make_labeled_lineedit(label_text='Int_Time (ms):')
         self.int_time_lineedit.setValidator(QtGui.QDoubleValidator(0, 1e5, 2, self.int_time_lineedit))
         self.layout().addWidget(self.int_time_lineedit, 2, 0, 1, 1)
@@ -495,7 +498,7 @@ class RTCollector(QtWidgets.QWidget, GuiBuilder):
         if not hasattr(self, 'channel_combobox'):
             return None
         channel = self.channel_combobox.currentText()
-        if channel != 'SQUID':
+        if channel != 'SQUID' and self.dewar != '576':
             sample_key = 'LS{0}'.format(channel.zfill(2))
             sample_name = self.samples_settings[sample_key]
             self.sample_name_lineedit.setText(sample_name)
@@ -527,7 +530,6 @@ class RTCollector(QtWidgets.QWidget, GuiBuilder):
         self.new_housekeeping_low_value_lineedit = self.gb_make_labeled_lineedit(label_text='Low Value (K=0V):')
         self.new_housekeeping_low_value_lineedit.setValidator(QtGui.QDoubleValidator(0, 10, 2, self.new_housekeeping_low_value_lineedit))
         self.rtc_plot_panel.layout().addWidget(self.new_housekeeping_low_value_lineedit, 0, 1, 1, 1)
-        print(self.housekeeping_low_value)
         self.new_housekeeping_low_value_lineedit.setText(str(self.housekeeping_low_value))
 
         self.set_new_housekeeping_low_value_pushbutton = QtWidgets.QPushButton('Set Low')
@@ -592,8 +594,8 @@ class RTCollector(QtWidgets.QWidget, GuiBuilder):
 
         # Data Clip
         self.data_clip_lo_lineedit = self.gb_make_labeled_lineedit(label_text='Clip_Lo (mK)')
-        self.data_clip_lo_lineedit.setText(str(0.0))
-        self.data_clip_lo_lineedit.setValidator(QtGui.QDoubleValidator(0, 4000, 5, self.data_clip_lo_lineedit))
+        self.data_clip_lo_lineedit.setText(str(-1000.0))
+        self.data_clip_lo_lineedit.setValidator(QtGui.QDoubleValidator(-1000, 4000, 5, self.data_clip_lo_lineedit))
         self.rtc_plot_panel.layout().addWidget(self.data_clip_lo_lineedit, 1, 7, 1, 1)
         self.data_clip_hi_lineedit = self.gb_make_labeled_lineedit(label_text='Clip_Hi (mK)')
         self.data_clip_hi_lineedit.setText(str(10000.0))
@@ -663,12 +665,14 @@ class RTCollector(QtWidgets.QWidget, GuiBuilder):
         daq.screen_resolution = self.screen_resolution
         self.daq_collector = Collector(self)
         self.daq_collector.signals.data_ready.connect(self.rtc_plot_running_from_disk)
-        self.daq_collector.signals.check_scan.connect(self.rtc_scan_temp)
-        self.daq_collector.signals.check_heater.connect(self.rtc_get_lakeshore_temp_control)
         self.daq_collector.signals.finished.connect(self.rtc_update_data)
+        if self.dewar != '576':
+            self.daq_collector.signals.check_scan.connect(self.rtc_scan_temp)
+            self.daq_collector.signals.check_heater.connect(self.rtc_get_lakeshore_temp_control)
         self.daq_collector.add_daq(daq)
         self.qthreadpool.start(self.daq_collector)
-        self.ls372_temp_widget.temp_control.ls372_set_monitor_channel(self.thermometer_index)
+        if self.ls372_temp_widget is not None:
+            self.ls372_temp_widget.temp_control.ls372_set_monitor_channel(self.thermometer_index)
         i = 0
         while self.started:
             QtWidgets.QApplication.processEvents()
@@ -707,7 +711,9 @@ class RTCollector(QtWidgets.QWidget, GuiBuilder):
     def rtc_start_stop(self):
         '''
         '''
-        if self.heater_range_combobox.currentText() == '0.0000':
+        if self.dewar == '576':
+            self.gb_quick_message('Running manual temp control in 576!', msg_type='Warning')
+        elif self.heater_range_combobox.currentText() == '0.0000':
             self.gb_quick_message('Heater range is set to zero cannot regulate temp!', msg_type='Warning')
             return None
         self.rtc_write_set_points()
@@ -738,6 +744,7 @@ class RTCollector(QtWidgets.QWidget, GuiBuilder):
     def rtc_plot_running_from_disk(self):
         '''
         '''
+        print('plotting')
         save_path = os.path.join('temp_files', 'temp_xy.png')
         image_to_display = QtGui.QPixmap(save_path)
         self.xy_scatter_label.setPixmap(image_to_display)
@@ -859,6 +866,7 @@ class RTCollector(QtWidgets.QWidget, GuiBuilder):
                 x_stds = np.asarray(self.x_stds) * slope
         self.x_data_real = x_data #K
         self.x_stds_real = x_stds #K
+        print('adjusted', x_data)
         return x_data, x_stds
 
     def rtc_adjust_y_data(self):
@@ -1020,7 +1028,9 @@ class Collector(QRunnable):
         self.int_time = self.daq.int_time
         self.sample_rate = self.daq.sample_rate
         self.transparent_plots = self.rtc.transparent_plots_checkbox.isChecked()
+        print('adfadfasdfaf')
         while self.rtc.started:
+            print('3333adfadfasdfaf')
             data_dict = self.daq.run()
             sleep_time = float(self.daq.int_time) / 1e3
             time.sleep(sleep_time)
@@ -1094,6 +1104,7 @@ class Collector(QRunnable):
             x_stds = np.asarray(self.x_stds) * slope
         self.x_data_real = x_data #mK
         self.x_stds_real = x_stds #mK
+        print('adjusted', x_data)
         return x_data, x_stds
 
     def rtc_adjust_y_data_point(self, y):
@@ -1211,7 +1222,7 @@ class Collector(QRunnable):
             self.y_data, self.y_stds = self.rtc_adjust_y_data()
             self.x_data, self.x_stds = self.rtc_adjust_x_data()
             fig = self.rtc_plot_drifts(fig, self.x_data, self.x_stds, self.y_data, self.y_stds)
-            print(self.x_data)
+            fig.set_canvas(pl.gcf().canvas)
             ax.tick_params(axis='x', labelsize=16)
             ax.tick_params(axis='y', labelsize=16)
             ax.set_xlabel('Temperature ($mK$)', fontsize=14)
@@ -1347,6 +1358,11 @@ class Collector(QRunnable):
             else:
                 ax_plot.plot(final_plot_x_data[rn_selector], np.ones(len(final_plot_x_data[rn_selector])) * normal_resistance,
                              color='k', lw=5, alpha=0.4, label='$R_n$')
+            print()
+            print()
+            print()
+            print()
+            print(final_plot_x_data[selector], final_plot_y_data[selector])
             ax_plot.errorbar(final_plot_x_data[selector], final_plot_y_data[selector],
                              xerr=final_plot_x_stds[selector], yerr=final_plot_y_stds[selector],
                              marker='x', ms=0.75, color=color, alpha=0.75,
