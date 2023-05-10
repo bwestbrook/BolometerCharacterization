@@ -145,7 +145,6 @@ class ConfigureBoloDAQGui(QtWidgets.QWidget, GuiBuilder):
         if len(save_path) == 0:
             return None
         default_path = os.path.join('bd_settings', '{0}_settings.json'.format(setting))
-        print(default_path, save_path)
         shutil.copy(default_path, save_path)
 
     def cbd_modify_dict(self, index=0):
@@ -220,9 +219,6 @@ class ConfigureBoloDAQGui(QtWidgets.QWidget, GuiBuilder):
         combobox = getattr(self, '{0}_combobox'.format(setting))
         lineedit = getattr(self, '{0}_lineedit'.format(setting))
         if combobox.itemText(index) in dict_to_edit:
-            print(setting)
-            print(setting)
-            print(dict_to_edit)
             if setting == 'comports':
                 try:
                     value = dict_to_edit[self.login][combobox.itemText(index)]

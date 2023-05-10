@@ -67,6 +67,60 @@ class FourierTransformSpectroscopy():
                 'Transmission Column': 4,
                 'Header Lines': 2,
                 'Path': os.path.join('bd_lib', 'simulated_bands', 'Nitride_Lumped_Diplexer_030_05_040_08_MoreWider20190226_300GHz.csv')
+                },
+            'LBLF4-40': {
+                'Active': False,
+                'Band Center':40,
+                'Project': 'LiteBird',
+                'Freq Column': 0,
+                'Transmission Column': 4,
+                'Header Lines': 2,
+                'Path': ''
+                },
+            'LBLF4-58': {
+                'Active': False,
+                'Band Center': 58,
+                'Project': 'LiteBird',
+                'Freq Column': 0,
+                'Transmission Column': 4,
+                'Header Lines': 2,
+                'Path': ''
+                },
+            'LBLF4-82': {
+                'Active': False,
+                'Band Center': 82,
+                'Project': 'LiteBird',
+                'Freq Column': 0,
+                'Transmission Column': 4,
+                'Header Lines': 2,
+                'Path': ''
+                },
+            'LBLF4-70': {
+                'Active': False,
+                'Band Center': 70,
+                'Project': 'LiteBird',
+                'Freq Column': 0,
+                'Transmission Column': 4,
+                'Header Lines': 2,
+                'Path': ''
+                },
+            'LBLF4-100': {
+                'Active': False,
+                'Band Center': 100,
+                'Project': 'LiteBird',
+                'Freq Column': 0,
+                'Transmission Column': 4,
+                'Header Lines': 2,
+                'Path': ''
+                },
+            'LBLF4-140': {
+                'Active': False,
+                'Band Center': 140,
+                'Project': 'LiteBird',
+                'Freq Column': 0,
+                'Transmission Column': 4,
+                'Header Lines': 2,
+                'Path': ''
                 }
             }
         return self.bands

@@ -32,6 +32,28 @@ class FourierTransformSpectrometer(QtWidgets.QWidget, GuiBuilder, FourierTransfo
         super(FourierTransformSpectrometer, self).__init__()
         self.c = 2.99792458 * 10 ** 8 # speed of light in m/s
         self.com_port_dict_path = os.path.join('bd_settings', 'com_settings.json')
+        self.active_daq_dict = {
+                0: {
+                    'active': True,
+                    'plot': True,
+                    'name': '',
+                },
+                1: {
+                    'active': False,
+                    'plot': False,
+                    'name': '',
+                },
+                2: {
+                    'active': False,
+                    'plot': False,
+                    'name': '',
+                },
+                3:{
+                    'active': False,
+                    'plot': False,
+                    'name': '',
+                }
+            }
         self.fts_load_com_port_settings()
         self.bands = self.ftsy_get_bands()
         self.optical_elements = self.ftsy_get_optical_elements()
@@ -136,23 +158,27 @@ class FourierTransformSpectrometer(QtWidgets.QWidget, GuiBuilder, FourierTransfo
             self.device_combobox.addItem(device)
         self.daq_combobox = self.gb_make_labeled_combobox(label_text='DAQ:')
         self.layout().addWidget(self.daq_combobox, 1, 3, 1, 1)
-        for channel in sorted([int(x) for x in self.daq_settings[device]]):
+        for channel in sorted(self.active_daq_dict):
             self.daq_combobox.addItem(str(channel))
+        self.daq_active_checkbox = QtWidgets.QCheckBox('active')
+        self.daq_combobox.currentIndexChanged.connect(self.fts_update_active_checkbox)
+        self.daq_active_checkbox.stateChanged.connect(self.fts_configure_channels)
+        self.layout().addWidget(self.daq_active_checkbox, 1, 4, 1, 1)
         #Pause Time 
         self.pause_time_lineedit = self.gb_make_labeled_lineedit(label_text='Pause Time (ms):')
         self.pause_time_lineedit.setText('500')
         self.pause_time_lineedit.setValidator(QtGui.QIntValidator(0, 25000, self.pause_time_lineedit))
-        self.layout().addWidget(self.pause_time_lineedit, 2, 3, 1, 1)
+        self.layout().addWidget(self.pause_time_lineedit, 3, 3, 1, 1)
         #Int Time 
         self.int_time_lineedit = self.gb_make_labeled_lineedit(label_text='Int Time (ms): ')
         self.int_time_lineedit.setText('250')
         self.int_time_lineedit.setValidator(QtGui.QIntValidator(10, 1000000, self.int_time_lineedit))
-        self.layout().addWidget(self.int_time_lineedit, 3, 3, 1, 1)
+        self.layout().addWidget(self.int_time_lineedit, 4, 3, 1, 1)
         #Sample Rate 
         self.sample_rate_lineedit = self.gb_make_labeled_lineedit(label_text='Sample Rate (Hz): ')
         self.sample_rate_lineedit.setText('5000')
         self.sample_rate_lineedit.setValidator(QtGui.QIntValidator(100, 5000, self.sample_rate_lineedit))
-        self.layout().addWidget(self.sample_rate_lineedit, 4, 3, 1, 1)
+        self.layout().addWidget(self.sample_rate_lineedit, 5, 3, 1, 1)
         ######
         # Scan Params
         ######
@@ -161,28 +187,28 @@ class FourierTransformSpectrometer(QtWidgets.QWidget, GuiBuilder, FourierTransfo
         self.start_position_lineedit.setText('30000')
         self.start_position_lineedit.setValidator(QtGui.QIntValidator(-600000, 300000, self.start_position_lineedit))
         self.start_position_lineedit.textChanged.connect(self.fts_update_scan_params)
-        self.layout().addWidget(self.start_position_lineedit, 0, 4, 1, 1)
+        self.layout().addWidget(self.start_position_lineedit, 2, 3, 1, 1)
         # End Scan
         self.end_position_lineedit = self.gb_make_labeled_lineedit(label_text='End Position:')
         self.end_position_lineedit.setValidator(QtGui.QIntValidator(-600000, 300000, self.end_position_lineedit))
         self.end_position_lineedit.setText('-60000')
         self.end_position_lineedit.textChanged.connect(self.fts_update_scan_params)
-        self.layout().addWidget(self.end_position_lineedit, 1, 4, 1, 1)
+        self.layout().addWidget(self.end_position_lineedit, 2, 4, 1, 1)
         # Mirror Interval 
         self.mirror_interval_lineedit = self.gb_make_labeled_lineedit(label_text='Mirror Interval (steps):')
         self.mirror_interval_lineedit.setText('2000')
         self.mirror_interval_lineedit.textChanged.connect(self.fts_update_scan_params)
         self.mirror_interval_lineedit.setValidator(QtGui.QIntValidator(1, 200000, self.mirror_interval_lineedit))
-        self.layout().addWidget(self.mirror_interval_lineedit, 2, 4, 1, 1)
+        self.layout().addWidget(self.mirror_interval_lineedit, 3, 4, 1, 1)
         # Step size (Fixed for Bill's FTS right now)
         self.distance_per_step_combobox = self.gb_make_labeled_combobox(label_text='Distance Per Step (nm):')
         for distance_per_step in ['250.39']:
             self.distance_per_step_combobox.addItem(distance_per_step)
         self.distance_per_step_combobox.activated.connect(self.fts_update_scan_params)
-        self.layout().addWidget(self.distance_per_step_combobox, 3, 4, 1, 1)
+        self.layout().addWidget(self.distance_per_step_combobox, 4, 4, 1, 1)
         #Scan Info 
         self.scan_info_label = QtWidgets.QLabel('Scan Info', self)
-        self.layout().addWidget(self.scan_info_label, 4, 4, 1, 1)
+        self.layout().addWidget(self.scan_info_label, 5, 4, 1, 1)
         self.fts_update_scan_params()
         # Source Type
         self.source_type_combobox = self.gb_make_labeled_combobox(label_text='Soure Type')
@@ -327,6 +353,16 @@ class FourierTransformSpectrometer(QtWidgets.QWidget, GuiBuilder, FourierTransfo
         self.layout().addWidget(self.save_pushbutton, 16, 0, 1, 3)
         self.save_pushbutton.clicked.connect(self.fts_save)
 
+        # which channels to plot
+        self.plot_combobox = self.gb_make_labeled_combobox(label_text='plot?')
+        self.layout().addWidget(self.plot_combobox, 16, 3, 1, 1)
+        for channel in sorted(self.active_daq_dict):
+            self.plot_combobox.addItem(str(channel))
+        self.plot_active_checkbox = QtWidgets.QCheckBox('plot')
+        self.plot_combobox.currentIndexChanged.connect(self.fts_configure_plot_channels)
+        self.plot_active_checkbox.stateChanged.connect(self.fts_update_active_plot_checkbox)
+        self.layout().addWidget(self.plot_active_checkbox, 16, 4, 1, 1)
+
 
     def fts_update_source_power(self):
         '''
@@ -376,6 +412,40 @@ class FourierTransformSpectrometer(QtWidgets.QWidget, GuiBuilder, FourierTransfo
     #################################################
     # Scanning
     #################################################
+
+    def fts_update_active_plot_checkbox(self):
+        '''
+        '''
+        plot_daq = int(self.plot_combobox.currentText())
+        self.active_daq_dict[plot_daq]['plot'] = self.sender().isChecked()
+
+    def fts_configure_plot_channels(self):
+        '''
+        '''
+        plot_daq = int(self.plot_combobox.currentText())
+        self.plot_active_checkbox.setChecked(self.active_daq_dict[plot_daq]['plot'])
+
+    def fts_update_active_checkbox(self):
+        '''
+        '''
+        daq = int(self.daq_combobox.currentText())
+        self.daq_active_checkbox.setChecked(self.active_daq_dict[daq]['active'])
+        name = self.active_daq_dict[daq]['name']
+        self.multi_channel_name_lineedit.setText(name)
+
+    def fts_configure_channels(self):
+        '''
+        '''
+        daq = int(self.daq_combobox.currentText())
+        self.active_daq_dict[daq]['active'] = self.sender().isChecked()
+        self.channels = []
+        for daq, active_dict in self.active_daq_dict.items():
+            if active_dict['active']:
+                self.channels.append(daq)
+        if len(self.channels) != 1:
+            self.multi_channel_name_lineedit.setDisabled(False)
+        else:
+            self.multi_channel_name_lineedit.setDisabled(True)
 
     def fts_reset_zero(self):
         '''
@@ -439,6 +509,8 @@ class FourierTransformSpectrometer(QtWidgets.QWidget, GuiBuilder, FourierTransfo
     def fts_setup_stepper(self):
         '''
         '''
+        if self.csm_mirror_widget is None:
+            return None
         QtWidgets.QApplication.processEvents()
         for i, comport in enumerate(['COM12', 'COM13', 'COM14']):
             if i == 0:

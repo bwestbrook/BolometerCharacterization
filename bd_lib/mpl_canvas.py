@@ -218,7 +218,9 @@ class MplCanvas(FigureCanvasQTAgg):
         fig.canvas = FigureCanvas(fig)
         gs = gridspec.GridSpec(1, 2,width_ratios=[2,1])
         ax1 = fig.add_subplot(gs[0])
+        ax1_twinx= ax1.twinx()
         ax2 = fig.add_subplot(gs[1])
+        ax2_twinx= ax2.twinx()
         fig = self.mplc_adjust_subplots(
             fig=fig,
             left=left,

@@ -12,6 +12,8 @@ from pprint import pprint
 from bd_lib.bolo_daq import BoloDAQ
 from PyQt5 import QtGui, QtWidgets
 from PyQt5.QtCore import *
+
+from bd_lib.mpl_canvas import MplCanvas
 from bd_lib.fast_fourier_transform import FastFourierTransform
 from GuiBuilder.gui_builder import GuiBuilder, GenericClass
 
@@ -27,6 +29,17 @@ class NoiseAnalyzer(QtWidgets.QWidget, GuiBuilder):
         self.squid_calibration_dict = squid_calibration_dict
         self.screen_resolution = screen_resolution
         self.monitor_dpi = monitor_dpi
+        self.mplc = MplCanvas(self, screen_resolution, monitor_dpi)
+
+        self.ts_fig, self.ts_ax = self.mplc.mplc_create_basic_fig(
+                frac_screen_width=0.3,
+                frac_screen_height=0.3,
+                left=0.15, right =0.98, top=0.9, bottom=0.13)
+        self.fft_fig, self.fft_ax = self.mplc.mplc_create_basic_fig(
+                frac_screen_width=0.3,
+                frac_screen_height=0.3,
+                left=0.15, right =0.98, top=0.9, bottom=0.17)
+
         grid = QtWidgets.QGridLayout()
         self.setLayout(grid)
         self.today = datetime.now()
@@ -181,17 +194,12 @@ class NoiseAnalyzer(QtWidgets.QWidget, GuiBuilder):
                       sample_rate=sample_rate,
                       device=device)
         self.data_dict = daq.run()
-        #self.qthreadpool.start(daq.run)
         self.seconds_count = 0
         n_seconds = float(self.int_time) / 1000.0 + 0.5
-        #self.na_update_progress(n_seconds)
-        #with open('temp.pkl', 'rb') as fh:
-            #data_dict = pkl.load(fh)
-        #self.data_dict = pkl.loads(data_dict)
         self.ts = self.data_dict[self.channel]['ts']
-        print('ha')
         self.na_plot()
         self.status_bar.progress_bar.setValue(100)
+        self.na_save()
 
     def na_update_progress(self, n_seconds, update_interval=0.1):
         '''
@@ -226,7 +234,8 @@ class NoiseAnalyzer(QtWidgets.QWidget, GuiBuilder):
         '''
         '''
         save_path = self.na_index_file_name()
-        save_path = QtWidgets.QFileDialog.getSaveFileName(self, 'Data Save Location', save_path, filter=',*.txt,*.dat')[0]
+        if hasattr(self.sender(), 'text') and self.sender().text() == 'Save':
+            save_path = QtWidgets.QFileDialog.getSaveFileName(self, 'Data Save Location', save_path, filter=',*.txt,*.dat')[0]
         if len(save_path) > 0:
             self.na_plot()
             with open(save_path, 'w') as save_handle:
@@ -259,44 +268,45 @@ class NoiseAnalyzer(QtWidgets.QWidget, GuiBuilder):
     def na_plot(self, save_path=None):
         '''
         '''
+        self.ts_ax.cla()
+        self.fft_ax.cla()
+        self.ts_ax.set_title(self.sample_name_lineedit.text())
         #gain = float(self.squid_calibration_label.text())
         squid_calibration = float(self.squid_calibration_label.text())
         #squid_calibration *= gain
         squid_calibration *= 1e-6 # uA to A
 
         int_time = float(self.int_time_lineedit.text())
-        ts_fig, ts_ax = self.na_create_blank_fig(frac_screen_width=0.5, frac_screen_height=0.5,
-                                                 left=0.14, right=0.98, top=0.9, bottom=0.13, aspect=None)
-        ts_ax.set_xlabel('Sample', fontsize=16)
+        self.ts_ax.set_xlabel('Sample', fontsize=14)
         mean_subtracted_ts = self.ts - np.mean(self.ts)
         if self.apply_calibration_checkbox.isChecked():
             mean_subtracted_ts *= squid_calibration
-            ts_ax.set_ylabel('Current (A)', fontsize=16)
+            self.ts_ax.set_ylabel('Current (A)', fontsize=14)
         else:
-            ts_ax.set_ylabel('Voltage (V)', fontsize=16)
-        ts_ax.plot(mean_subtracted_ts, label='Mean Subtracted Time Stream')
+            self.ts_ax.set_ylabel('Voltage (V)', fontsize=14)
+        self.ts_ax.plot(mean_subtracted_ts, label='Mean Subtracted Time Stream')
         temp_png_path = os.path.join('temp_files', 'temp_ts.png')
-        ts_fig.savefig(temp_png_path)
+        self.ts_fig.savefig(temp_png_path)
         image_to_display = QtGui.QPixmap(temp_png_path)
         self.ts_label.setPixmap(image_to_display)
-        fft_fig, fft_ax = self.na_create_blank_fig(frac_screen_width=0.5, frac_screen_height=0.5,
-                                                   left=0.15, right=0.98, top=0.9, bottom=0.13, aspect=None)
-        fft_ax.set_xlabel('Frequency ($Hz$)', fontsize=16)
-        fft_ax.set_ylabel('PSD ($pA / \sqrt{Hz}$)', fontsize=16)
+        self.fft_ax.set_xlabel('Frequency ($Hz$)', fontsize=14)
+        self.fft_ax.set_ylabel('PSD ($pA / \sqrt{Hz}$)', fontsize=14)
         bin_low_edge = float(self.noise_bin_low_edge_lineedit.text())
         bin_high_edge = float(self.noise_bin_high_edge_lineedit.text())
         plot_clip_low = float(self.plot_clip_low_lineedit.text())
         plot_clip_high = float(self.plot_clip_high_lineedit.text())
-        fft_ax.axvline(bin_low_edge, color='k')
-        fft_ax.axvline(bin_high_edge, color='k')
-        fft_ax.axvspan(bin_low_edge, bin_high_edge, alpha=0.33, color='c')
-
+        self.fft_ax.axvline(bin_low_edge, color='k')
+        self.fft_ax.axvline(bin_high_edge, color='k')
+        self.fft_ax.axvspan(bin_low_edge, bin_high_edge, alpha=0.33, color='c')
         nperseg = int(float(len(self.ts)) / 10.)
         ts_in_amps = self.ts * squid_calibration
         fft_freq_vector, fft_psd_vector = scipy.signal.welch(ts_in_amps, fs=float(self.sample_rate), nperseg=nperseg)
         fft_psd_vector *= 1e24 # A to pA
         fft_psd_vector = np.sqrt(fft_psd_vector) # CONVERSION to ASD
-
+        band_selector = np.where(np.logical_and(bin_low_edge < fft_freq_vector, fft_freq_vector < bin_high_edge))
+        in_band_noise = np.mean(fft_psd_vector[band_selector])
+        in_band_peak = np.mean(fft_psd_vector[band_selector])
+        out_band_peak = np.mean(fft_psd_vector)
         ##############################################
         ##############################################
         ##############################################
@@ -326,17 +336,14 @@ class NoiseAnalyzer(QtWidgets.QWidget, GuiBuilder):
         selector = np.where(fft_freq_vector > 0.0)
         mean_selector = np.where(np.logical_and(fft_freq_vector > bin_low_edge, fft_freq_vector < bin_high_edge))
         in_band_noise = np.mean(fft_psd_vector[mean_selector])
-        label = 'In Band Noise (pA/sqrt(Hz)): {0:.3f}'.format(in_band_noise)
+        label = 'In Band Noise: {0:.3f} pA/sqrt(Hz)'.format(in_band_noise)
         noise_vector = np.asarray([in_band_noise] * len(fft_psd_vector))
-        #fft_ax.plot(fft_freq_vector[mean_selector], noise_vector[mean_selector], color='r', label=label)
         self.in_band_noise_label.setText(label)
-        print(fft_freq_vector, fft_psd_vector)
-        print(fft_freq_vector[selector], fft_psd_vector[selector])
-        fft_ax.loglog(fft_freq_vector[selector], fft_psd_vector[selector])
-        fft_ax.set_xlim((plot_clip_low, plot_clip_high))
-        pl.legend()
+        self.fft_ax.loglog(fft_freq_vector[selector], fft_psd_vector[selector], label=label)
+        self.fft_ax.set_xlim((plot_clip_low, plot_clip_high))
+        self.fft_fig.legend()
         temp_png_path = os.path.join('temp_files', 'temp_fft.png')
-        fft_fig.savefig(temp_png_path)
+        self.fft_fig.savefig(temp_png_path)
         image_to_display = QtGui.QPixmap(temp_png_path)
         self.fft_label.setPixmap(image_to_display)
         if save_path is not None and save_path:
@@ -346,29 +353,8 @@ class NoiseAnalyzer(QtWidgets.QWidget, GuiBuilder):
             else:
                 fft_fig_path = save_path.replace('.dat', '_fft.png')
                 ts_fig_path = save_path.replace('.dat', '_ts.png')
-            print(fft_fig_path)
-            print(ts_fig_path)
-            print(fft_fig_path)
-        pl.close('all')
         self.fft_label.resize(self.fft_label.maximumSize())
         self.ts_label.resize(self.ts_label.maximumSize())
         self.fft_freq_vector = fft_freq_vector
         self.fft_psd_vector = fft_psd_vector
 
-    def na_create_blank_fig(self, frac_screen_width=0.5, frac_screen_height=0.8,
-                             left=0.18, right=0.98, top=0.95, bottom=0.08, n_axes=1,
-                             aspect=None):
-        if frac_screen_width is None and frac_screen_height is None:
-            fig = pl.figure()
-        else:
-            width = (frac_screen_width * self.screen_resolution.width()) / self.monitor_dpi
-            height = (frac_screen_height * self.screen_resolution.height()) / self.monitor_dpi
-            fig = pl.figure(figsize=(width, height))
-        fig.subplots_adjust(left=left, right=right, top=top, bottom=bottom)
-        if n_axes == 2:
-            ax1 = fig.add_subplot(211, label='ch 1')
-            ax2 = fig.add_subplot(212, label='ch 2')
-            return fig, ax1, ax2
-        else:
-            ax = fig.add_subplot(111)
-            return fig, ax
