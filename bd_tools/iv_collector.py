@@ -62,6 +62,8 @@ class IVCollector(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTransformSpe
         self.today = datetime.now()
         self.today_str = datetime.strftime(self.today, '%Y_%m_%d')
         self.data_folder = os.path.join(data_folder, 'IV_Curves')
+        if not os.path.exists(self.data_folder):
+            os.makedirs(self.data_folder)
         self.saving_manager = SavingManager(self, self.data_folder, self.ivc_save, 'IV')
         self.ivc_populate()
         self.ivc_plot_running()
@@ -191,7 +193,7 @@ class IVCollector(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTransformSpe
         self.t_bath_lineedit.setText('275')
         self.layout().addWidget(self.t_bath_lineedit, 0, 7, 1, 1)
         self.t_bath_set_lineedit = self.gb_make_labeled_lineedit(label_text='T_bath set (mW)', lineedit_text='0.002')
-        self.t_bath_set_lineedit.setValidator(QtGui.QDoubleValidator(0, 1e5, 3, self.t_bath_set_lineedit))
+        self.t_bath_set_lineedit.setValidator(QtGui.QDoubleValidator(0, 1e5, 4, self.t_bath_set_lineedit))
         self.layout().addWidget(self.t_bath_set_lineedit, 0, 5, 1, 1)
         self.t_bath_get_pushbutton = QtWidgets.QPushButton(text='Monitor T_bath')
         self.t_bath_get_pushbutton.clicked.connect(self.ivc_monitor_t_bath)
@@ -356,7 +358,7 @@ class IVCollector(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTransformSpe
                 self.t_bath_lineedit.setText(temperature_str)
                 time.sleep(0.25)
                 QtWidgets.QApplication.processEvents()
-        self.t_bath_label.setText(str(int(float(t_baths[-1]) * 1e3)).replace('.', 'p'))
+        self.t_bath_label.setText('{0:.1f}'.format(float(t_baths[-1]) * 1e3).replace('.', 'p'))
 
 
 
@@ -574,6 +576,7 @@ class IVCollector(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTransformSpe
             save_path = self.ivc_index_file_name()
             save_path = QtWidgets.QFileDialog.getSaveFileName(self, 'Data Save Location', save_path, filter='*.txt')[0]
         if len(save_path) > 0:
+            print(save_path)
             self.gb_save_meta_data(save_path, 'txt')
             calibrated_save_path = save_path.replace('.txt', '_calibrated.txt')
             with open(save_path, 'w') as save_handle:

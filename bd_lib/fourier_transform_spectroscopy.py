@@ -315,6 +315,26 @@ class FourierTransformSpectroscopy():
                 np.put(averaged_vector, i, averaged_value)
         return averaged_vector
 
+    def ftsy_binned_mean(self, vector, smoothing_factor=0.01):
+        '''
+        '''
+        if smoothing_factor == 0.0:
+            return vector
+        N = int(smoothing_factor * len(vector))
+        averaged_vector = np.zeros(len(vector))
+        for i, value in enumerate(sorted(vector)):
+            low_index = i
+            hi_index = i + N
+            if hi_index > len(vector) - 1:
+                hi_index = len(vector) - 1
+            averaged_value = np.mean(vector[low_index:hi_index])
+            if np.isnan(averaged_value):
+                np.put(averaged_vector, i, 0.0)
+            else:
+                np.put(averaged_vector, i, averaged_value)
+        return averaged_vector
+
+
     def ftsy_find_if_zero(self, y_data):
         '''
         '''
@@ -754,12 +774,14 @@ if __name__ == '__main__':
     band = 'SO40'
     data_clip_lo = 0
     data_clip_hi = 80 * 1e9
-    t_source_low = 9
-    t_source_high = 14
+    t_source_low = 9.5
+    t_source_high = 12
+    efficiency = 0.65
     fft_frequency_vector_simulated, fft_vector_simulated = ftsy.ftsy_load_simulated_band(data_clip_lo, data_clip_hi, band)
     simulated_delta_power, simulated_integrated_bandwidth = ftsy.ftsy_compute_delta_power_and_bandwidth_at_window(fft_frequency_vector_simulated * 1e9, fft_vector_simulated,
                                                                                                                   data_clip_lo=data_clip_lo, data_clip_hi=data_clip_hi,
                                                                                                                   t_source_low=t_source_low, t_source_high=t_source_high)
+    simulated_delta_power *= efficiency
     label = 'Chop {0:.2f}K to {1:.1f}K\n{2:.2f}pW {3:.2f}GHz'.format(t_source_low, t_source_high, simulated_delta_power * 1e12, simulated_integrated_bandwidth * 1e-9)
     title = 'Band pass and Power for {0} {1}K to {2}K'.format(band, t_source_low, t_source_high)
     pl.plot(fft_frequency_vector_simulated, fft_vector_simulated, label=label)

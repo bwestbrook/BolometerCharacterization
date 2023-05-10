@@ -343,9 +343,7 @@ class RTCollector(QtWidgets.QWidget, GuiBuilder, FourierTransformSpectroscopy):
         self.layout().addWidget(read_ls372_settings_pushbutton, 3, 7, 1, 3)
 
         self.rtc_get_lakeshore_channel_info()
-        self.thermometer_combobox.setCurrentIndex(0)
         self.thermometer_combobox.currentIndexChanged.connect(self.rtc_scan_new_lakeshore_channel)
-        self.thermometer_combobox.setCurrentIndex(2)
         self.rtc_get_lakeshore_temp_control()
 
     def rtc_get_lakeshore_temp_control(self, pid=True, set_point=True):
@@ -534,7 +532,6 @@ class RTCollector(QtWidgets.QWidget, GuiBuilder, FourierTransformSpectroscopy):
         for thermometer in self.thermometers:
             self.thermometer_combobox.addItem(thermometer)
         self.layout().addWidget(self.thermometer_combobox, 3, 3, 1, 2)
-        self.thermometer_combobox.setCurrentIndex(2)
         self.y_label_combobox = self.gb_make_labeled_combobox(label_text='Y label:')
         y_labels = ['Resistance ($m\Omega$)', 'Arb Units']
         for y_label in y_labels:
@@ -807,18 +804,20 @@ class RTCollector(QtWidgets.QWidget, GuiBuilder, FourierTransformSpectroscopy):
         '''
         rt_set_points_path = os.path.join('bd_resources', 'rt_set_points.txt')
         with open(rt_set_points_path, 'r') as fh:
-            set_low, set_high = fh.read().split(', ')
+            set_low, set_high, thermometer = fh.read().split(', ')
         self.temp_set_point_low_lineedit.setText(set_low)
         self.temp_set_point_high_lineedit.setText(set_high)
+        self.thermometer_combobox.setCurrentIndex(int(thermometer.strip()))
 
     def rtc_write_set_points(self):
         '''
         '''
         set_low = self.temp_set_point_low_lineedit.text()
         set_high = self.temp_set_point_high_lineedit.text()
+        thermometer = self.thermometer_combobox.currentIndex()
         rt_set_points_path = os.path.join('bd_resources', 'rt_set_points.txt')
         with open(rt_set_points_path, 'w') as fh:
-            fh.write('{0}, {1}'.format(set_low, set_high))
+            fh.write('{0}, {1}, {2}'.format(set_low, set_high, thermometer))
 
     def rtc_start_stop(self):
         '''
@@ -839,6 +838,7 @@ class RTCollector(QtWidgets.QWidget, GuiBuilder, FourierTransformSpectroscopy):
             self.data_clip_hi_lineedit.setText('10000.0')
         else:
             self.daq_collector.stop()
+            time.sleep(1)
             self.sender().setText('Start DAQ')
             self.started = False
             self.meta_data['n_samples'] = len(self.x_data)
@@ -860,7 +860,7 @@ class RTCollector(QtWidgets.QWidget, GuiBuilder, FourierTransformSpectroscopy):
         save_path = os.path.join('temp_files', 'temp_y.png')
         image_to_display = QtGui.QPixmap(save_path)
         now = datetime.now()
-        time_delta = self.start_time - now
+        time_delta = now - self.start_time
         time_delta_seconds = time_delta.total_seconds()
         self.y_time_stream_label.setPixmap(image_to_display)
         if hasattr(self, 'daq_collector') and self.daq_collector.all_data_df is not None and hasattr(self.daq_collector, 'x_data_real') and hasattr(self.daq_collector, 'y_data_real'):
@@ -869,7 +869,7 @@ class RTCollector(QtWidgets.QWidget, GuiBuilder, FourierTransformSpectroscopy):
                 self.daq_collector.all_data_df[0]['data'][-1], self.daq_collector.all_data_df[0]['stds'][-1],
                 self.housekeeping_low_value, self.housekeeping_high_value)
             x_data_text += 'X Data: {0:.2f} (mK)::: X STD: {1:.2f} (mK)'.format(self.daq_collector.x_data_real[-1], self.daq_collector.x_stds_real[-1])
-            x_data_text += ' {0:.2f} minutes:{1:.2f}'.format(time_delta_seconds / 60.0, rate)
+            x_data_text += ' {0:.2f} minutes: {1:.2f} mk/min'.format(time_delta_seconds / 60.0, rate)
             self.x_data_label.setText(x_data_text)
             y_data_text = 'Y Data: {0:.4f} ::: Y STD: {1:.4f} (raw) [{2}Ohms=0V {3}Ohms=10V]\n'.format(
 
@@ -1015,7 +1015,7 @@ class RTCollector(QtWidgets.QWidget, GuiBuilder, FourierTransformSpectroscopy):
             low_value = self.samples_low_value
             high_value = self.samples_high_value
             slope = (high_value - low_value) / 1e1 # K / V
-            for daq in self.daq_collector.daq.signal_channels[1:]:
+            for daq in self.daq_collector.all_data_df.keys()[1:]:
                 y_data = self.rtc_get_linear_value(np.asarray(self.daq_collector.all_data_df[daq]['data']), slope, low_value) * 1e3 #mOhms
                 y_stds = np.asarray(self.daq_collector.all_data_df[daq]['stds']) * slope * 1e3 #mOhms
                 self.daq_collector.all_data_df[daq]['data'] = y_data
@@ -1055,7 +1055,6 @@ class RTCollector(QtWidgets.QWidget, GuiBuilder, FourierTransformSpectroscopy):
                 self.daq_collector.all_data_df.to_json(save_handle)
             x_data, x_stds = self.rtc_adjust_x_data(self.daq_collector.all_data_df[0]['data'], self.daq_collector.all_data_df[0]['stds'])
             y_data, y_stds = self.rtc_adjust_all_y_data()
-            time.sleep(1)
             self.daq_collector.all_data_df[0]['data'] = x_data
             self.daq_collector.all_data_df[0]['stds'] = x_stds
             with open(calibrated_save_path, 'w') as save_handle:
@@ -1382,6 +1381,7 @@ class Collector(QRunnable):
         ax = fig.get_axes()[0]
         ax.cla()
         y_label = self.rtc.y_label_combobox.currentText()
+        x_label = 'Temperature ($mK$)'
         if running:
             x_data, x_stds = self.rtc_adjust_x_data()
             for i, daq in enumerate(self.all_data_df.keys()[1:]):
@@ -1391,8 +1391,12 @@ class Collector(QRunnable):
                         y_data *= 1e-3
                         y_stds *= 1e-3
                         y_label = y_label.replace('$m','$')
+                    if np.mean(x_data) > 1e3:
+                        x_data *= 1e-3
+                        x_stds *= 1e-3
+                        x_label = x_label.replace('$m','$')
                     fig = self.rtc_plot_drifts(fig, x_data, x_stds, y_data, y_stds, daq)
-                    ax.set_xlabel('Temperature ($mK$)', fontsize=12)
+                    ax.set_xlabel(x_label, fontsize=12)
                     ax.set_ylabel(y_label, fontsize=12)
                     #import ipdb;ipdb.set_trace()
             save_path = os.path.join('temp_files', 'temp_xy.png')
@@ -1409,6 +1413,26 @@ class Collector(QRunnable):
                     ax.set_ylabel(y_label, fontsize=12)
                 save_path = os.path.join('temp_files', 'temp_xy.png')
                 fig.savefig(save_path, transparent=self.transparent_plots)
+
+    def rtc_bin_smooth_data(self, x_data, y_data, smoothing_factor=0.01):
+        '''
+        '''
+        if smoothing_factor == 0.0:
+            return vector
+        xy = zip(*sorted(zip(x_data, y_data), key=lambda pair: pair[0]))
+        import ipdb;ipdb.set_trace()
+        for i, value in enumerate(sorted(vector)):
+            low_index = i
+            hi_index = i + N
+            if hi_index > len(vector) - 1:
+                hi_index = len(vector) - 1
+            averaged_value = np.mean(vector[low_index:hi_index])
+            if np.isnan(averaged_value):
+                np.put(averaged_vector, i, 0.0)
+            else:
+                np.put(averaged_vector, i, averaged_value)
+        return averaged_vector
+
 
     def rtc_get_rn_and_tc(self, daq):
         '''
@@ -1437,6 +1461,7 @@ class Collector(QRunnable):
             smoothing_factor = float(self.rtc.smoothing_factor_combobox.currentText())
             if smoothing_factor > 0:
                 y_data = self.rtc.ftsy_running_mean(y_data, smoothing_factor=smoothing_factor)
+                #y_data = self.rtc_bin_smooth_data(x_data, y_data, smoothing_factor=smoothing_factor)
         x_data = np.asarray(x_data[sample_clip_lo:sample_clip_hi])
         x_data_selector = np.where(np.logical_and(data_clip_lo < x_data, x_data < data_clip_hi))
         y_data = y_data[x_data_selector]
@@ -1459,18 +1484,23 @@ class Collector(QRunnable):
             tc_idx = (np.abs(np.asarray(y_data) - half_rn)).argmin()
             transition_temperature = np.asarray(x_data)[tc_idx]
             normal_resistance = self.rtc_adjust_y_data_point(normal_resistance)
-            half_rn = self.rtc_adjust_y_data_point(y_data[tc_idx])
+            half_rn = 0.5 * normal_resistance
+            #half_rn = self.rtc_adjust_y_data_point(y_data[tc_idx])
         units = '$m\Omega$'
         if normal_resistance > 1e3:
             normal_resistance *= 1e-3
             half_rn *= 1e-3
             units = units.replace('$m', '$')
+        t_units = '$mK$'
+        if transition_temperature > 1e3:
+            transition_temperature *= 1e-3
+            t_units = t_units.replace('$m', '$')
         scan_info = '$R_n$ ({0}): {1:.2f} {2}\n'.format(units, normal_resistance, daq)
-        scan_info += '$T_c$ (mK): {0:.2f} {1}\n'.format(transition_temperature, daq)
+        scan_info += '$T_c$ ({0}): {1:.2f} {2}\n'.format(t_units, transition_temperature, daq)
         scan_info += 'Exc: {0:.2f} {1}\n'.format(float(excitation), unit)
         scan_info += 'Ramp: {0} K/min\n'.format(ramp_value)
         scan_info += 'Sensor: {0}\n'.format(thermometer)
-        return transition_temperature, normal_resistance, half_rn, scan_info
+        return transition_temperature, normal_resistance, half_rn, scan_info, units, t_units
 
     def rtc_plot_drifts(self, fig, x_data, x_stds, y_data, y_stds, daq):
         '''
@@ -1485,12 +1515,14 @@ class Collector(QRunnable):
             return fig
         if not self.rtc.gb_is_float(self.rtc.data_clip_hi_lineedit.text()):
             return fig
+        if len(x_data) == 0:
+            return fig
         ax_plot = fig.get_axes()[0]
         ax_legend = fig.get_axes()[1]
         ax_legend.set_axis_off()
         sample_name = self.rtc.sample_name_lineedit.text()
         # Analyze Tc
-        transition_temperature, normal_resistance, half_rn, label = self.rtc_get_rn_and_tc(daq)
+        transition_temperature, normal_resistance, half_rn, label, units, t_units = self.rtc_get_rn_and_tc(daq)
         sample_clip_lo = int(self.rtc.sample_clip_lo_lineedit.text())
         sample_clip_hi = int(self.rtc.sample_clip_hi_lineedit.text())
         data_clip_lo = float(self.rtc.data_clip_lo_lineedit.text())
@@ -1542,14 +1574,16 @@ class Collector(QRunnable):
             tc_label = None
             name = self.rtc.active_daq_dict[daq]['name']
             if i == 0:
-                rn_label = '{0}: $R_n$ {1:.2f}$\Omega$'.format(name, normal_resistance)
-                tc_label = '{0}: $T_c$ {1:.2f}mK'.format(name, transition_temperature)
+                rn_label = '{0}: $R_n$ {1:.2f} {2}'.format(name, normal_resistance, units)
+                tc_label = '{0}: $T_c$ {1:.2f} {2}'.format(name, transition_temperature, t_units)
             ax_plot.plot(final_plot_x_data[rn_selector], np.ones(len(final_plot_x_data[rn_selector])) * normal_resistance,
                          color='k', lw=5, alpha=0.4, label=rn_label)
             ax_plot.errorbar(final_plot_x_data[selector], final_plot_y_data[selector],
                              xerr=final_plot_x_stds[selector], yerr=final_plot_y_stds[selector],
                              marker='x', ms=0.75, color=color, alpha=0.75, linestyle='-')
-            ax_plot.plot(transition_temperature, half_rn, '*', ms=25, color='g', label=tc_label)
+            if not (np.isnan(normal_resistance) or np.isnan(transition_temperature)):
+                print(normal_resistance, transition_temperature)
+                ax_plot.plot(transition_temperature, half_rn, '*', ms=25, color='g', label=tc_label)
             drift_start_index = change_index
             handles, labels = ax_plot.get_legend_handles_labels()
             if len(final_plot_x_data[selector]) > 0 and '{0} up'.format(name) not in labels:
