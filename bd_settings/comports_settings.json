@@ -1,0 +1,20 @@
+{
+    "Bluefors_PC": {
+        "FTS Mirror Motor": "COM10",
+        "Housekeeping Lakeshore": "COM4",
+        "SRS SR830DSP": "None",
+        "Samples Lakeshore": "COM6"
+    },
+    "BoloTester": {
+        "FTS Mirror Motor": "COM10",
+        "Housekeeping Lakeshore": "COM4",
+        "SRS SR830DSP": "None",
+        "Samples Lakeshore": "COM6"
+    },
+    "BolometerTesterDR": {
+        "FTS Mirror Motor": "COM10",
+        "Housekeeping Lakeshore": "COM5",
+        "SRS SR830DSP": "None",
+        "Samples Lakeshore": "COM3"
+    }
+}

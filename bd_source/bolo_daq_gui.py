@@ -88,6 +88,12 @@ class BoloDAQGui(QtWidgets.QMainWindow, GuiBuilder):
         self.central_widget.setWhatsThis('cw_panel')
         self.central_widget.setLayout(grid)
         self.setCentralWidget(self.central_widget)
+        self.scroll_area = QtWidgets.QScrollArea(self.central_widget)
+        #self.scroll_area.setGeometry(300, 300, 100, 100)
+        self.scroll_area.setWidgetResizable(True)
+        #self.scroll_container = QtWidgets.QWidget(self.scroll_area)
+        #self.scroll_grid = QtWidgets.QGridLayout()
+        #self.scroll_container.setLayout(self.scroll_grid)
         self.tool_and_menu_bar_json_path = os.path.join('bd_settings', 'tool_and_menu_bars.json')
         self.gb_setup_menu_and_tool_bars(self.tool_and_menu_bar_json_path, icon_size=25)
         self.selected_files = []

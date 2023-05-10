@@ -2,6 +2,7 @@ import os
 import json
 import pylab as pl
 import numpy as np
+import pickle as pkl
 import matplotlib.pyplot as plt
 from copy import copy
 from pprint import pprint
@@ -87,22 +88,44 @@ class HistogramPlotter(QtWidgets.QWidget, GuiBuilder):
         file_path = QtWidgets.QFileDialog.getOpenFileName(self, 'Select Data File')[0]
         if not os.path.exists(file_path):
             return None
-        with open(file_path, 'r') as fh:
-            data_dict = json.load(fh)
-        float_data = []
+        if file_path.endswith('.npy'):
+            self.hp_load_pton_npy(file_path)
+        else:
+            with open(file_path, 'r') as fh:
+                data_dict = json.load(fh)
+            float_data = []
+            self.data_dict = {}
+            for label, data in data_dict.items():
+                for datum in data:
+                    if not self.gb_is_float(datum):
+                        self.gb_quick_message('Please only load jsons with floats for data in the lists')
+                        return None
+                    if label in self.data_dict:
+                        self.data_dict[label].append(datum)
+                    else:
+                        self.data_dict[label] = [datum]
+            self.hp_load_labels()
+            self.input_data_display_label.setText(str(self.data_dict)[0:100])
+            #self.hp_plot()
+
+    def hp_load_pton_npy(self, file_path):
+        '''
+        '''
+        data_dict = np.load(file_path, allow_pickle=True).item()['data']
+        name = 'Pton Lp2r1 5E Tc'
         self.data_dict = {}
-        for label, data in data_dict.items():
-            for datum in data:
-                if not self.gb_is_float(datum):
-                    self.gb_quick_message('Please only load jsons with floats for data in the lists')
-                    return None
-                if label in self.data_dict:
-                    self.data_dict[label].append(datum)
-                else:
-                    self.data_dict[label] = [datum]
-        self.hp_load_labels()
-        self.input_data_display_label.setText(str(self.data_dict)[0:100])
-        #self.hp_plot()
+        for bias_line in data_dict:
+            for smurf_board in data_dict[bias_line]:
+                for channel in data_dict[bias_line][smurf_board]:
+                    tc = data_dict[bias_line][smurf_board][channel]['tc'] * 1e3 #mK
+                    if name not in self.data_dict:
+                        self.data_dict[name] = [tc]
+                    else:
+                        self.data_dict[name].append(tc)
+        save_path = os.path.join('bd_histogram_data', name.replace(' ', '_') + '.json')
+        with open(save_path, 'w') as fh:
+            json.dump(self.data_dict, fh)
+        import ipdb;ipdb.set_trace()
 
     def hp_load_labels(self):
         '''
