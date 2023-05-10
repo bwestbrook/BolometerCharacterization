@@ -102,6 +102,7 @@ class FourierTransformSpectrometer(QtWidgets.QWidget, GuiBuilder, FourierTransfo
         '''
         with open(self.com_port_dict_path, 'r') as fh:
             self.com_ports_dict = simplejson.load(fh )
+            print(self.com_ports_dict)
 
     def fts_update_daq_settings(self, daq_settings):
         '''

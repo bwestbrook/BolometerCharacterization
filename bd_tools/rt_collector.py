@@ -148,6 +148,7 @@ class RTCollector(QtWidgets.QWidget, GuiBuilder, FourierTransformSpectroscopy):
                     'plot': False,
                     'name': '',
                 }
+            }
         self.dewar = dewar
         grid = QtWidgets.QGridLayout()
         self.setLayout(grid)
@@ -1440,7 +1441,6 @@ class Collector(QRunnable):
                     ax.set_ylabel(y_label, fontsize=12)
                 save_path = os.path.join('temp_files', 'temp_xy.png')
                 fig.savefig(save_path, transparent=self.transparent_plots)
->>>>>>> 40114dbe573eea7306c5e570d4d127b8deb17a8a
 
     def rtc_get_rn_and_tc(self, daq):
         '''

@@ -751,11 +751,11 @@ class BeamSplitter():
 
 if __name__ == '__main__':
     ftsy = FourierTransformSpectroscopy()
-    band = 'SO40'
+    band = '90'
     data_clip_lo = 0
-    data_clip_hi = 80 * 1e9
-    t_source_low = 9
-    t_source_high = 14
+    data_clip_hi = 140 * 1e9
+    t_source_low = 77
+    t_source_high = 293
     fft_frequency_vector_simulated, fft_vector_simulated = ftsy.ftsy_load_simulated_band(data_clip_lo, data_clip_hi, band)
     simulated_delta_power, simulated_integrated_bandwidth = ftsy.ftsy_compute_delta_power_and_bandwidth_at_window(fft_frequency_vector_simulated * 1e9, fft_vector_simulated,
                                                                                                                   data_clip_lo=data_clip_lo, data_clip_hi=data_clip_hi,
