@@ -535,11 +535,15 @@ class IVCollector(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTransformSpe
         '''
         absorber = self.absorber_type_lineedit.text()
 
-        channel_readout_info = self.ls_372_widget.channels.ls372_get_channel_value(6, reading='kelvin') # 6 is MXC
+        if self.ls_372_widget is not None:
+            channel_readout_info = self.ls_372_widget.channels.ls372_get_channel_value(6, reading='kelvin') # 6 is MXC
+            channel_readout_info = self.ls_372_widget.channels.ls372_get_channel_value(5, reading='kelvin') # 5 is STILL
+            if self.gb_is_float(channel_readout_info):
+                t_load = int(round(float(channel_readout_info)))
+        else:
+            t_load = 'NA'
+            t_bath = self.t_load_lineedit.text()
         t_bath = self.t_bath_label.text()
-        channel_readout_info = self.ls_372_widget.channels.ls372_get_channel_value(5, reading='kelvin') # 5 is MXC
-        if self.gb_is_float(channel_readout_info):
-            t_load = int(round(float(channel_readout_info)))
         for i in range(1, 1000):
             file_name = 'IV_{0}_tb_{1}mK_Tl_{2}K_{3}_{4}.txt'.format(self.sample_name_lineedit.text(), t_bath, t_load, absorber, str(i).zfill(3))
             save_path = os.path.join(self.data_folder, file_name)

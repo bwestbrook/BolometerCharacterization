@@ -771,8 +771,11 @@ class BeamSplitter():
 
 if __name__ == '__main__':
     ftsy = FourierTransformSpectroscopy()
-    band = 'SO40'
+    band = '90'
     data_clip_lo = 0
+    data_clip_hi = 140 * 1e9
+    t_source_low = 77
+    t_source_high = 293
     data_clip_hi = 80 * 1e9
     t_source_low = 9.5
     t_source_high = 12
