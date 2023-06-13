@@ -44,52 +44,64 @@
                 "function": "bd_cosmic_rays",
                 "icon": "cosmicrays.png"
             },
-            "07_Time Constant": {
+            "07_Resonance Measurement": {
                 "Shortcut": "7",
+                "StatusTip": "Resonance Measurement",
+                "ToolTip": "Resonance Measurement",
+                "function": "bd_resonance_measurement",
+                "icon": "resonance.png"
+            },
+            "08_Time Constant": {
+                "Shortcut": "8",
                 "StatusTip": "Time Constant",
                 "ToolTip": "Time Constant",
                 "function": "bd_time_constant",
                 "icon": "time_constant.png"
             },
-            "08_Data Plotter": {
-                "Shortcut": "8",
+            "09_Data Plotter": {
+                "Shortcut": "9",
                 "StatusTip": "Data Plotter",
                 "ToolTip": "Data Plotter",
                 "function": "bd_data_plotter",
                 "icon": "data.png"
             },
-            "09_Histogram Plotter": {
-                "Shortcut": "9",
+            "10_Histogram Plotter": {
+                "Shortcut": "10",
                 "StatusTip": "Histogram Plotter",
                 "ToolTip": "Histogram Plotter",
                 "function": "bd_histogram_plotter",
                 "icon": "histogram.png"
             },
-            "10_Difference Load Curves": {
+            "11_Difference Load Curves": {
+                "Shortcut": "11",
                 "StatusTip": "Difference Load Curves",
                 "ToolTip": "Difference Load Curves",
                 "function": "bd_difference_load_curves",
                 "icon": "load_curves.png"
             },
-            "11_Cosmic Ray Data Viewer": {
+            "12_Cosmic Ray Data Viewer": {
+                "Shortcut": "12",
                 "StatusTip": "Cosmic Ray Data Viewer",
                 "ToolTip": "Cosmic Ray Data Viewer",
                 "function": "bd_cosmic_ray_viewer",
                 "icon": "cosmic_ray_viewer.png"
             },
-            "12_Noise Analyzer": {
+            "13_Noise Analyzer": {
+                "Shortcut": "13",
                 "StatusTip": "Noise Analyzer",
                 "ToolTip": "Noise Analyzer",
                 "function": "bd_noise_analyzer",
                 "icon": "noise_analyzer.png"
             },
-            "13_Wafer Yield": {
+            "14_Wafer Yield": {
+                "Shortcut": "14",
                 "StatusTip": "Wafer Yield",
                 "ToolTip": "Wafer Yield ",
                 "function": "bd_wafer_yield",
                 "icon": "wafer.png"
             },
-            "14_Fridge Cycle 576": {
+            "15_Fridge Cycle 576": {
+                "Shortcut": "15",
                 "StatusTip": "Fridge Cycle 576",
                 "ToolTip": "Fridge Cycle 576",
                 "function": "bd_fridge_cycle",

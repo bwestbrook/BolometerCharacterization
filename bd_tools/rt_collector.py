@@ -234,7 +234,7 @@ class RTCollector(QtWidgets.QWidget, GuiBuilder, FourierTransformSpectroscopy):
         self.daq_y_combobox.currentIndexChanged.connect(self.rtc_update_active_y_checkbox)
         self.daq_y_checkbox.stateChanged.connect(self.rtc_configure_y_channels)
         self.daq_y_combobox.setCurrentIndex(0)
-        self.rtc_daq_combobox.setCurrentIndex(1)
+        self.rtc_daq_combobox.setCurrentIndex(2)
         # Sample Configure 
         self.configure_channel_pushbutton = QtWidgets.QPushButton('Configure And Scan', self)
         self.layout().addWidget(self.configure_channel_pushbutton, 2, 1, 1, 1)
