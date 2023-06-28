@@ -11,6 +11,7 @@ class FourierTransformSpectroscopy():
     '''
     This is a custom class of python function used to conver interferogram data into Spectra for bolometers
     '''
+
     def __init__(self):
         '''
         init for the Fourier class
@@ -75,7 +76,7 @@ class FourierTransformSpectroscopy():
                 'Freq Column': 0,
                 'Transmission Column': 4,
                 'Header Lines': 2,
-                'Path': ''
+                'Path': os.path.join('bd_lib', 'simulated_bands', 'Nitride_Lumped_Diplexer_030_05_040_08_MoreWider20190226_300GHz.csv')
                 },
             'LBLF4-58': {
                 'Active': False,
@@ -84,7 +85,7 @@ class FourierTransformSpectroscopy():
                 'Freq Column': 0,
                 'Transmission Column': 4,
                 'Header Lines': 2,
-                'Path': ''
+                'Path': os.path.join('bd_lib', 'simulated_bands', 'Nitride_Lumped_Diplexer_030_05_040_08_MoreWider20190226_300GHz.csv')
                 },
             'LBLF4-82': {
                 'Active': False,
@@ -93,16 +94,15 @@ class FourierTransformSpectroscopy():
                 'Freq Column': 0,
                 'Transmission Column': 4,
                 'Header Lines': 2,
-                'Path': ''
                 },
-            'LBLF4-70': {
+            'LBLF4-78': {
                 'Active': False,
                 'Band Center': 70,
                 'Project': 'LiteBird',
                 'Freq Column': 0,
                 'Transmission Column': 4,
                 'Header Lines': 2,
-                'Path': ''
+                'Path': os.path.join('bd_lib', 'simulated_bands', 'Nitride_Lumped_Diplexer_030_05_040_08_MoreWider20190226_300GHz.csv')
                 },
             'LBLF4-100': {
                 'Active': False,
@@ -111,7 +111,7 @@ class FourierTransformSpectroscopy():
                 'Freq Column': 0,
                 'Transmission Column': 4,
                 'Header Lines': 2,
-                'Path': ''
+                'Path': os.path.join('bd_lib', 'simulated_bands', 'Nitride_Lumped_Diplexer_030_05_040_08_MoreWider20190226_300GHz.csv')
                 },
             'LBLF4-140': {
                 'Active': False,
@@ -120,7 +120,7 @@ class FourierTransformSpectroscopy():
                 'Freq Column': 0,
                 'Transmission Column': 4,
                 'Header Lines': 2,
-                'Path': ''
+                'Path': os.path.join('bd_lib', 'simulated_bands', 'Nitride_Lumped_Diplexer_030_05_040_08_MoreWider20190226_300GHz.csv')
                 }
             }
         return self.bands
@@ -155,20 +155,17 @@ class FourierTransformSpectroscopy():
     def ftsy_load_simulated_band(self, data_clip_lo, data_clip_hi, band):
         '''
         '''
+        print(self.bands)
         data_path = self.bands[band]['Path']
         freq_idx = self.bands[band]['Freq Column']
         trans_idx = self.bands[band]['Transmission Column']
         header_lines = self.bands[band]['Header Lines']
-        print(freq_idx, trans_idx)
-        print(freq_idx, trans_idx)
-        print(freq_idx, trans_idx)
         with open(data_path, 'r') as file_handle:
             lines = file_handle.readlines()
             frequency_vector = np.zeros([])
             transmission_vector = np.zeros([])
             for i, line in enumerate(lines):
                 if i > header_lines:
-                    print(line)
                     try:
                         if ',' in line:
                             frequency = line.split(',')[freq_idx].strip()
@@ -583,10 +580,7 @@ class FourierTransformSpectroscopy():
         resolution = ((3 * 10 ** 8) / total_distance) # Hz
         resolution = float(mirror_interval) * distance_per_step / (10 ** 12)
         print(resolution)
-        print(resolution)
-        print(resolution)
         fft_freq_vector, fft_psd, normalized_fft_psd = self.manual_fourier_transform(apodized_efficiency_vector, resolution)
-        print(np.min(fft_freq_vector))
         print(np.max(fft_freq_vector))
         if quick_plot:
             fig = pl.figure(figsize=(10, 5))
@@ -755,7 +749,6 @@ class BeamSplitter():
                 save_path = os.path.join('optical_elements', '{0}_mil_beamsplitter_efficiency.dat'.format(thickness))
             frequency_vector, efficiency_vector = self.create_beam_splitter_response(save_path, thickness)
             if save_data:
-                print('saving')
                 self.save_beam_splitter_efficiency(frequency_vector / 1e9, efficiency_vector, thickness)
             if plot_data:
                 self.plot_beam_splitter_efficiency(frequency_vector / 1e9, efficiency_vector, thickness)
@@ -763,7 +756,6 @@ class BeamSplitter():
         #print(freq, band)
         #pl.plot(freq, band, label='SO40')
         #freq, band = self.fts.ftsy_load_simulated_band(0, 100e9, 'SO40')
-        print(freq, band)
         #pl.plot(freq, band, label='SO40')
         #pl.xlim((0, 100))
         #pl.legend(loc='best')
@@ -775,6 +767,8 @@ if __name__ == '__main__':
     band = 'SO40'
     data_clip_lo = 0
     data_clip_hi = 40 * 1e9
+
+    ftsy.ftsy_load_simulated_band(data_clip_lo, data_clip_hi, band)
     t_source_low = 14
     t_source_high = 293
     data_clip_hi = 80 * 1e9
