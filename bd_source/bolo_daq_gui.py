@@ -89,9 +89,9 @@ class BoloDAQGui(QtWidgets.QMainWindow, GuiBuilder):
         self.central_widget.setWhatsThis('cw_panel')
         self.central_widget.setLayout(grid)
         self.setCentralWidget(self.central_widget)
-        self.scroll_area = QtWidgets.QScrollArea(self.central_widget)
+        #self.scroll_area = QtWidgets.QScrollArea(self.central_widget)
         #self.scroll_area.setGeometry(300, 300, 100, 100)
-        self.scroll_area.setWidgetResizable(True)
+        #self.scroll_area.setWidgetResizable(True)
         #self.scroll_container = QtWidgets.QWidget(self.scroll_area)
         #self.scroll_grid = QtWidgets.QGridLayout()
         #self.scroll_container.setLayout(self.scroll_grid)
@@ -678,7 +678,7 @@ class BoloDAQGui(QtWidgets.QMainWindow, GuiBuilder):
             elif self.login == 'BolometerTesterDR':
                 ls_372_samples_widget = getattr(self, 'ls_372_widget_COM{0}'.format(3))
                 ls_372_temp_widget = getattr(self, 'ls_372_widget_COM{0}'.format(5))
-            self.rtc_widget = RTCollector(self.daq_settings, self.status_bar, self.screen_resolution, self.monitor_dpi, ls_372_temp_widget, ls_372_samples_widget, self.data_folder)
+            self.rtc_widget = RTCollector(self.daq_settings, self.status_bar, self.screen_resolution, self.monitor_dpi, ls_372_temp_widget, ls_372_samples_widget, self.data_folder, self.dewar)
         else:
             self.daq_settings = self.bolo_daq.initialize_daqs()
             self.rtc_widget.rtc_update_samples()

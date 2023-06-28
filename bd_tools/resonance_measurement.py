@@ -102,10 +102,38 @@ class ResonanceMeasurement(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTra
         '''
         '''
 
-        self.hello_label = QtWidgets.QLabel('hello')
-        self.layout().addWidget(self.hello_label, 0, 0, 1, 1)
-        self.t_bath_lineedit = self.gb_make_labeled_lineedit('Set Tbath')
+        #Control
+        self.t_bath_lineedit = self.gb_make_labeled_lineedit('Bath Temp')
         self.layout().addWidget(self.t_bath_lineedit, 1, 0, 1, 1)
+        self.t_bath_set_lineedit = self.gb_make_labeled_lineedit('Set Tbath Power')
+        self.layout().addWidget(self.t_bath_set_lineedit, 1, 1, 1, 1)
+        self.get_spectrum_analyzer_data_pushbutton = QtWidgets.QPushButton('Get SA data')
+        self.get_spectrum_analyzer_data_pushbutton.clicked.connect(self.rm_get_spectrum_analyzer_data)
+        self.layout().addWidget(self.get_spectrum_analyzer_data_pushbutton, 2, 0, 1, 1)
+        self.start_temp_lineedit = self.gb_make_labeled_lineedit('Start Temp', lineedit_text='0.050')
+        self.layout().addWidget(self.start_temp_lineedit, 3, 0, 1, 1)
+        self.end_temp_lineedit = self.gb_make_labeled_lineedit('End Temp', lineedit_text='4')
+        self.layout().addWidget(self.end_temp_lineedit, 3, 1, 1, 1)
+        self.n_temp_points_lineedit = self.gb_make_labeled_lineedit('N Temp Points', lineedit_text='10')
+        self.layout().addWidget(self.n_temp_points_lineedit, 4, 0, 1, 1)
+        self.log_spacing_checkbox = QtWidgets.QCheckBox('Log Spacing?')
+        self.layout().addWidget(self.log_spacing_checkbox, 4, 1, 1, 1)
+        self.start_power_lineedit = self.gb_make_labeled_lineedit('Start Power (dBm)', lineedit_text='-90')
+        self.layout().addWidget(self.start_power_lineedit, 5, 0, 1, 1)
+        self.end_power_lineedit = self.gb_make_labeled_lineedit('End Power (dBm)', lineedit_text='-60')
+        self.layout().addWidget(self.end_power_lineedit, 5, 1, 1, 1)
+        self.n_power_points_lineedit = self.gb_make_labeled_lineedit('N Power Points', lineedit_text='5')
+        self.layout().addWidget(self.n_power_points_lineedit, 6, 0, 1, 1)
+        self.start_multitemp_scan_pushbutton = QtWidgets.QPushButton('Start Multitemp Scan')
+        self.layout().addWidget(self.start_multitemp_scan_pushbutton, 7, 0, 1, 1)
+
+        #Data Display
+        self.data_plot_label = QtWidgets.QLabel()
+        self.layout().addWidget(self.data_plot_label, 0, 4, 4, 1)
+
+    ############################################
+    # Lakeshore Temperature Control
+    ############################################
 
     def rm_get_t_bath(self):
         '''
@@ -138,3 +166,12 @@ class ResonanceMeasurement(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTra
                 'manual_value': power
         }
         self.ls_372_widget.analog_outputs.ls372_set_open_loop_heater(0, new_settings, None)
+
+    ############################################
+    # Spectrum Analyzer
+    ############################################
+
+    def rm_get_spectrum_analyzer_data(self):
+        '''
+        '''
+        self.status_bar.showMessage('Done')
