@@ -497,7 +497,10 @@ class DifferenceLoadCurves(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTra
             self.iv_1_data_clip_hi_lineedit.setText(meta_data['data_clip_hi_lineedit'])
             self.iv_1_fit_clip_lo_lineedit.setText(meta_data['fit_clip_lo_lineedit'])
             self.iv_1_fit_clip_hi_lineedit.setText(meta_data['fit_clip_hi_lineedit'])
-            x_correction = meta_data['x_correction_label'].split(' ')[1]
+            if 'x_correction_label' in meta_data:
+                x_correction = meta_data['x_correction_label'].split(' ')[1]
+            else:
+                x_correction = '1e-5'
             self.iv_1_x_correction_lineedit.setText(x_correction)
             y_correction = self.squid_calibration_dict[meta_data['squid_select_combobox']]
             self.iv_1_y_correction_lineedit.setText(y_correction)
@@ -592,7 +595,10 @@ class DifferenceLoadCurves(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTra
             self.iv_2_data_clip_hi_lineedit.setText(meta_data['data_clip_hi_lineedit'])
             self.iv_2_fit_clip_lo_lineedit.setText(meta_data['fit_clip_lo_lineedit'])
             self.iv_2_fit_clip_hi_lineedit.setText(meta_data['fit_clip_hi_lineedit'])
-            x_correction = meta_data['x_correction_label'].split(' ')[1]
+            if 'x_correction_label' in meta_data:
+                x_correction = meta_data['x_correction_label'].split(' ')[1]
+            else:
+                x_correction = '1e-5'
             self.iv_2_x_correction_lineedit.setText(x_correction)
             y_correction = self.squid_calibration_dict[meta_data['squid_select_combobox']]
             self.iv_2_y_correction_lineedit.setText(y_correction)
