@@ -102,7 +102,6 @@ class FourierTransformSpectrometer(QtWidgets.QWidget, GuiBuilder, FourierTransfo
         '''
         with open(self.com_port_dict_path, 'r') as fh:
             self.com_ports_dict = simplejson.load(fh )
-            print(self.com_ports_dict)
 
     def fts_update_daq_settings(self, daq_settings):
         '''
@@ -462,7 +461,6 @@ class FourierTransformSpectrometer(QtWidgets.QWidget, GuiBuilder, FourierTransfo
         if not hasattr(self.csm_mirror_widget, 'com_port'):
             return None
         position = int(self.set_position_lineedit.text())
-        print('adfa', position)
         self.csm_mirror_widget.csm_set_position(position=position, verbose=True)
 
     def fts_update_scan_params(self):
@@ -513,6 +511,9 @@ class FourierTransformSpectrometer(QtWidgets.QWidget, GuiBuilder, FourierTransfo
         if self.csm_mirror_widget is None:
             return None
         QtWidgets.QApplication.processEvents()
+        #self.csm_mirror_widget.csm_get_motor_state()
+        #import ipdb;ipdb.set_trace()
+
         for i, comport in enumerate(['COM12', 'COM13', 'COM14']):
             if i == 0:
                 settings_dict = self.csm_mirror_widget.stepper_settings_dict
@@ -523,8 +524,6 @@ class FourierTransformSpectrometer(QtWidgets.QWidget, GuiBuilder, FourierTransfo
             sm_settings_str = '{0} Settings:'.format(comport)
             for setting, value in settings_dict.items():
                 self.status_bar.showMessage('Setting up serial connection to stepper motor on {0}'.format(comport))
-
-                print(setting[0].title())
                 sm_settings_str += setting[0].title()
                 sm_settings_str += ': {0:.1f} -'.format(float(value))
                 getattr(self, '{0}_stepper_settings_label'.format(comport)).setText(sm_settings_str)
@@ -653,7 +652,7 @@ class FourierTransformSpectrometer(QtWidgets.QWidget, GuiBuilder, FourierTransfo
         '''
         '''
         for i in range(1, 1000):
-            file_name = '{0}_{1}GHz_Res_{2}GHz_MaxFreq_{3}.{4}'.format(
+            file_name = '{0}_{1:.2f}GHz_Res_{2:.2f}GHz_MaxFreq_{3}.{4}'.format(
                     self.sample_name_lineedit.text(),
                     self.resolution,
                     self.max_frequency,
@@ -746,7 +745,7 @@ class FourierTransformSpectrometer(QtWidgets.QWidget, GuiBuilder, FourierTransfo
         '''
         fig, ax = self.fts_create_blank_fig(
             frac_screen_width=0.35,
-            frac_screen_height=0.2,
+            frac_screen_height=0.1,
             top=0.90,
             bottom=0.23,
             n_axes=1,
@@ -879,9 +878,7 @@ class FourierTransformSpectrometer(QtWidgets.QWidget, GuiBuilder, FourierTransfo
             ax1.errorbar(max_freq * 1e-9, normalized_phase_corrected_fft_vector[data_selector][max_idx], color=color, marker='*', markersize=10, label=pk_label)
             ax1.errorbar(fft_freq_vector[data_selector] * 1e-9, normalized_phase_corrected_fft_vector[data_selector], color=color, linestyle='-', label=label)
             # Normalized and Smooth
-            print(smoothing_factor)
             normalized_phase_corrected_fft_vector = self.ftsy_running_mean(normalized_phase_corrected_fft_vector, smoothing_factor=smoothing_factor)
-            print(smoothing_factor)
             for band in self.bands:
                 if self.bands[band]['Active']:
                     fft_frequency_vector_simulated, fft_vector_simulated = self.ftsy_load_simulated_band(data_clip_lo, data_clip_hi, band)

@@ -394,6 +394,7 @@ class BoloDAQGui(QtWidgets.QMainWindow, GuiBuilder):
         QtWidgets.QApplication.processEvents()
         dialog = 'Select the comport for the SRS SR830'
         com_port, okPressed = self.gb_quick_static_info_gather(title='', dialog=dialog, items=['COM10'])
+        print(com_port)
         if not hasattr(self, 'ser_{0}'.format(com_port)) and okPressed:
             serial_com = BoloSerial(com_port, device='SRS_SR830_DSP', splash_screen=self.status_bar)
             setattr(self, 'ser_{0}'.format(com_port), serial_com)
@@ -937,16 +938,20 @@ class BoloDAQGui(QtWidgets.QMainWindow, GuiBuilder):
         dialog = 'Select the comport for the stepper motor you wish to configure'
         for motor in ['FTS Mirror Motor']:
             sm_com_port = self.com_ports_dict[self.login][motor]
-            pprint(self.com_ports_dict)
             if not hasattr(self, 'csm_widget_{0}'.format(sm_com_port)) and okPressed:
-                if not hasattr(self, 'ser_{0}'.format(sm_com_port)):
-                    setattr(self, 'csm_widget_{0}'.format(sm_com_port), None)
-                    csm_widget = None
-                elif getattr(self, 'ser_{0}'.format(sm_com_port)) is None:
-                    setattr(self, 'csm_widget_{0}'.format(sm_com_port), None)
-                    csm_widget = None
-                else:
-                    csm_widget = ConfigureStepperMotor(sm_com_port, self.status_bar)
+                print('making motor', sm_com_port)
+                #import ipdb;ipdb.set_trace()
+                #if not hasattr(self, 'ser_{0}'.format(sm_com_port)):
+                    #setattr(self, 'csm_widget_{0}'.format(sm_com_port), None)
+                    #csm_widget = None
+                    #print('A making motor', sm_com_port)
+                #elif getattr(self, 'ser_{0}'.format(sm_com_port)) is None:
+                    #setattr(self, 'csm_widget_{0}'.format(sm_com_port), None)
+                    #csm_widget = None
+                    #print('B making motor', sm_com_port)
+                #else:
+                csm_widget = ConfigureStepperMotor(sm_com_port, self.status_bar)
+                print('C making motor', sm_com_port)
                 setattr(self, 'csm_widget_{0}'.format(sm_com_port), csm_widget)
             elif okPressed:
                 csm_widget = getattr(self, 'csm_widget_{0}'.format(sm_com_port))

@@ -41,7 +41,8 @@ class IVCollector(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTransformSpe
             }
         self.cold_bias_resistor_dict  = {
             '1': 20e-3, # 20mOhm
-            '2': 250e-6, # 250microOhm
+            '2': 5e-4, # 0.5mOhm
+            '3': 250e-6, # 250microOhm
             }
         self.voltage_reduction_factor_dict  = {
             '1': 9.09e-8,
@@ -541,8 +542,7 @@ class IVCollector(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTransformSpe
             if self.gb_is_float(channel_readout_info):
                 t_load = int(round(float(channel_readout_info)))
         else:
-            t_load = 'NA'
-            t_bath = self.t_load_lineedit.text()
+            t_load = self.t_load_lineedit.text()
         t_bath = self.t_bath_label.text()
         for i in range(1, 1000):
             file_name = 'IV_{0}_tb_{1}mK_Tl_{2}K_{3}_{4}.txt'.format(self.sample_name_lineedit.text(), t_bath, t_load, absorber, str(i).zfill(3))
@@ -775,7 +775,7 @@ class IVCollector(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTransformSpe
                 label='Plast = {0:.2f} pW'.format(plast_pw))
         resistance = 1.0 / fit_vals[0]
         frac_rn = rlast / resistance * 1e2 # as pct
-        ax3.plot(v_bolo_real[plot_selector], r_bolo[plot_selector], 'b', label='Res {0:.2f} ($\Omega$) {1:.2f}%'.format(resistance, frac_rn))
+        ax3.plot(v_bolo_real[plot_selector], r_bolo[plot_selector], 'b', label='Res {0:.3f} ($\Omega$) {1:.2f}%'.format(resistance, frac_rn))
         ax4.plot(r_bolo[plot_selector], p_bolo[plot_selector], 'r', label='Power (pW)')
         # Grab all the labels and combine them 
         handles, labels = ax1.get_legend_handles_labels()
