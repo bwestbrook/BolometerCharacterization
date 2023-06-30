@@ -160,6 +160,8 @@ class CosmicRays(QtWidgets.QWidget, GuiBuilder):
         '''
         '''
         if 'Start' in self.sender().text():
+            self.cr_scan_file_name()
+            self.gb_save_meta_data(os.path.join(self.folder_path,  'scan.png'), 'png')
             self.sender().setText('Stop')
             self.started = True
             self.cr_collecter()
@@ -174,7 +176,6 @@ class CosmicRays(QtWidgets.QWidget, GuiBuilder):
         int_time = float(self.int_time_lineedit.text())
         sample_rate = float(self.sample_rate_lineedit.text())
         squids, gains, biases, signal_channels, scan_time = self.cr_get_analyzer_input()
-        self.cr_scan_file_name()
         daq = BoloDAQ(signal_channels=signal_channels,
                       int_time=int_time,
                       sample_rate=sample_rate,

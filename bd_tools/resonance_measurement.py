@@ -123,7 +123,7 @@ class ResonanceMeasurement(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTra
         self.end_power_lineedit = self.gb_make_labeled_lineedit('End Power (dBm)', lineedit_text='-60')
         self.layout().addWidget(self.end_power_lineedit, 5, 1, 1, 1)
         self.n_power_points_lineedit = self.gb_make_labeled_lineedit('N Power Points', lineedit_text='5')
-        self.layout().addWidget(self.n_power_points_lineedit, 6, 0, 1, 1)
+        elf.layout().addWidget(self.n_power_points_lineedit, 6, 0, 1, 1)
         self.start_multitemp_scan_pushbutton = QtWidgets.QPushButton('Start Multitemp Scan')
         self.layout().addWidget(self.start_multitemp_scan_pushbutton, 7, 0, 1, 1)
 

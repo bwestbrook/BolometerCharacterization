@@ -102,25 +102,25 @@ class FourierTransformSpectroscopy():
                 'Freq Column': 0,
                 'Transmission Column': 4,
                 'Header Lines': 2,
-                'Path': os.path.join('bd_lib', 'simulated_bands', 'Nitride_Lumped_Diplexer_030_05_040_08_MoreWider20190226_300GHz.csv')
+                'Path': os.path.join('bd_lib', 'simulated_bands', '20190428_LB_78100140_WithoutNotch.csv')
                 },
             'LBLF4-100': {
                 'Active': False,
                 'Band Center': 100,
                 'Project': 'LiteBird',
                 'Freq Column': 0,
-                'Transmission Column': 4,
+                'Transmission Column': 5,
                 'Header Lines': 2,
-                'Path': os.path.join('bd_lib', 'simulated_bands', 'Nitride_Lumped_Diplexer_030_05_040_08_MoreWider20190226_300GHz.csv')
+                'Path': os.path.join('bd_lib', 'simulated_bands', '20190428_LB_78100140_WithoutNotch.csv')
                 },
             'LBLF4-140': {
                 'Active': False,
                 'Band Center': 140,
                 'Project': 'LiteBird',
                 'Freq Column': 0,
-                'Transmission Column': 4,
+                'Transmission Column': 6,
                 'Header Lines': 2,
-                'Path': os.path.join('bd_lib', 'simulated_bands', 'Nitride_Lumped_Diplexer_030_05_040_08_MoreWider20190226_300GHz.csv')
+                'Path': os.path.join('bd_lib', 'simulated_bands', '20190428_LB_78100140_WithoutNotch.csv')
                 }
             }
         return self.bands
@@ -764,7 +764,7 @@ class BeamSplitter():
 if __name__ == '__main__':
     ftsy = FourierTransformSpectroscopy()
     pprint(ftsy.bands)
-    band = 'SO40'
+    band = 'LBLF4-140'
     data_clip_lo = 0
     data_clip_hi = 40 * 1e9
 
