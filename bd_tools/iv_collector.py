@@ -219,18 +219,26 @@ class IVCollector(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTransformSpe
 
         # General Meta Data and Information
         self.absorber_type_lineedit = self.gb_make_labeled_lineedit(label_text='Absorber Type:')
-        self.layout().addWidget(self.absorber_type_lineedit, 8, 6, 1, 1)
+        self.layout().addWidget(self.absorber_type_lineedit, 9, 4, 1, 1)
 
         # Band information
         self.sample_band_combobox = self.gb_make_labeled_combobox(label_text='Sample Band (GHz)')
-        self.layout().addWidget(self.sample_band_combobox, 8, 5, 1, 1)
+        self.layout().addWidget(self.sample_band_combobox, 8, 6, 1, 1)
         for sample_band in self.bands:
             self.sample_band_combobox.addItem(sample_band)
         # Sample Name
         self.sample_name_lineedit = self.gb_make_labeled_lineedit(label_text='Sample Name')
-        self.layout().addWidget(self.sample_name_lineedit, 8, 4, 1, 1)
+        self.layout().addWidget(self.sample_name_lineedit, 8, 5, 1, 1)
+        self.sample_name_combobox = self.gb_make_labeled_combobox(label_text='Sample Name')
+        self.sample_name_combobox.currentIndexChanged.connect(self.ivc_update_sample_name)
+        for sample_name in self.samples_settings:
+            self.sample_name_combobox.addItem(sample_name)
+        self.layout().addWidget(self.sample_name_combobox, 8, 4, 1, 1)
         self.notes_lineedit = self.gb_make_labeled_lineedit(label_text='Notes:')
-        self.layout().addWidget(self.notes_lineedit, 8, 7, 1, 1)
+        self.layout().addWidget(self.notes_lineedit, 9, 5, 1, 1)
+        self.meta_data_warning_checkbox = QtWidgets.QCheckBox('Meta Data Warn?')
+        self.meta_data_warning_checkbox.setChecked(True)
+        self.layout().addWidget(self.meta_data_warning_checkbox, 9, 6, 1, 1)
 
         #Connect to function
         self.daq_y_combobox.setCurrentIndex(1)
@@ -299,21 +307,14 @@ class IVCollector(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTransformSpe
         self.fit_clip_hi_lineedit.returnPressed.connect(self.ivc_plot_running)
         self.layout().addWidget(self.fit_clip_hi_lineedit, 6, 7, 1, 1)
 
-
     def ivc_update_sample_name(self, index):
         '''
         '''
         sample_key = self.sample_name_combobox.currentText()
         if len(sample_key) == 0:
             return None
-        #import ipdb;ipdb.set_trace()
         sample_name = self.samples_settings[sample_key]
-        squid = sample_key.split('-')[1]
         self.sample_name_lineedit.setText(sample_name)
-        for index in range(self.squid_select_combobox.count()):
-            if squid in self.squid_select_combobox.itemText(index):
-                self.squid_select_combobox.setCurrentIndex(index)
-                break
 
     def ivc_calc_x_correction(self):
         '''
@@ -434,6 +435,10 @@ class IVCollector(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTransformSpe
         if 'Start' in self.sender().text():
             if self.ls_372_widget is not None:
                 self.ivc_monitor_t_bath(n_trials=1)
+            if self.meta_data_warning_checkbox.isChecked():
+                response = self.gb_quick_message('Meta Data Check\nShow again?', add_yes=True, add_no=True, msg_type='Warning')
+                if response == QtWidgets.QMessageBox.No:
+                    self.meta_data_warning_checkbox.setChecked(False)
             self.data_clip_lo_lineedit.setText('0')
             self.sender().setText('Stop DAQ')
             self.started = True
