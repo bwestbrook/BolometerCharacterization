@@ -764,7 +764,7 @@ class BeamSplitter():
 if __name__ == '__main__':
     ftsy = FourierTransformSpectroscopy()
     pprint(ftsy.bands)
-    band = 'LBLF4-140'
+    band = 'LBLF4-78'
     data_clip_lo = 0
     data_clip_hi = 40 * 1e9
 
@@ -774,7 +774,7 @@ if __name__ == '__main__':
     data_clip_hi = 80 * 1e9
     t_source_low = 9
     t_source_high = 14
-    data_clip_hi = 280 * 1e9
+    data_clip_hi = 110 * 1e9
     t_source_low = 77
     t_source_high = 293
     efficiency = 0.65
