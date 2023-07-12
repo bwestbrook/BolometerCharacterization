@@ -926,9 +926,16 @@ class LS372AnalogOutputs(QObject):
                                                                        analog_output_object.low_value,
                                                                        analog_output_object.manual_value,
                                                                        )
+        print(monitor_cmd)
+
         self.status_bar.showMessage('Sending Serial Command "{0}"'.format(monitor_cmd))
         self.communicator.write(monitor_cmd)
         self.communicator.read()
+        outmode_cmd = 'outmode 0,5,{0},0,1,0 '.format(channel)
+        self.status_bar.showMessage('Sending Serial Command "{0}"'.format(outmode_cmd))
+        self.communicator.write(outmode_cmd)
+        QtWidgets.QApplication.processEvents()
+        result = self.communicator.read()
 
     def ls372_set_open_loop_heater(self, set_to_channel, new_settings, channel_object):
         '''

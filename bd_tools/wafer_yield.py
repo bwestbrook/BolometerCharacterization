@@ -1,4 +1,3 @@
-
 import os
 import pandas as pd
 import pylab as pl
@@ -19,13 +18,15 @@ class WaferYield(QtWidgets.QWidget, GuiBuilder):
         '''
         '''
         super(WaferYield, self).__init__()
-        self.hi = 'hi'
         self.status_bar = status_bar
         self.screen_resolution = screen_resolution
         self.monitor_dpi = monitor_dpi
         self.so_map_path = os.path.join('bd_histogram_data', 'LF_UFM_map.csv')
+        self.lblf4_map_path = os.path.join('bd_histogram_data', 'LBLF4_MAP.csv')
         self.so_resistance_key_path = os.path.join('bd_histogram_data', 'so_resistance_key_path.json')
-        self.map_path_dict = {'SO': self.so_map_path}
+        self.map_path_dict = {
+            'SO': self.so_map_path,
+            'LBLF4': self.lblf4_map_path}
         self.map_path = self.map_path_dict['SO']
         self.display_radius = 5.0 #mm
         self.dl_lf_pixel_avg_resistance_dict = {
@@ -66,7 +67,7 @@ class WaferYield(QtWidgets.QWidget, GuiBuilder):
             '7': 33.5825,
             '8': 35.775,
             '9': 33.533}
-        self.intra_pixel_resistance_dict = {
+        self.dl_lf_intra_pixel_resistance_dict = {
                 '30B': 11.0,
                 '30D': 8.5,
                 '30T': 6.2,
@@ -74,7 +75,8 @@ class WaferYield(QtWidgets.QWidget, GuiBuilder):
                 '40D': 2.1,
                 '40T': 0.0
             }
-        self.intra_pixel_offsets = {
+        self.lb_bolo_scale = 3.0
+        self.dl_lf_intra_pixel_offsets = {
                 '30B': (0.5 *np.sqrt(2), -0.5 *np.sqrt(2)),
                 '30D': (0.5 *np.sqrt(2), 0.5 *np.sqrt(2)),
                 '30T': (0, 1),
@@ -82,6 +84,16 @@ class WaferYield(QtWidgets.QWidget, GuiBuilder):
                 '40D': (-0.5 *np.sqrt(2), -0.5 *np.sqrt(2)),
                 '40T': (0, -1)
                 }
+        self.lblf4_intra_pixel_offsets = {
+            '100T': (1, 0),
+            '100B': (0.5 * np.sqrt(2), 0.5 * np.sqrt(2)),
+            '140T': (0, 1),
+            '140B': (-0.5 * np.sqrt(2), 0.5 * np.sqrt(2)),
+            '78T': (-1, 0),
+            '78B': (-0.5 * np.sqrt(2),  -0.5 * np.sqrt(2)),
+            'DX': (0, -1),
+            'DY': (0.5 * np.sqrt(2), -0.5 * np.sqrt(2)),
+        }
         grid = QtWidgets.QGridLayout()
         self.setLayout(grid)
         self.wy_input_panel()
@@ -117,15 +129,19 @@ class WaferYield(QtWidgets.QWidget, GuiBuilder):
         '''
         '''
 
+        wafer_type = self.wafer_type_combobox.currentText()
         file_path = QtWidgets.QFileDialog.getOpenFileName(self, 'Select Data File')[0]
         basename = os.path.basename(file_path)
-        self.wafer_name_lineedit.setText(basename.split(' ')[0])
+        #self.wafer_name_lineedit.setText(basename.split(' ')[0])
         if not os.path.exists(file_path):
             return None
         with open(file_path, 'r') as fh:
             self.df = pd.read_csv(file_path)
-        self.wy_plot()
         #import ipdb;ipdb.set_trace()
+        if wafer_type == 'SO':
+            self.wy_plot_so()
+        if wafer_type == 'LBLF4':
+            self.wy_plot_lblf4()
 
     def check_bolo(self):
         '''
@@ -134,6 +150,55 @@ class WaferYield(QtWidgets.QWidget, GuiBuilder):
             resistance_key_dict = json.load(fh)
 
     def wy_plot(self):
+        '''
+        '''
+        wafer_type = self.wafer_type_combobox.currentText()
+        if wafer_type == 'SO':
+            self.wy_plot_so()
+        elif wafer_type == 'LBLF4':
+            self.wy_plot_lblfl4
+
+    def wy_plot_lblf4(self):
+        '''
+        '''
+
+        fig = pl.figure(figsize=(8, 6))
+        ax = fig.add_subplot(111)
+        ax.set_aspect('equal')
+        all_xs = []
+        all_ys = []
+        all_resistances = []
+        for i in range(36):
+            pixel = i + 1
+            pixel_resistances = self.df[str(pixel)]
+            x = self.map_df[self.map_df['pixel'] == pixel].iloc[0]['x_mm']
+            y = self.map_df[self.map_df['pixel'] == pixel].iloc[0]['y_mm']
+            for i, tes_id in enumerate(self.df['Pixel Number']):
+                full_x = x + self.lb_bolo_scale * self.lblf4_intra_pixel_offsets[tes_id.upper()][0]
+                full_y = y + self.lb_bolo_scale * self.lblf4_intra_pixel_offsets[tes_id.upper()][1]
+                resistance = pixel_resistances[i]
+                ax.text(full_x, full_y, '{0}'.format(tes_id), fontsize=6)
+                if not self.gb_is_float(resistance) or np.isnan(resistance):
+                    resistance = 40
+                    label = None
+                    handles, labels = ax.get_legend_handles_labels()
+                    if "Open" not in labels:
+                        label = "Open"
+                    ax.plot(full_x, full_y, 'o', ms=3, color='k', label=label)
+                else:
+                    all_xs.append(full_x)
+                    all_ys.append(full_y)
+                    all_resistances.append(float(resistance))
+        cm = ax.scatter(np.asarray(all_xs), np.asarray(all_ys), s=100, c=np.asarray(all_resistances), cmap='jet')
+        wafer_name = self.wafer_name_lineedit.text()
+        ax.set_title('Resistance Heat Map for {0}'.format(wafer_name))
+        ax.set_xlabel('X Pos (mm)')
+        ax.set_ylabel('Y Pos (mm)')
+        pl.legend()
+        pl.colorbar(cm, label='Resitance (k$\Omega$)')
+        pl.show()
+
+    def wy_plot_so(self):
         '''
         '''
         all_xs = []
@@ -155,8 +220,8 @@ class WaferYield(QtWidgets.QWidget, GuiBuilder):
             pixel = self.map_df['pixel'][i]
             resistance = self.df['R (kohms)'][i]
             info_dict[tes_id] = resistance
-            x = x_center + self.intra_pixel_offsets[tes_id][0] * self.display_radius
-            y = y_center + self.intra_pixel_offsets[tes_id][1] * self.display_radius
+            x = x_center + self.dl_lf_intra_pixel_offsets[tes_id][0] * self.display_radius
+            y = y_center + self.dl_lf_intra_pixel_offsets[tes_id][1] * self.display_radius
             if i % 6 == 0 and i > 0:
                 prev_pixel = self.map_df['pixel'][i - 6]
                 x_pos = x_center - 0.15 * self.display_radius
@@ -195,8 +260,6 @@ class WaferYield(QtWidgets.QWidget, GuiBuilder):
         pprint(all_pixel_resistance_small_dict)
         for i in range(6):
             intra_pixel_value = intra_pixel_resistances.T[i][np.abs(intra_pixel_resistances.T[i] - np.mean(intra_pixel_resistances.T[i])) < 1]
-            #print(i, np.mean(intra_pixel_value))
-        #import ipdb;ipdb.set_trace()
         cm = ax.scatter(np.asarray(all_xs), np.asarray(all_ys), s=100, c=np.asarray(all_resistances), cmap='jet')
         wafer_name = self.wafer_name_lineedit.text()
         ax.set_title('Resistance Heat Map for {0}'.format(wafer_name))
@@ -210,15 +273,12 @@ class WaferYield(QtWidgets.QWidget, GuiBuilder):
         '''
         '''
         nominal_average_resistance = self.dl_lf_pixel_avg_resistance_dict[str(pixel)]
-        base_pixel_resistance = nominal_average_resistance - np.mean(list(self.intra_pixel_resistance_dict.values()))
+        base_pixel_resistance = nominal_average_resistance - np.mean(list(self.dl_lf_intra_pixel_resistance_dict.values()))
         average_resistance = info_dict['mean']
         mean_deviation = np.abs(nominal_average_resistance - average_resistance)
-        print()
-        print(pixel, base_pixel_resistance)
-        print(pixel, 'avg dev', mean_deviation)
         base_pixel_resistances = []
-        for tes_id in self.intra_pixel_resistance_dict:
-            expected_resistance = float(base_pixel_resistance) + float(self.intra_pixel_resistance_dict[tes_id])
+        for tes_id in self.dl_lf_intra_pixel_resistance_dict:
+            expected_resistance = float(base_pixel_resistance) + float(self.dl_lf_intra_pixel_resistance_dict[tes_id])
             if info_dict[tes_id] in ['open', 'Open']:
                 bolo_deviation = np.nan
             else:

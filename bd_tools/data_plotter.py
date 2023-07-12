@@ -1,10 +1,13 @@
 import os
 
-
-
 import pylab as pl
 import numpy as np
 import pandas as pd
+import matplotlib as mpl
+mpl.rcParams.update(mpl.rcParamsDefault)
+#mpl.rcParams['text.usetex'] = True
+mpl.rcParams['text.latex.preamble'] = [r'\usepackage{amssymb}']
+mpl.rcParams['text.latex.preamble'] = [r'usepackage{amsmath}']
 import matplotlib.pyplot as plt
 from copy import copy
 from pprint import pprint
