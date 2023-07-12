@@ -11,6 +11,7 @@ from pprint import pprint
 from bd_lib.bolo_daq import BoloDAQ
 from bd_lib.mpl_canvas import MplCanvas
 from bd_lib.iv_curve_lib import IVCurveLib
+from bd_lib.bolo_pyvisa import BoloPyVisa
 from bd_lib.fourier_transform_spectroscopy import FourierTransformSpectroscopy
 from PyQt5 import QtCore, QtGui, QtWidgets
 from GuiBuilder.gui_builder import GuiBuilder, GenericClass
@@ -22,6 +23,10 @@ class ResonanceMeasurement(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTra
         '''
         '''
         super(ResonanceMeasurement, self).__init__()
+        self.thermometer_dict = {
+                'MXC': 6,
+                'X110595': 9
+                }
         self.mplc = MplCanvas(self, screen_resolution, monitor_dpi)
         self.bands = self.ftsy_get_bands()
         self.status_bar = status_bar
@@ -30,67 +35,26 @@ class ResonanceMeasurement(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTra
         self.monitor_dpi = monitor_dpi
         self.ls_372_widget = ls_372_widget
         self.dewar = dewar
-        with open(os.path.join('bd_settings', 'squids_settings.json'), 'r') as fh:
-            self.squid_calibration_dict = simplejson.load(fh)
-        with open(os.path.join('bd_settings', 'samples_settings.json'), 'r') as fh:
-            self.samples_settings = simplejson.load(fh)
-        self.squid_gains = {
-            '5': 1e-2,
-            '50': 1e-1,
-            '500': 1,
-            }
-        self.cold_bias_resistor_dict  = {
-            '1': 20e-3, # 20mOhm
-            '2': 250e-6, # 250microOhm
-            }
-        self.voltage_reduction_factor_dict  = {
-            '1': 9.09e-8,
-            '2': 4.28e-7,
-            '3': 9.09e-7,
-            '4': 1e-6,
-            '5': 1e-4,
-            '6': 1e-5,
-            '7': 100,
-            '8': 1e3,
-            }
+        self.bpv = BoloPyVisa()
+        self.fig = self.mplc.mplc_create_horizontal_array_fig()
         grid = QtWidgets.QGridLayout()
         self.setLayout(grid)
-        self.x_data = []
-        self.x_stds = []
-        self.y_data = []
-        self.y_stds = []
         self.today = datetime.now()
         self.today_str = datetime.strftime(self.today, '%Y_%m_%d')
-        self.data_folder = os.path.join(data_folder, 'IV_Curves')
+        self.data_folder = os.path.join(data_folder, 'Resonantor_Data')
         if not os.path.exists(self.data_folder):
             os.makedirs(self.data_folder)
         self.rm_populate()
         self.qthreadpool = QtCore.QThreadPool()
         self.rm_get_t_bath()
-        with open(os.path.join('bd_resources', 'iv_collector_tool_tips.json'), 'r') as fh:
-            tool_tips_dict = simplejson.load(fh)
-        self.gb_add_tool_tips(self, tool_tips_dict)
+        response = self.gb_quick_message('Would you like to reset the Network Analyzer?', add_yes=True, add_no=True)
+        if response == QtWidgets.QMessageBox.Yes:
+            self.rm_reset_network_analyzer()
+        self.rm_read_set_points()
 
     #########################################################
     # GUI and Input Handling
     #########################################################
-
-    def rm_update_samples(self):
-        '''
-        '''
-        with open(os.path.join('bd_settings', 'samples_settings.json'), 'r') as fh:
-            self.samples_settings = simplejson.load(fh)
-
-    def rm_update_squids_data(self):
-        '''
-        '''
-        with open(os.path.join('bd_settings', 'squids_settings.json'), 'r') as fh:
-            self.squid_calibration_dict = simplejson.load(fh)
-
-    def rm_update_daq_settings(self, daq_settings):
-        '''
-        '''
-        self.daq_settings = daq_settings
 
     def rm_populate(self):
         '''
@@ -102,76 +66,463 @@ class ResonanceMeasurement(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTra
         '''
         '''
 
-        #Control
-        self.t_bath_lineedit = self.gb_make_labeled_lineedit('Bath Temp')
-        self.layout().addWidget(self.t_bath_lineedit, 1, 0, 1, 1)
-        self.t_bath_set_lineedit = self.gb_make_labeled_lineedit('Set Tbath Power')
-        self.layout().addWidget(self.t_bath_set_lineedit, 1, 1, 1, 1)
-        self.get_spectrum_analyzer_data_pushbutton = QtWidgets.QPushButton('Get SA data')
-        self.get_spectrum_analyzer_data_pushbutton.clicked.connect(self.rm_get_spectrum_analyzer_data)
-        self.layout().addWidget(self.get_spectrum_analyzer_data_pushbutton, 2, 0, 1, 1)
-        self.start_temp_lineedit = self.gb_make_labeled_lineedit('Start Temp', lineedit_text='0.050')
+        #Housekeeping Scan Setup
+        self.set_t_bath_lineedit = self.gb_make_labeled_lineedit('Bath Temp', lineedit_text='20.0')
+        self.layout().addWidget(self.set_t_bath_lineedit, 1, 0, 1, 1)
+        self.t_bath_set_pushbutton = QtWidgets.QPushButton('Set T_Bath')
+        self.t_bath_set_pushbutton.clicked.connect(self.rm_set_t_bath)
+        self.layout().addWidget(self.t_bath_set_pushbutton, 1, 1, 1, 1)
+        self.t_bath_get_pushbutton = QtWidgets.QPushButton('Get T_Bath')
+        self.t_bath_get_pushbutton.clicked.connect(self.rm_get_t_bath)
+        self.layout().addWidget(self.t_bath_get_pushbutton, 2, 1, 1, 1)
+        self.t_bath_label = self.gb_make_labeled_label(label_text='T_bath (Act)')
+        self.layout().addWidget(self.t_bath_label, 1, 2, 1, 1)
+        self.thermometer_combobox = self.gb_make_labeled_combobox('Thermometer')
+        for thermometer in self.thermometer_dict:
+            self.thermometer_combobox.addItem(thermometer)
+        self.layout().addWidget(self.thermometer_combobox, 2, 2, 1, 1)
+        self.thermometer_combobox.currentIndexChanged.connect(self.rm_scan_new_lakeshore_channel)
+
+        self.start_temp_lineedit = self.gb_make_labeled_lineedit('Start Temp', lineedit_text='0.200')
+        self.start_temp_lineedit.textChanged.connect(self.rm_update_scan_info)
         self.layout().addWidget(self.start_temp_lineedit, 3, 0, 1, 1)
-        self.end_temp_lineedit = self.gb_make_labeled_lineedit('End Temp', lineedit_text='4')
+        self.end_temp_lineedit = self.gb_make_labeled_lineedit('End Temp', lineedit_text='.250')
+        self.end_temp_lineedit.textChanged.connect(self.rm_update_scan_info)
         self.layout().addWidget(self.end_temp_lineedit, 3, 1, 1, 1)
-        self.n_temp_points_lineedit = self.gb_make_labeled_lineedit('N Temp Points', lineedit_text='10')
+        self.n_temp_points_lineedit = self.gb_make_labeled_lineedit('N Temp Points', lineedit_text='2')
+        self.n_temp_points_lineedit.textChanged.connect(self.rm_update_scan_info)
         self.layout().addWidget(self.n_temp_points_lineedit, 4, 0, 1, 1)
         self.log_spacing_checkbox = QtWidgets.QCheckBox('Log Spacing?')
+        self.log_spacing_checkbox.clicked.connect(self.rm_update_scan_info)
         self.layout().addWidget(self.log_spacing_checkbox, 4, 1, 1, 1)
-        self.start_power_lineedit = self.gb_make_labeled_lineedit('Start Power (dBm)', lineedit_text='-90')
-        self.layout().addWidget(self.start_power_lineedit, 5, 0, 1, 1)
-        self.end_power_lineedit = self.gb_make_labeled_lineedit('End Power (dBm)', lineedit_text='-60')
-        self.layout().addWidget(self.end_power_lineedit, 5, 1, 1, 1)
-        self.n_power_points_lineedit = self.gb_make_labeled_lineedit('N Power Points', lineedit_text='5')
-        elf.layout().addWidget(self.n_power_points_lineedit, 6, 0, 1, 1)
+
+        #Spectrum Analyzer Scan Setup
+        self.start_power_lineedit = self.gb_make_labeled_lineedit('Start Power (dBm)', lineedit_text='-35')
+        self.start_power_lineedit.textChanged.connect(self.rm_update_scan_info)
+        self.layout().addWidget(self.start_power_lineedit, 6, 0, 1, 1)
+        self.end_power_lineedit = self.gb_make_labeled_lineedit('End Power (dBm)', lineedit_text='0')
+        self.end_power_lineedit.textChanged.connect(self.rm_update_scan_info)
+        self.layout().addWidget(self.end_power_lineedit, 6, 1, 1, 1)
+        self.n_power_points_lineedit = self.gb_make_labeled_lineedit('N Power Points', lineedit_text='2')
+        self.layout().addWidget(self.n_power_points_lineedit, 7, 0, 1, 1)
+        self.n_power_points_lineedit.textChanged.connect(self.rm_update_scan_info)
+        self.scan_info_label = self.gb_make_labeled_label()
+        self.layout().addWidget(self.scan_info_label, 8, 0, 1, 3)
+
         self.start_multitemp_scan_pushbutton = QtWidgets.QPushButton('Start Multitemp Scan')
-        self.layout().addWidget(self.start_multitemp_scan_pushbutton, 7, 0, 1, 1)
+        self.layout().addWidget(self.start_multitemp_scan_pushbutton, 9, 0, 1, 2)
+        self.start_multitemp_scan_pushbutton.clicked.connect(self.rm_start_multistep_scan)
+        self.stop_scan_pushbutton = QtWidgets.QPushButton('Stop Scan')
+        self.stop_scan_pushbutton.clicked.connect(self.rm_stop)
+        self.layout().addWidget(self.stop_scan_pushbutton, 9, 2, 1, 1)
+
+        #Spectrum Analzyer General Setup 
+        self.reset_network_analyzer = QtWidgets.QPushButton('Reset SA')
+        self.layout().addWidget(self.reset_network_analyzer, 10, 0, 1, 1)
+        self.reset_network_analyzer.clicked.connect(self.rm_reset_network_analyzer)
+        self.get_network_analyzer_data_pushbutton = QtWidgets.QPushButton('Get SA data')
+        self.get_network_analyzer_data_pushbutton.clicked.connect(self.rm_get_network_analyzer_data)
+        self.layout().addWidget(self.get_network_analyzer_data_pushbutton, 10, 1, 1, 1)
+
+        # Frequency Range 
+        self.center_frequency_combobox = self.gb_make_labeled_combobox(label_text='Center Frequency (GHz)')
+        self.center_frequency_combobox.setEditable(True)
+        self.layout().addWidget(self.center_frequency_combobox, 11, 0, 1, 1)
+        self.set_center_frequency_pushbutton = QtWidgets.QPushButton('Set Center Frequency (GHz)')
+        self.set_center_frequency_pushbutton.clicked.connect(self.rm_set_center_frequency)
+        self.layout().addWidget(self.set_center_frequency_pushbutton, 11, 1, 1, 1)
+        self.frequency_span_lineedit = self.gb_make_labeled_lineedit(label_text='Frequency Span (MHz)', lineedit_text='1000.0')
+        self.layout().addWidget(self.frequency_span_lineedit, 12, 0, 1, 1)
+        self.set_frequency_span_pushbutton = QtWidgets.QPushButton('Set Frequency Span')
+        self.set_frequency_span_pushbutton.clicked.connect(self.rm_set_frequency_span)
+        self.layout().addWidget(self.set_frequency_span_pushbutton, 12, 1, 1, 1)
+
+        # N Points
+        self.n_points_lineedit = self.gb_make_labeled_lineedit(label_text="N Points", lineedit_text='801')
+        self.layout().addWidget(self.n_points_lineedit, 13, 0, 1, 1)
+        self.set_n_points_pushbutton = QtWidgets.QPushButton("Set N Points")
+        self.set_n_points_pushbutton.clicked.connect(self.rm_set_n_points)
+        self.layout().addWidget(self.set_n_points_pushbutton, 13, 1, 1, 1)
+
+        # N Averages
+        self.n_averages_lineedit = self.gb_make_labeled_lineedit(label_text="N Averages", lineedit_text='5')
+        self.layout().addWidget(self.n_averages_lineedit, 14, 0, 1, 1)
+        self.set_n_averages_pushbutton = QtWidgets.QPushButton("Set N Averages")
+        self.set_n_averages_pushbutton.clicked.connect(self.rm_set_n_averages)
+        self.layout().addWidget(self.set_n_averages_pushbutton, 14, 1, 1, 1)
+        self.time_per_average_lineedit = self.gb_make_labeled_lineedit(label_text='Time Per Avg (ms)', lineedit_text='50')
+        self.layout().addWidget(self.time_per_average_lineedit, 14, 2, 1, 1)
+
+        # Power
+        self.power_lineedit = self.gb_make_labeled_lineedit(label_text="Power (dBm)", lineedit_text='-30')
+        self.layout().addWidget(self.power_lineedit, 15, 0, 1, 1)
+        self.set_power_pushbutton = QtWidgets.QPushButton("Set Power")
+        self.set_power_pushbutton.clicked.connect(self.rm_set_power)
+        self.layout().addWidget(self.set_power_pushbutton, 15, 1, 1, 1)
+        self.attenuation_lineedit = self.gb_make_labeled_lineedit(label_text="Attenuation (dB)", lineedit_text='-10')
+        self.layout().addWidget(self.attenuation_lineedit, 15, 2, 1, 1)
+
+        self.set_all_sa_settings_pushbutton = QtWidgets.QPushButton('Set All')
+        self.set_all_sa_settings_pushbutton.clicked.connect(self.rm_set_all_sa_settings)
+        self.layout().addWidget(self.set_all_sa_settings_pushbutton, 16, 0, 1, 2)
+
+        # Filename
+        self.filename_lineedit = self.gb_make_labeled_lineedit(label_text="Filename")
+        self.layout().addWidget(self.filename_lineedit, 17, 0, 1, 1)
+        self.filename_lineedit.textChanged.connect(self.rm_set_filename)
+        self.filename_label = self.gb_make_labeled_label(label_text="Filename")
+        self.layout().addWidget(self.filename_label, 17, 1, 1, 1)
 
         #Data Display
         self.data_plot_label = QtWidgets.QLabel()
-        self.layout().addWidget(self.data_plot_label, 0, 4, 4, 1)
+        self.layout().addWidget(self.data_plot_label, 0, 4, 15, 1)
+
+        self.rm_set_filename()
+        self.rm_update_scan_info()
 
     ############################################
     # Lakeshore Temperature Control
     ############################################
+
+    def rm_scan_new_lakeshore_channel(self):
+        '''
+        '''
+        if self.ls_372_widget is None:
+            return None
+        thermometer_index = int(self.thermometer_dict[self.thermometer_combobox.currentText()])
+        self.ls_372_widget.ls372_scan_channel(index=thermometer_index)
+        self.ls_372_widget.analog_outputs.ls372_monitor_channel_aux_analog(thermometer_index, self.ls_372_widget.analog_outputs.analog_output_aux)
+        self.rm_get_t_bath()
 
     def rm_get_t_bath(self):
         '''
         '''
         if not hasattr(self.ls_372_widget, 'channels'):
             return None
-        channel_readout_info = self.ls_372_widget.channels.ls372_get_channel_value(6, reading='kelvin') # 6 is MXC
+        thermometer_index = int(self.thermometer_dict[self.thermometer_combobox.currentText()])
+        channel_readout_info = self.ls_372_widget.channels.ls372_get_channel_value(thermometer_index, reading='kelvin') # 6 is MXC
         if self.gb_is_float(channel_readout_info):
             temperature = '{0:.3f}'.format(float(channel_readout_info) * 1e3) # mK
         else:
             temperature = '300'
-        self.t_bath_lineedit.setText(temperature)
+        self.t_bath_label.setText(temperature)
+        self.temperature = float(temperature)
 
-    def rm_set_t_bath_power(self):
+    def rm_set_t_bath(self):
         '''
         '''
-        power = float(self.t_bath_set_lineedit.text()) * 1e-3 #mW
-        self.status_bar.showMessage('Setting T_bath power to  {0:.2f} mK'.format(power))
-        new_settings = {
-                'power': power,
-                'polarity': 0,
-                'analog_mode': 2,
-                'input_channel': 6,
-                'source': 1,
-                'high_value': 0.5,
-                'powerup_enable': 0,
-                'filter_on': 1,
-                'delay': 1,
-                'low_value': 0,
-                'manual_value': power
-        }
-        self.ls_372_widget.analog_outputs.ls372_set_open_loop_heater(0, new_settings, None)
+        if not self.gb_is_float(self.set_t_bath_lineedit.text()):
+            return None
+        target_temp = float(self.set_t_bath_lineedit.text()) * 1e-3 # into K
+        self.ls_372_widget.temp_control.ls372_set_temp_set_point(target_temp)
+
+    def rm_update_scan_info(self):
+        '''
+        '''
+        start_temp = int(float(self.start_temp_lineedit.text()) * 1e3)
+        end_temp = int(float(self.end_temp_lineedit.text()) * 1e3)
+        n_temp_points = int(self.n_temp_points_lineedit.text())
+        start_power = int(self.start_power_lineedit.text())
+        end_power = int(self.end_power_lineedit.text())
+        n_power_points = int(self.n_power_points_lineedit.text())
+        scan_info = '{0}mK_to_{1}mK_{2}step_{3}dBm_to_{4}dBm_{5}Steps'.format(start_temp, end_temp, n_temp_points, start_power, end_power, n_power_points)
+        self.scan_info_label.setText(scan_info)
+        self.temp_range = np.linspace(start_temp * 1e-3, end_temp * 1e-3, n_temp_points)
+        self.power_range = np.linspace(start_power, end_power, n_power_points)
+
+    def rm_stop(self):
+        '''
+        '''
+        self.stop = True
+
+    def rm_start_multistep_scan(self):
+        '''
+        '''
+        self.rm_set_all_sa_settings()
+        self.rm_set_sweep_mode()
+        self.stop = False
+        self.delta_threshold = 1
+        for i, set_temperature in enumerate(self.temp_range):
+            self.ls_372_widget.temp_control.ls372_set_temp_set_point(set_temperature)
+            temp_out_of_range = True
+            wait_count = 0
+            in_range_count = 0
+            while temp_out_of_range:
+                self.rm_get_t_bath()
+                current_temp = self.temperature
+                delta = set_temperature * 1e3 - self.temperature
+                self.status_bar.showMessage('T_delta:{0:.4f}mK Current:{1:.3f}mK Set:{2:.0f}mK {3}'.format(delta, current_temp, set_temperature * 1e3, in_range_count))
+                QtWidgets.QApplication.processEvents()
+                if np.abs(delta) <= self.delta_threshold:
+                    in_range_count += 1
+                    self.status_bar.showMessage('under threshold waiting 15 seconds to check if in range for {0}/4'.format(in_range_count))
+                    QtWidgets.QApplication.processEvents()
+                    time.sleep(1)
+                    if in_range_count > 300:
+                        temp_out_of_range = False
+                else:
+                    time.sleep(3)
+                    in_range_count = 0
+                wait_count += 1
+            for i in range(self.center_frequency_combobox.count()):
+                self.center_frequency_combobox.setCurrentIndex(i)
+                center_frequency = self.center_frequency_combobox.itemText(i)
+                self.rm_set_center_frequency()
+
+                for j, power in enumerate(self.power_range):
+                    status = '{0} {1}'.format(set_temperature, power)
+                    self.status_bar.showMessage(status)
+                    self.power_lineedit.setText('{0:.1f}'.format(power))
+                    self.rm_set_power()
+                    time.sleep(0.5)
+                    self.rm_get_network_analyzer_data()
+                    time.sleep(3.0)
+                    self.status_bar.showMessage('Temps:{0}/{1} Powers: {2}/{3}'.format(i, len(self.temp_range), j, len(self.power_range)))
+                    QtWidgets.QApplication.processEvents()
+                    if self.stop:
+                        break
+            if self.stop:
+                break
+        self.stop = False
 
     ############################################
     # Spectrum Analyzer
+
     ############################################
 
-    def rm_get_spectrum_analyzer_data(self):
+    def rm_err_check(self):
         '''
         '''
-        self.status_bar.showMessage('Done')
+        err = self.bpv.inst.query("SYST:ERR?")
+        if err:
+          self.status_bar.showMessage(err)
+
+    def rm_reset_network_analyzer(self):
+        '''
+        '''
+        # ---- reset, then put instrument into network analyzer mode ----
+        self.status_bar.showMessage("...reset and put instrument into network analyzer mode")
+        self.bpv.inst.query("*RST; INSTrument 'NA'; *OPC?")			# set operating mode, p. 460
+        time.sleep(1.0)
+        self.rm_err_check()
+        # ---- turn off time gating (not sure why reset does not do this) ----
+        self.status_bar.showMessage("...turn off time gating")
+        self.bpv.inst.query("CALCulate:FILTer:TIME:STATe 0; *OPC?")		# turn off time gating, p. 299
+        time.sleep(1.0)
+        self.rm_err_check()
+        # ---- set up standard measurement of S21 from fstart to fstop GHz ----
+        self.bpv.inst.write("CALC:PAR:DEF S21")				# measure S21
+        self.bpv.inst.query("CALC:FORM MLOG; *OPC?")				# set data format to log magnitude, p. 301
+        time.sleep(1.0)
+        self.rm_err_check()
+
+    def rm_set_all_sa_settings(self):
+        '''
+        '''
+        self.rm_set_center_frequency()
+        time.sleep(0.3)
+        self.rm_set_frequency_span()
+        time.sleep(0.3)
+        self.rm_set_n_points()
+        time.sleep(0.3)
+        self.rm_set_n_averages()
+        time.sleep(0.3)
+        self.rm_set_power()
+        time.sleep(0.3)
+
+    def rm_set_center_frequency(self):
+        '''
+        '''
+        frequency = float(self.center_frequency_combobox.currentText()) * 1e9 # GHz
+        self.bpv.inst.write("FREQuency:CENTer {0:.5f}".format(frequency))
+
+    def rm_set_frequency_span(self):
+        '''
+        '''
+        frequency = float(self.frequency_span_lineedit.text()) * 1e6 #MHz
+        self.bpv.inst.write("FREQuency:SPAN {0:.3f}".format(frequency))
+
+    def rm_set_n_points(self):
+        '''
+        '''
+        n_points = int(self.n_points_lineedit.text())
+        self.bpv.inst.write("SWEep:POINts {0}".format(n_points))
+
+    def rm_set_n_averages(self):
+        '''
+        '''
+        n_averages = int(self.n_averages_lineedit.text())
+        self.bpv.inst.write("AVERage:COUNt {0}".format(n_averages))
+
+    def rm_set_power(self):
+        '''
+        '''
+        power = float(self.power_lineedit.text())
+        self.bpv.inst.write("SOURce:POWer {0:.1f}".format(power))
+
+    def rm_set_sweep_mode(self):
+        '''
+        '''
+        self.bpv.inst.write("FORM ASCII,0") # set format to ASCII; p. 451
+        self.bpv.inst.write("CALC:PAR1:SEL") # select trace 1
+        self.bpv.inst.query("INIT:CONT 1; *OPC?") # set up single sweep mode, p. 453
+        # ---- set data format to log magnitude, autoscale the trace ----#
+        self.bpv.inst.query("CALC:FORM MLOG; *OPC?") # set data format to log magnitude, p. 301
+        time.sleep(1.)
+
+    def rm_set_filename(self):
+        '''
+        '''
+        if self.center_frequency_combobox.currentText() == '':
+            return None
+        self.rm_get_t_bath()
+        temperature = int(np.round(self.temperature))
+        sample_name = self.filename_lineedit.text()
+        cent_freq = float(self.center_frequency_combobox.currentText())# GHz
+        freq_span = float(self.frequency_span_lineedit.text())#MHz
+        power = float(self.power_lineedit.text())
+        attenuation = float(self.attenuation_lineedit.text())
+        now = datetime.now()
+        now_str = datetime.strftime(now, '%Y_%m_%d_%H_%M_%S')
+        self.filename = '{0}_CF{1:.2f}GHz_Span{2:.1f}MHz_Power{3:.0f}dBm_Atten{4:.0f}_Temp{5:d}mK_{6}'.format(sample_name, cent_freq, freq_span, power, attenuation, temperature, now_str)
+        self.filename = self.filename.replace('.', 'p')
+        self.filename += '.csv'
+        if self.filename.startswith('_'):
+            self.filename = self.filename[1:]
+        self.filename_label.setText(self.filename)
+        self.status_bar.showMessage(self.filename)
+
+    def rm_read_set_points(self):
+        '''
+        '''
+        rt_set_points_path = os.path.join('bd_resources', 'rm_set_points.txt')
+        with open(rt_set_points_path, 'r') as fh:
+            line = fh.readlines()[0]
+        cf_1, cf_2, frequency_span, n_points, n_averages, power, attenuation, start_temp, end_temp = line.split(', ')
+        print(cf_1, cf_2)
+        self.center_frequency_combobox.addItem(cf_1)
+        self.center_frequency_combobox.addItem(cf_2)
+        self.frequency_span_lineedit.setText(frequency_span)
+        self.n_points_lineedit.setText(n_points)
+        self.n_averages_lineedit.setText(n_averages)
+        self.power_lineedit.setText(power)
+        self.attenuation_lineedit.setText(attenuation)
+        self.start_temp_lineedit.setText(start_temp)
+        self.end_temp_lineedit.setText(end_temp)
+
+    def rm_write_set_points(self):
+        '''
+        '''
+        frequency_span = self.frequency_span_lineedit.text()
+        n_points = self.n_points_lineedit.text()
+        n_averages = self.n_averages_lineedit.text()
+        power = self.power_lineedit.text()
+        attenuation = self.attenuation_lineedit.text()
+        start_temp = self.start_temp_lineedit.text()
+        end_temp = self.end_temp_lineedit.text()
+        cf_1 = self.center_frequency_combobox.itemText(0)
+        cf_2 = self.center_frequency_combobox.itemText(1)
+        rt_set_points_path = os.path.join('bd_resources', 'rm_set_points.txt')
+        with open(rt_set_points_path, 'w') as fh:
+            line = '{0}, {1}, {2}, {3}, {4}, {5}, {6}, {7}, {8}'.format(cf_1, cf_2, frequency_span, n_points, n_averages, power, attenuation, start_temp, end_temp)
+            fh.write(line)
+
+    def rm_get_network_analyzer_data(self):
+        '''
+        '''
+        self.rm_set_sweep_mode()
+        self.rm_write_set_points()
+        self.rm_set_filename()
+        #---- wait for navg sweeps to complete ---- #
+        n_averages = int(self.n_averages_lineedit.text())
+        self.status_bar.showMessage("...clear averaging, wait for {0} sweeps to complete".format(n_averages))
+        self.bpv.inst.query("AVERage:CLEar; *OPC?")
+        n_acum = 0
+        while n_acum < n_averages:
+            #n_acum = int(self.bpv.inst.query("SENSe:AVERage:COUNt?"))
+            sleep_time = float(self.time_per_average_lineedit.text()) * 1e-3
+            time.sleep(sleep_time)
+            self.status_bar.showMessage("{0} sweeps complete".format(n_acum))
+            QtWidgets.QApplication.processEvents()
+            n_acum += 1
+        self.rm_err_check()
+        # ---- read frequencies ----
+        self.status_bar.showMessage("...reading frequencies")
+        line = self.bpv.inst.query("SENS:FREQ:DATA?") # returns comma separated array of freq values; p. 638
+        self.frqGHz = [ float(x)/1.e9 for x in line.split(',') ]	# convert to list of floats, in GHz
+        self.rm_err_check()
+        # ---- read S21 amplitude (log magnitude) ----
+        self.status_bar.showMessage("...reading out S21 magnitudes")
+        line = self.bpv.inst.query("CALCulate:DATA:FDATa?")# read selected trace data in current display format, p. 296
+        self.S21amp = [ float(x) for x in line.split(',') ] # convert to list of floats
+        self.rm_err_check()
+        # ---- read S21 phase ----
+        self.status_bar.showMessage("...switch to phase plot")
+        self.bpv.inst.query("CALCulate:FORMat PHASe; *OPC?") # set data format to phase in degrees (-180 to 180), p. 301
+        self.status_bar.showMessage("...reading out S21 phases")
+        line = self.bpv.inst.query("CALCulate:DATA:FDATa?")# read selected trace data in current display format, p. 296
+        self.S21phs = [ float(x) for x in line.split(',') ]# convert to list of floats
+        self.rm_err_check()
+        self.bpv.inst.query("CALC:FORM MLOG; *OPC?")# set data format to log magnitude, p. 301
+        self.rm_err_check()
+        self.rm_set_sweep_mode()
+        self.rm_plot_data()
+        self.rm_save_data()
+
+    def rm_save_data(self):
+        '''
+        '''
+        power = float(self.power_lineedit.text())
+        temperature = int(np.round(self.temperature))
+        temperature_str = 'T{0}mK'.format(temperature)
+        if not os.path.exists(os.path.join(self.data_folder, temperature_str)):
+            os.makedirs(os.path.join(self.data_folder, temperature_str))
+        save_path = os.path.join(self.data_folder, temperature_str, self.filename)
+        self.status_bar.showMessage("...writing data to file {0}".format(save_path))
+        frequency_span = float(self.frequency_span_lineedit.text())
+        n_points = self.n_points_lineedit.text()
+        n_averages = self.n_averages_lineedit.text()
+        power = float(self.power_lineedit.text())
+        attenuation = float(self.attenuation_lineedit.text())
+        cf = float(self.center_frequency_combobox.currentText())
+        with open(save_path, "w") as fout:
+            fout.write("# %s\n" % self.filename)
+            fout.write("# %s\n" % time.ctime())			# write current date and time as comment
+            fout.write("# VNA Power={0:.1f}dBm CF={1:.3f}GHz Span={2:.1f}Mhz Attn={3:.1f}dB Temp={4}mK\n\n".format(power, cf, frequency_span, attenuation, temperature))
+            fout.write("#   fGHz        S21_dB      S21_phs\n")
+            for i in range(0, len(self.frqGHz)) :
+                fout.write("{0:.7f}   {1:.6f}   {2:.5f}\n".format(float(self.frqGHz[i]), float(self.S21amp[i]), float(self.S21phs[i])))
+        shutil.copy(self.fig_save_path, save_path.replace('csv', 'png'))
+
+    def rm_plot_data(self):
+        '''
+        '''
+        frequency_span = self.frequency_span_lineedit.text()
+        n_points = self.n_points_lineedit.text()
+        n_averages = self.n_averages_lineedit.text()
+        power = self.power_lineedit.text()
+        attenuation = self.attenuation_lineedit.text()
+        cf = self.center_frequency_combobox.currentText()
+        line = 'CF:{0}GHz, SPAN{1}MHz, Np{2}, Na{3}, Pwr:{4}-dBm, Attn:{5}dB, T{6:.2f}mK'.format(cf, frequency_span, n_points, n_averages, power, attenuation, self.temperature)
+        ax = self.fig.get_axes()[0]
+        ax.cla()
+        ax.set_axis_off()
+        #ax.set_xlabel('Frequency (GHz)')
+        ax1 = self.fig.get_axes()[0]
+        ax1.set_xlabel('Frequency (GHz)')
+        ax1.set_title(line)
+        ax1.cla()
+        ax1.set_ylabel('Amp (dBm)')
+        ax1.plot(self.frqGHz, self.S21amp)
+        ax2 = self.fig.get_axes()[1]
+        self.fig.suptitle(line)
+        ax2.set_ylabel('Phase ($^\circ$)')
+        ax2.cla()
+        ax2.plot(self.frqGHz, self.S21phs)
+        #ax1.legend()
+
+        self.fig_save_path = os.path.join('temp_files', 'temp_resonantor.png')
+        self.fig.savefig(self.fig_save_path)
+        image_to_display = QtGui.QPixmap(self.fig_save_path)
+        self.data_plot_label.setPixmap(image_to_display)
+

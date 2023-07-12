@@ -348,15 +348,16 @@ class RTCollector(QtWidgets.QWidget, GuiBuilder, FourierTransformSpectroscopy):
                 self.meta_data['Heater Range (mW)'] = range_value_in_mw
         self.heater_range_combobox.setCurrentIndex(set_to_index)
         # Read and Write Settings
-        update_ls372_settings_pushbutton = QtWidgets.QPushButton('Update Settings', self)
+        update_ls372_heater_range_pushbutton = QtWidgets.QPushButton('Update Heater Range', self)
+        update_ls372_heater_range_pushbutton.clicked.connect(self.rtc_edit_lakeshore_heater_range)
+        self.layout().addWidget(update_ls372_heater_range_pushbutton, 2, 8, 1, 2)
+        update_ls372_settings_pushbutton = QtWidgets.QPushButton('Update All Settings', self)
         update_ls372_settings_pushbutton.clicked.connect(self.rtc_edit_lakeshore_temp_control)
-        update_ls372_settings_pushbutton.resize(update_ls372_settings_pushbutton.minimumSizeHint())
-        self.layout().addWidget(update_ls372_settings_pushbutton, 2, 8, 1, 2)
+        self.layout().addWidget(update_ls372_settings_pushbutton, 3, 7, 1, 3)
 
         read_ls372_settings_pushbutton = QtWidgets.QPushButton('Get Lakeshore State', self)
         read_ls372_settings_pushbutton.clicked.connect(self.rtc_get_lakeshore_temp_control)
-        read_ls372_settings_pushbutton.resize(read_ls372_settings_pushbutton.minimumSizeHint())
-        self.layout().addWidget(read_ls372_settings_pushbutton, 3, 7, 1, 3)
+        self.layout().addWidget(read_ls372_settings_pushbutton, 4, 7, 1, 3)
 
         self.rtc_get_lakeshore_channel_info()
         self.thermometer_combobox.currentIndexChanged.connect(self.rtc_scan_new_lakeshore_channel)
@@ -468,6 +469,16 @@ class RTCollector(QtWidgets.QWidget, GuiBuilder, FourierTransformSpectroscopy):
         self.ls372_temp_widget.temp_control.set_run_function('ls372_set_temp_set_point', new_target)
         self.qthreadpool.start(self.ls372_temp_widget.temp_control)
         self.status_bar.showMessage('Setting temperature {0} to {1} mK'.format(self.drift_direction, new_target * 1e3))
+
+    def rtc_edit_lakeshore_heater_range(self):
+        '''
+        '''
+        # Heater Range
+        new_range_index = self.heater_range_combobox.currentIndex()
+        self.ls372_temp_widget.channels.ls372_scan_channel(index=self.thermometer_index) # 6 is the MXC thermometer #10 is the Cu box
+        self.ls372_temp_widget.temp_control.ls372_set_heater_range(new_range_index)
+        self.status_bar.showMessage('Lakeshore Heater Ranges Set to {0}'.format(new_range_index))
+        self.rtc_get_lakeshore_temp_control()
 
     def rtc_edit_lakeshore_temp_control(self):
         '''
@@ -1575,6 +1586,8 @@ class Collector(QRunnable):
             smoothing_factor = float(self.rtc.smoothing_factor_combobox.currentText())
             if smoothing_factor > 0:
                 y_data = self.rtc.ftsy_running_mean(y_data, smoothing_factor=smoothing_factor)
+                x_data = x_data[:-1]
+                y_data = y_data[:-1]
         plot_x_data = x_data[sample_clip_lo:sample_clip_hi]
         plot_x_stds = x_stds[sample_clip_lo:sample_clip_hi]
         plot_y_data = y_data[sample_clip_lo:sample_clip_hi]

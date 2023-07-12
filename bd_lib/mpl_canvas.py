@@ -121,9 +121,9 @@ class MplCanvas(FigureCanvasQTAgg):
             name=name,
             frac_screen_width=frac_screen_width,
             frac_screen_height=frac_screen_height)
+        #fig.add_subplot(111)
         for i, axes_name in enumerate(axes_names):
             plot_loc = '1{0}{1}'.format(len(axes_names), i + 1)
-            print(plot_loc)
             fig.add_subplot(int(plot_loc))
         fig = self.mplc_adjust_subplots(
             fig=fig,

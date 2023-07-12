@@ -175,7 +175,12 @@
                 "function": "bd_com_port_utility",
                 "icon": "comport.png"
             },
-            "04_DR P and T Plotter": {
+            "04_PyVisa Utility": {
+                "ToolTip": "Py Visa Utility",
+                "function": "bd_pyvisa_utility",
+                "icon": "comport.png"
+            },
+            "05_DR P and T Plotter": {
                 "ToolTip": "DR P and T Plotter ",
                 "function": "bd_dr_p_and_t_plotter",
                 "icon": "data.png"

@@ -30,6 +30,7 @@ from bd_lib.fourier_transform_spectroscopy import FourierTransformSpectroscopy
 
 # Widgets
 from bd_tools.com_port_utility import ComPortUtility
+from bd_tools.pyvisa_utility import PyVisaUtility
 from bd_tools.configure_ni_daq import ConfigureNIDAQ
 from bd_tools.configure_bolo_daq_gui import ConfigureBoloDAQGui
 from bd_tools.iv_collector import IVCollector
@@ -409,6 +410,24 @@ class BoloDAQGui(QtWidgets.QMainWindow, GuiBuilder):
         self.resize(self.minimumSizeHint())
 
     #################################################
+    # PyVisa Utility
+    #################################################
+
+    def bd_pyvisa_utility(self):
+        '''
+        '''
+        self.gb_initialize_panel('central_widget')
+        self.status_bar.showMessage('Setting up COM port utility')
+        QtWidgets.QApplication.processEvents()
+        if not hasattr(self, 'pyvisa_utility_widget'):
+            self.pyvisa_utility_widget = PyVisaUtility(self.status_bar, self.screen_resolution, self.monitor_dpi)
+        self.central_widget.layout().addWidget(self.pyvisa_utility_widget, 0, 0, 1, 1)
+        self.com_port_utility_widget.cpu_change_status_bar(self.status_bar)
+        self.status_bar.showMessage('COM port utility')
+        QtWidgets.QApplication.processEvents()
+        self.resize(self.minimumSizeHint())
+
+    #################################################
     # Comport Utility
     #################################################
 
@@ -548,7 +567,7 @@ class BoloDAQGui(QtWidgets.QMainWindow, GuiBuilder):
         Opens the panel and sets som defaults
         '''
         self.gb_initialize_panel('central_widget')
-        self.status_bar.showMessage('Loading IV Curves')
+        self.status_bar.showMessage('Loading Resonance Measurement')
         QtWidgets.QApplication.processEvents()
         self.daq_settings = self.bolo_daq.initialize_daqs()
         if self.dewar == '576':
@@ -574,8 +593,6 @@ class BoloDAQGui(QtWidgets.QMainWindow, GuiBuilder):
                 ls_372_widget = getattr(self, 'ls_372_widget_{0}'.format(com_port))
         if not hasattr(self, 'ivc_widget'):
             self.rm_widget = ResonanceMeasurement(self.daq_settings, self.status_bar, self.screen_resolution, self.monitor_dpi, self.data_folder, self.dewar, ls_372_widget)
-        self.rm_widget.rm_update_samples()
-        self.rm_widget.rm_update_daq_settings(self.daq_settings)
         self.central_widget.layout().addWidget(self.rm_widget, 0, 0, 1, 1)
         self.status_bar.showMessage('Resonance Measurement')
         QtWidgets.QApplication.processEvents()

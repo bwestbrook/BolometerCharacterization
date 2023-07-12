@@ -5,7 +5,6 @@ import os
 import simplejson
 import numpy as np
 from copy import copy
-from datetime import datetime
 from pprint import pprint
 from bd_lib.bolo_daq import BoloDAQ
 from PyQt5 import QtCore, QtGui, QtWidgets
