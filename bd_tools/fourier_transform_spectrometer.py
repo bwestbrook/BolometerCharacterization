@@ -74,7 +74,9 @@ class FourierTransformSpectrometer(QtWidgets.QWidget, GuiBuilder, FourierTransfo
         grid_2 = QtWidgets.QGridLayout()
         self.fts_configure_input_panel()
         self.fts_configure_analysis_panel()
-        self.data_folder = data_folder
+        self.data_folder = os.path.join(data_folder, 'FTS_Curves')
+        if not os.path.exists(self.data_folder):
+            os.makedirs(self.data_folder)
         self.start_pause = 5.0
         self.status_bar.showMessage('Ready')
         self.x_data = []
