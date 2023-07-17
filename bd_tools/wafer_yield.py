@@ -3,6 +3,7 @@ import pandas as pd
 import pylab as pl
 import numpy as np
 import json
+import matplotlib.gridspec as gridspec
 from pprint import pprint
 from PyQt5 import QtGui, QtWidgets
 from PyQt5.QtCore import *
@@ -75,7 +76,7 @@ class WaferYield(QtWidgets.QWidget, GuiBuilder):
                 '40D': 2.1,
                 '40T': 0.0
             }
-        self.lb_bolo_scale = 3.0
+        self.lb_bolo_scale = 4.
         self.dl_lf_intra_pixel_offsets = {
                 '30B': (0.5 *np.sqrt(2), -0.5 *np.sqrt(2)),
                 '30D': (0.5 *np.sqrt(2), 0.5 *np.sqrt(2)),
@@ -93,6 +94,16 @@ class WaferYield(QtWidgets.QWidget, GuiBuilder):
             '78B': (-0.5 * np.sqrt(2),  -0.5 * np.sqrt(2)),
             'DX': (0, -1),
             'DY': (0.5 * np.sqrt(2), -0.5 * np.sqrt(2)),
+        }
+        self.lblf4_intra_pixel_key_offsets = {
+            '100T': (1.2, 0),
+            '100B': (0.5 * np.sqrt(2), 0.4 * np.sqrt(2)),
+            '140T': (-0.20, 1),
+            '140B': (-0.8 * np.sqrt(2), 0.4 * np.sqrt(2)),
+            '78T': (-1.5, 0),
+            '78B': (-0.8 * np.sqrt(2),  -0.5 * np.sqrt(2)),
+            'DX': (-0.10, -1.3),
+            'DY': (0.7 * np.sqrt(2), -0.5 * np.sqrt(2)),
         }
         grid = QtWidgets.QGridLayout()
         self.setLayout(grid)
@@ -113,6 +124,7 @@ class WaferYield(QtWidgets.QWidget, GuiBuilder):
         for wafer_type in self.map_path_dict:
             self.wafer_type_combobox.addItem(wafer_type)
         self.wafer_type_combobox.currentIndexChanged.connect(self.wy_set_df)
+        self.wafer_type_combobox.setCurrentIndex(1)
         self.wy_set_df()
         self.load_data_pushbutton = QtWidgets.QPushButton('Load')
         self.layout().addWidget(self.load_data_pushbutton, 0, 1, 1, 1)
@@ -162,9 +174,22 @@ class WaferYield(QtWidgets.QWidget, GuiBuilder):
         '''
         '''
 
-        fig = pl.figure(figsize=(8, 6))
-        ax = fig.add_subplot(111)
+        fig = pl.figure(figsize=(8, 8))
+        #fig = pl.figure()
+
+        gs = gridspec.GridSpec(1, 2,width_ratios=[4,1])
+        ax = fig.add_subplot(gs[0])
+        ax_key = fig.add_subplot(gs[1])
+        ax_key.set_axis_off()
+        ax_key.set_xlim([-1.2, 1.2])
+        ax_key.set_ylim([-1.2, 1.2])
+        ax.set_xlim([-50, 50])
+        ax.set_ylim([-50, 50])
         ax.set_aspect('equal')
+        ax.xaxis.set_tick_params(labelbottom=False)
+        ax.yaxis.set_tick_params(labelleft=False)
+        ax.set_xticks([])
+        ax.set_yticks([])
         all_xs = []
         all_ys = []
         all_resistances = []
@@ -173,29 +198,42 @@ class WaferYield(QtWidgets.QWidget, GuiBuilder):
             pixel_resistances = self.df[str(pixel)]
             x = self.map_df[self.map_df['pixel'] == pixel].iloc[0]['x_mm']
             y = self.map_df[self.map_df['pixel'] == pixel].iloc[0]['y_mm']
-            for i, tes_id in enumerate(self.df['Pixel Number']):
+            if i + 1 < 10:
+                ax.text(x - 1, y - 1, '{0}'.format(i + 1), fontsize=8)
+            else:
+                ax.text(x - 1.5, y - 1, '{0}'.format(i + 1), fontsize=8)
+            ax.scatter(x, y, 1600, facecolor='none', edgecolor='k')
+            for j, tes_id in enumerate(self.df['Pixel Number']):
                 full_x = x + self.lb_bolo_scale * self.lblf4_intra_pixel_offsets[tes_id.upper()][0]
                 full_y = y + self.lb_bolo_scale * self.lblf4_intra_pixel_offsets[tes_id.upper()][1]
-                resistance = pixel_resistances[i]
-                ax.text(full_x, full_y, '{0}'.format(tes_id), fontsize=6)
+                resistance = pixel_resistances[j]
+                if i == 0:
+                    key_x = -0.15
+                    key_y = 0.6
+                    ax_key.text(key_x + 0.5 * self.lblf4_intra_pixel_key_offsets[tes_id.upper()][0] - 0.125,
+                                key_y + 0.5 * self.lblf4_intra_pixel_key_offsets[tes_id.upper()][1] / 4.0,
+                                '{0}'.format(tes_id).upper(), fontsize=6)
+                    ax_key.scatter(key_x, key_y, 4600, facecolor='none', edgecolor='k')
+                    ax_key.text(key_x - 0.25, key_y + 0.2, 'KEY')
                 if not self.gb_is_float(resistance) or np.isnan(resistance):
                     resistance = 40
                     label = None
                     handles, labels = ax.get_legend_handles_labels()
                     if "Open" not in labels:
                         label = "Open"
-                    ax.plot(full_x, full_y, 'o', ms=3, color='k', label=label)
+                    ax.plot(full_x, full_y, 'o', ms=1, color='k', label=label)
                 else:
                     all_xs.append(full_x)
                     all_ys.append(full_y)
                     all_resistances.append(float(resistance))
-        cm = ax.scatter(np.asarray(all_xs), np.asarray(all_ys), s=100, c=np.asarray(all_resistances), cmap='jet')
+        cm = ax.scatter(np.asarray(all_xs), np.asarray(all_ys), s=50, c=np.asarray(all_resistances), cmap='jet')
         wafer_name = self.wafer_name_lineedit.text()
         ax.set_title('Resistance Heat Map for {0}'.format(wafer_name))
-        ax.set_xlabel('X Pos (mm)')
-        ax.set_ylabel('Y Pos (mm)')
-        pl.legend()
-        pl.colorbar(cm, label='Resitance (k$\Omega$)')
+        #ax.set_xlabel('X Pos (mm)')
+        #ax.set_ylabel('Y Pos (mm)')
+        #pl.legend(bbox_to_anchor=(0, 0, 1.05, 1.05))
+        pl.colorbar(cm, label='Resitance (k$\Omega$)', fraction=0.046, pad=0.04)
+        #pl.colorbar(cm, label='Resitance (k$\Omega$)', location='bottom')
         pl.show()
 
     def wy_plot_so(self):

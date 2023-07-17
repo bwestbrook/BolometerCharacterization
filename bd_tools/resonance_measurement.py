@@ -91,10 +91,14 @@ class ResonanceMeasurement(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTra
         self.layout().addWidget(self.end_temp_lineedit, 3, 1, 1, 1)
         self.n_temp_points_lineedit = self.gb_make_labeled_lineedit('N Temp Points', lineedit_text='2')
         self.n_temp_points_lineedit.textChanged.connect(self.rm_update_scan_info)
-        self.layout().addWidget(self.n_temp_points_lineedit, 4, 0, 1, 1)
+        self.layout().addWidget(self.n_temp_points_lineedit, 3, 2, 1, 1)
         self.log_spacing_checkbox = QtWidgets.QCheckBox('Log Spacing?')
         self.log_spacing_checkbox.clicked.connect(self.rm_update_scan_info)
-        self.layout().addWidget(self.log_spacing_checkbox, 4, 1, 1, 1)
+        self.layout().addWidget(self.log_spacing_checkbox, 3, 3, 1, 1)
+        self.n_drift_points_lineedit = self.gb_make_labeled_lineedit('N Drift Points', lineedit_text='500')
+        self.layout().addWidget(self.n_drift_points_lineedit, 4, 0, 1, 1)
+        self.drift_scan_delay_lineedit = self.gb_make_labeled_lineedit('Drift Delay (m)', lineedit_text='0.01')
+        self.layout().addWidget(self.drift_scan_delay_lineedit, 4, 1, 1, 1)
 
         #Spectrum Analyzer Scan Setup
         self.start_power_lineedit = self.gb_make_labeled_lineedit('Start Power (dBm)', lineedit_text='-35')
@@ -104,14 +108,17 @@ class ResonanceMeasurement(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTra
         self.end_power_lineedit.textChanged.connect(self.rm_update_scan_info)
         self.layout().addWidget(self.end_power_lineedit, 6, 1, 1, 1)
         self.n_power_points_lineedit = self.gb_make_labeled_lineedit('N Power Points', lineedit_text='2')
-        self.layout().addWidget(self.n_power_points_lineedit, 7, 0, 1, 1)
+        self.layout().addWidget(self.n_power_points_lineedit, 6, 2, 1, 1)
         self.n_power_points_lineedit.textChanged.connect(self.rm_update_scan_info)
         self.scan_info_label = self.gb_make_labeled_label()
         self.layout().addWidget(self.scan_info_label, 8, 0, 1, 3)
 
         self.start_multitemp_scan_pushbutton = QtWidgets.QPushButton('Start Multitemp Scan')
-        self.layout().addWidget(self.start_multitemp_scan_pushbutton, 9, 0, 1, 2)
+        self.layout().addWidget(self.start_multitemp_scan_pushbutton, 9, 0, 1, 1)
         self.start_multitemp_scan_pushbutton.clicked.connect(self.rm_start_multistep_scan)
+        self.start_drift_scan_pushbutton = QtWidgets.QPushButton('Start Drift Scan')
+        self.layout().addWidget(self.start_drift_scan_pushbutton, 9, 1, 1, 1)
+        self.start_drift_scan_pushbutton.clicked.connect(self.rm_start_drift_scan)
         self.stop_scan_pushbutton = QtWidgets.QPushButton('Stop Scan')
         self.stop_scan_pushbutton.clicked.connect(self.rm_stop)
         self.layout().addWidget(self.stop_scan_pushbutton, 9, 2, 1, 1)
@@ -198,6 +205,7 @@ class ResonanceMeasurement(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTra
         '''
         '''
         if not hasattr(self.ls_372_widget, 'channels'):
+            self.temperature = np.nan
             return None
         thermometer_index = int(self.thermometer_dict[self.thermometer_combobox.currentText()])
         channel_readout_info = self.ls_372_widget.channels.ls372_get_channel_value(thermometer_index, reading='kelvin') # 6 is MXC
@@ -234,6 +242,41 @@ class ResonanceMeasurement(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTra
         '''
         '''
         self.stop = True
+
+    def rm_start_drift_scan(self):
+        '''
+        '''
+        print('clieck')
+        self.rm_set_all_sa_settings()
+        self.rm_set_sweep_mode()
+        self.stop = False
+        self.delta_threshold = 1
+        n_drift_points = int(self.n_drift_points_lineedit.text())
+        for i in enumerate(range(n_drift_points)):
+            print(i)
+            self.rm_get_t_bath()
+            for i in range(self.center_frequency_combobox.count()):
+                self.center_frequency_combobox.setCurrentIndex(i)
+                center_frequency = self.center_frequency_combobox.itemText(i)
+                self.rm_set_center_frequency()
+                for j, power in enumerate(self.power_range):
+                    print(power)
+                    status = '{0} {1}'.format(self.temperature, power)
+                    self.status_bar.showMessage(status)
+                    self.power_lineedit.setText('{0:.1f}'.format(power))
+                    self.rm_set_power()
+                    time.sleep(0.5)
+                    self.rm_get_network_analyzer_data()
+                    time.sleep(10.0)
+                    self.status_bar.showMessage('Temps:{0}/{1} Powers: {2}/{3}'.format(i, n_drift_points, j, len(self.power_range)))
+                    QtWidgets.QApplication.processEvents()
+                    if self.stop:
+                        break
+            wait_time = int(float(self.drift_scan_delay_lineedit.text()) / 60.0)
+            time.sleep(wait_time)
+            if self.stop:
+                break
+        self.stop = False
 
     def rm_start_multistep_scan(self):
         '''
@@ -376,7 +419,6 @@ class ResonanceMeasurement(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTra
         if self.center_frequency_combobox.currentText() == '':
             return None
         self.rm_get_t_bath()
-        temperature = int(np.round(self.temperature))
         sample_name = self.filename_lineedit.text()
         cent_freq = float(self.center_frequency_combobox.currentText())# GHz
         freq_span = float(self.frequency_span_lineedit.text())#MHz
@@ -384,7 +426,12 @@ class ResonanceMeasurement(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTra
         attenuation = float(self.attenuation_lineedit.text())
         now = datetime.now()
         now_str = datetime.strftime(now, '%Y_%m_%d_%H_%M_%S')
-        self.filename = '{0}_CF{1:.2f}GHz_Span{2:.1f}MHz_Power{3:.0f}dBm_Atten{4:.0f}_Temp{5:d}mK_{6}'.format(sample_name, cent_freq, freq_span, power, attenuation, temperature, now_str)
+        if np.isnan(self.temperature):
+            temperature = 'nan'
+            self.filename = '{0}_CF{1:.2f}GHz_Span{2:.1f}MHz_Power{3:.0f}dBm_Atten{4:.0f}_Temp{5}mK_{6}'.format(sample_name, cent_freq, freq_span, power, attenuation, temperature, now_str)
+        else:
+            temperature = int(np.round(self.temperature))
+            self.filename = '{0}_CF{1:.2f}GHz_Span{2:.1f}MHz_Power{3:.0f}dBm_Atten{4:.0f}_Temp{5:d}mK_{6}'.format(sample_name, cent_freq, freq_span, power, attenuation, temperature, now_str)
         self.filename = self.filename.replace('.', 'p')
         self.filename += '.csv'
         if self.filename.startswith('_'):
@@ -473,7 +520,10 @@ class ResonanceMeasurement(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTra
         '''
         '''
         power = float(self.power_lineedit.text())
-        temperature = int(np.round(self.temperature))
+        if np.isnan(self.temperature):
+            temperature = 'nan'
+        else:
+            temperature = int(np.round(self.temperature))
         temperature_str = 'T{0}mK'.format(temperature)
         if not os.path.exists(os.path.join(self.data_folder, temperature_str)):
             os.makedirs(os.path.join(self.data_folder, temperature_str))

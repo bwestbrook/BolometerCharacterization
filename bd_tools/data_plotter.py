@@ -1,13 +1,13 @@
 import os
-
+import shutil
 import pylab as pl
 import numpy as np
 import pandas as pd
 import matplotlib as mpl
-mpl.rcParams.update(mpl.rcParamsDefault)
-#mpl.rcParams['text.usetex'] = True
-mpl.rcParams['text.latex.preamble'] = [r'\usepackage{amssymb}']
-mpl.rcParams['text.latex.preamble'] = [r'usepackage{amsmath}']
+
+from matplotlib import rc
+rc('text', usetex=True)
+rc('text.latex', preamble=r'\usepackage{amssymb}')
 import matplotlib.pyplot as plt
 from copy import copy
 from pprint import pprint
@@ -56,6 +56,9 @@ class DataPlotter(QtWidgets.QWidget, GuiBuilder):
         plot_pushbutton = QtWidgets.QPushButton('Replot', self)
         self.layout().addWidget(plot_pushbutton, 0, 1, 1, 1)
         plot_pushbutton.clicked.connect(self.dp_plot)
+        save_pushbutton = QtWidgets.QPushButton('Save', self)
+        self.layout().addWidget(save_pushbutton, 0, 2, 1, 1)
+        save_pushbutton.clicked.connect(self.dp_save)
 
     def dp_plot_input(self):
         '''
@@ -96,7 +99,7 @@ class DataPlotter(QtWidgets.QWidget, GuiBuilder):
         self.legend_checkbox.clicked.connect(self.dp_plot)
         self.transparent_checkbox = QtWidgets.QCheckBox('Transparent?')
         self.layout().addWidget(self.transparent_checkbox, 3, 3, 1, 1)
-        self.transparent_checkbox.setChecked(True)
+        self.transparent_checkbox.setChecked(False)
         self.transparent_checkbox.clicked.connect(self.dp_plot)
 
         #Subplot
@@ -340,12 +343,20 @@ class DataPlotter(QtWidgets.QWidget, GuiBuilder):
         if self.fit_select_checkbox.isChecked():
             x_fits, y_fits = self.dp_get_fit()
             ax.plot(x_fits, y_fits, label='{0} Fit'.format(self.fit_select_combobox.currentText()))
-        if self.legend_checkbox.isChecked():
+        if self.legend_checkbox.isChecked() and False:
             handles, labels = ax.get_legend_handles_labels()
             ax.legend(handles, labels, numpoints=1, mode="expand", frameon=True, fontsize=10, bbox_to_anchor=(0, 0.1, 1, 1))
         fig.savefig(temp_save_path, transparent=self.transparent_checkbox.isChecked())
         image_to_display = QtGui.QPixmap(temp_save_path)
         self.plot_label.setPixmap(image_to_display)
 
-
+    def dp_save(self):
+        '''
+        '''
+        save_path = os.path.join('temp_files', 'temp_custom_xy.png')
+        new_path = QtWidgets.QFileDialog.getSaveFileName(self, 'Save File', save_path, '.png')[0]
+        print(save_path, new_path)
+        shutil.copy(save_path, new_path)
+        json_path = new_path.replace('png', 'json')
+        self.df.to_json(json_path)
 
