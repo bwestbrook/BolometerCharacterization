@@ -212,16 +212,16 @@ class RTCollector(QtWidgets.QWidget, GuiBuilder, FourierTransformSpectroscopy):
             self.rtc_daq_combobox.addItem(daq)
         self.layout().addWidget(self.rtc_daq_combobox, 1, 0, 1, 1)
         # DAQ X
-        self.daq_x_combobox = self.gb_make_labeled_combobox(label_text='DAQ_X:')
-        for daq in range(0, 8):
-            self.daq_x_combobox.addItem(str(daq))
-        self.layout().addWidget(self.daq_x_combobox, 1, 1, 1, 1)
+        #self.daq_x_combobox = self.gb_make_labeled_combobox(label_text='DAQ_X:')
+        #for daq in range(0, 8):
+            #self.daq_x_combobox.addItem(str(daq))
+        #self.layout().addWidget(self.daq_x_combobox, 1, 1, 1, 1)
         # DAQ Y
-        self.daq_y_combobox = self.gb_make_labeled_combobox(label_text='DAQ_Y:')
-        for daq in range(0, 8):
-            self.daq_y_combobox.addItem(str(daq))
-        self.layout().addWidget(self.daq_y_combobox, 1, 2, 1, 1)
-        self.daq_y_combobox.setCurrentIndex(1)
+        #self.daq_y_combobox = self.gb_make_labeled_combobox(label_text='DAQ_Y:')
+        #for daq in range(0, 8):
+            #self.daq_y_combobox.addItem(str(daq))
+        #self.layout().addWidget(self.daq_y_combobox, 1, 2, 1, 1)
+        #self.daq_y_combobox.setCurrentIndex(1)
         self.rtc_daq_combobox.setCurrentIndex(0)
         self.layout().addWidget(self.rtc_daq_combobox, 0, 0, 1, 1)
         # Int time and sample rte
@@ -235,7 +235,7 @@ class RTCollector(QtWidgets.QWidget, GuiBuilder, FourierTransformSpectroscopy):
         self.layout().addWidget(self.sample_rate_lineedit, 0, 2, 1, 1)
         self.sample_rate_lineedit.setText('10000')
         self.sample_rate = self.sample_rate_lineedit.text()
-        # DAQ X
+        ## DAQ X
         self.daq_x_combobox = self.gb_make_labeled_combobox(label_text='DAQ_X:')
         for daq in range(0, 8):
             self.daq_x_combobox.addItem(str(daq))
@@ -250,7 +250,7 @@ class RTCollector(QtWidgets.QWidget, GuiBuilder, FourierTransformSpectroscopy):
         self.daq_y_combobox.currentIndexChanged.connect(self.rtc_update_active_y_checkbox)
         self.daq_y_checkbox.stateChanged.connect(self.rtc_configure_y_channels)
         self.daq_y_combobox.setCurrentIndex(0)
-        self.rtc_daq_combobox.setCurrentIndex(2)
+        self.rtc_daq_combobox.setCurrentIndex(1)
         # Sample Configure 
         self.configure_channel_pushbutton = QtWidgets.QPushButton('Configure And Scan', self)
         self.layout().addWidget(self.configure_channel_pushbutton, 2, 1, 1, 1)
@@ -528,6 +528,8 @@ class RTCollector(QtWidgets.QWidget, GuiBuilder, FourierTransformSpectroscopy):
         '''
         '''
         if not hasattr(self, 'channel_combobox'):
+            return None
+        if self.channel_combobox.currentText() == 'SQUID':
             return None
         channel = self.channel_combobox.currentText()
         channel_info = 'Scanning {0} '.format(channel)
@@ -879,10 +881,22 @@ class RTCollector(QtWidgets.QWidget, GuiBuilder, FourierTransformSpectroscopy):
             QtWidgets.QApplication.processEvents()
             self.qthreadpool.clear()
 
+    def rtc_get_first_active_daq(self):
+        '''
+        '''
+        active_daqs = []
+        for daq, daq_dict in self.active_daq_dict.items():
+            if daq_dict['active']:
+                active_daqs.append(daq)
+        return active_daqs[0]
+
     def rtc_plot_running_from_disk(self):
         '''
         '''
         print('plotting')
+        daq_channel_y = int(self.daq_y_combobox.currentText())
+        first_active_daq = self.rtc_get_first_active_daq()
+        #import ipdb;ipdb.set_trace()
         save_path = os.path.join('temp_files', 'temp_xy.png')
         image_to_display = QtGui.QPixmap(save_path)
         self.xy_scatter_label.setPixmap(image_to_display)
@@ -905,7 +919,7 @@ class RTCollector(QtWidgets.QWidget, GuiBuilder, FourierTransformSpectroscopy):
             self.x_data_label.setText(x_data_text)
             y_data_text = 'Y Data: {0:.4f} ::: Y STD: {1:.4f} (raw) [{2}Ohms=0V {3}Ohms=10V]\n'.format(
 
-                self.daq_collector.all_data_df[1]['data'][-1], self.daq_collector.all_data_df[1]['stds'][-1],
+                self.daq_collector.all_data_df[first_active_daq]['data'][-1], self.daq_collector.all_data_df[first_active_daq]['stds'][-1],
                 self.samples_low_value, self.samples_high_value)
             if len(self.daq_collector.y_data_real) > 0:
                 y_data_text += 'Y Data: {0:.2f} (mOhms)::: Y STD: {1:.2f} (mOhms)\n'.format(self.daq_collector.y_data_real[-1], self.daq_collector.y_stds_real[-1])

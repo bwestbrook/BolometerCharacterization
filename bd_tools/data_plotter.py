@@ -4,7 +4,7 @@ import pylab as pl
 import numpy as np
 import pandas as pd
 import matplotlib as mpl
-
+from matplotlib.lines import Line2D
 from matplotlib import rc
 rc('text', usetex=True)
 rc('text.latex', preamble=r'\usepackage{amssymb}')
@@ -35,6 +35,12 @@ class DataPlotter(QtWidgets.QWidget, GuiBuilder):
             ]
         self.loaded_file_data_rows = []
         self.include_in_plot_list = []
+        self.marker_styles = {
+                '-': '',
+                'o': '',
+                '*': '',
+                '.': '',
+                }
         self.fit_types = {
                 'Polynomial': 'p[0]*X**[N-1] + ...',
                 'Exponential': 'A*eB*x + C',
@@ -127,9 +133,19 @@ class DataPlotter(QtWidgets.QWidget, GuiBuilder):
         self.frac_screen_width_lineedit.returnPressed.connect(self.dp_plot)
         self.frac_screen_height_lineedit = self.gb_make_labeled_lineedit(label_text='Frac Screen Height', lineedit_text='0.5')
         self.frac_screen_height_lineedit.setValidator(QtGui.QDoubleValidator(0, 1, 4, self.frac_screen_height_lineedit))
-        self.layout().addWidget(self.frac_screen_height_lineedit, 5, 1, 1, 1)
         self.frac_screen_height_lineedit.returnPressed.connect(self.dp_plot)
-
+        self.layout().addWidget(self.frac_screen_height_lineedit, 5, 1, 1, 1)
+        self.marker_style_combobox = self.gb_make_labeled_combobox(label_text='Marker Style')
+        #import ipdb;ipdb.set_trace()
+        for marker_style in Line2D.markers:
+            print(marker_style)
+            if not str(marker_style).isnumeric():
+                self.marker_style_combobox.addItem(str(marker_style))
+        self.marker_style_combobox.currentIndexChanged.connect(self.dp_plot)
+        self.layout().addWidget(self.marker_style_combobox, 5, 2, 1, 1)
+        self.marker_size_lineedit = self.gb_make_labeled_lineedit(label_text='Marker Size', lineedit_text='3')
+        self.marker_size_lineedit.returnPressed.connect(self.dp_plot)
+        self.layout().addWidget(self.marker_size_lineedit, 5, 3, 1, 1)
         #Data Clip
         self.data_clip_lo_lineedit = self.gb_make_labeled_lineedit(label_text='Data Clip Lo', lineedit_text='0')
         self.data_clip_lo_lineedit.setValidator(QtGui.QDoubleValidator(0, 1e8, 4, self.data_clip_lo_lineedit))
@@ -311,6 +327,8 @@ class DataPlotter(QtWidgets.QWidget, GuiBuilder):
         if len(y_label_2) > 0:
             axy2 = ax.twinx()
             axy2.set_ylabel(y_label_2)
+        marker_style = self.marker_style_combobox.currentText()
+        marker_size = float(self.marker_size_lineedit.text())
         sample_clip_lo = int(self.sample_clip_lo_lineedit.text())
         sample_clip_hi = int(self.sample_clip_hi_lineedit.text())
         data_clip_lo = float(self.data_clip_lo_lineedit.text())
@@ -334,7 +352,7 @@ class DataPlotter(QtWidgets.QWidget, GuiBuilder):
             y_data = y_data[0][data_selector]
             yerr = y_data[1][data_selector]
 
-        ax.errorbar(x_data, y_data, xerr=xerr, yerr=yerr)
+        ax.errorbar(x_data, y_data, xerr=xerr, yerr=yerr, fmt=marker_style, ms=marker_size)
         ax.tick_params(axis='both', labelsize=ticksize)
         ax.set_xlabel(x_label, fontsize=fontsize)
         ax.set_ylabel(y_label, fontsize=fontsize)

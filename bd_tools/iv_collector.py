@@ -1,7 +1,6 @@
 import time
 import shutil
 import os
-
 import simplejson
 import numpy as np
 import pickle as pkl
@@ -16,6 +15,9 @@ from bd_lib.fourier_transform_spectroscopy import FourierTransformSpectroscopy
 from PyQt5 import QtCore, QtGui, QtWidgets
 from GuiBuilder.gui_builder import GuiBuilder, GenericClass
 from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
+
+
+
 class IVCollector(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTransformSpectroscopy):
 
     def __init__(self, daq_settings, status_bar, screen_resolution, monitor_dpi, data_folder, dewar, ls_372_widget):
@@ -464,8 +466,13 @@ class IVCollector(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTransformSpe
                       int_time=self.int_time,
                       sample_rate=self.sample_rate,
                       device=device)
+        i = 0
         while self.started:
+            i += 1
             data_dict = daq.run()
+            #pprint(data_dict)
+            print('post data_dict')
+            print('pre get data from data_dict')
             x_ts = data_dict[self.x_channel]['ts']
             x_mean = data_dict[self.x_channel]['mean']
             x_min = data_dict[self.x_channel]['min']
@@ -476,21 +483,36 @@ class IVCollector(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTransformSpe
             y_min = data_dict[self.y_channel]['min']
             y_max = data_dict[self.y_channel]['max']
             y_std = data_dict[self.y_channel]['std']
+            print('post get data from data_dict')
             if x_mean < 0:
                 x_mean *= -1
                 x_min *= -1
                 x_max *= -1
             self.x_data.append(x_mean)
+            print('a')
             self.x_stds.append(x_std)
+            print('b')
             self.y_data.append(y_mean)
+            print('c')
             self.y_stds.append(y_std)
+            print('d')
             self.ivc_plot_running()
+            print('e')
             self.current_x_mean = x_mean
+            print('f')
             self.current_x_std = x_std
+            print('g')
             self.current_y_mean = y_mean
+            print('h')
             self.current_y_std = y_std
+            print('pre display')
             self.ivc_display_current_data()
+            print('post display / pre process')
             QtWidgets.QApplication.processEvents()
+            print('post prosss')
+            print(i)
+            print()
+            print()
             self.repaint()
 
     def ivc_display_current_data(self):
