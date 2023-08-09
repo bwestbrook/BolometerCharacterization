@@ -19,6 +19,8 @@ from pprint import pprint, pformat
 from datetime import datetime
 from copy import copy
 from PyQt5 import QtCore, QtGui, QtWidgets
+from matplotlib import rc
+rc('text', usetex=False)
 
 # Settings 
 from bd_settings.bd_global_settings import settings

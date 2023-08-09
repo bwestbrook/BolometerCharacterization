@@ -765,6 +765,7 @@ if __name__ == '__main__':
     ftsy = FourierTransformSpectroscopy()
     pprint(ftsy.bands)
     band = 'LBLF4-78'
+    band = 'SO40'
     data_clip_lo = 0
     data_clip_hi = 40 * 1e9
 
@@ -777,7 +778,7 @@ if __name__ == '__main__':
     data_clip_hi = 110 * 1e9
     t_source_low = 77
     t_source_high = 293
-    efficiency = 0.65
+    efficiency = 1.00
     fft_frequency_vector_simulated, fft_vector_simulated = ftsy.ftsy_load_simulated_band(data_clip_lo, data_clip_hi, band)
     simulated_delta_power, simulated_integrated_bandwidth = ftsy.ftsy_compute_delta_power_and_bandwidth_at_window(fft_frequency_vector_simulated * 1e9, fft_vector_simulated,
                                                                                                                   data_clip_lo=data_clip_lo, data_clip_hi=data_clip_hi,

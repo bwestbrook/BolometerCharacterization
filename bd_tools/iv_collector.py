@@ -15,6 +15,8 @@ from bd_lib.fourier_transform_spectroscopy import FourierTransformSpectroscopy
 from PyQt5 import QtCore, QtGui, QtWidgets
 from GuiBuilder.gui_builder import GuiBuilder, GenericClass
 from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
+from matplotlib import rc
+rc('text', usetex=False)
 
 
 

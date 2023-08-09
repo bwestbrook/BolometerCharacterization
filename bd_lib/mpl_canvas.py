@@ -1,5 +1,7 @@
 from matplotlib.figure import Figure
 import matplotlib.gridspec as gridspec
+from matplotlib import rc
+rc('text', usetex=False)
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg
 from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
 

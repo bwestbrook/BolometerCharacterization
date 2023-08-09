@@ -3,7 +3,8 @@ import bisect
 import numpy as np
 from pprint import pprint
 from copy import copy
-
+from matplotlib import rc
+rc('text', usetex=False)
 
 class IVCurveLib():
 

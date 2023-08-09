@@ -17,6 +17,8 @@ from bd_lib.fourier_transform_spectroscopy import FourierTransformSpectroscopy
 from PyQt5 import QtCore, QtGui, QtWidgets
 from GuiBuilder.gui_builder import GuiBuilder, GenericClass
 from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
+from matplotlib import rc
+rc('text', usetex=False)
 
 
 class DifferenceLoadCurves(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTransformSpectroscopy):
@@ -298,7 +300,7 @@ class DifferenceLoadCurves(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTra
         self.differenced_load_curve_label.setPixmap(image_to_display)
         pl.close('all')
 
-    def dlc_plot_differenced_load_curves(self, frac_screen_width=0.4, frac_screen_height=0.3):
+    def dlc_plot_differenced_load_curves(self, frac_screen_width=0.5, frac_screen_height=0.5):
         '''
         '''
         fig, axes = self.dlc_create_differenced_load_curve_figure(frac_screen_width=frac_screen_width, frac_screen_height=frac_screen_height)
@@ -343,6 +345,7 @@ class DifferenceLoadCurves(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTra
         text += 'Rel Eff (pix)    [%] | {0:7.2f}  | {1:7.2f}\n'.format(efficiency / self.dewar_transmission, simulated_efficiency / self.dewar_transmission)
         print(text)
         ax4 = fig.get_axes()[3]
+        text = text.replace("%", "pct")
         ax4.annotate(text, xy=(0, 0), xytext=(-0.125, -0.3), fontfamily='monospace', fontsize=9)
         text = '\n\n\n\n$\eta_{dewar}$\n'
         text += '$T_{chop}$\n'
@@ -362,6 +365,7 @@ class DifferenceLoadCurves(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTra
         #ax4.legend(handles, labels, fontsize=10, numpoints=1, mode="expand", bbox_to_anchor=(0.0, 0, 1, 1))
         ax2 = fig.get_axes()[1]
         ax2.legend(handles, labels, fontsize=9, numpoints=1, loc='best')
+        pl.show()
         return fig
 
     def dlc_plot_differenced_spectra_data(self, fig):
@@ -379,19 +383,24 @@ class DifferenceLoadCurves(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTra
         if smoothing_factor > 0:
             normalized_fft_vector_processed = self.ftsy_running_mean(normalized_fft_vector_processed, smoothing_factor=smoothing_factor)
         normalized_fft_vector_processed = normalized_fft_vector_processed / np.max(normalized_fft_vector_processed)
-        print('data', fft_frequency_vector_processed)
+        if np.max(fft_frequency_vector_processed) < 1e6:
+            fft_frequency_vector_processed *= 1e9
         measured_delta_power, measured_integrated_bandwidth = self.ftsy_compute_delta_power_and_bandwidth_at_window(fft_frequency_vector_processed, normalized_fft_vector_processed,
                                                                                                                     data_clip_lo=data_clip_lo, data_clip_hi=data_clip_hi,
                                                                                                                     t_source_low=t_source_low, t_source_high=t_source_high)
-        print(measured_delta_power, measured_integrated_bandwidth)
-        ax2.plot(fft_frequency_vector_processed * 1e-9, normalized_fft_vector_processed, label='Measured Spectra')
         band = self.band_select_combobox.currentText()
         fft_frequency_vector_simulated, fft_vector_simulated = self.ftsy_load_simulated_band(data_clip_lo, data_clip_hi, band)
         ax2.plot(fft_frequency_vector_simulated, fft_vector_simulated, label='Simulated Spectra')
-        print('simulated', fft_frequency_vector_simulated)
         simulated_delta_power, simulated_integrated_bandwidth = self.ftsy_compute_delta_power_and_bandwidth_at_window(fft_frequency_vector_simulated * 1e9, fft_vector_simulated,
                                                                                                                       data_clip_lo=data_clip_lo, data_clip_hi=data_clip_hi,
                                                                                                                       t_source_low=t_source_low, t_source_high=t_source_high)
+        print(data_clip_lo, data_clip_hi, fft_frequency_vector_processed)
+        if np.max(fft_frequency_vector_processed) > 1e6:
+            fft_frequency_vector_processed *= 1e-9
+            data_clip_lo *= 1e-9
+            data_clip_hi *= 1e-9
+        data_selector = np.logical_and(data_clip_lo < fft_frequency_vector_processed, fft_frequency_vector_processed < data_clip_hi)
+        ax2.plot(fft_frequency_vector_processed[data_selector], normalized_fft_vector_processed[data_selector], label='Measured Spectra')
         return fig, measured_delta_power, measured_integrated_bandwidth, simulated_delta_power, simulated_integrated_bandwidth
 
     def dlc_plot_differenced_iv_data(self, v_bolo, i_bolo, fig, iv=1):
@@ -734,10 +743,15 @@ class DifferenceLoadCurves(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTra
             self.sample_name_lineedit.setText(meta_data['sample_name_lineedit'])
         fig, ax = self.dlc_create_blank_fig(left=0.1, frac_screen_width=0.4, frac_screen_height=0.2)
         fft_frequency_vector, normalized_fft_vector = self.dlc_load_spectra_data(spectra_path)
-        ax.plot(fft_frequency_vector * 1e-9, normalized_fft_vector, label='Raw Data')
+        #print(fft_frequency_vector)
+        #if np.max(fft_frequency_vector) > 1e6:
+            #ax.plot(fft_frequency_vector * 1e-9, normalized_fft_vector, label='Raw Data')
+        #else:
+            #ax.plot(fft_frequency_vector, normalized_fft_vector, label='Raw Data')
         print(band)
-        if len(band) > 0:
+        if len(band) > 0 and False:
             fft_frequency_vector_simulated, fft_vector_simulated = self.ftsy_load_simulated_band(data_clip_lo, data_clip_hi, band)
+            print(fft_frequency_vector_simulated)
             ax.plot(fft_frequency_vector_simulated, fft_vector_simulated, label='HFSS Data')
         ax.set_xlabel('Frequency (GHz)')
         ax.set_ylabel('Normalized\nTransmission')
@@ -758,7 +772,10 @@ class DifferenceLoadCurves(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTra
             label='$\Delta(P)$ {0:.2f} pW\nBW {1:.2f} GHz '.format(delta_power * 1e12, integrated_bandwidth * 1e-9)
         if smoothing_factor > 0:
             normalized_fft_vector_processed = self.ftsy_running_mean(normalized_fft_vector_processed, smoothing_factor=smoothing_factor)
-        ax.plot(fft_frequency_vector_processed * 1e-9, normalized_fft_vector_processed, label=label)
+        if np.max(fft_frequency_vector_processed) > 1e6:
+            ax.plot(fft_frequency_vector_processed * 1e-9, normalized_fft_vector_processed, label=label)
+        else:
+            ax.plot(fft_frequency_vector_processed, normalized_fft_vector_processed, label=label)
         #ax.plot(fft_frequency_vector_simulated, fft_vector_simulated, label='HFSS Data')
         ax = self.dlc_plot_optical_elements(ax)
         ax.set_xlabel('Frequency (GHz)')
