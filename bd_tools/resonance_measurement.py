@@ -37,11 +37,13 @@ class ResonanceMeasurement(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTra
         self.dewar = dewar
         self.bpv = BoloPyVisa()
         self.fig = self.mplc.mplc_create_horizontal_array_fig()
+        self.temp_scan = False
+        self.drift_scan = False
         grid = QtWidgets.QGridLayout()
         self.setLayout(grid)
         self.today = datetime.now()
         self.today_str = datetime.strftime(self.today, '%Y_%m_%d')
-        self.data_folder = os.path.join(data_folder, 'Resonantor_Data')
+        self.data_folder = os.path.join(data_folder, 'Resonator_Data')
         if not os.path.exists(self.data_folder):
             os.makedirs(self.data_folder)
         self.rm_populate()
@@ -115,7 +117,7 @@ class ResonanceMeasurement(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTra
 
         self.start_multitemp_scan_pushbutton = QtWidgets.QPushButton('Start Multitemp Scan')
         self.layout().addWidget(self.start_multitemp_scan_pushbutton, 9, 0, 1, 1)
-        self.start_multitemp_scan_pushbutton.clicked.connect(self.rm_start_multistep_scan)
+        self.start_multitemp_scan_pushbutton.clicked.connect(self.rm_start_multitemp_scan)
         self.start_drift_scan_pushbutton = QtWidgets.QPushButton('Start Drift Scan')
         self.layout().addWidget(self.start_drift_scan_pushbutton, 9, 1, 1, 1)
         self.start_drift_scan_pushbutton.clicked.connect(self.rm_start_drift_scan)
@@ -183,6 +185,8 @@ class ResonanceMeasurement(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTra
         #Data Display
         self.data_plot_label = QtWidgets.QLabel()
         self.layout().addWidget(self.data_plot_label, 0, 4, 15, 1)
+        self.running_temp_label = QtWidgets.QLabel()
+        self.layout().addWidget(self.running_temp_label, 18, 0, 1, 4)
 
         self.rm_set_filename()
         self.rm_update_scan_info()
@@ -227,6 +231,18 @@ class ResonanceMeasurement(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTra
     def rm_update_scan_info(self):
         '''
         '''
+        if len(self.start_temp_lineedit.text()) == 0:
+            return None
+        if len(self.end_temp_lineedit.text()) == 0:
+            return None
+        if len(self.n_temp_points_lineedit.text()) == 0:
+            return None
+        if len(self.start_power_lineedit.text()) == 0:
+            return None
+        if len(self.end_power_lineedit.text()) == 0:
+            return None
+        if len(self.n_power_points_lineedit.text()) == 0:
+            return None
         start_temp = int(float(self.start_temp_lineedit.text()) * 1e3)
         end_temp = int(float(self.end_temp_lineedit.text()) * 1e3)
         n_temp_points = int(self.n_temp_points_lineedit.text())
@@ -236,7 +252,9 @@ class ResonanceMeasurement(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTra
         scan_info = '{0}mK_to_{1}mK_{2}step_{3}dBm_to_{4}dBm_{5}Steps'.format(start_temp, end_temp, n_temp_points, start_power, end_power, n_power_points)
         self.scan_info_label.setText(scan_info)
         self.temp_range = np.linspace(start_temp * 1e-3, end_temp * 1e-3, n_temp_points)
+        print(self.temp_range)
         self.power_range = np.linspace(start_power, end_power, n_power_points)
+        print(self.power_range)
 
     def rm_stop(self):
         '''
@@ -246,11 +264,11 @@ class ResonanceMeasurement(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTra
     def rm_start_drift_scan(self):
         '''
         '''
-        print('clieck')
+        self.temp_scan = False
+        self.drift_scan = True
         self.rm_set_all_sa_settings()
         self.rm_set_sweep_mode()
         self.stop = False
-        self.delta_threshold = 1
         n_drift_points = int(self.n_drift_points_lineedit.text())
         for i in enumerate(range(n_drift_points)):
             print(i)
@@ -267,25 +285,31 @@ class ResonanceMeasurement(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTra
                     self.rm_set_power()
                     time.sleep(0.5)
                     self.rm_get_network_analyzer_data()
-                    time.sleep(10.0)
+                    time.sleep(3.0)
                     self.status_bar.showMessage('Temps:{0}/{1} Powers: {2}/{3}'.format(i, n_drift_points, j, len(self.power_range)))
                     QtWidgets.QApplication.processEvents()
                     if self.stop:
                         break
-            wait_time = int(float(self.drift_scan_delay_lineedit.text()) / 60.0)
-            time.sleep(wait_time)
+            #wait_time = int(float(self.drift_scan_delay_lineedit.text()) / 60.0)
+            time.sleep(5.0)
             if self.stop:
                 break
         self.stop = False
 
-    def rm_start_multistep_scan(self):
+    def rm_start_multitemp_scan(self):
         '''
         '''
+        self.temp_scan = True
+        self.drift_scan = False
         self.rm_set_all_sa_settings()
         self.rm_set_sweep_mode()
         self.stop = False
-        self.delta_threshold = 1
+        self.delta_threshold = 1.2
+        self.temperatures = []
+        self.times = []
         for i, set_temperature in enumerate(self.temp_range):
+            self.current_set_temperature = int(set_temperature * 1e3)
+            self.delta_threshold = 0.012 * self.current_set_temperature
             self.ls_372_widget.temp_control.ls372_set_temp_set_point(set_temperature)
             temp_out_of_range = True
             wait_count = 0
@@ -293,33 +317,43 @@ class ResonanceMeasurement(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTra
             while temp_out_of_range:
                 self.rm_get_t_bath()
                 current_temp = self.temperature
+                self.temperatures.append(current_temp)
+                self.times.append(datetime.now())
                 delta = set_temperature * 1e3 - self.temperature
                 self.status_bar.showMessage('T_delta:{0:.4f}mK Current:{1:.3f}mK Set:{2:.0f}mK {3}'.format(delta, current_temp, set_temperature * 1e3, in_range_count))
                 QtWidgets.QApplication.processEvents()
                 if np.abs(delta) <= self.delta_threshold:
                     in_range_count += 1
-                    self.status_bar.showMessage('under threshold waiting 15 seconds to check if in range for {0}/4'.format(in_range_count))
+                    msg = 'Under threshold waiting 1 second to check if still in range:'
+                    msg += '{0}/100 checks complete. Current:{1:.1f}mK Set:{2:.1f}mK Delta:{3:.1f}mK Threshold:{4:.1f}mK'.format(in_range_count, current_temp, set_temperature * 1e3, delta, self.delta_threshold)
+                    self.status_bar.showMessage(msg)
                     QtWidgets.QApplication.processEvents()
                     time.sleep(1)
-                    if in_range_count > 300:
+                    if in_range_count > 100:
                         temp_out_of_range = False
                 else:
                     time.sleep(3)
                     in_range_count = 0
                 wait_count += 1
+                self.rm_plot_running_temp(set_temperature)
             for i in range(self.center_frequency_combobox.count()):
                 self.center_frequency_combobox.setCurrentIndex(i)
                 center_frequency = self.center_frequency_combobox.itemText(i)
                 self.rm_set_center_frequency()
+                self.rm_get_t_bath()
 
                 for j, power in enumerate(self.power_range):
+                    current_temp = self.temperature
+                    self.temperatures.append(current_temp)
+                    self.times.append(datetime.now())
+                    self.rm_plot_running_temp(set_temperature)
                     status = '{0} {1}'.format(set_temperature, power)
                     self.status_bar.showMessage(status)
                     self.power_lineedit.setText('{0:.1f}'.format(power))
                     self.rm_set_power()
                     time.sleep(0.5)
                     self.rm_get_network_analyzer_data()
-                    time.sleep(3.0)
+                    time.sleep(5.0)
                     self.status_bar.showMessage('Temps:{0}/{1} Powers: {2}/{3}'.format(i, len(self.temp_range), j, len(self.power_range)))
                     QtWidgets.QApplication.processEvents()
                     if self.stop:
@@ -446,7 +480,6 @@ class ResonanceMeasurement(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTra
         with open(rt_set_points_path, 'r') as fh:
             line = fh.readlines()[0]
         cf_1, cf_2, frequency_span, n_points, n_averages, power, attenuation, start_temp, end_temp = line.split(', ')
-        print(cf_1, cf_2)
         self.center_frequency_combobox.addItem(cf_1)
         self.center_frequency_combobox.addItem(cf_2)
         self.frequency_span_lineedit.setText(frequency_span)
@@ -498,6 +531,7 @@ class ResonanceMeasurement(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTra
         line = self.bpv.inst.query("SENS:FREQ:DATA?") # returns comma separated array of freq values; p. 638
         self.frqGHz = [ float(x)/1.e9 for x in line.split(',') ]	# convert to list of floats, in GHz
         self.rm_err_check()
+        time.sleep(3)
         # ---- read S21 amplitude (log magnitude) ----
         self.status_bar.showMessage("...reading out S21 magnitudes")
         line = self.bpv.inst.query("CALCulate:DATA:FDATa?")# read selected trace data in current display format, p. 296
@@ -507,14 +541,18 @@ class ResonanceMeasurement(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTra
         self.status_bar.showMessage("...switch to phase plot")
         self.bpv.inst.query("CALCulate:FORMat PHASe; *OPC?") # set data format to phase in degrees (-180 to 180), p. 301
         self.status_bar.showMessage("...reading out S21 phases")
+        time.sleep(5)
         line = self.bpv.inst.query("CALCulate:DATA:FDATa?")# read selected trace data in current display format, p. 296
         self.S21phs = [ float(x) for x in line.split(',') ]# convert to list of floats
         self.rm_err_check()
+        time.sleep(3)
         self.bpv.inst.query("CALC:FORM MLOG; *OPC?")# set data format to log magnitude, p. 301
         self.rm_err_check()
         self.rm_set_sweep_mode()
         self.rm_plot_data()
+        time.sleep(1)
         self.rm_save_data()
+        time.sleep(1)
 
     def rm_save_data(self):
         '''
@@ -524,6 +562,8 @@ class ResonanceMeasurement(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTra
             temperature = 'nan'
         else:
             temperature = int(np.round(self.temperature))
+        if self.temp_scan:
+            temperature = self.current_set_temperature
         temperature_str = 'T{0}mK'.format(temperature)
         if not os.path.exists(os.path.join(self.data_folder, temperature_str)):
             os.makedirs(os.path.join(self.data_folder, temperature_str))
@@ -576,3 +616,26 @@ class ResonanceMeasurement(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTra
         image_to_display = QtGui.QPixmap(self.fig_save_path)
         self.data_plot_label.setPixmap(image_to_display)
 
+    def rm_plot_running_temp(self, set_temperature):
+        '''
+        '''
+        if not hasattr(self, 'temp_fig'):
+            self.temp_fig, ax = self.mplc.mplc_create_basic_fig(
+                name='x_fig',
+                left=0.18,
+                right=0.95,
+                bottom=0.25,
+                top=0.88,
+                frac_screen_height=0.15,
+                frac_screen_width=0.25)
+        else:
+            ax = self.temp_fig.get_axes()[0]
+        ax.plot(self.times, self.temperatures, color='b', label='Temp')
+        ax.axhline(set_temperature * 1e3, color='k', lw=3, alpha=0.5, label='Target')
+        ax.axhline(set_temperature * 1e3 + self.delta_threshold, color='r', lw=3, alpha=0.75, label='Target')
+        ax.axhline(set_temperature * 1e3 - self.delta_threshold, color='r', lw=3, alpha=0.75, label='Target')
+        ax.set_xlabel('Time')
+        ax.set_ylabel('Temp (mK)')
+        self.temp_fig.savefig('temp_temps.png', transparent=True)
+        image_to_display = QtGui.QPixmap('temp_temps.png')
+        self.running_temp_label.setPixmap(image_to_display)

@@ -250,7 +250,7 @@ class RTCollector(QtWidgets.QWidget, GuiBuilder, FourierTransformSpectroscopy):
         self.daq_y_combobox.currentIndexChanged.connect(self.rtc_update_active_y_checkbox)
         self.daq_y_checkbox.stateChanged.connect(self.rtc_configure_y_channels)
         self.daq_y_combobox.setCurrentIndex(0)
-        self.rtc_daq_combobox.setCurrentIndex(1)
+        self.rtc_daq_combobox.setCurrentIndex(2)
         # Sample Configure 
         self.configure_channel_pushbutton = QtWidgets.QPushButton('Configure And Scan', self)
         self.layout().addWidget(self.configure_channel_pushbutton, 2, 1, 1, 1)
@@ -897,6 +897,7 @@ class RTCollector(QtWidgets.QWidget, GuiBuilder, FourierTransformSpectroscopy):
         daq_channel_y = int(self.daq_y_combobox.currentText())
         first_active_daq = self.rtc_get_first_active_daq()
         #import ipdb;ipdb.set_trace()
+        print(daq_channel_y)
         save_path = os.path.join('temp_files', 'temp_xy.png')
         image_to_display = QtGui.QPixmap(save_path)
         self.xy_scatter_label.setPixmap(image_to_display)
@@ -910,7 +911,7 @@ class RTCollector(QtWidgets.QWidget, GuiBuilder, FourierTransformSpectroscopy):
         time_delta_seconds = time_delta.total_seconds()
         self.y_time_stream_label.setPixmap(image_to_display)
         if hasattr(self, 'daq_collector') and self.daq_collector.all_data_df is not None and hasattr(self.daq_collector, 'x_data_real') and hasattr(self.daq_collector, 'y_data_real'):
-            rate = float(len(self.daq_collector.all_data_df[0]['data'])) / time_delta_seconds
+            rate = float(self.daq_collector.all_data_df[0]['data'].size) / time_delta_seconds
             x_data_text = 'X Data: {0:.4f} ::: X STD: {1:.4f} (raw) [{2}K=0V {3}K=10V]\n'.format(
                 self.daq_collector.all_data_df[0]['data'][-1], self.daq_collector.all_data_df[0]['stds'][-1],
                 self.housekeeping_low_value, self.housekeeping_high_value)
@@ -1042,7 +1043,6 @@ class RTCollector(QtWidgets.QWidget, GuiBuilder, FourierTransformSpectroscopy):
                 x_stds = []
         self.x_data_real = x_data #K
         self.x_stds_real = x_stds #K
-        print('adjusted', x_data)
         return x_data, x_stds
 
     def rtc_adjust_all_y_data(self):
@@ -1206,9 +1206,7 @@ class Collector(QRunnable):
         self.int_time = self.daq.int_time
         self.sample_rate = self.daq.sample_rate
         self.transparent_plots = self.rtc.transparent_plots_checkbox.isChecked()
-        print('adfadfasdfaf')
         while self.rtc.started:
-            print('3333adfadfasdfaf')
             data_dict = self.daq.run()
             sleep_time = float(self.daq.int_time) / 1e3
             time.sleep(sleep_time)
@@ -1222,17 +1220,17 @@ class Collector(QRunnable):
                 time_delta = time_delta.microseconds
                 temp_delta = self.all_data_df[0]['data'] - data_point_df[0]['mean']
                 self.time_deltas.append(time_delta)
-                self.temp_deltas.append(temp_delta[0])
+                #self.temp_deltas.append(temp_delta[0])
             for signal_channel in self.daq.signal_channels:
                 mean = data_point_df[signal_channel]['mean']
                 std = data_point_df[signal_channel]['std']
                 self.all_data_df[signal_channel]['data'] = np.insert(
                         self.all_data_df[signal_channel]['data'],
-                        len(self.all_data_df[signal_channel]['data']),
+                        self.all_data_df[signal_channel]['data'].size,
                         mean)
                 self.all_data_df[signal_channel]['stds'] = np.insert(
                         self.all_data_df[signal_channel]['stds'],
-                        len(self.all_data_df[signal_channel]['stds']),
+                        self.all_data_df[signal_channel]['stds'].size,
                         std)
                 self.all_data_df[signal_channel]['directions'] = self.directions
                 self.all_data_df[signal_channel]['time_deltas'] = self.time_deltas
@@ -1280,6 +1278,9 @@ class Collector(QRunnable):
             slope = (high_value - low_value) / 1e1 # Y range / 10V
             x_data = self.rtc.rtc_get_linear_value(np.asarray(self.all_data_df[0]['data']), slope, low_value) * 1e3 #mK
             x_stds = np.asarray(self.all_data_df[0]['data']) * slope
+        if type(x_data) == np.float64:
+            x_data = np.asarray([x_data])
+            x_stds = np.asarray([x_stds])
         self.x_data_real = x_data #mK
         self.x_stds_real = x_stds #mK
         return x_data[:-1], x_stds[:-1]
@@ -1308,6 +1309,9 @@ class Collector(QRunnable):
             slope = (high_value - low_value) / 10 # K/ V
             y_data = self.rtc.rtc_get_linear_value(np.asarray(self.all_data_df[daq]['data']), slope, low_value) * 1e3 #mOhms
             y_stds = np.asarray(self.all_data_df[daq]['stds']) * slope * 1e3 #mOhms
+        if type(y_data) == np.float64:
+            y_data = np.asarray([y_data])
+            y_stds = np.asarray([y_stds])
         self.y_data_real = y_data[:-1]
         self.y_stds_real = y_stds[:-1]
         return y_data[:-1], y_stds[:-1]
@@ -1350,9 +1354,12 @@ class Collector(QRunnable):
         ax_y.set_ylabel('Y_DAQ_OUT ($V$)', fontsize=8)
         ax_y_twinx.set_ylabel('(m$\Omega$)', fontsize=8)
         label = None
-        if hasattr(self, 'daq') and len(self.all_data_df[0]['data']) > 1:
-            label_str = 'DAQ {0} Sample {1}'.format(self.x_channel, len(self.all_data_df[0]['data']))
-            label = label_str
+        try:
+            if hasattr(self, 'daq') and self.all_data_df[0]['data'].size > 1:
+                label_str = 'DAQ {0} Sample {1}'.format(self.x_channel, len(self.all_data_df[0]['data']))
+                label = label_str
+        except TypeError:
+            import ipdb;ipdb.set_trace()
         for i, change_index in enumerate(change_indicies):
             if i == 0:
                 drift_start_index = 0
@@ -1361,51 +1368,47 @@ class Collector(QRunnable):
             if len(self.directions) > 0:
                 if self.directions[change_index] == 'down':
                     color = 'b'
-            #try:
-                ##rate = np.asarray(self.all_data_df[0]['temp_deltas'][drift_start_index:drift_end_index]) / np.asarray(self.all_data_df[0]['time_deltas'][drift_start_index:drift_end_index]) * 1e6 # back to seconds 
-                #print(rate[-1], 'mK/s')
-            #except:
-                #import ipdb;ipdb.set_trace()
-            #ax_x.errorbar(range(len(rate)), rate, label='rate')
-
-            ax_x.errorbar(
-                    range(len(self.all_data_df[0]['data']))[drift_start_index:drift_end_index],
-                    self.all_data_df[0]['data'][drift_start_index:drift_end_index],
-                    yerr=self.all_data_df[0]['stds'][drift_start_index:drift_end_index],
-                    marker='.', ms=0.5, color=color, alpha=0.75,
-                    linestyle='None', label=label)
-            x_data, x_stds = self.rtc.rtc_adjust_x_data(
-                    self.all_data_df[0]['data'][drift_start_index:drift_end_index],
-                    self.all_data_df[0]['stds'][drift_start_index:drift_end_index])
-            ax_x_twinx.plot(range(len(x_data)), np.asarray(x_data) * 1e3, #mK
-                    marker='x', ms=0.5, color=color, alpha=0.0,
-                    linestyle='None', label=label)
-            scaled_x_point = self.rtc_adjust_x_data_point(self.all_data_df[0]['data'][-1])
-            ax2_x.plot(self.all_data_df[0]['data'][-1], scaled_x_point, '*', ms=3)
-            for y_channel in self.all_data_df.keys()[1:]:
-                y_data = self.all_data_df[y_channel]['data'][drift_start_index:drift_end_index]
-                yerr = self.all_data_df[y_channel]['stds'][drift_start_index:drift_end_index]
-                if self.directions[change_index] == 'down':
-                    color = self.colors[y_channel + 2]
+            if type(self.all_data_df[0]['data']) == list or self.all_data_df[0]['data'].size <= 1:
+                pass
+            else:
+                x_data = self.all_data_df[0]['data'][drift_start_index:drift_end_index]
+                x_stds = self.all_data_df[0]['stds'][drift_start_index:drift_end_index]
+                if change_index == -1:
+                    x_range = range(drift_start_index, drift_start_index + len(x_data))
                 else:
-                    color = self.colors[y_channel - 1]
-                ax_y.errorbar(
-                        range(drift_start_index, drift_start_index + len(y_data)),
-                        y_data, yerr=yerr,
-                        marker='.', ms=0.5, color=color, alpha=0.75,
-                        linestyle='None', label=str(y_channel))
-                temp_y_data, temp_y_stds = self.rtc_adjust_y_data(y_channel)
-                temp_x_data = range(drift_start_index, drift_start_index + len(y_data) - 1)
-                if len(temp_x_data) != len(temp_y_data):
-                    temp_x_data = range(drift_start_index, drift_start_index + len(y_data))
-                ax_y_twinx.plot(
-                        temp_x_data,
-                        temp_y_data[drift_start_index:drift_start_index + len(temp_x_data)],
-                        marker='x', ms=0.5, color=color, alpha=0.0,
-                        linestyle='None', label=str(y_channel))
-                scaled_y_point = self.rtc_adjust_y_data_point(self.all_data_df[y_channel]['data'][-1]) * 1e-3 #back to K
-                ax2_y.plot(self.all_data_df[y_channel]['data'][-1], scaled_y_point, '*', color=self.colors[y_channel - 1], ms=3)
-            drift_start_index = change_index
+                    x_range = range(drift_start_index, drift_end_index)
+                ax_x.errorbar(x_range, x_data, yerr=x_stds, marker='.', ms=0.5, color=color, alpha=0.75, linestyle='None', label=label)
+                x_data, x_stds = self.rtc.rtc_adjust_x_data(x_data, x_stds)
+                #ax_x_twinx.plot(range(len(x_data)), np.asarray(x_data) * 1e3, #mK
+                        #marker='x', ms=0.5, color=color, alpha=0.0,
+                        #linestyle='None', label=label)
+                scaled_x_point = self.rtc_adjust_x_data_point(self.all_data_df[0]['data'][-1])
+                ax2_x.plot(self.all_data_df[0]['data'][-1], scaled_x_point, '*', ms=3)
+                for y_channel in self.all_data_df.keys()[1:]:
+                    y_data = self.all_data_df[y_channel]['data'][drift_start_index:drift_end_index]
+                    yerr = self.all_data_df[y_channel]['stds'][drift_start_index:drift_end_index]
+                    y_range = x_range #range(drift_start_index, drift_start_index + len(y_data)),
+                    if self.directions[change_index] == 'down':
+                        color = self.colors[y_channel + 2]
+                    else:
+                        color = self.colors[y_channel - 1]
+                    ax_y.errorbar(
+                            y_range,
+                            y_data, yerr=yerr,
+                            marker='.', ms=0.5, color=color, alpha=0.75,
+                            linestyle='None', label=str(y_channel))
+                    temp_y_data, temp_y_stds = self.rtc_adjust_y_data(y_channel)
+                    temp_x_data = range(drift_start_index, drift_start_index + len(y_data) - 1)
+                    if len(temp_x_data) != len(temp_y_data):
+                        temp_x_data = range(drift_start_index, drift_start_index + len(y_data))
+                    ax_y_twinx.plot(
+                            temp_x_data,
+                            temp_y_data[drift_start_index:drift_start_index + len(temp_x_data)],
+                            marker='x', ms=0.5, color=color, alpha=0.0,
+                            linestyle='None', label=str(y_channel))
+                    scaled_y_point = self.rtc_adjust_y_data_point(self.all_data_df[y_channel]['data'][-1]) * 1e-3 #back to K
+                    ax2_y.plot(self.all_data_df[y_channel]['data'][-1], scaled_y_point, '*', color=self.colors[y_channel - 1], ms=3)
+                drift_start_index = change_index
         handles, labels = ax_x.get_legend_handles_labels()
         if len(handles) > 0:
             label_str = 'DAQ {0} Sample {1}'.format(self.x_channel, len(self.all_data_df[0]['data']))
@@ -1424,15 +1427,17 @@ class Collector(QRunnable):
         '''
         if not hasattr(self, 'all_data_df'):
             return None
-        if len(self.all_data_df[0]['data']) == 0:
+        if type(self.all_data_df[0]['data']) == list or self.all_data_df[0]['data'].size == 0:
             return None
         fig = self.rtc.xy_fig
         ax = fig.get_axes()[0]
         ax.cla()
         y_label = self.rtc.y_label_combobox.currentText()
         x_label = 'Temperature ($mK$)'
+        print('run', running)
         if running:
             x_data, x_stds = self.rtc_adjust_x_data()
+            print(x_data, x_stds)
             for i, daq in enumerate(self.all_data_df.keys()[1:]):
                 if self.rtc.active_daq_dict[daq]['plot']:
                     y_data, y_stds = self.rtc_adjust_y_data(daq)
@@ -1562,7 +1567,8 @@ class Collector(QRunnable):
     def rtc_plot_drifts(self, fig, x_data, x_stds, y_data, y_stds, daq):
         '''
         '''
-        if len(self.all_data_df[0]['data']) == 0:
+        #import ipdb;ipdb.set_trace()
+        if self.all_data_df[0]['data'].size == 0:
             return fig
         if not self.rtc.gb_is_float(self.rtc.sample_clip_lo_lineedit.text()):
             return fig
@@ -1635,9 +1641,6 @@ class Collector(QRunnable):
             else:
                 ax_plot.plot(final_plot_x_data[rn_selector], np.ones(len(final_plot_x_data[rn_selector])) * normal_resistance,
                              color='k', lw=5, alpha=0.4, label='$R_n$')
-            print()
-            print()
-            print()
             print()
             print(final_plot_x_data[selector], final_plot_y_data[selector])
             ax_plot.errorbar(final_plot_x_data[selector], final_plot_y_data[selector],

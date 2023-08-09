@@ -228,6 +228,17 @@ class LakeShore372(QtWidgets.QWidget, GuiBuilder):
                     }
                 }
             }
+        self.ls372_heater_range_dict = {
+            '0': 0,
+            '1': 31.6e-6,
+            '2': 100e-6,
+            '3': 316e-6,
+            '4': 1e-3,
+            '5': 3.16e-3,
+            '6': 10e-3,
+            '7': 31.6e-3,
+            '8': 100e-3
+            }
         self.exceptions = ['analog_output', 'channel', 'cs_shunt', 'curve_number', 'curve_tempco']
         self.ls372_get_idn()
         self.ls372_populate_gui()
@@ -488,6 +499,8 @@ class LakeShore372(QtWidgets.QWidget, GuiBuilder):
                 value = getattr(analog_output_object, header)
                 if header in self.lakeshore372_command_dict:
                     value = self.lakeshore372_command_dict[header][value]
+                if header == 'heater_range':
+                    value = self.ls372_heater_range_dict[str(value)]
                 value_label = QtWidgets.QLabel(str(value), self)
                 self.layout().addWidget(value_label, 19 + i, index + 1, 1, 1)
             edit_analog_output_pushbutton = QtWidgets.QPushButton('Edit {0}'.format(analog_output, self))
@@ -515,7 +528,7 @@ class LakeShore372(QtWidgets.QWidget, GuiBuilder):
                 value = self.lakeshore372_command_dict[header][value]
             if header == 'analog_output':
                 value_widget = QtWidgets.QLabel(str(value), editing_popup)
-            elif header in ['delay', 'high_value', 'low_value', 'manual_value']:
+            elif header in ['delay', 'heater_value', 'high_value', 'low_value', 'manual_value']:
                 value_widget = QtWidgets.QLineEdit(str(value), editing_popup)
             else:
                 if header == 'input_channel':
@@ -523,10 +536,14 @@ class LakeShore372(QtWidgets.QWidget, GuiBuilder):
                 elif header in self.lakeshore372_command_dict:
                     valid_set_to_values = self.lakeshore372_command_dict[header].values()
                     valid_set_to_values = [x for x in valid_set_to_values if not x.isnumeric()]
+                elif header == 'heater_range':
+                    valid_set_to_values = list(self.ls372_heater_range_dict.values())
                 value_widget = QtWidgets.QComboBox(editing_popup)
                 for j, valid_set_to_value in enumerate(valid_set_to_values):
                     value_widget.addItem(str(valid_set_to_value))
                     if header == 'input_channel' and int(valid_set_to_value) == int(value):
+                        set_to_index = j
+                    elif header == 'heater_range' and self.ls372_heater_range_dict[str(value)] == valid_set_to_value:
                         set_to_index = j
                     elif valid_set_to_value == value:
                         set_to_index = j
@@ -567,6 +584,9 @@ class LakeShore372(QtWidgets.QWidget, GuiBuilder):
             if header in self.lakeshore372_command_dict:
                 new_value = self.lakeshore372_command_dict[header][value]
                 new_settings[header] = new_value
+            elif header == 'heater_range':
+                heater_range_index = [str(x) for x in self.ls372_heater_range_dict.values()].index(value)
+                new_settings[header] = heater_range_index
         analog_output_object = getattr(self.analog_outputs, 'analog_output_{0}'.format(self.set_to_analog_output))
         self.status_bar.showMessage('Writing new settings to analog output "{0}"'.format(self.set_to_analog_output))
         QtWidgets.QApplication.processEvents()
@@ -895,23 +915,40 @@ class LS372AnalogOutputs(QObject):
     def ls372_update_analog_output_settings(self, index, analog_output, analog_output_object):
         '''
         '''
-        # Checking the set up
+        # Gathering general information 
         self.communicator.write( "analog? {0}".format(index))
         analog_output_config = self.communicator.read()
         setattr(analog_output_object, 'analog_output', analog_output)
         setattr(analog_output_object, 'polarity', str(analog_output_config.split(',')[0]))
-        setattr(analog_output_object, 'analog_mode', str(analog_output_config.split(',')[1]))
         setattr(analog_output_object, 'input_channel', str(analog_output_config.split(',')[2]))
         setattr(analog_output_object, 'source', str(analog_output_config.split(',')[3]))
         setattr(analog_output_object, 'high_value', float(analog_output_config.split(',')[4]))
         setattr(analog_output_object, 'low_value', float(analog_output_config.split(',')[5]))
-        setattr(analog_output_object, 'manual_value', float(analog_output_config.split(',')[6]))
-        # Checking the set up
+        # Checking the output mode 
         self.communicator.write( "outmode? {0}".format(index))
         outmode_config = self.communicator.read()
+        setattr(analog_output_object, 'analog_mode', str(outmode_config.split(',')[0]))
         setattr(analog_output_object, 'powerup_enable', str(outmode_config.split(',')[2]))
         setattr(analog_output_object, 'filter_on', str(outmode_config.split(',')[4]))
         setattr(analog_output_object, 'delay', int(outmode_config.split(',')[5]))
+        # Checking the heater setting 
+        self.communicator.write( "range? {0}".format(index))
+        heater_config = self.communicator.read()
+        setattr(analog_output_object, 'heater_range', int(heater_config))
+        if index == 0:
+            self.communicator.write( "htr? {0}".format(index))
+            heater_value = self.communicator.read()
+        else:
+            self.communicator.write( "aout? {0}".format(index))
+            heater_value = self.communicator.read()
+        heater_value = heater_value.replace('+', '')
+        setattr(analog_output_object, 'heater_value', heater_value)
+        # Checking the manual out (MOUT) setting 
+        mout_cmd = 'MOUT? {0} '.format(index)
+        self.communicator.write(mout_cmd)
+        manual_value = self.communicator.read()
+        manual_value = manual_value.replace('+', '')
+        setattr(analog_output_object, 'manual_value', manual_value)
         return analog_output_object
 
     def ls372_monitor_channel_aux_analog(self, channel, analog_output_object):
@@ -924,9 +961,8 @@ class LS372AnalogOutputs(QObject):
                                                                        analog_output_object.source,
                                                                        analog_output_object.high_value,
                                                                        analog_output_object.low_value,
-                                                                       analog_output_object.manual_value,
+                                                                       analog_output_object.heater_value,
                                                                        )
-        print(monitor_cmd)
 
         self.status_bar.showMessage('Sending Serial Command "{0}"'.format(monitor_cmd))
         self.communicator.write(monitor_cmd)
@@ -972,7 +1008,7 @@ class LS372AnalogOutputs(QObject):
         self.communicator.write(heater_set_cmd)
         result = self.communicator.read()
         QtWidgets.QApplication.processEvents()
-        mout_set_cmd = 'MOUT {0},{1} '.format(set_to_channel, new_settings['power'])
+        mout_set_cmd = 'MOUT {0},{1} '.format(set_to_channel, new_settings['manual_value'])
         QtWidgets.QApplication.processEvents()
         self.status_bar.showMessage('Sending Serial Command "{0}"'.format(mout_set_cmd))
         self.communicator.write(mout_set_cmd)
@@ -988,6 +1024,8 @@ class LS372AnalogOutputs(QObject):
             'sample': 0
             }
         set_to_channel = set_to_channel_dict[set_to_channel]
+
+        # Analog
         analog_cmd = 'analog {0},{1},{2},{3},{4},{5},{6},{7} '.format(set_to_channel,
                                                                       new_settings['polarity'],
                                                                       new_settings['analog_mode'],
@@ -995,12 +1033,13 @@ class LS372AnalogOutputs(QObject):
                                                                       new_settings['source'],
                                                                       new_settings['high_value'],
                                                                       new_settings['low_value'],
-                                                                      new_settings['manual_value'],
+                                                                      new_settings['heater_value'],
                                                                       )
         self.status_bar.showMessage('Sending Serial Command "{0}"'.format(analog_cmd))
-        QtWidgets.QApplication.processEvents()
         self.communicator.write(analog_cmd)
+        QtWidgets.QApplication.processEvents()
         result = self.communicator.read()
+        # Outmode
         outmode_cmd = 'outmode {0},{1},{2},{3},{4},{5},{6} '.format(set_to_channel,
                                                                     new_settings['analog_mode'],
                                                                     new_settings['input_channel'],
@@ -1011,6 +1050,17 @@ class LS372AnalogOutputs(QObject):
                                                                     )
         self.status_bar.showMessage('Sending Serial Command "{0}"'.format(outmode_cmd))
         self.communicator.write(outmode_cmd)
+        QtWidgets.QApplication.processEvents()
+        result = self.communicator.read()
+        # Heater
+        heater_range_cmd = 'range {0},{1} '.format(set_to_channel, new_settings['heater_range'])
+        self.status_bar.showMessage('Sending Serial Command "{0}"'.format(heater_range_cmd))
+        self.communicator.write(heater_range_cmd)
+        QtWidgets.QApplication.processEvents()
+        result = self.communicator.read()
+        mout_set_cmd = 'MOUT {0},{1} '.format(set_to_channel, new_settings['manual_value'])
+        self.status_bar.showMessage('Sending Serial Command "{0}"'.format(mout_set_cmd))
+        self.communicator.write(mout_set_cmd)
         QtWidgets.QApplication.processEvents()
         result = self.communicator.read()
 
