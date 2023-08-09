@@ -284,6 +284,10 @@ class FourierTransformSpectroscopy():
         integrated_bandwidth = self.ftsy_integrate_spectra_bandwidth(frequency_vector, normalized_transmission_vector,
                                                                      data_clip_lo=data_clip_lo, data_clip_hi=data_clip_hi)
         delta_power = boltzmann_constant * (t_source_high - t_source_low) * integrated_bandwidth  # in W
+        t_power_high = boltzmann_constant * t_source_high * integrated_bandwidth  # in W
+        t_power_low = boltzmann_constant * t_source_low * integrated_bandwidth  # in W
+        print('t_power_high', t_power_high)
+        print('t_power_low', t_power_low)
         return delta_power, integrated_bandwidth
 
     def ftsy_integrate_spectra_bandwidth(self, frequency_vector, normalized_transmission_vector, data_clip_lo=0, data_clip_hi=600):
@@ -773,12 +777,13 @@ if __name__ == '__main__':
     t_source_low = 14
     t_source_high = 293
     data_clip_hi = 80 * 1e9
-    t_source_low = 9
-    t_source_high = 14
-    data_clip_hi = 110 * 1e9
+    data_clip_hi = 100 * 1e9
+    efficiency = 1.0
     t_source_low = 77
     t_source_high = 293
     efficiency = 1.00
+    t_source_low = 9
+    t_source_high = 14
     fft_frequency_vector_simulated, fft_vector_simulated = ftsy.ftsy_load_simulated_band(data_clip_lo, data_clip_hi, band)
     simulated_delta_power, simulated_integrated_bandwidth = ftsy.ftsy_compute_delta_power_and_bandwidth_at_window(fft_frequency_vector_simulated * 1e9, fft_vector_simulated,
                                                                                                                   data_clip_lo=data_clip_lo, data_clip_hi=data_clip_hi,

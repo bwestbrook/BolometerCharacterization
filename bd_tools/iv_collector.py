@@ -3,7 +3,9 @@ import shutil
 import os
 import simplejson
 import numpy as np
+import pylab as pl
 import pickle as pkl
+import matplotlib.pyplot as plt
 from copy import copy
 from datetime import datetime
 from pprint import pprint
@@ -19,8 +21,9 @@ from matplotlib import rc
 rc('text', usetex=False)
 
 
-
 class IVCollector(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTransformSpectroscopy):
+    '''
+    '''
 
     def __init__(self, daq_settings, status_bar, screen_resolution, monitor_dpi, data_folder, dewar, ls_372_widget):
         '''
@@ -241,7 +244,7 @@ class IVCollector(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTransformSpe
         self.notes_lineedit = self.gb_make_labeled_lineedit(label_text='Notes:')
         self.layout().addWidget(self.notes_lineedit, 9, 5, 1, 1)
         self.meta_data_warning_checkbox = QtWidgets.QCheckBox('Meta Data Warn?')
-        self.meta_data_warning_checkbox.setChecked(True)
+        self.meta_data_warning_checkbox.setChecked(False)
         self.layout().addWidget(self.meta_data_warning_checkbox, 9, 6, 1, 1)
 
         #Connect to function
@@ -364,6 +367,7 @@ class IVCollector(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTransformSpe
                 self.t_bath_lineedit.setText(temperature_str)
                 time.sleep(0.25)
                 QtWidgets.QApplication.processEvents()
+            print(channel_readout_info)
         self.t_bath_label.setText('{0:.1f}'.format(float(t_baths[-1]) * 1e3).replace('.', 'p'))
 
 
@@ -472,9 +476,6 @@ class IVCollector(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTransformSpe
         while self.started:
             i += 1
             data_dict = daq.run()
-            #pprint(data_dict)
-            print('post data_dict')
-            print('pre get data from data_dict')
             x_ts = data_dict[self.x_channel]['ts']
             x_mean = data_dict[self.x_channel]['mean']
             x_min = data_dict[self.x_channel]['min']
@@ -485,36 +486,21 @@ class IVCollector(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTransformSpe
             y_min = data_dict[self.y_channel]['min']
             y_max = data_dict[self.y_channel]['max']
             y_std = data_dict[self.y_channel]['std']
-            print('post get data from data_dict')
             if x_mean < 0:
                 x_mean *= -1
                 x_min *= -1
                 x_max *= -1
             self.x_data.append(x_mean)
-            print('a')
             self.x_stds.append(x_std)
-            print('b')
             self.y_data.append(y_mean)
-            print('c')
             self.y_stds.append(y_std)
-            print('d')
             self.ivc_plot_running()
-            print('e')
             self.current_x_mean = x_mean
-            print('f')
             self.current_x_std = x_std
-            print('g')
             self.current_y_mean = y_mean
-            print('h')
             self.current_y_std = y_std
-            print('pre display')
-            self.ivc_display_current_data()
-            print('post display / pre process')
+            #self.ivc_display_current_data()
             QtWidgets.QApplication.processEvents()
-            print('post prosss')
-            print(i)
-            print()
-            print()
             self.repaint()
 
     def ivc_display_current_data(self):
@@ -658,7 +644,7 @@ class IVCollector(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTransformSpe
         fig.savefig('temp_x.png', transparent=True)
         image_to_display = QtGui.QPixmap('temp_x.png')
         self.x_time_stream_label.setPixmap(image_to_display)
-        os.remove('temp_x.png')
+        #os.remove('temp_x.png')
 
     def ivc_plot_y(self):
         '''
@@ -682,7 +668,7 @@ class IVCollector(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTransformSpe
         fig.savefig('temp_y.png', transparent=True)
         image_to_display = QtGui.QPixmap('temp_y.png')
         self.y_time_stream_label.setPixmap(image_to_display)
-        os.remove('temp_y.png')
+        #os.remove('temp_y.png')
 
     def ivc_plot_xy(self, file_name=''):
         '''
@@ -704,6 +690,7 @@ class IVCollector(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTransformSpe
         #####################################
         # Plot creation labeling Plotting
         #####################################
+        #if not hasattr(self, 'fig'):
         fig = self.mplc.mplc_create_iv_paneled_plot(
             name='xy_fig',
             left=0.14,
@@ -714,9 +701,11 @@ class IVCollector(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTransformSpe
             frac_screen_width=0.4,
             hspace=0.7,
             wspace=0.4)
-        fig.canvas = FigureCanvas(fig)
-
         ax1, ax2, ax3, ax4 = fig.get_axes()
+        ax1.cla()
+        ax2.cla()
+        ax3.cla()
+        ax4.cla()
 
         ax1.set_xlabel("Voltage ($\mu$V)", fontsize=12)
         ax1.set_ylabel("Current ($\mu$A)", fontsize=12)
@@ -747,7 +736,6 @@ class IVCollector(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTransformSpe
 
         v_bolo_real, v_bolo_stds = self.ivc_adjust_x_data()
         i_bolo_real, i_bolo_stds, fit_vals = self.ivc_adjust_y_data()
-
 
         resistance = 1.0 / fit_vals[0] # in Ohms
 
@@ -820,9 +808,28 @@ class IVCollector(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTransformSpe
         self.x_stds_real = v_bolo_stds
         self.y_data_real = i_bolo_real
         self.y_stds_real = i_bolo_stds
-        fig.savefig('temp_iv_all.png', transparent=False)
+        fig.savefig('temp_iv_all.png')
         image_to_display = QtGui.QPixmap('temp_iv_all.png')
         self.xy_scatter_label.setPixmap(image_to_display)
+        #self.ivc_plot_xy2()
+        print('post process', time.time())
+
+    def ivc_plot_xy2(self):
+        '''
+        '''
+        fig, ax = self.mplc.mplc_create_basic_fig(
+            name='x_fig',
+            left=0.18,
+            right=0.95,
+            bottom=0.25,
+            top=0.88,
+            frac_screen_height=0.15,
+            frac_screen_width=0.25)
+        ax.plot(self.x_data, self.y_data)
+        fig.savefig('temp_iv_all.png')
+        image_to_display = QtGui.QPixmap('temp_iv_all.png')
+        self.xy_scatter_label.setPixmap(image_to_display)
+        #os.remove('temp_iv_all.png')
 
     def ivc_adjust_x_data(self):
         '''
@@ -872,9 +879,9 @@ class IVCollector(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTransformSpe
         return i_bolo_real, i_bolo_stds, fit_vals
 
     def ivc_plot_all_curves(self, fig, bolo_voltage_bias, bolo_current, bolo_current_stds=None, fit_clip=None, plot_clip=None,
-                              label='', sample_name='', t_bath='275', t_load='300', pturn=True,
-                              left=0.1, right=0.98, top=0.9, bottom=0.13, hspace=0.9,
-                              show_plot=False):
+                            label='', sample_name='', t_bath='275', t_load='300', pturn=True,
+                            left=0.1, right=0.98, top=0.9, bottom=0.13, hspace=0.9,
+                            show_plot=False):
         '''
         This function creates an x-y scatter plot with v_bolo on the x-axis and
         bolo curent on the y-axis.  The resistance value is reported as text annotation
