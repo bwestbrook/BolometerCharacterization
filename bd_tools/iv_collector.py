@@ -233,6 +233,8 @@ class IVCollector(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTransformSpe
         self.layout().addWidget(self.sample_band_combobox, 8, 6, 1, 1)
         for sample_band in self.bands:
             self.sample_band_combobox.addItem(sample_band)
+        self.resistance_label = self.gb_make_labeled_label(label_text='Resistance (Ohms):')
+        self.layout().addWidget(self.resistance_label, 8, 7, 1, 1)
         # Sample Name
         self.sample_name_lineedit = self.gb_make_labeled_lineedit(label_text='Sample Name')
         self.layout().addWidget(self.sample_name_lineedit, 8, 5, 1, 1)
@@ -368,7 +370,8 @@ class IVCollector(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTransformSpe
                 time.sleep(0.25)
                 QtWidgets.QApplication.processEvents()
             print(channel_readout_info)
-        self.t_bath_label.setText('{0:.1f}'.format(float(t_baths[-1]) * 1e3).replace('.', 'p'))
+        if len(t_baths) > 0:
+            self.t_bath_label.setText('{0:.1f}'.format(float(t_baths[-1]) * 1e3).replace('.', 'p'))
 
 
 
@@ -457,7 +460,7 @@ class IVCollector(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTransformSpe
             self.started = False
             save_path = self.ivc_index_file_name()
             self.ivc_save(save_path)
-            self.ivc_plot_xy(file_name=save_path.replace('txt', 'png'))
+            self.ivc_plot_xy(file_name=save_path.replace('txt', 'png'), running=False)
 
     def ivc_collecter(self):
         '''
@@ -617,7 +620,7 @@ class IVCollector(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTransformSpe
         '''
         self.ivc_plot_x()
         self.ivc_plot_y()
-        self.ivc_plot_xy()
+        self.ivc_plot_xy(running=True)
 
     def ivc_plot_x(self):
         '''
@@ -670,7 +673,7 @@ class IVCollector(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTransformSpe
         self.y_time_stream_label.setPixmap(image_to_display)
         #os.remove('temp_y.png')
 
-    def ivc_plot_xy(self, file_name=''):
+    def ivc_plot_xy(self, file_name='', running=False):
         '''
         '''
         #####################################
@@ -690,7 +693,6 @@ class IVCollector(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTransformSpe
         #####################################
         # Plot creation labeling Plotting
         #####################################
-        #if not hasattr(self, 'fig'):
         fig = self.mplc.mplc_create_iv_paneled_plot(
             name='xy_fig',
             left=0.14,
@@ -704,6 +706,7 @@ class IVCollector(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTransformSpe
         ax1, ax2, ax3, ax4 = fig.get_axes()
         ax1.cla()
         ax2.cla()
+        ax2.set_axis_off()
         ax3.cla()
         ax4.cla()
 
@@ -738,12 +741,14 @@ class IVCollector(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTransformSpe
         i_bolo_real, i_bolo_stds, fit_vals = self.ivc_adjust_y_data()
 
         resistance = 1.0 / fit_vals[0] # in Ohms
+        self.resistance_label.setText('{0:.3f}'.format(resistance))
 
         p_bolo = v_bolo_real * i_bolo_real
         r_bolo = v_bolo_real / i_bolo_real
 
         x_fit_vector = np.arange(fit_clip_lo, fit_clip_hi, 0.005)
         y_fit_vector = np.polyval(fit_vals, x_fit_vector) - fit_vals[1]
+        resistance = 1.0 / fit_vals[0]
         if fit_vals[0] < 0:
             y_fit_vector *= -1
         fit_selector = np.where(np.logical_and(fit_clip_lo < x_fit_vector, x_fit_vector < fit_clip_hi))
@@ -756,51 +761,53 @@ class IVCollector(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTransformSpe
 
         rlast = np.nan
         ax1.plot(x_fit_vector[fit_selector], y_fit_vector[fit_selector], '-', lw=3, color='r', label='fit')
-        ax1.plot(v_bolo_real[plot_selector], i_bolo_real[plot_selector], '.', label=label)
+        #ax1.plot(v_bolo_real[plot_selector], i_bolo_real[plot_selector], '.', label=label)
         if len(i_bolo_stds) > 0:
+            label = '{0:.2f} $\Omega$'.format(resistance)
             ax1.errorbar(v_bolo_real[plot_selector], i_bolo_real[plot_selector], yerr=i_bolo_stds[plot_selector],
-                         label=None, marker='.', linestyle='None', alpha=0.25)
-        if len(v_bolo_real) > 2 and len(i_bolo_real[plot_selector]) > 0:
-            pt_idx = np.where(i_bolo_real[plot_selector] == min(i_bolo_real[plot_selector]))[0][0]
-            pl_idx = np.where(v_bolo_real[plot_selector] == min(v_bolo_real[plot_selector]))[0][0]
-            pturn_pw = i_bolo_real[plot_selector][pt_idx] * v_bolo_real[plot_selector][pt_idx]
-            plast_pw = i_bolo_real[plot_selector][pl_idx] * v_bolo_real[plot_selector][pl_idx]
-            rlast = np.min(v_bolo_real[plot_selector] / i_bolo_real[plot_selector])
-            v_0 = v_bolo_real[plot_selector][pt_idx]
-            v_1 = v_bolo_real[plot_selector][pt_idx - 1]
-            i_0 = i_bolo_real[plot_selector][pt_idx]
-            i_1 = i_bolo_real[plot_selector][pt_idx - 1]
-            r_0 = v_0 / i_0
-            r_1 = v_1 / i_1
-            squid_inductance = 1e-9 #H
-            warm_bias_resistance = 20e3 #Ohms
-            derivative = (r_1 - r_0) / (i_1 - i_0)
-            beta = (i_0 / r_0 ) * derivative
-            beta_2 = -1 * (i_0 / r_0) * (v_0 / i_0 ** 2)
-            t_el = squid_inductance / (warm_bias_resistance + r_0 * (1 + beta_2))
-            loopgain = 1
-            responsivity = -1 * (1 / v_0) * (squid_inductance / (t_el * r_0 * loopgain)) ** -1
-            ax1.plot(
-                v_bolo_real[plot_selector][pt_idx],
-                i_bolo_real[plot_selector][pt_idx],
-                '*', markersize=10.0, color='g',
-                label='Pturn = {0:.2f} pW $S_i$={1:.2f}e-6'.format(pturn_pw, responsivity * 1e6))
-            ax1.plot(
-                v_bolo_real[plot_selector][pl_idx],
-                i_bolo_real[plot_selector][pl_idx],
-                '*', markersize=10.0, color='m',
-                label='Plast = {0:.2f} pW'.format(plast_pw))
-        resistance = 1.0 / fit_vals[0]
-        frac_rn = rlast / resistance * 1e2 # as pct
-        ax3.plot(v_bolo_real[plot_selector], r_bolo[plot_selector], 'b', label='Res {0:.3f} ($\Omega$) {1:.2f}%'.format(resistance, frac_rn))
-        ax4.plot(r_bolo[plot_selector], p_bolo[plot_selector], 'r', label='Power (pW)')
-        # Grab all the labels and combine them 
-        handles, labels = ax1.get_legend_handles_labels()
-        handles += ax3.get_legend_handles_labels()[0]
-        labels += ax3.get_legend_handles_labels()[1]
-        handles += ax4.get_legend_handles_labels()[0]
-        labels += ax4.get_legend_handles_labels()[1]
-        ax2.legend(handles, labels, numpoints=1, mode="expand", frameon=True, fontsize=10, bbox_to_anchor=(0, 0.1, 1, 1))
+                         label=label, marker='.', linestyle='None', alpha=0.25)
+        if not running:
+            if len(v_bolo_real) > 2 and len(i_bolo_real[plot_selector]) > 0:
+                pt_idx = np.where(i_bolo_real[plot_selector] == min(i_bolo_real[plot_selector]))[0][0]
+                pl_idx = np.where(v_bolo_real[plot_selector] == min(v_bolo_real[plot_selector]))[0][0]
+                pturn_pw = i_bolo_real[plot_selector][pt_idx] * v_bolo_real[plot_selector][pt_idx]
+                plast_pw = i_bolo_real[plot_selector][pl_idx] * v_bolo_real[plot_selector][pl_idx]
+                rlast = np.min(v_bolo_real[plot_selector] / i_bolo_real[plot_selector])
+                v_0 = v_bolo_real[plot_selector][pt_idx]
+                v_1 = v_bolo_real[plot_selector][pt_idx - 1]
+                i_0 = i_bolo_real[plot_selector][pt_idx]
+                i_1 = i_bolo_real[plot_selector][pt_idx - 1]
+                r_0 = v_0 / i_0
+                r_1 = v_1 / i_1
+                squid_inductance = 1e-9 #H
+                warm_bias_resistance = 20e3 #Ohms
+                derivative = (r_1 - r_0) / (i_1 - i_0)
+                beta = (i_0 / r_0 ) * derivative
+                beta_2 = -1 * (i_0 / r_0) * (v_0 / i_0 ** 2)
+                t_el = squid_inductance / (warm_bias_resistance + r_0 * (1 + beta_2))
+                loopgain = 1
+                responsivity = -1 * (1 / v_0) * (squid_inductance / (t_el * r_0 * loopgain)) ** -1
+                ax1.plot(
+                    v_bolo_real[plot_selector][pt_idx],
+                    i_bolo_real[plot_selector][pt_idx],
+                    '*', markersize=10.0, color='g',
+                    label='Pturn = {0:.2f} pW $S_i$={1:.2f}e-6'.format(pturn_pw, responsivity * 1e6))
+                ax1.plot(
+                    v_bolo_real[plot_selector][pl_idx],
+                    i_bolo_real[plot_selector][pl_idx],
+                    '*', markersize=10.0, color='m',
+                    label='Plast = {0:.2f} pW'.format(plast_pw))
+            resistance = 1.0 / fit_vals[0]
+            frac_rn = rlast / resistance * 1e2 # as pct
+            ax3.plot(v_bolo_real[plot_selector], r_bolo[plot_selector], 'b', label='Res {0:.3f} ($\Omega$) {1:.2f}%'.format(resistance, frac_rn))
+            ax4.plot(r_bolo[plot_selector], p_bolo[plot_selector], 'r', label='Power (pW)')
+            # Grab all the labels and combine them 
+            handles, labels = ax1.get_legend_handles_labels()
+            handles += ax3.get_legend_handles_labels()[0]
+            labels += ax3.get_legend_handles_labels()[1]
+            handles += ax4.get_legend_handles_labels()[0]
+            labels += ax4.get_legend_handles_labels()[1]
+            ax2.legend(handles, labels, numpoints=1, mode="expand", frameon=True, fontsize=10, bbox_to_anchor=(0, 0.1, 1, 1))
         #####################################
         # For Saving
         #####################################

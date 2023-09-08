@@ -267,7 +267,11 @@ class ResonanceMeasurement(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTra
         self.temp_scan = False
         self.drift_scan = True
         self.rm_set_all_sa_settings()
-        self.rm_set_sweep_mode()
+        try:
+            self.rm_set_sweep_mode()
+        except pyvisa.errors.VisaIOError:
+            print('encountered pyvisa error')
+            import ipdb;ipdb.set_trace()
         self.stop = False
         n_drift_points = int(self.n_drift_points_lineedit.text())
         for i in enumerate(range(n_drift_points)):
