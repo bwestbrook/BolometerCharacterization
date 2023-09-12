@@ -106,7 +106,8 @@ class BoloDAQGui(QtWidgets.QMainWindow, GuiBuilder):
         self.today = datetime.now()
         self.today_str = datetime.strftime(self.today, '%Y_%m_%d')
         self.login = os.getlogin()
-        if self.login == 'BoloTester':
+        print(self.login)
+        if self.login in ['BoloTester']:
             self.data_folder = os.path.join('Data', '{0}'.format(self.today_str))
             self.dewar = '576'
         elif self.login in ['Bluefors_PC']:
@@ -114,7 +115,7 @@ class BoloDAQGui(QtWidgets.QMainWindow, GuiBuilder):
             self.dewar = 'BlueForsDR1'
             self.samples_com_port = 'COM6'
             self.housekeeping_com_port = 'COM4'
-        elif self.login in ['BolometerTesterDR']:
+        elif self.login in ['BolometerTesterDR', 'BolometerTester576']:
             self.data_folder = os.path.join('D:', 'Daily_Data', '{0}'.format(self.today_str))
             self.dewar = 'BlueForsDR1'
             self.samples_com_port = 'COM3'
@@ -748,7 +749,7 @@ class BoloDAQGui(QtWidgets.QMainWindow, GuiBuilder):
         '''
         self.gb_initialize_panel('central_widget')
         dialog = 'Select the comport for the sigma koki'
-        com_port, okPressed = 'COM4', True
+        com_port, okPressed = 'COM13', True
         if not hasattr(self, 'sk_widget_{0}'.format(com_port)) and okPressed:
             sk_widget = ConfigureSigmaKoki(com_port, self.status_bar)
             setattr(self, 'sk_widget_{0}'.format(com_port), sk_widget)
@@ -934,6 +935,7 @@ class BoloDAQGui(QtWidgets.QMainWindow, GuiBuilder):
         dialog = 'Select the comport for the SRS 830'
         #com_port, okPressed = self.gb_quick_static_info_gather(title='', dialog=dialog, items=['COM10'])
         com_port = self.com_ports_dict[self.login]['SRS SR830DSP']
+        print(com_port)
         #self.srs_sr830dsp_widget = None
         if not hasattr(self, 'ser_{0}'.format(com_port)) and com_port != 'None':
             if not hasattr(self, 'srs_sr830dsp_widget'):

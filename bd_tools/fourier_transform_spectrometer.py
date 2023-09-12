@@ -627,7 +627,7 @@ class FourierTransformSpectrometer(QtWidgets.QWidget, GuiBuilder, FourierTransfo
                 status_message += ':::Scan Postion {0} (Step {1} of {2})'.format(scan_position, i, self.n_data_points)
                 self.status_bar.showMessage(status_message)
                 pct_finished = 1e2 * float(i + 1) / float(self.n_data_points)
-                self.status_bar.progress_bar.setValue(np.ceil(pct_finished))
+                self.status_bar.progress_bar.setValue(int(np.ceil(pct_finished)))
                 QtWidgets.QApplication.processEvents()
                 if not self.started:
                     break

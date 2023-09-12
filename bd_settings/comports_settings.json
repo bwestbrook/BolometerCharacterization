@@ -11,6 +11,12 @@
         "SRS SR830DSP": "COM10",
         "Samples Lakeshore": "COM6"
     },
+    "BolometerTester576": {
+        "FTS Mirror Motor": "COM9",
+        "Housekeeping Lakeshore": "None",
+        "SRS SR830DSP": "COM12",
+        "Samples Lakeshore": "None"
+    },
     "BolometerTesterDR": {
         "FTS Mirror Motor": "COM10",
         "Housekeeping Lakeshore": "COM5",
