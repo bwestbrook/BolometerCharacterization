@@ -48,6 +48,7 @@ from bd_tools.data_plotter import DataPlotter
 from bd_tools.wafer_yield import WaferYield
 from bd_tools.histogram_plotter import HistogramPlotter
 from bd_tools.time_constant import TimeConstant
+from bd_tools.microwave_analyzer import MicrowaveAnalyzer
 from bd_tools.agilent_e3634a import AgilentE3634A
 from bd_tools.agilent_agc100 import AgilentAGC100
 from bd_tools.resonance_measurement import ResonanceMeasurement
@@ -110,12 +111,15 @@ class BoloDAQGui(QtWidgets.QMainWindow, GuiBuilder):
         if self.login in ['BoloTester']:
             self.data_folder = os.path.join('Data', '{0}'.format(self.today_str))
             self.dewar = '576'
+        elif self.login in ['BolometerTester576']:
+            self.data_folder = os.path.join('D:', 'Daily_Data', '{0}'.format(self.today_str))
+            self.dewar = '576'
         elif self.login in ['Bluefors_PC']:
             self.data_folder = os.path.join('Data', '{0}'.format(self.today_str))
             self.dewar = 'BlueForsDR1'
             self.samples_com_port = 'COM6'
             self.housekeeping_com_port = 'COM4'
-        elif self.login in ['BolometerTesterDR', 'BolometerTester576']:
+        elif self.login in ['BolometerTesterDR']:
             self.data_folder = os.path.join('D:', 'Daily_Data', '{0}'.format(self.today_str))
             self.dewar = 'BlueForsDR1'
             self.samples_com_port = 'COM3'
@@ -771,8 +775,13 @@ class BoloDAQGui(QtWidgets.QMainWindow, GuiBuilder):
         '''
         self.gb_initialize_panel('central_widget')
         dialog = 'Select the comport for the stepper motor you wish to configure'
+        print(self.dewar)
+        print(self.dewar)
+        print(self.dewar)
+        print(self.dewar)
+        print(self.dewar)
         if self.dewar == '576':
-            stepper_motor_ports = ['COM12', 'COM13', 'COM14']
+            stepper_motor_ports = ['COM9', 'COM10', 'COM11']
         elif self.dewar == 'BlueForsDR1':
             stepper_motor_ports = ['COM12', 'COM13', 'COM14']
         else:
@@ -824,6 +833,41 @@ class BoloDAQGui(QtWidgets.QMainWindow, GuiBuilder):
             self.cosmic_ray_widget.cr_update_daq_settings(self.daq_settings)
         self.central_widget.layout().addWidget(self.cosmic_ray_widget, 0, 0, 1, 1)
         self.status_bar.showMessage('Cosmic Ray Data')
+        QtWidgets.QApplication.processEvents()
+        self.resize(self.minimumSizeHint())
+
+    #################################################
+    # Microwave Analyzer 
+    #################################################
+
+    def bd_microwave_analyzer(self):
+        '''
+        '''
+        self.gb_initialize_panel('central_widget')
+        dialog = 'Select the comport for the SRS 830'
+        #com_port, okPressed = self.gb_quick_static_info_gather(title='', dialog=dialog, items=['COM10'])
+        com_port, okPressed = 'COM12', True
+        if not hasattr(self, 'ser_{0}'.format(com_port)) and okPressed:
+            if not hasattr(self, 'srs_sr830dsp_widget'):
+                self.status_bar.showMessage('Connecting to the SRS SR830 DSP')
+                QtWidgets.QApplication.processEvents()
+                try:
+                    serial_com = BoloSerial(com_port, device='SRS_SR830_DSP', splash_screen=self.status_bar)
+                except:
+                    response = self.gb_quick_message('Com port in use... Launch in data analysis mode?', add_yes=True, add_no=True)
+                    if response == QtWidgets.QMessageBox.Yes:
+                        serial_com = None
+                    else:
+                        return None
+                setattr(self, 'ser_{0}'.format(com_port), serial_com)
+                if serial_com is not None:
+                    self.srs_sr830dsp_widget = StanfordResearchSystemsSR830DSP(serial_com, com_port, self.status_bar, self.screen_resolution, self.monitor_dpi)
+                else:
+                    self.srs_sr830dsp_widget = None
+        if not hasattr(self, 'microwave_analyzer_widget'):
+            self.microwave_analyzer_widget = MicrowaveAnalyzer(self.daq_settings, self.status_bar, self.screen_resolution, self.monitor_dpi, self.srs_sr830dsp_widget, self.data_folder)
+        self.central_widget.layout().addWidget(self.microwave_analyzer_widget, 0, 0, 1, 1)
+        self.status_bar.showMessage('Microwave Analyzer')
         QtWidgets.QApplication.processEvents()
         self.resize(self.minimumSizeHint())
 

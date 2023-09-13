@@ -65,43 +65,50 @@
                 "function": "bd_data_plotter",
                 "icon": "data.png"
             },
-            "10_Histogram Plotter": {
+            "10_Microwave Analyzer": {
                 "Shortcut": "10",
+                "StatusTip": "Microwave Analyzer",
+                "ToolTip": "Microwave Analyzer",
+                "function": "bd_microwave_analyzer",
+                "icon": "spectrum_analyzer.png"
+            },
+            "11_Histogram Plotter": {
+                "Shortcut": "11",
                 "StatusTip": "Histogram Plotter",
                 "ToolTip": "Histogram Plotter",
                 "function": "bd_histogram_plotter",
                 "icon": "histogram.png"
             },
-            "11_Difference Load Curves": {
-                "Shortcut": "11",
+            "12_Difference Load Curves": {
+                "Shortcut": "12",
                 "StatusTip": "Difference Load Curves",
                 "ToolTip": "Difference Load Curves",
                 "function": "bd_difference_load_curves",
                 "icon": "load_curves.png"
             },
-            "12_Cosmic Ray Data Viewer": {
-                "Shortcut": "12",
+            "13_Cosmic Ray Data Viewer": {
+                "Shortcut": "13",
                 "StatusTip": "Cosmic Ray Data Viewer",
                 "ToolTip": "Cosmic Ray Data Viewer",
                 "function": "bd_cosmic_ray_viewer",
                 "icon": "cosmic_ray_viewer.png"
             },
-            "13_Noise Analyzer": {
-                "Shortcut": "13",
+            "14_Noise Analyzer": {
+                "Shortcut": "14",
                 "StatusTip": "Noise Analyzer",
                 "ToolTip": "Noise Analyzer",
                 "function": "bd_noise_analyzer",
                 "icon": "noise_analyzer.png"
             },
-            "14_Wafer Yield": {
-                "Shortcut": "14",
+            "15_Wafer Yield": {
+                "Shortcut": "15",
                 "StatusTip": "Wafer Yield",
                 "ToolTip": "Wafer Yield ",
                 "function": "bd_wafer_yield",
                 "icon": "wafer.png"
             },
-            "15_Fridge Cycle 576": {
-                "Shortcut": "15",
+            "16_Fridge Cycle 576": {
+                "Shortcut": "16",
                 "StatusTip": "Fridge Cycle 576",
                 "ToolTip": "Fridge Cycle 576",
                 "function": "bd_fridge_cycle",

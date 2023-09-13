@@ -1078,7 +1078,7 @@ class RTCollector(QtWidgets.QWidget, GuiBuilder, FourierTransformSpectroscopy):
             ramp = '{0}'.format(ramp_value.replace('+', '')).replace('.', '_')
             excitation = self.exc_mode_label.text().split(' ')[0]
             sample_name = self.sample_name_lineedit.text().replace('-', '').replace(' ', '_').replace('__', '_')
-            file_name = 'RvT_{0}_Ramp_{1}_Exc_{2}_Scan_{3}.txt'.format(sample_name, ramp, excitation, str(i).zfill(3))
+            file_name = 'rvt_{0}_ramp_{1}_exc_{2}_scan_{3}.txt'.format(sample_name, ramp, excitation, str(i).zfill(3))
             save_path = os.path.join(self.data_folder, file_name)
             if not os.path.exists(save_path):
                 break

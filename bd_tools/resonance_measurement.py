@@ -252,9 +252,7 @@ class ResonanceMeasurement(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTra
         scan_info = '{0}mK_to_{1}mK_{2}step_{3}dBm_to_{4}dBm_{5}Steps'.format(start_temp, end_temp, n_temp_points, start_power, end_power, n_power_points)
         self.scan_info_label.setText(scan_info)
         self.temp_range = np.linspace(start_temp * 1e-3, end_temp * 1e-3, n_temp_points)
-        print(self.temp_range)
         self.power_range = np.linspace(start_power, end_power, n_power_points)
-        print(self.power_range)
 
     def rm_stop(self):
         '''

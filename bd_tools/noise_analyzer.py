@@ -146,6 +146,9 @@ class NoiseAnalyzer(QtWidgets.QWidget, GuiBuilder):
         save_pushbutton = QtWidgets.QPushButton('Save', self)
         save_pushbutton.clicked.connect(self.na_save)
         self.layout().addWidget(save_pushbutton, 12, 0, 1, 4)
+        self.display_data_label = QtWidgets.QLabel()
+        self.layout().addWidget(self.display_data_label, 13, 0, 1, 4)
+
         # Connect to functions after placing widgets
         self.daq_combobox.activated.connect(self.na_update_sample_name)
         self.device_combobox.activated.connect(self.na_update_sample_name)
@@ -299,6 +302,7 @@ class NoiseAnalyzer(QtWidgets.QWidget, GuiBuilder):
         self.fft_ax.axvline(bin_high_edge, color='k')
         self.fft_ax.axvspan(bin_low_edge, bin_high_edge, alpha=0.33, color='c')
         nperseg = int(float(len(self.ts)) / 10.)
+        self.display_data_label.setText('{0}+/-{1}'.format(np.mean(self.ts), np.std(self.ts)))
         ts_in_amps = self.ts * squid_calibration
         fft_freq_vector, fft_psd_vector = scipy.signal.welch(ts_in_amps, fs=float(self.sample_rate), nperseg=nperseg)
         fft_psd_vector *= 1e24 # A to pA

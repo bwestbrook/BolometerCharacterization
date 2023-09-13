@@ -446,13 +446,8 @@ class FourierTransformSpectroscopy():
         return zero_filled_position_data
 
     def ftsy_zero_fill(self, apodized_efficiency_data, next_power_of_two=None):
-        if next_power_of_two is None:
-            next_power_of_two = self.ftsy_next_power_of_two(len(apodized_efficiency_data))
-        dog = copy(apodized_efficiency_data)
-        #print(len(apodized_efficiency_data))
-        zeros_to_pad = int(next_power_of_two - len(apodized_efficiency_data) / 2)
-        apodized_efficiency_data = np.insert(apodized_efficiency_data, len(apodized_efficiency_data), np.zeros(zeros_to_pad))
-        apodized_efficiency_data = np.insert(apodized_efficiency_data, 0, np.zeros(zeros_to_pad))
+        z = numpy.zeros(len(apodized_efficiency_data / 2))
+        apodized_efficiency_data = numpy.concatenate((z, apodized_efficiency_data, z))
         #print(len(apodized_efficiency_data))
         quick_plot = False
         if quick_plot:
@@ -503,7 +498,7 @@ class FourierTransformSpectroscopy():
         return rotated_array
 
     def ftsy_prepare_data_for_fft(self, efficiency_data, position_data,
-                                  remove_polynomial=1, apodization_type='TRIANGULAR',
+                                  remove_polynomial=1, apodization_type='hann',
                                   zero_fill=True, quick_plot=False):
         '''
         This function will apply a window function to the data
@@ -517,15 +512,14 @@ class FourierTransformSpectroscopy():
             apodized_efficiency_data = self.ftsy_remove_polynomial(efficiency_data, n=remove_polynomial)
         # Apply the window function
         if apodization_type is not None:
-            N = apodized_efficiency_data.size
             if apodization_type in ('TRIANGULAR', 'Triangular'):
                 apodization_function = 'triang'
             elif apodization_type in ('BOXCAR', 'Boxcar'):
                 apodization_function = 'boxcar'
             else:
                 apodization_function = 'boxcar'
-            window_function = getattr(scipy.signal.windows, apodization_function)(N) / np.max(apodized_efficiency_data)
-            apodized_efficiency_data = np.max(efficiency_data) * window_function * apodized_efficiency_data
+            window_function = getattr(scipy.signal.windows, apodization_function)(len(efficiency_data))
+            apodized_efficiency_data = window_function * efficiency_data
         # Zero-fill the FFT to the nearest next largest power of 2
         if zero_fill:
             apodized_efficiency_data = self.ftsy_zero_fill(apodized_efficiency_data)
@@ -835,7 +829,7 @@ if __name__ == '__main__':
     delta_P = True
     if delta_P:
         band = 'LBLF4-78'
-        band = 'SO30'
+        band = 'SO40'
         data_clip_lo = 0
         data_clip_hi = 40 * 1e9
         t_source_low = 14

@@ -204,7 +204,7 @@ class FourierTransformSpectrometer(QtWidgets.QWidget, GuiBuilder, FourierTransfo
         self.layout().addWidget(self.mirror_interval_lineedit, 3, 4, 1, 1)
         # Step size (Fixed for Bill's FTS right now)
         self.distance_per_step_combobox = self.gb_make_labeled_combobox(label_text='Distance Per Step (nm):')
-        for distance_per_step in ['250.39']:
+        for distance_per_step in ['250.39', '254.0']:
             self.distance_per_step_combobox.addItem(distance_per_step)
         self.distance_per_step_combobox.activated.connect(self.fts_update_scan_params)
         self.layout().addWidget(self.distance_per_step_combobox, 4, 4, 1, 1)
@@ -757,7 +757,7 @@ class FourierTransformSpectrometer(QtWidgets.QWidget, GuiBuilder, FourierTransfo
         ax.set_ylabel('($V$)', fontsize=10)
         ax.set_title('Data', fontsize=10)
         pl.legend()
-        fig.savefig('temp_files/temp_ts.png', transparent=True)
+        fig.savefig('temp_files/temp_ts.png', transparent=False)
         image = QtGui.QPixmap('temp_files/temp_ts.png')
         self.time_stream_plot_label.setPixmap(image)
         pl.close('all')
@@ -825,7 +825,7 @@ class FourierTransformSpectrometer(QtWidgets.QWidget, GuiBuilder, FourierTransfo
             handles += ax3.get_legend_handles_labels()[0]
             labels += ax3.get_legend_handles_labels()[1]
             ax2.legend(handles, labels, numpoints=1, mode="expand", bbox_to_anchor=(0, 0.1, 1, 1), fontsize=9)
-            fig.savefig(temp_png_path, transparent=True)
+            fig.savefig(temp_png_path, transparent=False)
             image_to_display = QtGui.QPixmap(temp_png_path)
             self.int_spec_plot_label.setPixmap(image_to_display)
 
@@ -921,7 +921,7 @@ class FourierTransformSpectrometer(QtWidgets.QWidget, GuiBuilder, FourierTransfo
         handles += ax4.get_legend_handles_labels()[0]
         labels += ax4.get_legend_handles_labels()[1]
         ax2.legend(handles, labels, numpoints=1, mode="expand", bbox_to_anchor=(0, 0.1, 1, 1), fontsize=8)
-        fig.savefig(temp_png_path, transparent=True)
+        fig.savefig(temp_png_path, transparent=False)
         image_to_display = QtGui.QPixmap(temp_png_path)
         self.int_spec_plot_label.setPixmap(image_to_display)
         return fig

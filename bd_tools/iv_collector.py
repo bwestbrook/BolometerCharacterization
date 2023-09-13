@@ -459,8 +459,8 @@ class IVCollector(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTransformSpe
             self.sender().setText('Start DAQ')
             self.started = False
             save_path = self.ivc_index_file_name()
-            self.ivc_save(save_path)
             self.ivc_plot_xy(file_name=save_path.replace('txt', 'png'), running=False)
+            self.ivc_save(save_path)
 
     def ivc_collecter(self):
         '''
