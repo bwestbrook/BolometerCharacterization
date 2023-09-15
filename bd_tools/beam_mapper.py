@@ -293,7 +293,7 @@ class BeamMapper(QtWidgets.QWidget, GuiBuilder):
         self.layout().addWidget(self.x_cut_plot_label, 10, 1, 3, 4)
         self.x_cut_select_combobox = self.gb_make_labeled_combobox(label_text='X Slice')
         self.x_cut_select_combobox.activated.connect(self.bm_plot_x_cut)
-        self.layout().addWidget(self.x_cut_select_combobox, 10, 4, 1, 1)
+        self.layout().addWidget(self.x_cut_select_combobox, 10, 5, 1, 1)
 
         for x_tick in self.x_ticks:
             self.x_cut_select_combobox.addItem(x_tick)
@@ -306,7 +306,7 @@ class BeamMapper(QtWidgets.QWidget, GuiBuilder):
         self.device_combobox.setCurrentIndex(0)
         self.y_cut_select_combobox = self.gb_make_labeled_combobox(label_text='Y Slice')
         self.y_cut_select_combobox.activated.connect(self.bm_plot_y_cut)
-        self.layout().addWidget(self.y_cut_select_combobox, 13, 4, 1, 1)
+        self.layout().addWidget(self.y_cut_select_combobox, 13, 5, 1, 1)
         for y_tick in self.y_ticks:
             self.y_cut_select_combobox.addItem(y_tick)
         self.y_slice_fit_label = QtWidgets.QLabel('', self)

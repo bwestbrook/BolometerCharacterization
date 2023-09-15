@@ -478,7 +478,7 @@ class ResonanceMeasurement(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTra
     def rm_read_set_points(self):
         '''
         '''
-        rt_set_points_path = os.path.join('bd_resources', 'rm_set_points.txt')
+        rt_set_points_path = os.path.join('bd_settings', 'rm_set_points.txt')
         with open(rt_set_points_path, 'r') as fh:
             line = fh.readlines()[0]
         cf_1, cf_2, frequency_span, n_points, n_averages, power, attenuation, start_temp, end_temp = line.split(', ')
@@ -504,7 +504,7 @@ class ResonanceMeasurement(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTra
         end_temp = self.end_temp_lineedit.text()
         cf_1 = self.center_frequency_combobox.itemText(0)
         cf_2 = self.center_frequency_combobox.itemText(1)
-        rt_set_points_path = os.path.join('bd_resources', 'rm_set_points.txt')
+        rt_set_points_path = os.path.join('bd_settings', 'rm_set_points.txt')
         with open(rt_set_points_path, 'w') as fh:
             line = '{0}, {1}, {2}, {3}, {4}, {5}, {6}, {7}, {8}'.format(cf_1, cf_2, frequency_span, n_points, n_averages, power, attenuation, start_temp, end_temp)
             fh.write(line)

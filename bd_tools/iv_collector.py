@@ -110,7 +110,6 @@ class IVCollector(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTransformSpe
             tool_tips_dict = simplejson.load(fh)
         self.gb_add_tool_tips(self, tool_tips_dict)
         self.ivc_read_set_points()
-        
 
     #########################################################
     # GUI and Input Handling
@@ -560,14 +559,14 @@ class IVCollector(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTransformSpe
         for widget in widgets:
             value = getattr(self, widget).text()
             fit_points_dict[widget] = value
-        rt_set_points_path = os.path.join('bd_resources', 'iv_set_points.json')
+        rt_set_points_path = os.path.join('bd_settings', 'iv_set_points.json')
         with open(rt_set_points_path, 'w') as fh:
             simplejson.dump(fit_points_dict, fh, indent=4, sort_keys=True)
 
     def ivc_read_set_points(self):
         '''
         '''
-        rt_set_points_path = os.path.join('bd_resources', 'iv_set_points.json')
+        rt_set_points_path = os.path.join('bd_settings', 'iv_set_points.json')
         with open(rt_set_points_path, 'r') as fh:
             fit_points_dict = simplejson.load(fh)
         for widget,value in fit_points_dict.items():

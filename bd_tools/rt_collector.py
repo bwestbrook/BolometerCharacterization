@@ -833,7 +833,7 @@ class RTCollector(QtWidgets.QWidget, GuiBuilder, FourierTransformSpectroscopy):
     def rtc_read_set_points(self):
         '''
         '''
-        rt_set_points_path = os.path.join('bd_resources', 'rt_set_points.txt')
+        rt_set_points_path = os.path.join('bd_settings', 'rt_set_points.txt')
         with open(rt_set_points_path, 'r') as fh:
             set_low, set_high, thermometer = fh.read().split(', ')
         self.temp_set_point_low_lineedit.setText(set_low)
@@ -846,7 +846,7 @@ class RTCollector(QtWidgets.QWidget, GuiBuilder, FourierTransformSpectroscopy):
         set_low = self.temp_set_point_low_lineedit.text()
         set_high = self.temp_set_point_high_lineedit.text()
         thermometer = self.thermometer_combobox.currentIndex()
-        rt_set_points_path = os.path.join('bd_resources', 'rt_set_points.txt')
+        rt_set_points_path = os.path.join('bd_settings', 'rt_set_points.txt')
         with open(rt_set_points_path, 'w') as fh:
             fh.write('{0}, {1}, {2}'.format(set_low, set_high, thermometer))
 
