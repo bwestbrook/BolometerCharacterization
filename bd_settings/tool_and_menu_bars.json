@@ -58,61 +58,26 @@
                 "function": "bd_time_constant",
                 "icon": "time_constant.png"
             },
-            "09_Data Plotter": {
-                "Shortcut": "9",
-                "StatusTip": "Data Plotter",
-                "ToolTip": "Data Plotter",
-                "function": "bd_data_plotter",
-                "icon": "data.png"
-            },
-            "10_Microwave Analyzer": {
+            "09_Microwave Analyzer": {
                 "Shortcut": "10",
                 "StatusTip": "Microwave Analyzer",
                 "ToolTip": "Microwave Analyzer",
                 "function": "bd_microwave_analyzer",
                 "icon": "spectrum_analyzer.png"
             },
-            "11_Histogram Plotter": {
+            "10_Histogram Plotter": {
                 "Shortcut": "11",
                 "StatusTip": "Histogram Plotter",
                 "ToolTip": "Histogram Plotter",
                 "function": "bd_histogram_plotter",
                 "icon": "histogram.png"
             },
-            "12_Difference Load Curves": {
-                "Shortcut": "12",
-                "StatusTip": "Difference Load Curves",
-                "ToolTip": "Difference Load Curves",
-                "function": "bd_difference_load_curves",
-                "icon": "load_curves.png"
-            },
-            "13_Cosmic Ray Data Viewer": {
-                "Shortcut": "13",
-                "StatusTip": "Cosmic Ray Data Viewer",
-                "ToolTip": "Cosmic Ray Data Viewer",
-                "function": "bd_cosmic_ray_viewer",
-                "icon": "cosmic_ray_viewer.png"
-            },
-            "14_Noise Analyzer": {
+            "11_Noise Analyzer": {
                 "Shortcut": "14",
                 "StatusTip": "Noise Analyzer",
                 "ToolTip": "Noise Analyzer",
                 "function": "bd_noise_analyzer",
                 "icon": "noise_analyzer.png"
-            },
-            "15_Wafer Yield": {
-                "Shortcut": "15",
-                "StatusTip": "Wafer Yield",
-                "ToolTip": "Wafer Yield ",
-                "function": "bd_wafer_yield",
-                "icon": "wafer.png"
-            },
-            "16_Fridge Cycle 576": {
-                "Shortcut": "16",
-                "StatusTip": "Fridge Cycle 576",
-                "ToolTip": "Fridge Cycle 576",
-                "function": "bd_fridge_cycle",
-                "icon": "snowflake.png"
             }
         }
     },
@@ -159,10 +124,46 @@
                 "icon": "power_supply.png"
             },
             "06_Sigma Koki": {
+                "Shortcut": "6",
                 "StatusTip": "Sigma Koki",
                 "ToolTip": "Sigma Koki",
                 "function": "bd_sigma_koki",
                 "icon": "rotation.png"
+            },
+            "07_Data Plotter": {
+                "Shortcut": "7",
+                "StatusTip": "Data Plotter",
+                "ToolTip": "Data Plotter",
+                "function": "bd_data_plotter",
+                "icon": "data.png"
+            },
+            "08_Difference Load Curves": {
+                "Shortcut": "08",
+                "StatusTip": "Difference Load Curves",
+                "ToolTip": "Difference Load Curves",
+                "function": "bd_difference_load_curves",
+                "icon": "load_curves.png"
+            },
+            "09_Cosmic Ray Data Viewer": {
+                "Shortcut": "09",
+                "StatusTip": "Cosmic Ray Data Viewer",
+                "ToolTip": "Cosmic Ray Data Viewer",
+                "function": "bd_cosmic_ray_viewer",
+                "icon": "cosmic_ray_viewer.png"
+            },
+            "10_Wafer Yield": {
+                "Shortcut": "10",
+                "StatusTip": "Wafer Yield",
+                "ToolTip": "Wafer Yield ",
+                "function": "bd_wafer_yield",
+                "icon": "wafer.png"
+            },
+            "11_Fridge Cycle 576": {
+                "Shortcut": "11",
+                "StatusTip": "Fridge Cycle 576",
+                "ToolTip": "Fridge Cycle 576",
+                "function": "bd_fridge_cycle",
+                "icon": "snowflake.png"
             }
         },
         "03_Edit": {

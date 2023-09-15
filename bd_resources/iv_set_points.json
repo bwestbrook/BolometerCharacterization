@@ -1,7 +1,7 @@
 {
-    "data_clip_hi_lineedit": "20",
+    "data_clip_hi_lineedit": "11",
     "data_clip_lo_lineedit": "0",
-    "fit_clip_hi_lineedit": "20",
-    "fit_clip_lo_lineedit": "0",
+    "fit_clip_hi_lineedit": "11",
+    "fit_clip_lo_lineedit": "9",
     "warm_bias_resistor_lineedit": "2000"
 }

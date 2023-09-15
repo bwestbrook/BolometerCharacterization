@@ -1099,7 +1099,7 @@ class BoloDAQGui(QtWidgets.QMainWindow, GuiBuilder):
         QtWidgets.QApplication.processEvents()
         dialog = 'Select the comport for the SRS 830'
         #com_port, okPressed = self.gb_quick_static_info_gather(title='', dialog=dialog, items=['COM10'])
-        com_port, okPressed = 'COM10', True
+        com_port, okPressed = 'COM12', True
         if not hasattr(self, 'ser_{0}'.format(com_port)) and okPressed:
             if not hasattr(self, 'srs_sr830dsp_widget'):
                 self.status_bar.showMessage('Connecting to the SRS SR830 DSP')
@@ -1117,7 +1117,7 @@ class BoloDAQGui(QtWidgets.QMainWindow, GuiBuilder):
                 self.srs_sr830dsp_widget = StanfordResearchSystemsSR830DSP(serial_com, com_port, self.status_bar, self.screen_resolution, self.monitor_dpi)
             else:
                 self.srs_sr830dsp_widget = None
-        stepper_motor_ports = ['COM13', 'COM14']
+        stepper_motor_ports = ['COM10', 'COM11']
         self.csm_widget_dict = {}
         for i, dim in enumerate(('X', 'Y')):
             dialog = 'Select the comport for the {0} stepper motor you wish to configure'.format(dim)

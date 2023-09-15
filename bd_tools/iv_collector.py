@@ -5,6 +5,8 @@ import simplejson
 import numpy as np
 import pylab as pl
 import pickle as pkl
+import matplotlib
+matplotlib.use('Qt5Agg')
 import matplotlib.pyplot as plt
 from copy import copy
 from datetime import datetime
@@ -17,7 +19,7 @@ from bd_lib.fourier_transform_spectroscopy import FourierTransformSpectroscopy
 from PyQt5 import QtCore, QtGui, QtWidgets
 from GuiBuilder.gui_builder import GuiBuilder, GenericClass
 from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
-from matplotlib import rc
+from matplotlib import rc#
 rc('text', usetex=False)
 
 
@@ -29,7 +31,33 @@ class IVCollector(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTransformSpe
         '''
         '''
         super(IVCollector, self).__init__()
-        self.mplc = MplCanvas(self, screen_resolution, monitor_dpi)
+        self.started = False
+        self.xy_mplc = MplCanvas(self, screen_resolution, monitor_dpi)
+        self.xy_mplc.mplc_create_iv_paneled_plot(
+            left=0.14,
+            right=0.95,
+            bottom=0.18,
+            top=0.9,
+            frac_screen_height=0.8,
+            frac_screen_width=0.4,
+            hspace=0.7,
+            wspace=0.4)
+        self.x_mplc= MplCanvas(self, screen_resolution, monitor_dpi)
+        self.x_mplc.mplc_create_basic_fig(
+            left=0.18,
+            right=0.95,
+            bottom=0.25,
+            top=0.88,
+            frac_screen_height=0.15,
+            frac_screen_width=0.25)
+        self.y_mplc = MplCanvas(self, screen_resolution, monitor_dpi)
+        self.y_mplc.mplc_create_basic_fig(
+            left=0.18,
+            right=0.95,
+            bottom=0.25,
+            top=0.88,
+            frac_screen_height=0.15,
+            frac_screen_width=0.25)
         self.bands = self.ftsy_get_bands()
         self.status_bar = status_bar
         self.daq_settings = daq_settings
@@ -82,6 +110,7 @@ class IVCollector(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTransformSpe
             tool_tips_dict = simplejson.load(fh)
         self.gb_add_tool_tips(self, tool_tips_dict)
         self.ivc_read_set_points()
+        
 
     #########################################################
     # GUI and Input Handling
@@ -139,7 +168,7 @@ class IVCollector(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTransformSpe
         self.int_time_lineedit = self.gb_make_labeled_lineedit(label_text='Int Time')
         self.int_time_lineedit.setValidator(QtGui.QDoubleValidator(0, 1e5, 2, self.int_time_lineedit))
         self.layout().addWidget(self.int_time_lineedit, 0, 1, 1, 1)
-        self.int_time_lineedit.setText('100')
+        self.int_time_lineedit.setText('25')
         self.int_time = self.int_time_lineedit.text()
         self.sample_rate_lineedit = self.gb_make_labeled_lineedit(label_text='Sample Rate (Hz)')
         self.sample_rate_lineedit.setValidator(QtGui.QDoubleValidator(0, 1e5, 2, self.sample_rate_lineedit))
@@ -226,28 +255,28 @@ class IVCollector(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTransformSpe
 
         # General Meta Data and Information
         self.absorber_type_lineedit = self.gb_make_labeled_lineedit(label_text='Absorber Type:')
-        self.layout().addWidget(self.absorber_type_lineedit, 9, 4, 1, 1)
+        self.layout().addWidget(self.absorber_type_lineedit, 9, 0, 1, 1)
 
         # Band information
         self.sample_band_combobox = self.gb_make_labeled_combobox(label_text='Sample Band (GHz)')
-        self.layout().addWidget(self.sample_band_combobox, 8, 6, 1, 1)
+        self.layout().addWidget(self.sample_band_combobox, 8, 0, 1, 1)
         for sample_band in self.bands:
             self.sample_band_combobox.addItem(sample_band)
         self.resistance_label = self.gb_make_labeled_label(label_text='Resistance (Ohms):')
-        self.layout().addWidget(self.resistance_label, 8, 7, 1, 1)
+        self.layout().addWidget(self.resistance_label, 8, 1, 1, 1)
         # Sample Name
         self.sample_name_lineedit = self.gb_make_labeled_lineedit(label_text='Sample Name')
-        self.layout().addWidget(self.sample_name_lineedit, 8, 5, 1, 1)
+        self.layout().addWidget(self.sample_name_lineedit, 8, 2, 1, 1)
         self.sample_name_combobox = self.gb_make_labeled_combobox(label_text='Sample Name')
         self.sample_name_combobox.currentIndexChanged.connect(self.ivc_update_sample_name)
         for sample_name in self.samples_settings:
             self.sample_name_combobox.addItem(sample_name)
-        self.layout().addWidget(self.sample_name_combobox, 8, 4, 1, 1)
+        self.layout().addWidget(self.sample_name_combobox, 8, 3, 1, 1)
         self.notes_lineedit = self.gb_make_labeled_lineedit(label_text='Notes:')
-        self.layout().addWidget(self.notes_lineedit, 9, 5, 1, 1)
+        self.layout().addWidget(self.notes_lineedit, 9, 2, 1, 1)
         self.meta_data_warning_checkbox = QtWidgets.QCheckBox('Meta Data Warn?')
         self.meta_data_warning_checkbox.setChecked(False)
-        self.layout().addWidget(self.meta_data_warning_checkbox, 9, 6, 1, 1)
+        self.layout().addWidget(self.meta_data_warning_checkbox, 9, 3, 1, 1)
 
         #Connect to function
         self.daq_y_combobox.setCurrentIndex(1)
@@ -263,58 +292,51 @@ class IVCollector(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTransformSpe
         '''
         '''
         # X
-        self.x_time_stream_label = QtWidgets.QLabel('', self)
-        self.x_time_stream_label.setAttribute(QtCore.Qt.WA_TranslucentBackground)
-        self.x_time_stream_label.setAlignment(QtCore.Qt.AlignCenter)
-        self.layout().addWidget(self.x_time_stream_label, 2, 0, 1, 4)
-        self.x_data_label = QtWidgets.QLabel('X Data: X STD:', self)
-        self.x_data_label.setAlignment(QtCore.Qt.AlignCenter)
-        self.layout().addWidget(self.x_data_label, 3, 0, 1, 4)
+        self.layout().addWidget(self.x_mplc, 17, 4, 4, 4)
+
+        #self.x_data_label = QtWidgets.QLabel('X Data: X STD:', self)
+        #self.x_data_label.setAlignment(QtCore.Qt.AlignCenter)
+        #self.layout().addWidget(self.x_data_label, 5, 0, 1, 4)
 
         # Y
-        self.y_time_stream_label = QtWidgets.QLabel('', self)
-        self.y_time_stream_label.setAttribute(QtCore.Qt.WA_TranslucentBackground)
-        self.y_time_stream_label.setAlignment(QtCore.Qt.AlignCenter)
-        self.layout().addWidget(self.y_time_stream_label, 5, 0, 1, 4)
-        self.y_data_label = QtWidgets.QLabel('Y Data: Y STD:', self)
-        self.y_data_label.setAlignment(QtCore.Qt.AlignCenter)
-        self.layout().addWidget(self.y_data_label, 6, 0, 1, 4)
+        self.layout().addWidget(self.y_mplc, 21, 4, 4, 4)
+
+        #self.y_data_label = QtWidgets.QLabel('Y Data: Y STD:', self)
+        #self.y_data_label.setAlignment(QtCore.Qt.AlignCenter)
+        #self.layout().addWidget(self.y_data_label, 8, 0, 1, 4)
 
         # Buttons
         self.start_pushbutton = QtWidgets.QPushButton('Start', self)
         self.start_pushbutton.clicked.connect(self.ivc_start_stop)
-        self.layout().addWidget(self.start_pushbutton, 7, 0, 1, 4)
+        self.layout().addWidget(self.start_pushbutton, 20, 0, 1, 4)
         self.load_pushbutton = QtWidgets.QPushButton('Load', self)
         self.load_pushbutton.clicked.connect(self.ivc_load)
-        self.layout().addWidget(self.load_pushbutton, 8, 0, 1, 4)
+        self.layout().addWidget(self.load_pushbutton, 21, 0, 1, 4)
         self.save_pushbutton = QtWidgets.QPushButton('Save', self)
         self.save_pushbutton.clicked.connect(self.ivc_save)
-        self.layout().addWidget(self.save_pushbutton, 9, 0, 1, 4)
+        self.layout().addWidget(self.save_pushbutton, 22, 0, 1, 4)
 
         # XY
-        self.xy_scatter_label = QtWidgets.QLabel('', self)
-        self.xy_scatter_label.setAttribute(QtCore.Qt.WA_TranslucentBackground)
-        self.xy_scatter_label.setAlignment(QtCore.Qt.AlignCenter)
-        self.layout().addWidget(self.xy_scatter_label, 2, 4, 4, 4)
+        self.layout().addWidget(self.xy_mplc, 2, 4, 15, 4)
 
         # Data Clip
         self.data_clip_lo_lineedit = self.gb_make_labeled_lineedit(label_text='Data Clip Lo (uV)', lineedit_text='0.0')
         self.data_clip_lo_lineedit.returnPressed.connect(self.ivc_plot_running)
         self.data_clip_lo_lineedit.setValidator(QtGui.QDoubleValidator(0, 1e5, 2, self.data_clip_lo_lineedit))
-        self.layout().addWidget(self.data_clip_lo_lineedit, 6, 4, 1, 1)
+        self.layout().addWidget(self.data_clip_lo_lineedit, 15, 0, 1, 1)
         self.data_clip_hi_lineedit = self.gb_make_labeled_lineedit(label_text='Data Clip Hi (uV)', lineedit_text='10.0')
         self.data_clip_hi_lineedit.returnPressed.connect(self.ivc_plot_running)
         self.data_clip_hi_lineedit.setValidator(QtGui.QDoubleValidator(0, 1e5, 2, self.data_clip_hi_lineedit))
-        self.layout().addWidget(self.data_clip_hi_lineedit, 6, 5, 1, 1)
+        self.layout().addWidget(self.data_clip_hi_lineedit, 15, 1, 1, 1)
         # Fit Clip
         self.fit_clip_lo_lineedit = self.gb_make_labeled_lineedit(label_text='Fit Clip Lo (uV)', lineedit_text='1.0')
         self.fit_clip_lo_lineedit.returnPressed.connect(self.ivc_plot_running)
-        self.layout().addWidget(self.fit_clip_lo_lineedit, 6, 6, 1, 1)
+        self.layout().addWidget(self.fit_clip_lo_lineedit, 15, 2, 1, 1)
         self.fit_clip_lo_lineedit.setValidator(QtGui.QDoubleValidator(0, 1e5, 2, self.fit_clip_lo_lineedit))
         self.fit_clip_hi_lineedit = self.gb_make_labeled_lineedit(label_text='Fit Clip Hi (uV)', lineedit_text='4.0')
         self.fit_clip_hi_lineedit.setValidator(QtGui.QDoubleValidator(0, 1e5, 2, self.fit_clip_hi_lineedit))
         self.fit_clip_hi_lineedit.returnPressed.connect(self.ivc_plot_running)
-        self.layout().addWidget(self.fit_clip_hi_lineedit, 6, 7, 1, 1)
+        self.layout().addWidget(self.fit_clip_hi_lineedit, 15, 3, 1, 1)
 
     def ivc_update_sample_name(self, index):
         '''
@@ -457,10 +479,12 @@ class IVCollector(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTransformSpe
         else:
             self.ivc_write_fit_points()
             self.sender().setText('Start DAQ')
-            self.started = False
             save_path = self.ivc_index_file_name()
             self.ivc_plot_xy(file_name=save_path.replace('txt', 'png'), running=False)
+            self.started = False
             self.ivc_save(save_path)
+            #time.sleep(3.0)
+            QtWidgets.QApplication.processEvents()
 
     def ivc_collecter(self):
         '''
@@ -598,7 +622,6 @@ class IVCollector(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTransformSpe
             save_path = self.ivc_index_file_name()
             save_path = QtWidgets.QFileDialog.getSaveFileName(self, 'Data Save Location', save_path, filter='*.txt')[0]
         if len(save_path) > 0:
-            print(save_path)
             self.gb_save_meta_data(save_path, 'txt')
             calibrated_save_path = save_path.replace('.txt', '_calibrated.txt')
             with open(save_path, 'w') as save_handle:
@@ -610,10 +633,10 @@ class IVCollector(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTransformSpe
                     line = '{0:.5f}, {1:.5f}, {2:.5f}, {3:.5f}\n'.format(self.x_data_real[i], self.x_stds_real[i], self.y_data_real[i], self.y_stds_real[i])
                     save_handle.write(line)
             png_save_path = save_path.replace('.txt', '.png')
+            self.xy_mplc.fig.savefig('temp_iv_all.png')
             shutil.copy('temp_iv_all.png', png_save_path)
         else:
             self.gb_quick_message('Warning Data Not Written to File!', msg_type='Warning')
-        self.ivc_plot_xy()
 
     def ivc_plot_running(self):
         '''
@@ -625,41 +648,26 @@ class IVCollector(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTransformSpe
     def ivc_plot_x(self):
         '''
         '''
-        fig, ax = self.mplc.mplc_create_basic_fig(
-            name='x_fig',
-            left=0.18,
-            right=0.95,
-            bottom=0.25,
-            top=0.88,
-            frac_screen_height=0.15,
-            frac_screen_width=0.25)
+        QtWidgets.QApplication.processEvents()
+        ax = self.x_mplc.fig.axes[0]
+        ax.cla()
         ax.set_xlabel('Sample', fontsize=12)
         ax.set_ylabel('X ($V$)', fontsize=12)
         label = 'DAQ {0}'.format(self.x_channel)
         handles, labels = ax.get_legend_handles_labels()
         if label in labels:
             label = None
-        try:
-            ax.errorbar(range(len(self.x_data)), self.x_data, self.x_stds, marker='.', linestyle='None', label=label)
-        except ValueError:
-            import ipdb;ipdb.set_trace()
+        ax.errorbar(range(len(self.x_data)), self.x_data, self.x_stds, marker='.', linestyle='None', label=label)
         ax.legend(loc='best', fontsize=10)
-        fig.savefig('temp_x.png', transparent=True)
-        image_to_display = QtGui.QPixmap('temp_x.png')
-        self.x_time_stream_label.setPixmap(image_to_display)
-        #os.remove('temp_x.png')
+        self.x_mplc.draw()
+        QtWidgets.QApplication.processEvents()
 
     def ivc_plot_y(self):
         '''
         '''
-        fig, ax = self.mplc.mplc_create_basic_fig(
-            name='x_fig',
-            left=0.18,
-            right=0.95,
-            bottom=0.25,
-            top=0.88,
-            frac_screen_height=0.15,
-            frac_screen_width=0.25)
+        QtWidgets.QApplication.processEvents()
+        ax = self.y_mplc.fig.axes[0]
+        ax.cla()
         ax.set_xlabel('Sample', fontsize=12)
         ax.set_ylabel('Y ($V$)', fontsize=12)
         label = 'DAQ {0}'.format(self.y_channel)
@@ -668,10 +676,9 @@ class IVCollector(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTransformSpe
             label = None
         ax.errorbar(range(len(self.y_data)), self.y_data, self.y_stds, marker='.', linestyle='None', label=label)
         ax.legend(loc='best', fontsize=10)
-        fig.savefig('temp_y.png', transparent=True)
-        image_to_display = QtGui.QPixmap('temp_y.png')
-        self.y_time_stream_label.setPixmap(image_to_display)
-        #os.remove('temp_y.png')
+        self.y_mplc.draw()
+        print(self.y_data)
+        QtWidgets.QApplication.processEvents()
 
     def ivc_plot_xy(self, file_name='', running=False):
         '''
@@ -679,6 +686,9 @@ class IVCollector(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTransformSpe
         #####################################
         # Screen for bad input
         #####################################
+        if not self.started:
+            return None
+        start_plot_time = time.time()
         if len(self.x_data) == 0:
             return None
         if not self.gb_is_float(self.data_clip_lo_lineedit.text()):
@@ -693,17 +703,8 @@ class IVCollector(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTransformSpe
         #####################################
         # Plot creation labeling Plotting
         #####################################
-        fig = self.mplc.mplc_create_iv_paneled_plot(
-            name='xy_fig',
-            left=0.14,
-            right=0.95,
-            bottom=0.18,
-            top=0.9,
-            frac_screen_height=0.4,
-            frac_screen_width=0.4,
-            hspace=0.7,
-            wspace=0.4)
-        ax1, ax2, ax3, ax4 = fig.get_axes()
+
+        ax1, ax2, ax3, ax4 = self.xy_mplc.fig.get_axes()
         ax1.cla()
         ax2.cla()
         ax2.set_axis_off()
@@ -760,12 +761,14 @@ class IVCollector(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTransformSpe
             label = None
 
         rlast = np.nan
-        ax1.plot(x_fit_vector[fit_selector], y_fit_vector[fit_selector], '-', lw=3, color='r', label='fit')
-        #ax1.plot(v_bolo_real[plot_selector], i_bolo_real[plot_selector], '.', label=label)
+        create_plot_time = time.time()
+        label = 'Fit {0:.2f} $\Omega$'.format(resistance)
+        ax1.plot(x_fit_vector[fit_selector], y_fit_vector[fit_selector], '-', lw=3, color='r', label=label)
         if len(i_bolo_stds) > 0:
-            label = '{0:.2f} $\Omega$'.format(resistance)
+            label = None
             ax1.errorbar(v_bolo_real[plot_selector], i_bolo_real[plot_selector], yerr=i_bolo_stds[plot_selector],
                          label=label, marker='.', linestyle='None', alpha=0.25)
+        post_basic_plot_time = time.time()
         if not running:
             if len(v_bolo_real) > 2 and len(i_bolo_real[plot_selector]) > 0:
                 pt_idx = np.where(i_bolo_real[plot_selector] == min(i_bolo_real[plot_selector]))[0][0]
@@ -797,6 +800,7 @@ class IVCollector(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTransformSpe
                     i_bolo_real[plot_selector][pl_idx],
                     '*', markersize=10.0, color='m',
                     label='Plast = {0:.2f} pW'.format(plast_pw))
+            post_psat_plot_time = time.time()
             resistance = 1.0 / fit_vals[0]
             frac_rn = rlast / resistance * 1e2 # as pct
             ax3.plot(v_bolo_real[plot_selector], r_bolo[plot_selector], 'b', label='Res {0:.3f} ($\Omega$) {1:.2f}%'.format(resistance, frac_rn))
@@ -808,6 +812,7 @@ class IVCollector(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTransformSpe
             handles += ax4.get_legend_handles_labels()[0]
             labels += ax4.get_legend_handles_labels()[1]
             ax2.legend(handles, labels, numpoints=1, mode="expand", frameon=True, fontsize=10, bbox_to_anchor=(0, 0.1, 1, 1))
+            post_legend_plot_time = time.time()
         #####################################
         # For Saving
         #####################################
@@ -815,28 +820,10 @@ class IVCollector(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTransformSpe
         self.x_stds_real = v_bolo_stds
         self.y_data_real = i_bolo_real
         self.y_stds_real = i_bolo_stds
-        fig.savefig('temp_iv_all.png')
-        image_to_display = QtGui.QPixmap('temp_iv_all.png')
-        self.xy_scatter_label.setPixmap(image_to_display)
-        #self.ivc_plot_xy2()
-        print('post process', time.time())
-
-    def ivc_plot_xy2(self):
-        '''
-        '''
-        fig, ax = self.mplc.mplc_create_basic_fig(
-            name='x_fig',
-            left=0.18,
-            right=0.95,
-            bottom=0.25,
-            top=0.88,
-            frac_screen_height=0.15,
-            frac_screen_width=0.25)
-        ax.plot(self.x_data, self.y_data)
-        fig.savefig('temp_iv_all.png')
-        image_to_display = QtGui.QPixmap('temp_iv_all.png')
-        self.xy_scatter_label.setPixmap(image_to_display)
-        #os.remove('temp_iv_all.png')
+        pre_save_time = time.time()
+        post_save_time = time.time()
+        self.xy_mplc.draw()
+        QtWidgets.QApplication.processEvents()
 
     def ivc_adjust_x_data(self):
         '''

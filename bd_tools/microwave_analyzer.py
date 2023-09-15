@@ -227,11 +227,13 @@ class MicrowaveAnalyzer(QtWidgets.QWidget, GuiBuilder):
         self.layout().addWidget(self.plot_so30_checkbox, 6, 0, 1, 1)
         self.plot_so40_checkbox = QtWidgets.QCheckBox('Plot SO40')
         self.layout().addWidget(self.plot_so40_checkbox, 6, 1, 1, 1)
+        self.normalize_checkbox = QtWidgets.QCheckBox('Normalize?')
+        self.layout().addWidget(self.normalize_checkbox, 6, 2, 1, 1)
         self.time_stream_plot_label = QtWidgets.QLabel()
         self.layout().addWidget(self.time_stream_plot_label, 7, 0, 1, 4)
         # Control Buttons
         self.start_pushbutton = QtWidgets.QPushButton('Start', self)
-        self.start_pushbutton.clicked.connect(self.ma_start)
+        self.start_pushbutton.clicked.connect(self.ma_start_stop)
         self.layout().addWidget(self.start_pushbutton, 9, 0, 1, 4)
         self.save_pushbutton = QtWidgets.QPushButton('Save', self)
         self.save_pushbutton.clicked.connect(self.ma_save)
@@ -311,6 +313,19 @@ class MicrowaveAnalyzer(QtWidgets.QWidget, GuiBuilder):
     # Data Taking 
     ######################
 
+    def ma_start_stop(self):
+        '''
+        '''
+        self.saved = False
+        if self.sender().text() == 'Start':
+            self.sender().setText('Stop')
+            self.started = True
+            self.ma_scan()
+        else:
+            self.sender().setText('Start')
+            self.started = False
+            self.saved = True
+
     def ma_update_frequencies(self):
         '''
         '''
@@ -335,7 +350,7 @@ class MicrowaveAnalyzer(QtWidgets.QWidget, GuiBuilder):
         self.frequency_array = frequency_array
         return frequency_array
 
-    def ma_start(self):
+    def ma_scan(self):
         '''
         '''
         int_time = float(self.int_time_lineedit.text())
@@ -368,7 +383,10 @@ class MicrowaveAnalyzer(QtWidgets.QWidget, GuiBuilder):
             print(i, self.frequency_array.size)
             self.status_bar.progress_bar.setValue(int(np.ceil(pct_finished)))
             QtWidgets.QApplication.processEvents()
+            if not self.started:
+                break
         self.ma_save()
+        self.sender().setText('Start')
 
     #######################
     # Loading and Saving
@@ -472,7 +490,11 @@ class MicrowaveAnalyzer(QtWidgets.QWidget, GuiBuilder):
         if self.plot_so40_checkbox.isChecked():
             freq_40, trans_40 = self.ma_load_simulated_band(20e9, 60e9, 'SO40')
             ax.plot(freq_40, trans_40, label='Sim 40 1.0')
-        ax.errorbar(self.frequency_array, self.y_data / np.max(self.y_data), yerr=self.y_err, ms=3, label='TES response')
+        if self.normalize_checkbox.isChecked():
+            y_data = self.y_data / np.max(self.y_data)
+        else:
+            y_data = self.y_data
+        ax.errorbar(self.frequency_array, y_data, yerr=self.y_err, ms=3, label='TES response')
         ax.set_title("{0}".format(self.sample_name_lineedit.text()))
         ax.set_xlabel('Frequency (GHz)',fontsize=14)
         ax.set_ylabel('TES Response',fontsize=14)

@@ -1,3 +1,5 @@
+import matplotlib
+matplotlib.use('Qt5Agg')
 from matplotlib.figure import Figure
 import matplotlib.gridspec as gridspec
 from matplotlib import rc
@@ -11,10 +13,8 @@ class MplCanvas(FigureCanvasQTAgg):
     def __init__(self, parent, screen_resolution, monitor_dpi):
         '''
         '''
-        #fig = Figure()
         self.screen_resolution = screen_resolution
         self.dpi = monitor_dpi
-        #super(MplCanvas, self).__init__()
 
     def mplc_adjust_subplots(self,
             fig,
@@ -38,18 +38,19 @@ class MplCanvas(FigureCanvasQTAgg):
 
     def mplc_create_blank_fig(
             self,
-            name=None,
             frac_screen_width=0.5,
-            frac_screen_height=0.5):
+            frac_screen_height=0.5,
+            fig_name=None):
         '''
         '''
         width = (frac_screen_width * self.screen_resolution.width()) / self.dpi # in pixels
         height = (frac_screen_height * self.screen_resolution.height()) / self.dpi # in pixels
         fig = Figure(figsize=(width, height), dpi=self.dpi)
+        self.fig = fig
+        super(MplCanvas, self).__init__(fig)
         return fig
 
     def mplc_create_basic_fig(self,
-            name=None,
             left=None,
             right=None,
             top=None,
@@ -61,7 +62,6 @@ class MplCanvas(FigureCanvasQTAgg):
         '''
         '''
         fig = self.mplc_create_blank_fig(
-            name=name,
             frac_screen_width=frac_screen_width,
             frac_screen_height=frac_screen_height)
         fig.canvas = FigureCanvas(fig)
@@ -74,10 +74,11 @@ class MplCanvas(FigureCanvasQTAgg):
             bottom=bottom,
             wspace=wspace,
             hspace=hspace)
+        self.fig = fig
+        self.ax = ax
         return fig, ax
 
     def mplc_create_fig_with_legend_axes(self,
-            name=None,
             left=None,
             right=None,
             top=None,
@@ -89,7 +90,6 @@ class MplCanvas(FigureCanvasQTAgg):
         '''
         '''
         fig = self.mplc_create_blank_fig(
-            name=name,
             frac_screen_width=frac_screen_width,
             frac_screen_height=frac_screen_height)
         gs = fig.add_gridspec(1, 2, width_ratios=[2.5,1])
@@ -104,10 +104,12 @@ class MplCanvas(FigureCanvasQTAgg):
             bottom=bottom,
             wspace=wspace,
             hspace=hspace)
+        self.fig = fig
+        self.ax1 = ax1
+        self.ax2 = ax2
         return fig
 
     def mplc_create_horizontal_array_fig(self,
-            name='Plot',
             axes_names=['CH 1', 'CH 2'],
             left=None,
             right=None,
@@ -120,7 +122,6 @@ class MplCanvas(FigureCanvasQTAgg):
         '''
         '''
         fig = self.mplc_create_blank_fig(
-            name=name,
             frac_screen_width=frac_screen_width,
             frac_screen_height=frac_screen_height)
         #fig.add_subplot(111)
@@ -135,10 +136,10 @@ class MplCanvas(FigureCanvasQTAgg):
             bottom=bottom,
             wspace=wspace,
             hspace=hspace)
+        self.fig = fig
         return fig
 
     def mplc_create_cr_paneled_plot(self,
-            name='Plot',
             axes_names=['CH 1', 'CH 2'],
             left=None,
             right=None,
@@ -151,7 +152,6 @@ class MplCanvas(FigureCanvasQTAgg):
         '''
         '''
         fig = self.mplc_create_blank_fig(
-            name=name,
             frac_screen_width=frac_screen_width,
             frac_screen_height=frac_screen_height)
         ax1 = fig.add_subplot(221)
@@ -166,10 +166,14 @@ class MplCanvas(FigureCanvasQTAgg):
             bottom=bottom,
             wspace=wspace,
             hspace=hspace)
+        self.fig = fig
+        self.ax1 = ax1
+        self.ax2 = ax2
+        self.ax3 = ax3
+        self.ax4 = ax4
         return fig
 
     def mplc_create_iv_paneled_plot(self,
-            name='Plot',
             axes_names=['CH 1', 'CH 2'],
             left=None,
             right=None,
@@ -182,7 +186,6 @@ class MplCanvas(FigureCanvasQTAgg):
         '''
         '''
         fig = self.mplc_create_blank_fig(
-            name=name,
             frac_screen_width=frac_screen_width,
             frac_screen_height=frac_screen_height)
         ax1 = fig.add_subplot(221)
@@ -198,10 +201,14 @@ class MplCanvas(FigureCanvasQTAgg):
             bottom=bottom,
             wspace=wspace,
             hspace=hspace)
+        self.fig = fig
+        self.ax1 = ax1
+        self.ax2 = ax2
+        self.ax3 = ax3
+        self.ax4 = ax4
         return fig
 
     def mplc_create_two_pane_plot(self,
-            name='Plot',
             axes_names=['CH 1', 'CH 2'],
             left=None,
             right=None,
@@ -214,7 +221,6 @@ class MplCanvas(FigureCanvasQTAgg):
         '''
         '''
         fig = self.mplc_create_blank_fig(
-            name=name,
             frac_screen_width=frac_screen_width,
             frac_screen_height=frac_screen_height)
         fig.canvas = FigureCanvas(fig)
@@ -231,6 +237,8 @@ class MplCanvas(FigureCanvasQTAgg):
             bottom=bottom,
             wspace=wspace,
             hspace=hspace)
+        self.fig = fig
+        self.ax1 = ax1
+        self.ax2 = ax2
         return fig
-
 

@@ -37,9 +37,19 @@ class BeamMapper(QtWidgets.QWidget, GuiBuilder):
         self.bm_update_samples()
         grid = QtWidgets.QGridLayout()
         self.setLayout(grid)
+        self.layout().setColumnStretch(0, 0)
+        self.layout().setColumnStretch(1, 0)
+        self.layout().setColumnStretch(2, 0)
+        self.layout().setColumnStretch(3, 0)
+        self.layout().setColumnStretch(4, 0)
+        self.layout().setColumnStretch(5, 0)
+        self.layout().setColumnStretch(6, 0)
+        self.layout().setColumnStretch(7, 10)
+        self.layout().setColumnStretch(8, 10)
+        self.layout().setColumnStretch(9, 10)
         self.today = datetime.now()
         self.today_str = datetime.strftime(self.today, '%Y_%m_%d')
-        self.data_folder = data_folder
+        self.data_folder = os.path.join(data_folder, 'beam_maps')
         self.bm_configure_input_panel()
         self.bm_configure_plot_panel()
         self.bm_plot_time_stream([0], -1.0, 1.0)
@@ -64,191 +74,243 @@ class BeamMapper(QtWidgets.QWidget, GuiBuilder):
     def bm_configure_input_panel(self):
         '''
         '''
-        #self.welcome_header_label = QtWidgets.QLabel('Welcome to Beam Mapper', self)
-        #self.layout().addWidget(self.welcome_header_label, 0, 0, 1, 4)
-        # DAQ (Device + Channel) Selection
-        device_header_label = QtWidgets.QLabel('Device:', self)
-        self.layout().addWidget(device_header_label, 0, 0, 1, 1)
-        self.device_combobox = QtWidgets.QComboBox(self)
-        self.layout().addWidget(self.device_combobox, 0, 1, 1, 1)
+        self.device_combobox = self.gb_make_labeled_combobox(label_text='Device:')
+        self.layout().addWidget(self.device_combobox, 0, 0, 1, 1)
         for device in self.daq_settings:
             self.device_combobox.addItem(device)
-        self.device_combobox.setCurrentIndex(1)
-        daq_header_label = QtWidgets.QLabel('DAQ:', self)
-        self.layout().addWidget(daq_header_label, 1, 0, 1, 1)
-        self.daq_combobox = QtWidgets.QComboBox(self)
-        self.layout().addWidget(self.daq_combobox, 1, 1, 1, 1)
+        self.daq_combobox = self.gb_make_labeled_combobox(label_text='DAQ:')
+        self.layout().addWidget(self.daq_combobox, 0, 1, 1, 1)
         for channel in sorted([int(x) for x in self.daq_settings[device]]):
             self.daq_combobox.addItem(str(channel))
         #Pause Time 
         self.pause_time_lineedit = self.gb_make_labeled_lineedit(label_text='Pause Time (ms):', lineedit_text='1250')
         self.pause_time_lineedit.setValidator(QtGui.QIntValidator(0, 25000, self.pause_time_lineedit))
-        self.layout().addWidget(self.pause_time_lineedit, 2, 0, 1, 1)
+        self.layout().addWidget(self.pause_time_lineedit, 0, 2, 1, 1)
         #Int Time 
         self.int_time_lineedit = self.gb_make_labeled_lineedit(label_text='Int Time (ms): ', lineedit_text='500')
         self.int_time_lineedit.setValidator(QtGui.QIntValidator(0, 25000, self.int_time_lineedit))
-        self.layout().addWidget(self.int_time_lineedit, 2, 1, 1, 1)
+        self.layout().addWidget(self.int_time_lineedit, 0, 3, 1, 1)
         #Sample rate 
         self.sample_rate_lineedit = self.gb_make_labeled_lineedit(label_text='Sample Rate (Hz): ', lineedit_text='5000')
         self.sample_rate_lineedit.setValidator(QtGui.QIntValidator(0, 25000, self.sample_rate_lineedit))
-        self.layout().addWidget(self.sample_rate_lineedit, 2, 2, 1, 1)
+        self.layout().addWidget(self.sample_rate_lineedit, 0, 4, 1, 1)
         # Basic stepper control X
-        self.set_position_x_lineedit = self.gb_make_labeled_lineedit(label_text='Set to Position X')
+        self.set_position_x_lineedit = self.gb_make_labeled_lineedit(label_text='X-Set-to Pos')
         self.set_position_x_lineedit.setValidator(QtGui.QIntValidator(-300000, 300000, self.set_position_x_lineedit))
-        self.layout().addWidget(self.set_position_x_lineedit, 3, 0, 1, 1)
-        self.set_position_x_pushbutton = QtWidgets.QPushButton('Set Position X')
-        self.layout().addWidget(self.set_position_x_pushbutton, 3, 1, 1, 1)
+        self.layout().addWidget(self.set_position_x_lineedit, 1, 0, 1, 1)
+        self.set_position_x_pushbutton = QtWidgets.QPushButton('X-Set Pos')
+        self.layout().addWidget(self.set_position_x_pushbutton, 1, 1, 1, 1)
         self.reset_zero_x_pushbutton = QtWidgets.QPushButton('Reset Zero X')
-        self.layout().addWidget(self.reset_zero_x_pushbutton, 3, 2, 1, 2)
+        self.layout().addWidget(self.reset_zero_x_pushbutton, 1, 2, 1, 1)
         # Basic stepper control Y
-        self.set_position_y_lineedit = self.gb_make_labeled_lineedit(label_text='Set to Position Y')
-        self.layout().addWidget(self.set_position_y_lineedit, 4, 0, 1, 1)
+        self.set_position_y_lineedit = self.gb_make_labeled_lineedit(label_text='Y-Set-to Pos')
+        self.layout().addWidget(self.set_position_y_lineedit, 1, 3, 1, 1)
         self.set_position_y_lineedit.setValidator(QtGui.QIntValidator(-300000, 300000, self.set_position_y_lineedit))
-        self.set_position_y_pushbutton = QtWidgets.QPushButton('Set Position Y')
-        self.layout().addWidget(self.set_position_y_pushbutton, 4, 1, 1, 1)
+        self.set_position_y_pushbutton = QtWidgets.QPushButton('Y-Set Pos')
+        self.layout().addWidget(self.set_position_y_pushbutton, 1, 4, 1, 1)
         self.reset_zero_y_pushbutton = QtWidgets.QPushButton('Reset Zero Y')
-        self.layout().addWidget(self.reset_zero_y_pushbutton, 4, 2, 1, 2)
+        self.layout().addWidget(self.reset_zero_y_pushbutton, 1, 5, 1, 1)
         self.reset_zero_x_pushbutton.clicked.connect(self.bm_reset_zero)
         self.reset_zero_y_pushbutton.clicked.connect(self.bm_reset_zero)
         self.set_position_x_pushbutton.clicked.connect(self.bm_set_position)
         self.set_position_y_pushbutton.clicked.connect(self.bm_set_position)
+
         # Common Positions 
         self.set_origin_pushbutton = QtWidgets.QPushButton('Go to Origin')
         self.set_origin_pushbutton.clicked.connect(self.bm_set_origin)
-        self.layout().addWidget(self.set_origin_pushbutton, 5, 0, 1, 2)
+        self.layout().addWidget(self.set_origin_pushbutton, 2, 0, 1, 3)
         self.set_ln2_load_pushbutton = QtWidgets.QPushButton('Go to LN2 Load')
         self.set_ln2_load_pushbutton.clicked.connect(self.bm_set_ln2_load)
-        self.layout().addWidget(self.set_ln2_load_pushbutton, 5, 2, 1, 2)
-        # Stepper Motor Selection
+        self.layout().addWidget(self.set_ln2_load_pushbutton, 2, 3, 1, 3)
+
         ######
         # Scan Params
         ######
         #X Scan
-        self.start_position_x_lineedit = self.gb_make_labeled_lineedit(label_text='Start Position X:', lineedit_text='-50000')
+        self.start_position_x_lineedit = self.gb_make_labeled_lineedit(label_text='X-Start Pos', lineedit_text='-50000')
         self.start_position_x_lineedit.setValidator(QtGui.QIntValidator(-300000, 300000, self.start_position_x_lineedit))
         self.start_position_x_lineedit.textChanged.connect(self.bm_update_scan_params)
-        self.layout().addWidget(self.start_position_x_lineedit, 7, 0, 1, 2)
-        self.end_position_x_lineedit = self.gb_make_labeled_lineedit(label_text='End Position X:', lineedit_text='50000')
+        self.layout().addWidget(self.start_position_x_lineedit, 3, 0, 1, 1)
+        self.end_position_x_lineedit = self.gb_make_labeled_lineedit(label_text='X-End Pos', lineedit_text='50000')
         self.end_position_x_lineedit.setValidator(QtGui.QIntValidator(-300000, 300000, self.end_position_x_lineedit))
         self.end_position_x_lineedit.textChanged.connect(self.bm_update_scan_params)
-        self.layout().addWidget(self.end_position_x_lineedit, 7, 2, 1, 2)
-        #Y Scan
-        self.start_position_y_lineedit = self.gb_make_labeled_lineedit(label_text='Start Position Y:', lineedit_text='-50000')
-        self.start_position_y_lineedit.setValidator(QtGui.QIntValidator(-300000, 300000, self.start_position_y_lineedit))
-        self.start_position_y_lineedit.textChanged.connect(self.bm_update_scan_params)
-        self.layout().addWidget(self.start_position_y_lineedit, 8, 0, 1, 2)
-        self.end_position_y_lineedit = self.gb_make_labeled_lineedit(label_text='End Position Y:', lineedit_text='50000')
-        self.end_position_y_lineedit.setValidator(QtGui.QIntValidator(-300000, 300000, self.end_position_y_lineedit))
-        self.end_position_y_lineedit.textChanged.connect(self.bm_update_scan_params)
-        self.layout().addWidget(self.end_position_y_lineedit, 8, 2, 1, 2)
-        #Step Size 
-        self.step_size_x_lineedit = self.gb_make_labeled_lineedit(label_text='Step Size X (steps):', lineedit_text='25000')
+        self.layout().addWidget(self.end_position_x_lineedit, 3, 1, 1, 1)
+
+        self.step_size_x_lineedit = self.gb_make_labeled_lineedit(label_text='X-Step-Size (steps):', lineedit_text='25000')
         self.step_size_x_lineedit.textChanged.connect(self.bm_update_scan_params)
         self.step_size_x_lineedit.setValidator(QtGui.QIntValidator(1, 200000, self.step_size_x_lineedit))
-        self.layout().addWidget(self.step_size_x_lineedit, 9, 0, 1, 2)
+        self.layout().addWidget(self.step_size_x_lineedit, 3, 2, 1, 1)
+
+
+        #Y Scan
+        self.start_position_y_lineedit = self.gb_make_labeled_lineedit(label_text='Y-Start Pos', lineedit_text='-50000')
+        self.start_position_y_lineedit.setValidator(QtGui.QIntValidator(-300000, 300000, self.start_position_y_lineedit))
+        self.start_position_y_lineedit.textChanged.connect(self.bm_update_scan_params)
+        self.layout().addWidget(self.start_position_y_lineedit, 3, 3, 1, 1)
+
+
+
+        self.end_position_y_lineedit = self.gb_make_labeled_lineedit(label_text='Y-End Position', lineedit_text='50000')
+        self.end_position_y_lineedit.setValidator(QtGui.QIntValidator(-300000, 300000, self.end_position_y_lineedit))
+        self.end_position_y_lineedit.textChanged.connect(self.bm_update_scan_params)
+        self.layout().addWidget(self.end_position_y_lineedit, 3, 4, 1, 1)
+        #Step Size 
         step_size_y_header_label = QtWidgets.QLabel
-        self.step_size_y_lineedit = self.gb_make_labeled_lineedit(label_text='Step Size Y (steps):', lineedit_text='25000')
+        self.step_size_y_lineedit = self.gb_make_labeled_lineedit(label_text='Y-Step-Size (steps):', lineedit_text='25000')
         self.step_size_y_lineedit.textChanged.connect(self.bm_update_scan_params)
         self.step_size_y_lineedit.setValidator(QtGui.QIntValidator(1, 200000, self.step_size_y_lineedit))
-        self.layout().addWidget(self.step_size_y_lineedit, 9, 2, 1, 2)
-        #Scan Info size
-        self.aperture_description_lineedit = self.gb_make_labeled_lineedit(label_text='Aperture Description')
-        self.layout().addWidget(self.aperture_description_lineedit, 10, 0, 1, 2)
-        self.voltage_bias_lineedit = self.gb_make_labeled_lineedit(label_text='Voltage Bias (uV):')
-        self.voltage_bias_lineedit.setValidator(QtGui.QDoubleValidator(0, 300, 3, self.voltage_bias_lineedit))
-        self.layout().addWidget(self.voltage_bias_lineedit, 10, 2, 1, 2)
-        #Source Information 
-        self.source_type_combobox = self.gb_make_labeled_combobox(label_text='Source Type')
-        for source_type in ['Analyzer', 'LN2', 'Heater']:
-            self.source_type_combobox.addItem(source_type)
-        self.source_type_combobox.currentIndexChanged.connect(self.bm_update_source_type)
-        self.layout().addWidget(self.source_type_combobox, 11, 0, 1, 1)
+        self.layout().addWidget(self.step_size_y_lineedit, 3, 5, 1, 1)
+        #Scan Info 
 
-        self.modulation_frequency_lineedit = self.gb_make_labeled_lineedit(label_text='Modulation Frequency (Hz)', lineedit_text='12')
-        self.modulation_frequency_lineedit.setValidator(QtGui.QDoubleValidator(0, 300, 3, self.modulation_frequency_lineedit))
-        self.layout().addWidget(self.modulation_frequency_lineedit, 11, 1, 1, 1)
-        # Source Temp
-        self.source_temp_lineedit = self.gb_make_labeled_lineedit(label_text='Source Temp (K):')
-        self.source_temp_lineedit.setValidator(QtGui.QDoubleValidator(0, 300, 3, self.source_temp_lineedit))
-        self.layout().addWidget(self.source_temp_lineedit, 11, 2, 1, 1)
-        # Source Frequency
-        self.source_frequency_lineedit = self.gb_make_labeled_lineedit(label_text='Source Frequency (GHz):')
-        self.source_frequency_lineedit.setValidator(QtGui.QDoubleValidator(0, 1000, 3, self.source_frequency_lineedit))
-        self.layout().addWidget(self.source_frequency_lineedit, 11, 3, 1, 1)
-        # Source Power
-        self.source_power_lineedit = self.gb_make_labeled_lineedit(label_text='Source Power (dBm):')
-        self.source_power_lineedit.setValidator(QtGui.QDoubleValidator(-1e3, 1e3, 5, self.source_power_lineedit))
-        self.layout().addWidget(self.source_power_lineedit, 12, 0, 1, 1)
-        # Source Angle
-        self.source_angle_lineedit = self.gb_make_labeled_lineedit(label_text='Source Angle (degrees):')
-        self.source_angle_lineedit.setValidator(QtGui.QDoubleValidator(0, 360, 2, self.source_angle_lineedit))
-        self.layout().addWidget(self.source_angle_lineedit, 12, 1, 1, 1)
-        # Source Distance
-        self.source_distance_lineedit = self.gb_make_labeled_lineedit(label_text='Source Distance (in):', lineedit_text='10')
-        self.source_distance_lineedit.setValidator(QtGui.QDoubleValidator(0, 360, 2, self.source_distance_lineedit))
-        self.layout().addWidget(self.source_distance_lineedit, 12, 2, 1, 1)
-        self.plot_angles_checkbox = QtWidgets.QCheckBox('Plot Angles?')
-        self.plot_angles_checkbox.setChecked(True)
-        self.layout().addWidget(self.plot_angles_checkbox, 12, 3, 1, 1)
-        # Time Stream and data label
-        self.time_stream_plot_label = QtWidgets.QLabel('', self)
-        self.time_stream_plot_label.setAttribute(QtCore.Qt.WA_TranslucentBackground)
-        self.layout().addWidget(self.time_stream_plot_label, 13, 0, 1, 3)
-        self.data_string_label = QtWidgets.QLabel('', self)
-        self.layout().addWidget(self.data_string_label, 13, 3, 1, 1)
-        self.bm_update_scan_params()
         #Sample Name and Notes
         self.sample_name_combobox = self.gb_make_labeled_combobox(label_text='Sample Name Select:')
         for sample in self.samples_settings:
             self.sample_name_combobox.addItem(sample)
         self.sample_name_combobox.activated.connect(self.bm_update_sample_name)
         self.sample_name_combobox.setCurrentIndex(0)
-        self.layout().addWidget(self.sample_name_combobox, 14, 0, 1, 1)
+        self.layout().addWidget(self.sample_name_combobox, 4, 0, 1, 1)
         self.sample_name_lineedit = self.gb_make_labeled_lineedit(label_text='Sample Name:')
-        self.layout().addWidget(self.sample_name_lineedit, 14, 1, 1, 3)
+        self.layout().addWidget(self.sample_name_lineedit, 4, 1, 1, 2)
         self.bm_update_sample_name()
         self.notes_lineedit = self.gb_make_labeled_lineedit(label_text='Notes/Comments:')
-        self.layout().addWidget(self.notes_lineedit, 15, 0, 1, 4)
+        self.layout().addWidget(self.notes_lineedit, 4, 3, 1, 3)
+
+        #Source Information 
+        self.source_type_combobox = self.gb_make_labeled_combobox(label_text='Source Type')
+        for source_type in ['Analyzer', 'LN2', 'Heater']:
+            self.source_type_combobox.addItem(source_type)
+        self.source_type_combobox.currentIndexChanged.connect(self.bm_update_source_type)
+        self.layout().addWidget(self.source_type_combobox, 6, 0, 1, 1)
+
+        self.aperture_description_lineedit = self.gb_make_labeled_lineedit(label_text='Aperture Description')
+        self.layout().addWidget(self.aperture_description_lineedit, 5, 0, 1, 1)
+        self.modulation_frequency_lineedit = self.gb_make_labeled_lineedit(label_text='Modulation Frequency (Hz)', lineedit_text='12')
+        self.modulation_frequency_lineedit.setValidator(QtGui.QDoubleValidator(0, 300, 3, self.modulation_frequency_lineedit))
+        self.layout().addWidget(self.modulation_frequency_lineedit, 5, 1, 1, 1)
+        # Source Distance
+        self.source_distance_lineedit = self.gb_make_labeled_lineedit(label_text='Source Distance (in):', lineedit_text='10')
+        self.source_distance_lineedit.setValidator(QtGui.QDoubleValidator(0, 360, 2, self.source_distance_lineedit))
+        self.layout().addWidget(self.source_distance_lineedit, 5, 2, 1, 1)
+
+        self.voltage_bias_lineedit = self.gb_make_labeled_lineedit(label_text='Voltage Bias (uV):')
+        self.voltage_bias_lineedit.setValidator(QtGui.QDoubleValidator(0, 300, 3, self.voltage_bias_lineedit))
+        self.layout().addWidget(self.voltage_bias_lineedit, 5, 3, 1, 1)
+
+        # Source Temp
+        self.source_temp_lineedit = self.gb_make_labeled_lineedit(label_text='Source Temp (K):')
+        self.source_temp_lineedit.setValidator(QtGui.QDoubleValidator(0, 300, 3, self.source_temp_lineedit))
+        self.layout().addWidget(self.source_temp_lineedit, 6, 1, 1, 1)
+
+        # Source Power
+        self.source_power_lineedit = self.gb_make_labeled_lineedit(label_text='Source Power (dBm):')
+        self.source_power_lineedit.setValidator(QtGui.QDoubleValidator(-1e3, 1e3, 5, self.source_power_lineedit))
+        self.layout().addWidget(self.source_power_lineedit, 6, 2, 1, 1)
+
+        # Source Frequency
+        self.source_frequency_lineedit = self.gb_make_labeled_lineedit(label_text='Source Frequency (GHz):')
+        self.source_frequency_lineedit.setValidator(QtGui.QDoubleValidator(0, 1000, 3, self.source_frequency_lineedit))
+        self.layout().addWidget(self.source_frequency_lineedit, 6, 3, 1, 1)
+
+        # Source Angle
+        self.source_angle_lineedit = self.gb_make_labeled_lineedit(label_text='Source Angle (degrees):')
+        self.source_angle_lineedit.setValidator(QtGui.QDoubleValidator(0, 360, 2, self.source_angle_lineedit))
+        self.layout().addWidget(self.source_angle_lineedit, 6, 4, 1, 1)
+
         # Zero Lock in
         self.zero_lock_in_checkbox = QtWidgets.QCheckBox('Zero Lock In?', self)
         self.zero_lock_in_checkbox.setChecked(True)
-        self.layout().addWidget(self.zero_lock_in_checkbox, 16, 0, 1, 1)
+        self.layout().addWidget(self.zero_lock_in_checkbox, 7, 0, 1, 1)
+
         # Reverse Scan
         self.reverse_scan_checkbox = QtWidgets.QCheckBox('Reverse Scan', self)
         self.reverse_scan_checkbox.setChecked(False)
         self.reverse_scan_checkbox.clicked.connect(self.bm_show_scan)
-        self.layout().addWidget(self.reverse_scan_checkbox, 16, 1, 1, 1)
+        self.layout().addWidget(self.reverse_scan_checkbox, 7, 1, 1, 1)
+
         # Vertical/Horizontal Scan
         self.scan_raster_combobox = self.gb_make_labeled_combobox(label_text='Scan Orientation')
         for scan in ['Vertical', 'Horizontal']:
             self.scan_raster_combobox.addItem(scan)
         self.scan_raster_combobox.currentIndexChanged.connect(self.bm_show_scan)
-        self.layout().addWidget(self.scan_raster_combobox, 16, 2, 1, 1)
+        self.layout().addWidget(self.scan_raster_combobox, 7, 2, 1, 1)
         self.scan_display_label = QtWidgets.QLabel(self)
-        self.layout().addWidget(self.scan_display_label, 16, 3, 1, 1)
+        self.layout().addWidget(self.scan_display_label, 7, 3, 1, 1)
+
+        #Plot Angles vs k-steps 
+        self.correct_angles_checkbox = QtWidgets.QCheckBox('Plot Angles?')
+        self.layout().addWidget(self.correct_angles_checkbox, 7, 4, 1, 1)
+
+        #Angle of aperature correction
+        self.correct_angles_checkbox = QtWidgets.QCheckBox('Correct Angles?')
+        self.layout().addWidget(self.correct_angles_checkbox, 7, 5, 1, 1)
+
+        # Time Stream and data label
+        self.time_stream_plot_label = QtWidgets.QLabel('', self)
+        self.time_stream_plot_label.setAttribute(QtCore.Qt.WA_TranslucentBackground)
+        self.layout().addWidget(self.time_stream_plot_label, 8, 0, 2, 5)
+        self.data_string_label = QtWidgets.QLabel('', self)
+        self.layout().addWidget(self.data_string_label, 8, 5, 2, 1)
+        self.bm_update_scan_params()
 
         ######
         # Control Buttons 
         ######
         self.start_pushbutton = QtWidgets.QPushButton('Start', self)
-        self.layout().addWidget(self.start_pushbutton, 17, 0, 1, 2)
+        self.layout().addWidget(self.start_pushbutton, 10, 0, 1, 1)
         self.start_pushbutton.clicked.connect(self.bm_start_stop_scan)
         self.pause_pushbutton = QtWidgets.QPushButton('Pause', self)
-        self.layout().addWidget(self.pause_pushbutton, 17, 2, 1, 2)
+        self.layout().addWidget(self.pause_pushbutton, 11, 0, 1, 1)
         self.pause_pushbutton.clicked.connect(self.bm_pause)
         save_pushbutton = QtWidgets.QPushButton('Save', self)
-        self.layout().addWidget(save_pushbutton, 18, 0, 1, 2)
+        self.layout().addWidget(save_pushbutton, 12, 0, 1, 1)
         save_pushbutton.clicked.connect(self.bm_save)
         load_pushbutton = QtWidgets.QPushButton('Load', self)
-        self.layout().addWidget(load_pushbutton, 18, 2, 1, 2)
+        self.layout().addWidget(load_pushbutton, 13, 0, 1, 1)
         load_pushbutton.clicked.connect(self.bm_load)
         plot_pushbutton = QtWidgets.QPushButton('Plot', self)
-        self.layout().addWidget(plot_pushbutton, 19, 2, 1, 2)
+        self.layout().addWidget(plot_pushbutton, 14, 0, 1, 1)
         load_pushbutton.clicked.connect(self.bm_plot_beam_map)
         #Call the the source type
         self.source_type_combobox.setCurrentIndex(1)
         self.source_type_combobox.setCurrentIndex(0)
         self.bm_show_scan()
+
+    def bm_configure_plot_panel(self):
+        '''
+        '''
+        # BEAM MAP
+        self.beam_map_plot_label = QtWidgets.QLabel('', self)
+        self.beam_map_plot_label.setAttribute(QtCore.Qt.WA_TranslucentBackground)
+        self.layout().addWidget(self.beam_map_plot_label, 0, 7, 7, 3)
+
+        # RESIDUAL BEAM MAP
+        self.residual_beam_map_plot_label = QtWidgets.QLabel('', self)
+        self.residual_beam_map_plot_label.setAttribute(QtCore.Qt.WA_TranslucentBackground)
+        self.layout().addWidget(self.residual_beam_map_plot_label, 7, 7, 7, 3)
+
+        # X
+        self.x_cut_plot_label = QtWidgets.QLabel('', self)
+        self.layout().addWidget(self.x_cut_plot_label, 10, 1, 3, 4)
+        self.x_cut_select_combobox = self.gb_make_labeled_combobox(label_text='X Slice')
+        self.x_cut_select_combobox.activated.connect(self.bm_plot_x_cut)
+        self.layout().addWidget(self.x_cut_select_combobox, 10, 4, 1, 1)
+
+        for x_tick in self.x_ticks:
+            self.x_cut_select_combobox.addItem(x_tick)
+        self.x_slice_fit_label = QtWidgets.QLabel('', self)
+        self.layout().addWidget(self.x_slice_fit_label, 11, 5, 1, 1)
+
+        # Y
+        self.y_cut_plot_label = QtWidgets.QLabel('', self)
+        self.layout().addWidget(self.y_cut_plot_label, 13, 1, 3, 4)
+        self.device_combobox.setCurrentIndex(0)
+        self.y_cut_select_combobox = self.gb_make_labeled_combobox(label_text='Y Slice')
+        self.y_cut_select_combobox.activated.connect(self.bm_plot_y_cut)
+        self.layout().addWidget(self.y_cut_select_combobox, 13, 4, 1, 1)
+        for y_tick in self.y_ticks:
+            self.y_cut_select_combobox.addItem(y_tick)
+        self.y_slice_fit_label = QtWidgets.QLabel('', self)
+        self.layout().addWidget(self.y_slice_fit_label, 16, 5, 1, 1)
 
     def bm_show_scan(self):
         '''
@@ -282,38 +344,6 @@ class BeamMapper(QtWidgets.QWidget, GuiBuilder):
             self.source_temp_lineedit.setText('')
             self.source_frequency_lineedit.setText('')
 
-    def bm_configure_plot_panel(self):
-        '''
-        '''
-        # BEAM MAP
-        self.beam_map_plot_label = QtWidgets.QLabel('', self)
-        self.beam_map_plot_label.setAttribute(QtCore.Qt.WA_TranslucentBackground)
-        self.layout().addWidget(self.beam_map_plot_label, 0, 4, 10, 2)
-        # BEAM MAP
-        self.residual_beam_map_plot_label = QtWidgets.QLabel('', self)
-        self.residual_beam_map_plot_label.setAttribute(QtCore.Qt.WA_TranslucentBackground)
-        self.layout().addWidget(self.residual_beam_map_plot_label, 0, 6, 10, 2)
-        # X
-        self.x_cut_plot_label = QtWidgets.QLabel('', self)
-        self.layout().addWidget(self.x_cut_plot_label, 10, 4, 4, 2)
-        self.x_cut_select_combobox = self.gb_make_labeled_combobox(label_text='X Slice')
-        self.x_cut_select_combobox.activated.connect(self.bm_plot_x_cut)
-        self.layout().addWidget(self.x_cut_select_combobox, 14, 4, 1, 1)
-        for x_tick in self.x_ticks:
-            self.x_cut_select_combobox.addItem(x_tick)
-        self.x_slice_fit_label = QtWidgets.QLabel('', self)
-        self.layout().addWidget(self.x_slice_fit_label, 15, 4, 1, 1)
-        # Y
-        self.y_cut_plot_label = QtWidgets.QLabel('', self)
-        self.layout().addWidget(self.y_cut_plot_label, 10, 6, 4, 2)
-        self.device_combobox.setCurrentIndex(0)
-        self.y_cut_select_combobox = self.gb_make_labeled_combobox(label_text='Y Slice')
-        self.y_cut_select_combobox.activated.connect(self.bm_plot_y_cut)
-        self.layout().addWidget(self.y_cut_select_combobox, 14, 6, 1, 1)
-        for y_tick in self.y_ticks:
-            self.y_cut_select_combobox.addItem(y_tick)
-        self.y_slice_fit_label = QtWidgets.QLabel('', self)
-        self.layout().addWidget(self.y_slice_fit_label, 15, 6, 1, 1)
 
     ##############################################################################
     # Scanning 
@@ -325,9 +355,9 @@ class BeamMapper(QtWidgets.QWidget, GuiBuilder):
         if not hasattr(self.csm_widget_x, 'com_port') or not hasattr(self.csm_widget_y, 'com_port'):
             return None
         self.csm_widget_x.csm_set_position(position=0)
-        self.csm_widget_y.csm_set_position(position=-250000)
+        self.csm_widget_y.csm_set_position(position=0)
         self.set_position_x_lineedit.setText('0')
-        self.set_position_y_lineedit.setText('-250000')
+        self.set_position_y_lineedit.setText('0')
 
     def bm_set_origin(self):
         '''
@@ -548,7 +578,7 @@ class BeamMapper(QtWidgets.QWidget, GuiBuilder):
         #print(Z_data)
         # Process Slices
         source_distance = float(self.source_distance_lineedit.text())
-        plot_angles = self.plot_angles_checkbox.isChecked()
+        correct_angles = self.correct_angles_checkbox.isChecked()
         Z_fit_data = np.zeros(shape=Z_data.shape)
         good_fit = False
         pct_residual = 0.0
@@ -574,7 +604,7 @@ class BeamMapper(QtWidgets.QWidget, GuiBuilder):
                 if 'sigma' in param or '0' in param:
                     value *= 1e-5
                     units = ' k-steps'
-                    if plot_angles:
+                    if correct_angles:
                         value = np.rad2deg(np.arctan(value / source_distance))
                         units = ' deg'
                 elif 'theta' in param:
@@ -637,6 +667,10 @@ class BeamMapper(QtWidgets.QWidget, GuiBuilder):
                             y_grid = raster_1
                     self.csm_widget_x.csm_set_position(position=int(x_position), verbose=False)
                     self.csm_widget_y.csm_set_position(position=int(y_position), verbose=False)
+                    if i == 0 and j == 0:
+                        self.status_bar.showMessage('Waiting 5s to move')
+                        QtWidgets.QApplication.processEvents()
+                        time.sleep(5)
                     self.x_posns.append(x_position)
                     self.y_posns.append(y_position)
                     time.sleep(pause_time * 1e-3)
@@ -690,7 +724,7 @@ class BeamMapper(QtWidgets.QWidget, GuiBuilder):
         '''
         planar_distance = np.sqrt((x_position * 1e-5) ** 2 + (y_position * 1e-5) ** 2)
         source_distance = float(self.source_distance_lineedit.text())
-        plot_angles = self.plot_angles_checkbox.isChecked()
+        correct_angles = self.correct_angles_checkbox.isChecked()
         signal_channel = self.daq_combobox.currentText()
         data_dict = daq.run()
         data_time_stream = data_dict[signal_channel]['ts']
@@ -699,7 +733,7 @@ class BeamMapper(QtWidgets.QWidget, GuiBuilder):
         max_ = data_dict[signal_channel]['max']
         std = data_dict[signal_channel]['std']
         self.bm_plot_time_stream(data_time_stream, min_, max_)
-        if plot_angles:
+        if correct_angles:
             print(mean)
             correction_factor = np.rad2deg(np.arctan(planar_distance / source_distance))
             print(correction_factor)
@@ -866,13 +900,13 @@ class BeamMapper(QtWidgets.QWidget, GuiBuilder):
         x_pos = self.x_cut_select_combobox.currentText()
         x_cut_beam_path = os.path.join('temp_beam_files', 'temp_x_beam_cut_{0}.png'.format(x_pos))
         source_distance = float(self.source_distance_lineedit.text())
-        plot_angles = self.plot_angles_checkbox.isChecked()
+        correct_angles = self.correct_angles_checkbox.isChecked()
         if len(x_ticks) > 0 and Z_data.size > 8:
             amps = Z_data.T[x_cut_pos]
-            fig, ax = self.bm_create_blank_fig(left=0.12, bottom=0.26, right=0.98, top=0.83,
-                                               frac_screen_width=0.25, frac_screen_height=0.3)
+            fig, ax = self.bm_create_blank_fig(left=0.12, bottom=0.26, right=0.98, top=0.8,
+                                               frac_screen_width=0.3, frac_screen_height=0.1)
             x_array = x_ticks
-            if plot_angles:
+            if correct_angles:
                 x_ticks_in_inches = np.asarray(x_ticks, dtype=float) / 1e5 #steps to inches
                 angles = np.rad2deg(np.arctan(x_ticks_in_inches / source_distance))
                 x_array = angles
@@ -904,14 +938,14 @@ class BeamMapper(QtWidgets.QWidget, GuiBuilder):
         y_pos = self.y_cut_select_combobox.currentText()
         y_cut_beam_path = os.path.join('temp_beam_files', 'temp_y_beam_cut_{0}.png'.format(y_pos))
         source_distance = float(self.source_distance_lineedit.text())
-        plot_angles = self.plot_angles_checkbox.isChecked()
+        correct_angles = self.correct_angles_checkbox.isChecked()
         y_array = y_ticks
         if len(y_ticks) > 0:
             y_cut_pos = int(self.y_cut_select_combobox.currentIndex())
             amps = Z_data[y_cut_pos]
-            fig, ax = self.bm_create_blank_fig(left=0.12, bottom=0.26, right=0.98, top=0.83,
-                                               frac_screen_width=0.25, frac_screen_height=0.3)
-            if plot_angles:
+            fig, ax = self.bm_create_blank_fig(left=0.12, bottom=0.26, right=0.98, top=0.8,
+                                               frac_screen_width=0.3, frac_screen_height=0.1)
+            if correct_angles:
                 y_ticks_in_inches = np.asarray(y_ticks, dtype=float) / 1e5 #steps to inches
                 angles = np.rad2deg(np.arctan(y_ticks_in_inches / source_distance))
                 y_array = angles
@@ -940,7 +974,7 @@ class BeamMapper(QtWidgets.QWidget, GuiBuilder):
         '''
         '''
         fig, ax = self.bm_create_blank_fig(left=0.15, bottom=0.26, right=0.98, top=0.85,
-                                           frac_screen_width=0.4, frac_screen_height=0.2,
+                                           frac_screen_width=0.25, frac_screen_height=0.1,
                                            font_label_size=10)
         ax.plot(ts)
         ax.set_xlabel('Samples', fontsize=8)
@@ -954,7 +988,7 @@ class BeamMapper(QtWidgets.QWidget, GuiBuilder):
         '''
         '''
         fig, ax = self.bm_create_blank_fig(left=0.05, bottom=0.21, right=0.98, top=0.9,
-                                           frac_screen_width=0.3, frac_screen_height=0.4,
+                                           frac_screen_width=0.25, frac_screen_height=0.3,
                                            aspect='equal')
         if len(x_ticks) > 0:
             if self.reverse_scan_checkbox.isChecked():
@@ -974,9 +1008,9 @@ class BeamMapper(QtWidgets.QWidget, GuiBuilder):
         '''
         '''
         fig, ax = self.bm_create_blank_fig(left=0.05, bottom=0.21, right=0.98, top=0.9,
-                                           frac_screen_width=0.3, frac_screen_height=0.4,
+                                           frac_screen_width=0.25, frac_screen_height=0.3,
                                            aspect='equal')
-        plot_angles = self.plot_angles_checkbox.isChecked()
+        correct_angles = self.correct_angles_checkbox.isChecked()
         if type(x_ticks) == int:
             x_tick_index = x_ticks
         elif type(x_ticks) == bool:
@@ -997,7 +1031,7 @@ class BeamMapper(QtWidgets.QWidget, GuiBuilder):
     def bm_configure_axes(self, ax, x_ticks, y_ticks):
         '''
         '''
-        plot_angles = self.plot_angles_checkbox.isChecked()
+        correct_angles = self.correct_angles_checkbox.isChecked()
         source_distance = float(self.source_distance_lineedit.text())
         x_tick_locs = [0.5 + x for x in range(len(self.x_ticks))]
         y_tick_locs = [0.5 + x for x in range(len(self.y_ticks))]
@@ -1005,7 +1039,7 @@ class BeamMapper(QtWidgets.QWidget, GuiBuilder):
         y_label = 'Y Position (k-steps)'
         x_ticks_labels = x_ticks
         y_ticks_labels = y_ticks
-        if plot_angles:
+        if correct_angles:
             x_label = 'X Position ($^\circ$)'
             y_label = 'Y Position ($^\circ$)'
             print(x_ticks)
