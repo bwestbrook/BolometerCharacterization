@@ -179,7 +179,7 @@ class DataPlotter(QtWidgets.QWidget, GuiBuilder):
         self.poly_fit_degree_combobox.currentIndexChanged.connect(self.dp_plot)
         self.poly_fit_degree_combobox.setCurrentIndex(2)
         self.fit_select_checkbox = QtWidgets.QCheckBox('Add Fit?')
-        self.fit_select_checkbox.setChecked(True)
+        self.fit_select_checkbox.setChecked(False)
         self.fit_select_checkbox.clicked.connect(self.dp_plot)
         self.layout().addWidget(self.fit_select_checkbox, 7, 2, 1, 1)
         self.fit_type_label = QtWidgets.QLabel()
@@ -333,14 +333,15 @@ class DataPlotter(QtWidgets.QWidget, GuiBuilder):
         sample_clip_hi = int(self.sample_clip_hi_lineedit.text())
         data_clip_lo = float(self.data_clip_lo_lineedit.text())
         data_clip_hi = float(self.data_clip_hi_lineedit.text())
-        x_data = self.df['x_data'][sample_clip_lo:sample_clip_hi]
-        y_data = self.df['y_data'][sample_clip_lo:sample_clip_hi]
-        xerr = self.df['x_err'][sample_clip_lo:sample_clip_hi]
-        yerr = self.df['y_err'][sample_clip_lo:sample_clip_hi]
-        #import ipdb;ipdb.set_trace()
+        x_data = np.asarray(self.df['x_data'][0][sample_clip_lo:sample_clip_hi])
+        y_data = np.asarray(self.df['y_data'][0][sample_clip_lo:sample_clip_hi])
+        xerr = np.asarray(self.df['x_data'][1][sample_clip_lo:sample_clip_hi])
+        yerr = np.asarray(self.df['y_data'][1][sample_clip_lo:sample_clip_hi])
         #self.qthreadpool.start(daq.run)
+        print(x_data)
         try:
             data_selector = np.logical_and(data_clip_lo < np.asarray(x_data), np.asarray(x_data) < data_clip_hi)
+            #import ipdb;ipdb.set_trace()
             x_data = x_data[data_selector]
             xerr = xerr[data_selector]
             y_data = y_data[data_selector]

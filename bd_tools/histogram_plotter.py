@@ -28,6 +28,15 @@ class HistogramPlotter(QtWidgets.QWidget, GuiBuilder):
             'mK',
             ''
                 ]
+        self.display_radius = 5.0
+        self.dl_lf_intra_pixel_offsets = {
+                '30B': (0.5 *np.sqrt(2), -0.5 *np.sqrt(2)),
+                '30D': (0.5 *np.sqrt(2), 0.5 *np.sqrt(2)),
+                '30T': (0, 1),
+                '40B': (-0.5 *np.sqrt(2), 0.5 *np.sqrt(2)),
+                '40D': (-0.5 *np.sqrt(2), -0.5 *np.sqrt(2)),
+                '40T': (0, -1)
+                }
         self.hp_data_input_panel()
 
 
@@ -49,6 +58,8 @@ class HistogramPlotter(QtWidgets.QWidget, GuiBuilder):
         self.layout().addWidget(self.input_data_lineedit, 1, 2, 1, 1)
         self.plot_all_checkbox = QtWidgets.QCheckBox('Plot All?')
         self.layout().addWidget(self.plot_all_checkbox, 1, 3, 1, 1)
+        self.param_to_hist_lineedit = self.gb_make_labeled_lineedit(label_text='Param2Hist')
+        self.layout().addWidget(self.param_to_hist_lineedit, 1, 4, 1, 1)
 
         # Modify existing data on the fly
         self.modify_data_push_button = QtWidgets.QPushButton('Modify Data')
@@ -62,6 +73,12 @@ class HistogramPlotter(QtWidgets.QWidget, GuiBuilder):
         self.modify_data_lineedit = self.gb_make_labeled_lineedit(label_text='New Data')
         self.layout().addWidget(self.modify_data_lineedit, 2, 3, 1, 1)
         self.load_data_label_combobox.currentIndexChanged.connect(self.update_modify_lineedit)
+        self.data_multiplier_lineedit = self.gb_make_labeled_lineedit(label_text='Data Multiplier')
+        self.data_multiplier_lineedit.setText('1.0')
+        self.layout().addWidget(self.data_multiplier_lineedit, 2, 4, 1, 1)
+        self.xlim_pad_lineedit = self.gb_make_labeled_lineedit(label_text='Xlim Pad')
+        self.xlim_pad_lineedit.setText('20.0')
+        self.layout().addWidget(self.xlim_pad_lineedit, 3, 4, 1, 1)
 
 
         # Make nice plots
@@ -72,7 +89,7 @@ class HistogramPlotter(QtWidgets.QWidget, GuiBuilder):
         self.layout().addWidget(self.x_label_lineedit, 4, 1, 1, 1)
         self.title_lineedit = self.gb_make_labeled_lineedit(label_text='Title')
         self.layout().addWidget(self.title_lineedit, 4, 2, 1, 1)
-        self.font_size_lineedit = self.gb_make_labeled_lineedit(label_text='Font Size', lineedit_text='12')
+        self.font_size_lineedit = self.gb_make_labeled_lineedit(label_text='Font Size', lineedit_text='18')
         self.layout().addWidget(self.font_size_lineedit, 4, 3, 1, 1)
         self.unit_combobox = self.gb_make_labeled_combobox(label_text='Units', add_lineedit=True)
         for unit in self.units:
@@ -97,6 +114,8 @@ class HistogramPlotter(QtWidgets.QWidget, GuiBuilder):
             self.data_dict = {}
             for label, data in data_dict.items():
                 for datum in data:
+                    multiplier = float(self.data_multiplier_lineedit.text())
+                    datum *= multiplier
                     if not self.gb_is_float(datum):
                         self.gb_quick_message('Please only load jsons with floats for data in the lists')
                         return None
@@ -111,21 +130,51 @@ class HistogramPlotter(QtWidgets.QWidget, GuiBuilder):
     def hp_load_pton_npy(self, file_path):
         '''
         '''
-        data_dict = np.load(file_path, allow_pickle=True).item()['data']
+        data_dict = np.load(file_path, allow_pickle=True).item() #)['data']
         name = 'Pton Lp2r1 5E Tc'
         self.data_dict = {}
+        if len(self.param_to_hist_lineedit.text()) > 0:
+            param_to_hist = self.param_to_hist_lineedit.text()
+        else:
+            param_to_hist = 'delta_psat'
+        all_xs = []
+        all_ys = []
+        all_delta_psats = []
         for bias_line in data_dict:
             for smurf_board in data_dict[bias_line]:
-                for channel in data_dict[bias_line][smurf_board]:
-                    tc = data_dict[bias_line][smurf_board][channel]['tc'] * 1e3 #mK
-                    if name not in self.data_dict:
-                        self.data_dict[name] = [tc]
-                    else:
-                        self.data_dict[name].append(tc)
+                for param in data_dict[bias_line][smurf_board]:
+                    value = data_dict[bias_line][smurf_board][param]
+                    if param == param_to_hist and 'tes_id' in data_dict[bias_line][smurf_board]:
+                        tes_id = data_dict[bias_line][smurf_board]['tes_id']
+                        pixel = data_dict[bias_line][smurf_board]['pixel']
+                        pixel_name = '{0}-{1}'.format(pixel, tes_id)
+                        if pixel in [16, 17, 19]:
+                            print(pixel_name, value)
+                        if param_to_hist not in self.data_dict:
+                            self.data_dict[param_to_hist] = [value]
+                        else:
+                            self.data_dict[param_to_hist].append(value)
+                        x_center = data_dict[bias_line][smurf_board]['x_mm']
+                        y_center = data_dict[bias_line][smurf_board]['y_mm']
+                        x = x_center + self.dl_lf_intra_pixel_offsets[tes_id][0] * self.display_radius
+                        y = y_center + self.dl_lf_intra_pixel_offsets[tes_id][1] * self.display_radius
+                        #import ipdb;ipdb.set_trace()
+                        all_xs.append(x)
+                        all_ys.append(y)
+                        all_delta_psats.append(value)
         save_path = os.path.join('bd_histogram_data', name.replace(' ', '_') + '.json')
         with open(save_path, 'w') as fh:
             json.dump(self.data_dict, fh)
-        import ipdb;ipdb.set_trace()
+        fig = pl.figure()
+        ax = fig.add_subplot(111)
+        cm = ax.scatter(np.asarray(all_xs), np.asarray(all_ys), s=100, c=np.asarray(all_delta_psats), cmap='jet')
+        ax.set_title('$\Delta P_{sat}$ Heat Map for 10J')
+        ax.set_xlabel('X Pos (mm)')
+        ax.set_ylabel('Y Pos (mm)')
+        pl.legend()
+        pl.colorbar(cm, label='Resitance (k$\Omega$)')
+        pl.show()
+
 
     def hp_load_labels(self):
         '''
@@ -203,6 +252,10 @@ class HistogramPlotter(QtWidgets.QWidget, GuiBuilder):
     def hp_plot(self):
         '''
         '''
+        fig = pl.figure(figsize=(10,5))
+        ax_plot = fig.add_subplot(121)
+        ax_legend = fig.add_subplot(122)
+        ax_legend.set_axis_off()
         if self.gb_is_float(self.font_size_lineedit.text()):
             font_size = int(self.font_size_lineedit.text())
         x_label = self.x_label_lineedit.text()
@@ -213,20 +266,94 @@ class HistogramPlotter(QtWidgets.QWidget, GuiBuilder):
             std = np.std(data)
             mean = np.mean(data)
             label = '{0} {1:.2f} +/- {2:.2f} {3} [N={4}]'.format(label, mean, std, unit, len(data))
-            pl.hist(data, label=label)
+            ax_plot.hist(data, label=label)
             for datum in data:
                 all_data.append(datum)
         std = np.std(all_data)
         mean = np.mean(all_data)
-        pl.xticks(fontsize=font_size)
-        pl.yticks(fontsize=font_size)
+        ax_plot.tick_params(labelsize=font_size)
+        ax_plot.tick_params(labelsize=font_size)
         if self.plot_all_checkbox.isChecked():
             label = 'All'
-            label = '{0} {1:.2f} +/- {2:.2f} {3} [N={4}]'.format(label, mean, std, unit, len(data))
-            pl.hist(all_data, alpha=0.2, label=label)
-        pl.xlabel(x_label, fontsize=font_size)
-        pl.ylabel('Count', fontsize=font_size)
-        pl.title(title, fontsize=font_size)
-        pl.legend(fontsize=font_size, loc='best')
+            label = '{0} {1:.2f} +/- {2:.2f} {3} [N={4}]'.format(label, mean, std, unit, len(all_data))
+            ax_plot.hist(all_data, alpha=0.5, color='y', label=label)
+            ax_plot.hist(all_data, alpha=0.5, color='k', label=None, histtype='step')
+        ax_plot.set_xlabel(x_label, fontsize=font_size)
+        ax_plot.set_ylabel('Count', fontsize=font_size)
+        ax_plot.set_title(title, fontsize=font_size)
+        pl.subplots_adjust(left=0.08, right=1.0, bottom=0.15, wspace=0.0)
+        handles, labels = ax_plot.get_legend_handles_labels()
+        ax_legend.legend(handles, labels, numpoints=1, mode="expand", frameon=True, fontsize=14, bbox_to_anchor=(0, 0.0, 1, 1))
+        xlim_pad = float(self.xlim_pad_lineedit.text())
+        ax_plot.set_xlim((np.min(all_data) - xlim_pad, np.max(all_data) + xlim_pad))
         pl.show()
 
+    def hp_plot_so_wafer(self):
+        '''
+        '''
+        all_xs = []
+        all_ys = []
+        all_resistances = []
+        fig = pl.figure(figsize=(8, 6))
+        ax = fig.add_subplot(111)
+        ax.set_aspect('equal')
+        all_pixel_resistance_dict = {}
+        all_pixel_resistance_small_dict = {}
+        pixel_resistance_dict = {}
+        info_dict = {}
+        pixel_resistances = []
+        intra_pixel_resistances = []
+        for i in self.df.index:#[0:6]:
+            x_center = self.map_df['x_mm'][i]
+            y_center = self.map_df['y_mm'][i]
+            tes_id = self.map_df['tes_id'][i]
+            pixel = self.map_df['pixel'][i]
+            resistance = self.df['R (kohms)'][i]
+            info_dict[tes_id] = resistance
+            x = x_center + self.dl_lf_intra_pixel_offsets[tes_id][0] * self.display_radius
+            y = y_center + self.dl_lf_intra_pixel_offsets[tes_id][1] * self.display_radius
+            if i % 6 == 0 and i > 0:
+                prev_pixel = self.map_df['pixel'][i - 6]
+                x_pos = x_center - 0.15 * self.display_radius
+                y_pos = y_center - 0.15 * self.display_radius
+                ax.text(x_pos, y_pos, 'P{0}'.format(pixel))
+                info_dict.update({
+                        'values': pixel_resistances,
+                        'mean': np.mean(pixel_resistances),
+                        'std': np.std(pixel_resistances)
+                        })
+                if len(pixel_resistances) == 6:
+                    intra_pixel_resistance = np.asarray(pixel_resistances) - np.min(pixel_resistances)
+                    intra_pixel_resistances.append(intra_pixel_resistance)
+                all_pixel_resistance_dict[str(prev_pixel)] = info_dict
+                all_pixel_resistance_small_dict[str(prev_pixel)] = info_dict['mean']
+                self.wy_analyze_pixel(prev_pixel, pixel_resistances, info_dict)
+                pixel_resistances = []
+                info_dict = {}
+            if resistance in ['open', 'Open']:
+                resistance = 80
+                label = None
+                handles, labels = ax.get_legend_handles_labels()
+                if "Open" not in labels:
+                    label = "Open"
+                ax.plot(x, y, 'o', ms=3, color='k', label=label)
+            else:
+                all_xs.append(x)
+                all_ys.append(y)
+                all_resistances.append(float(resistance))
+                pixel_resistances.append(float(resistance))
+            x_pos = x_center - 0.2 * self.display_radius
+            y_pos = y_center - 0.2 * self.display_radius
+            ax.text(x, y, '{0}'.format(tes_id), fontsize=6)
+        intra_pixel_resistances = np.asarray(intra_pixel_resistances)
+        pprint(all_pixel_resistance_small_dict)
+        for i in range(6):
+            intra_pixel_value = intra_pixel_resistances.T[i][np.abs(intra_pixel_resistances.T[i] - np.mean(intra_pixel_resistances.T[i])) < 1]
+        cm = ax.scatter(np.asarray(all_xs), np.asarray(all_ys), s=100, c=np.asarray(all_resistances), cmap='jet')
+        wafer_name = self.wafer_name_lineedit.text()
+        ax.set_title('Resistance Heat Map for {0}'.format(wafer_name))
+        ax.set_xlabel('X Pos (mm)')
+        ax.set_ylabel('Y Pos (mm)')
+        pl.legend()
+        pl.colorbar(cm, label='Resitance (k$\Omega$)')
+        pl.show()

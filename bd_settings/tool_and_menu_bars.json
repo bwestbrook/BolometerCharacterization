@@ -44,6 +44,13 @@
                 "function": "bd_cosmic_rays",
                 "icon": "cosmicrays.png"
             },
+            "06b_Cosmic Rays": {
+                "Shortcut": "6",
+                "StatusTip": "Cosmic Rays",
+                "ToolTip": "Cosmic Rays",
+                "function": "bd_cosmic_rays_2",
+                "icon": "cosmicrays.png"
+            },
             "07_Resonance Measurement": {
                 "Shortcut": "7",
                 "StatusTip": "Resonance Measurement",

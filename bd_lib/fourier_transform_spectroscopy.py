@@ -287,8 +287,6 @@ class FourierTransformSpectroscopy():
         delta_power = boltzmann_constant * (t_source_high - t_source_low) * integrated_bandwidth  # in W
         t_power_high = boltzmann_constant * t_source_high * integrated_bandwidth  # in W
         t_power_low = boltzmann_constant * t_source_low * integrated_bandwidth  # in W
-        print('t_power_high', t_power_high)
-        print('t_power_low', t_power_low)
         return delta_power, integrated_bandwidth
 
     def ftsy_integrate_spectra_bandwidth(self, frequency_data, normalized_transmission_data, data_clip_lo=0, data_clip_hi=600):
@@ -829,6 +827,29 @@ if __name__ == '__main__':
     delta_P = True
     if delta_P:
         band = 'LBLF4-78'
+        band = 'SO30'
+        data_clip_lo = 0
+        data_clip_hi = 40 * 1e9
+        t_source_low = 14
+        t_source_high = 293
+        data_clip_hi = 80 * 1e9
+        data_clip_hi = 100 * 1e9
+        efficiency = 1.0
+        t_source_low = 9
+        t_source_high = 20
+        efficiency = 1.00
+        t_source_low = 10
+        t_source_high = 20
+        fft_frequency_data_simulated, fft_data_simulated = ftsy.ftsy_load_simulated_band(data_clip_lo, data_clip_hi, band)
+        simulated_delta_power, simulated_integrated_bandwidth = ftsy.ftsy_compute_delta_power_and_bandwidth_at_window(fft_frequency_data_simulated * 1e9, fft_data_simulated,
+                                                                                                                      data_clip_lo=data_clip_lo, data_clip_hi=data_clip_hi,
+                                                                                                                      t_source_low=t_source_low, t_source_high=t_source_high)
+        simulated_delta_power *= efficiency
+        label = 'Chop {0:.2f}K to {1:.1f}K\n{2:.2f}pW {3:.2f}GHz'.format(t_source_low, t_source_high, simulated_delta_power * 1e12, simulated_integrated_bandwidth * 1e-9)
+        label = 'SO 30 GHz Band'
+        title = 'SO LF band pass design'.format(band, t_source_low, t_source_high)
+        pl.plot(fft_frequency_data_simulated, fft_data_simulated, label=label)
+        band = 'LBLF4-78'
         band = 'SO40'
         data_clip_lo = 0
         data_clip_hi = 40 * 1e9
@@ -840,16 +861,20 @@ if __name__ == '__main__':
         t_source_low = 9
         t_source_high = 20
         efficiency = 1.00
-        t_source_low = 9
-        t_source_high = 14
+        t_source_low = 10
+        t_source_high = 20
         fft_frequency_data_simulated, fft_data_simulated = ftsy.ftsy_load_simulated_band(data_clip_lo, data_clip_hi, band)
         simulated_delta_power, simulated_integrated_bandwidth = ftsy.ftsy_compute_delta_power_and_bandwidth_at_window(fft_frequency_data_simulated * 1e9, fft_data_simulated,
                                                                                                                       data_clip_lo=data_clip_lo, data_clip_hi=data_clip_hi,
                                                                                                                       t_source_low=t_source_low, t_source_high=t_source_high)
         simulated_delta_power *= efficiency
         label = 'Chop {0:.2f}K to {1:.1f}K\n{2:.2f}pW {3:.2f}GHz'.format(t_source_low, t_source_high, simulated_delta_power * 1e12, simulated_integrated_bandwidth * 1e-9)
-        title = 'Band pass and Power for {0} {1}K to {2}K'.format(band, t_source_low, t_source_high)
+        label = 'SO 40 GHz Band'
+        title = 'SO LF bandpass design'.format(band, t_source_low, t_source_high)
         pl.plot(fft_frequency_data_simulated, fft_data_simulated, label=label)
-        pl.title(title)
+        pl.xlim([10, 80])
+        pl.title(title, fontsize=14)
+        pl.xlabel('Frequency ($GHz$)', fontsize=14)
+        pl.ylabel('Transmission', fontsize=14)
         pl.legend()
         pl.show()

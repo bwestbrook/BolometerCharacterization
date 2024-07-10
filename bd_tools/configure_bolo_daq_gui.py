@@ -153,10 +153,26 @@ class ConfigureBoloDAQGui(QtWidgets.QWidget, GuiBuilder):
         setting = self.sender().whatsThis().split('_')[0]
         dict_to_modify = getattr(self, '{0}_dict'.format(setting))
         key_to_modify = getattr(self, '{0}_combobox'.format(setting.lower())).currentText()
-        new_value = getattr(self, '{0}_lineedit'.format(setting.lower())).text().strip()
         exclude = ['.', '\t', '\r', '\n']
-        new_value = ''.join(ch for ch in new_value if ch not in exclude)
-        msg = 'Update "{0}"\nKey: {1}\nNew Value: "{2}"'.format(setting, key_to_modify, new_value)
+        print(setting)
+        if setting == 'squids':
+            new_value = getattr(self, '{0}_lineedit'.format(setting.lower())).text().split(' ')[0]
+            print(new_value)
+            print()
+            #new_value = ''.join(ch for ch in new_value if ch not in exclude)
+            new_value = float(new_value)
+            msg = 'Update "{0}"\nKey: {1}\nNew Value: "{2:.3f}"'.format(setting, key_to_modify, new_value)
+            new_value = str(new_value)
+        else:
+            new_value = getattr(self, '{0}_lineedit'.format(setting.lower())).text().strip()
+            new_value = ''.join(ch for ch in new_value if ch not in exclude)
+            msg = 'Update "{0}"\nKey: {1}\nNew Value: "{2}"'.format(setting, key_to_modify, new_value)
+        print(new_value)
+        print(new_value)
+        print(new_value)
+        print(new_value)
+        print(new_value)
+        print(new_value)
         response = self.gb_quick_message(msg=msg, add_cancel=True, add_yes=True)
         if response == QtWidgets.QMessageBox.Yes:
             dict_to_modify[key_to_modify] = new_value.strip()
@@ -227,7 +243,7 @@ class ConfigureBoloDAQGui(QtWidgets.QWidget, GuiBuilder):
             else:
                 value = dict_to_edit[combobox.itemText(index)]
             if setting == 'squids':
-                lineedit.setText('{0} (uA/V)'.format(value))
+                lineedit.setText('{0:.3f} (uA/V)'.format(float(value)))
             else:
                 lineedit.setText(value)
 

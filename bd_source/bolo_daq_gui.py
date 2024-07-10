@@ -40,6 +40,7 @@ from bd_tools.rt_collector import RTCollector
 from bd_tools.lakeshore_372 import LakeShore372
 
 from bd_tools.cosmic_rays import CosmicRays
+from bd_tools.cosmic_rays_2 import CosmicRays2
 from bd_tools.cosmic_ray_viewer import CosmicRayViewer
 from bd_tools.beam_mapper import BeamMapper
 from bd_tools.fridge_cycle import FridgeCycle
@@ -828,6 +829,20 @@ class BoloDAQGui(QtWidgets.QMainWindow, GuiBuilder):
         self.gb_initialize_panel('central_widget')
         if not hasattr(self, 'cosmic_ray_widget'):
             self.cosmic_ray_widget = CosmicRays(self.daq_settings, self.status_bar, self.screen_resolution, self.monitor_dpi, self.data_folder)
+        else:
+            self.daq_settings = self.bolo_daq.initialize_daqs()
+            self.cosmic_ray_widget.cr_update_daq_settings(self.daq_settings)
+        self.central_widget.layout().addWidget(self.cosmic_ray_widget, 0, 0, 1, 1)
+        self.status_bar.showMessage('Cosmic Ray Data')
+        QtWidgets.QApplication.processEvents()
+        self.resize(self.minimumSizeHint())
+
+    def bd_cosmic_rays_2(self):
+        '''
+        '''
+        self.gb_initialize_panel('central_widget')
+        if not hasattr(self, 'cosmic_ray_widget'):
+            self.cosmic_ray_widget = CosmicRays2(self.daq_settings, self.status_bar, self.screen_resolution, self.monitor_dpi, self.data_folder)
         else:
             self.daq_settings = self.bolo_daq.initialize_daqs()
             self.cosmic_ray_widget.cr_update_daq_settings(self.daq_settings)

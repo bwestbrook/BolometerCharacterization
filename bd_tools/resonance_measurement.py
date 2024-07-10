@@ -1,4 +1,5 @@
 import time
+import pylab as pl
 import shutil
 import os
 
@@ -36,7 +37,14 @@ class ResonanceMeasurement(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTra
         self.ls_372_widget = ls_372_widget
         self.dewar = dewar
         self.bpv = BoloPyVisa()
-        self.fig = self.mplc.mplc_create_horizontal_array_fig()
+        self.temp_fig, self.temp_ax = self.mplc.mplc_create_basic_fig(
+            fig_name='running_temp',
+            left=0.18,
+            right=0.95,
+            bottom=0.25,
+            top=0.88,
+            frac_screen_height=0.15,
+            frac_screen_width=0.25)
         self.temp_scan = False
         self.drift_scan = False
         grid = QtWidgets.QGridLayout()
@@ -53,6 +61,7 @@ class ResonanceMeasurement(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTra
         if response == QtWidgets.QMessageBox.Yes:
             self.rm_reset_network_analyzer()
         self.rm_read_set_points()
+        self.fig = self.mplc.mplc_create_horizontal_array_fig()
 
     #########################################################
     # GUI and Input Handling
@@ -159,7 +168,7 @@ class ResonanceMeasurement(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTra
         self.set_n_averages_pushbutton = QtWidgets.QPushButton("Set N Averages")
         self.set_n_averages_pushbutton.clicked.connect(self.rm_set_n_averages)
         self.layout().addWidget(self.set_n_averages_pushbutton, 14, 1, 1, 1)
-        self.time_per_average_lineedit = self.gb_make_labeled_lineedit(label_text='Time Per Avg (ms)', lineedit_text='50')
+        self.time_per_average_lineedit = self.gb_make_labeled_lineedit(label_text='Time Per Avg (ms)', lineedit_text='650')
         self.layout().addWidget(self.time_per_average_lineedit, 14, 2, 1, 1)
 
         # Power
@@ -262,6 +271,7 @@ class ResonanceMeasurement(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTra
     def rm_start_drift_scan(self):
         '''
         '''
+        self.rm_write_set_points()
         self.temp_scan = False
         self.drift_scan = True
         self.rm_set_all_sa_settings()
@@ -285,9 +295,9 @@ class ResonanceMeasurement(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTra
                     self.status_bar.showMessage(status)
                     self.power_lineedit.setText('{0:.1f}'.format(power))
                     self.rm_set_power()
-                    time.sleep(0.5)
+                    time.sleep(10)
                     self.rm_get_network_analyzer_data()
-                    time.sleep(3.0)
+                    time.sleep(5.0)
                     self.status_bar.showMessage('Temps:{0}/{1} Powers: {2}/{3}'.format(i, n_drift_points, j, len(self.power_range)))
                     QtWidgets.QApplication.processEvents()
                     if self.stop:
@@ -301,6 +311,7 @@ class ResonanceMeasurement(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTra
     def rm_start_multitemp_scan(self):
         '''
         '''
+        self.rm_write_set_points()
         self.temp_scan = True
         self.drift_scan = False
         self.rm_set_all_sa_settings()
@@ -311,7 +322,7 @@ class ResonanceMeasurement(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTra
         self.times = []
         for i, set_temperature in enumerate(self.temp_range):
             self.current_set_temperature = int(set_temperature * 1e3)
-            self.delta_threshold = 0.012 * self.current_set_temperature
+            self.delta_threshold = 0.012 * self.current_set_temperature # 1.2% of current temp
             self.ls_372_widget.temp_control.ls372_set_temp_set_point(set_temperature)
             temp_out_of_range = True
             wait_count = 0
@@ -327,11 +338,11 @@ class ResonanceMeasurement(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTra
                 if np.abs(delta) <= self.delta_threshold:
                     in_range_count += 1
                     msg = 'Under threshold waiting 1 second to check if still in range:'
-                    msg += '{0}/100 checks complete. Current:{1:.1f}mK Set:{2:.1f}mK Delta:{3:.1f}mK Threshold:{4:.1f}mK'.format(in_range_count, current_temp, set_temperature * 1e3, delta, self.delta_threshold)
+                    msg += '{0}/60 checks complete. Current:{1:.1f}mK Set:{2:.1f}mK Delta:{3:.1f}mK Threshold:{4:.1f}mK'.format(in_range_count, current_temp, set_temperature * 1e3, delta, self.delta_threshold)
                     self.status_bar.showMessage(msg)
                     QtWidgets.QApplication.processEvents()
                     time.sleep(1)
-                    if in_range_count > 100:
+                    if in_range_count > 60:
                         temp_out_of_range = False
                 else:
                     time.sleep(3)
@@ -348,7 +359,6 @@ class ResonanceMeasurement(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTra
                     current_temp = self.temperature
                     self.temperatures.append(current_temp)
                     self.times.append(datetime.now())
-                    self.rm_plot_running_temp(set_temperature)
                     status = '{0} {1}'.format(set_temperature, power)
                     self.status_bar.showMessage(status)
                     self.power_lineedit.setText('{0:.1f}'.format(power))
@@ -382,17 +392,17 @@ class ResonanceMeasurement(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTra
         # ---- reset, then put instrument into network analyzer mode ----
         self.status_bar.showMessage("...reset and put instrument into network analyzer mode")
         self.bpv.inst.query("*RST; INSTrument 'NA'; *OPC?")			# set operating mode, p. 460
-        time.sleep(1.0)
+        time.sleep(3.0)
         self.rm_err_check()
         # ---- turn off time gating (not sure why reset does not do this) ----
         self.status_bar.showMessage("...turn off time gating")
         self.bpv.inst.query("CALCulate:FILTer:TIME:STATe 0; *OPC?")		# turn off time gating, p. 299
-        time.sleep(1.0)
+        time.sleep(2.0)
         self.rm_err_check()
         # ---- set up standard measurement of S21 from fstart to fstop GHz ----
         self.bpv.inst.write("CALC:PAR:DEF S21")				# measure S21
         self.bpv.inst.query("CALC:FORM MLOG; *OPC?")				# set data format to log magnitude, p. 301
-        time.sleep(1.0)
+        time.sleep(2.0)
         self.rm_err_check()
 
     def rm_set_all_sa_settings(self):
@@ -596,7 +606,11 @@ class ResonanceMeasurement(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTra
         attenuation = self.attenuation_lineedit.text()
         cf = self.center_frequency_combobox.currentText()
         line = 'CF:{0}GHz, SPAN{1}MHz, Np{2}, Na{3}, Pwr:{4}-dBm, Attn:{5}dB, T{6:.2f}mK'.format(cf, frequency_span, n_points, n_averages, power, attenuation, self.temperature)
+        #fig2 = pl.figure()
         ax = self.fig.get_axes()[0]
+        print(self.fig)
+        print(self.temp_fig)
+        print(ax)
         ax.cla()
         ax.set_axis_off()
         #ax.set_xlabel('Frequency (GHz)')
@@ -606,14 +620,19 @@ class ResonanceMeasurement(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTra
         ax1.cla()
         ax1.set_ylabel('Amp (dBm)')
         ax1.plot(self.frqGHz, self.S21amp)
+        #pl.plot(self.frqGHz, self.S21amp)
         ax2 = self.fig.get_axes()[1]
         self.fig.suptitle(line)
         ax2.set_ylabel('Phase ($^\circ$)')
+        #pl.plot(self.frqGHz, self.S21phs)
         ax2.cla()
         ax2.plot(self.frqGHz, self.S21phs)
         #ax1.legend()
 
+        #pl.show()
         self.fig_save_path = os.path.join('temp_files', 'temp_resonantor.png')
+        if os.path.exists(self.fig_save_path):
+            os.remove(self.fig_save_path)
         self.fig.savefig(self.fig_save_path)
         image_to_display = QtGui.QPixmap(self.fig_save_path)
         self.data_plot_label.setPixmap(image_to_display)
@@ -621,23 +640,14 @@ class ResonanceMeasurement(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTra
     def rm_plot_running_temp(self, set_temperature):
         '''
         '''
-        if not hasattr(self, 'temp_fig'):
-            self.temp_fig, ax = self.mplc.mplc_create_basic_fig(
-                name='x_fig',
-                left=0.18,
-                right=0.95,
-                bottom=0.25,
-                top=0.88,
-                frac_screen_height=0.15,
-                frac_screen_width=0.25)
-        else:
-            ax = self.temp_fig.get_axes()[0]
+        ax = self.temp_fig.get_axes()[0]
         ax.plot(self.times, self.temperatures, color='b', label='Temp')
         ax.axhline(set_temperature * 1e3, color='k', lw=3, alpha=0.5, label='Target')
         ax.axhline(set_temperature * 1e3 + self.delta_threshold, color='r', lw=3, alpha=0.75, label='Target')
         ax.axhline(set_temperature * 1e3 - self.delta_threshold, color='r', lw=3, alpha=0.75, label='Target')
         ax.set_xlabel('Time')
         ax.set_ylabel('Temp (mK)')
-        self.temp_fig.savefig('temp_temps.png', transparent=True)
-        image_to_display = QtGui.QPixmap('temp_temps.png')
+        temp_temps_path = os.path.join('temp_files', 'temp_temps.png')
+        self.temp_fig.savefig(temp_temps_path, transparent=True)
+        image_to_display = QtGui.QPixmap(temp_temps_path)
         self.running_temp_label.setPixmap(image_to_display)

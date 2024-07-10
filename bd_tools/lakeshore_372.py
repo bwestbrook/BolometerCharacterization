@@ -229,6 +229,7 @@ class LakeShore372(QtWidgets.QWidget, GuiBuilder):
                 }
             }
         self.ls372_heater_range_dict = {
+            '': 'Error',
             '0': 0,
             '1': 31.6e-6,
             '2': 100e-6,
@@ -697,8 +698,11 @@ class LS372TempControl(QRunnable):
         self.communicator.write(heater_range_query)
         QtWidgets.QApplication.processEvents()
         range_index = self.communicator.read()
-        range_value = self.ls372_heater_range_dict[range_index]
-        return range_index, range_value
+        if range_index == '':
+            return np.nan, np.nan
+        else:
+            range_value = self.ls372_heater_range_dict[range_index]
+            return range_index, range_value
 
     def ls372_set_heater_range(self, range_index):
         '''
@@ -965,13 +969,24 @@ class LS372AnalogOutputs(QObject):
                                                                        )
 
         self.status_bar.showMessage('Sending Serial Command "{0}"'.format(monitor_cmd))
+        QtWidgets.QApplication.processEvents()
         self.communicator.write(monitor_cmd)
         self.communicator.read()
-        outmode_cmd = 'outmode 0,5,{0},0,1,0 '.format(channel)
+        #outmode_cmd = 'analog?'.format(channel)
+        #self.status_bar.showMessage('Sending Serial Command "{0}"'.format(outmode_cmd))
+        #self.communicator.write(outmode_cmd)
+        #QtWidgets.QApplication.processEvents()
+        #result = self.communicator.read()
+        outmode_cmd = 'outmode 0,5,{0},0,0,0 '.format(channel)
         self.status_bar.showMessage('Sending Serial Command "{0}"'.format(outmode_cmd))
         self.communicator.write(outmode_cmd)
         QtWidgets.QApplication.processEvents()
         result = self.communicator.read()
+        #outmode_cmd = 'outmode?'.format(channel)
+        #self.status_bar.showMessage('Sending Serial Command "{0}"'.format(outmode_cmd))
+        #self.communicator.write(outmode_cmd)
+        #QtWidgets.QApplication.processEvents()
+        #result = self.communicator.read()
 
     def ls372_set_open_loop_heater(self, set_to_channel, new_settings, channel_object):
         '''
@@ -1013,7 +1028,6 @@ class LS372AnalogOutputs(QObject):
         self.status_bar.showMessage('Sending Serial Command "{0}"'.format(mout_set_cmd))
         self.communicator.write(mout_set_cmd)
         result = self.communicator.read()
-
 
     def ls372_write_analog_output_settings(self, set_to_channel, new_settings, channel_object):
         '''

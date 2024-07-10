@@ -139,9 +139,12 @@ class CosmicRays(QtWidgets.QWidget, GuiBuilder):
                 setattr(self, lineedit_unique_name, lineedit)
                 self.layout().addWidget(lineedit, 10 + j, i, 1, 1)
         # Buttons
-        self.plot_filter_only_checkbox = QtWidgets.QCheckBox('Plot Raw Data')
-        self.plot_filter_only_checkbox.setChecked(True)
-        self.layout().addWidget(self.plot_filter_only_checkbox, 9, 3, 1, 1)
+        self.plot_raw_data_checkbox = QtWidgets.QCheckBox('Plot Raw Data')
+        self.plot_raw_data_checkbox.setChecked(True)
+        self.layout().addWidget(self.plot_raw_data_checkbox, 9, 3, 1, 1)
+        self.remove_mean_checkbox = QtWidgets.QCheckBox('Remove Mean')
+        self.remove_mean_checkbox.setChecked(True)
+        self.layout().addWidget(self.remove_mean_checkbox, 10, 3, 1, 1)
         start_pushbutton = QtWidgets.QPushButton('Start', self)
         start_pushbutton.clicked.connect(self.cr_start_stop)
         self.layout().addWidget(start_pushbutton, 12, 0, 1, 3)
@@ -242,7 +245,7 @@ class CosmicRays(QtWidgets.QWidget, GuiBuilder):
         '''
         '''
         for i in range(1, 1000):
-            file_name = '{0}_{1}.txt'.format(self.data_set_name_lineedit.text(), str(i).zfill(3))
+            file_name = '{0}_{1}.txt'.format(self.data_set_name_lineedit.text(), str(i).zfill(5))
             save_path = os.path.join(self.folder_path, file_name)
             if not os.path.exists(save_path):
                 break
@@ -266,11 +269,18 @@ class CosmicRays(QtWidgets.QWidget, GuiBuilder):
         '''
         '''
         filters = []
-        filtered_data = data
+        if self.remove_mean_checkbox.isChecked():
+            x_fits = np.asarray(range(len(data)))
+            p_fits = np.polyfit(x_fits, data, 0)
+            y_fits = np.polyval(p_fits, x_fits)
+            filtered_data = np.asarray(data) - y_fits
+        else:
+            filtered_data = data
         for i, option in enumerate(self.analysis_options_dict):
             checkbox_unique_name = 'filter_{0}_checkbox'.format(option)
             checkbox = getattr(self, checkbox_unique_name)
             for j, filter_param in enumerate(self.analysis_options_dict[option]['filterParams']):
+                sample_rate = int(self.sample_rate_lineedit.text())
                 lineedit = self.gb_make_labeled_lineedit(
                         label_text=filter_param,
                         lineedit_text=str(self.analysis_options_dict[option]['filterParams'][filter_param])
@@ -284,18 +294,18 @@ class CosmicRays(QtWidgets.QWidget, GuiBuilder):
                 elif filter_param == 'Cuttoff Freq':
                     cutoff_frequency = float(lineedit.text())
             if option == '01 POLY' and checkbox.isChecked():
-                x_fits = np.asarray(range(len(data)))
-                p_fits = np.polyfit(x_fits, data, order)
+                x_fits = np.asarray(range(len(filtered_data)))
+                p_fits = np.polyfit(x_fits, filtered_data, order)
                 y_fits = np.polyval(p_fits, x_fits)
-                filtered_data = np.asarray(data) - y_fits
+                filtered_data = np.asarray(filtered_data) - y_fits
                 filters.append(option)
             elif option == '02 BW-LP' and checkbox.isChecked():
-                sos = signal.butter(n_filter_poles, cutoff_frequency, 'hp', output = 'sos', fs=5000)
-                filtered = signal.sosfilt(sos, data)
+                sos = signal.butter(n_filter_poles, cutoff_frequency, 'lp', output = 'sos', fs=sample_rate)
+                filtered_data = signal.sosfilt(sos, filtered_data)
                 filters.append(option)
             elif option == '03 BW-HP' and checkbox.isChecked():
-                sos = signal.butter(n_filter_poles, cutoff_frequency, 'lp', output = 'sos', fs=5000)
-                filtered = signal.sosfilt(sos, data)
+                sos = signal.butter(n_filter_poles, cutoff_frequency, 'hp', output = 'sos', fs=sample_rate)
+                filtered_data = signal.sosfilt(sos, filtered_data)
                 filters.append(option)
         return filtered_data, filters
 
@@ -306,7 +316,6 @@ class CosmicRays(QtWidgets.QWidget, GuiBuilder):
 
         axes_names = ['Ch {0}'.format(i + 1) for i in range(self.n_samples)]
         fig =self.mplc.mplc_create_cr_paneled_plot(
-            name='Cosmic Rays',
             left=0.08,
             right=0.98,
             top=0.95,
@@ -324,7 +333,7 @@ class CosmicRays(QtWidgets.QWidget, GuiBuilder):
         fig.suptitle(title)
         for i in range(1, self.n_samples + 1):
             data = getattr(self, 'data_{0}'.format(i))
-            filtered_data, filters = self.cr_analyze(data)
+            filtered_data, filters ,= self.cr_analyze(data)
             ax_title = getattr(self, 'sample_name_{0}_lineedit'.format(i)).text()
             #import ipdb;ipdb.set_trace()
             filter_label = ''
@@ -332,8 +341,14 @@ class CosmicRays(QtWidgets.QWidget, GuiBuilder):
                 filter_label += filter_type.split(' ')[1]
                 filter_label += '+\n'
             filter_label = filter_label[:-2]
-            if self.plot_filter_only_checkbox.isChecked():
+            if self.plot_raw_data_checkbox.isChecked():
                 axes[i - 1].plot(data, label='Raw Data {0}'.format(ax_title))
+            if self.remove_mean_checkbox.isChecked():
+                x_fits = np.asarray(range(len(data)))
+                p_fits = np.polyfit(x_fits, data, 0)
+                y_fits = np.polyval(p_fits, x_fits)
+                meansub_data = np.asarray(data) - y_fits
+                axes[i - 1].plot(meansub_data, label='Mean Subtracted {0}'.format(ax_title))
             if len(filters) > 0:
                 axes[i - 1].plot(filtered_data, label=filter_label)
             axes[i - 1].set_title(ax_title)
@@ -348,7 +363,6 @@ class CosmicRays(QtWidgets.QWidget, GuiBuilder):
                 fig.savefig(save_path.replace('txt', 'png'))
             for ax in fig.get_axes():
                 ax.cla()
-
         else:
             title, okPressed = self.gb_quick_info_gather(title='Plot Title', dialog='What is the title of this plot?')
             ax1.set_title(title)

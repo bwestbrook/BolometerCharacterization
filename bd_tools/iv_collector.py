@@ -58,6 +58,7 @@ class IVCollector(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTransformSpe
             top=0.88,
             frac_screen_height=0.15,
             frac_screen_width=0.25)
+        self.heater_resistance = 120.
         self.bands = self.ftsy_get_bands()
         self.status_bar = status_bar
         self.daq_settings = daq_settings
@@ -139,6 +140,9 @@ class IVCollector(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTransformSpe
         self.gb_initialize_panel('self')
         self.ivc_configure_ivs_panel()
         self.ivc_make_plot_panel()
+        #self.t_load_set_temp_lineedit = self.gb_make_labeled_lineedit(label_text='T_load set, (mK)', lineedit_text='10')
+        #self.t_load_set_temp_lineedit.setValidator(QtGui.QDoubleValidator(0, 1e5, 2, self.t_load_set_temp_lineedit))
+        #self.layout().addWidget(self.t_load_set_temp_lineedit, 2, 10, 1, 1)
         self.ivc_display_daq_settings()
         self.ivc_plot_running()
         self.daq_x_combobox.setCurrentIndex(0)
@@ -215,42 +219,78 @@ class IVCollector(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTransformSpe
         self.squid_gain_select_combobox.setCurrentIndex(2)
         self.squid_gain_select_combobox.currentIndexChanged.connect(self.ivc_update_squid_calibration)
         # Temperature Control of TBath and TLoad
+        self.select_t_bath_lakeshore_channel_combobox = self.gb_make_labeled_combobox(label_text='T_bath LS ch')
+        for i in range(1, 17):
+            self.select_t_bath_lakeshore_channel_combobox.addItem(str(i))
+        self.layout().addWidget(self.select_t_bath_lakeshore_channel_combobox, 0, 7, 1, 1)
+        self.select_t_bath_lakeshore_channel_combobox.setCurrentIndex(5)
         self.t_bath_label = QtWidgets.QLabel()
         if self.dewar == '576':
-            self.t_bath_lineedit = self.gb_make_labeled_lineedit(label_text='T_bath (mK)')
-            self.t_load_lineedit = self.gb_make_labeled_lineedit(label_text='T_load (K)')
+            self.t_bath_lineedit = self.gb_make_labeled_lineedit(label_text='T_bath Act (mK)')
+            self.t_load_lineedit = self.gb_make_labeled_lineedit(label_text='T_load Act (K)')
             self.t_bath_lineedit.returnPressed.connect(self.ivc_plot_running)
             self.t_bath_lineedit.setValidator(QtGui.QDoubleValidator(0, 10000, 8, self.t_bath_lineedit))
             self.t_load_lineedit.returnPressed.connect(self.ivc_plot_running)
             self.t_load_lineedit.setValidator(QtGui.QDoubleValidator(0, 500, 8, self.t_load_lineedit))
         elif self.dewar == 'BlueForsDR1':
-            self.t_bath_lineedit = self.gb_make_labeled_label(label_text='T_bath (mK)')
-            self.t_load_lineedit = self.gb_make_labeled_label(label_text='T_load (K)')
-        self.t_bath_lineedit.setText('275')
-        self.layout().addWidget(self.t_bath_lineedit, 0, 7, 1, 1)
-        self.t_bath_set_lineedit = self.gb_make_labeled_lineedit(label_text='T_bath set (mW)', lineedit_text='0.002')
-        self.t_bath_set_lineedit.setValidator(QtGui.QDoubleValidator(0, 1e5, 4, self.t_bath_set_lineedit))
-        self.layout().addWidget(self.t_bath_set_lineedit, 0, 5, 1, 1)
+            self.t_bath_lineedit = self.gb_make_labeled_label(label_text='T_bath Act (mK)')
+            self.t_load_lineedit = self.gb_make_labeled_label(label_text='T_load Act (K)')
+        self.layout().addWidget(self.t_bath_lineedit, 0, 8, 1, 1)
         self.t_bath_get_pushbutton = QtWidgets.QPushButton(text='Monitor T_bath')
         self.t_bath_get_pushbutton.clicked.connect(self.ivc_monitor_t_bath)
-        self.layout().addWidget(self.t_bath_get_pushbutton, 0, 6, 1, 1)
-        self.t_bath_set_pushbutton = QtWidgets.QPushButton(text='Set T_bath Heater')
-        self.t_bath_set_pushbutton.clicked.connect(self.ivc_set_t_bath_power)
-        self.t_bath_set_lineedit.returnPressed.connect(self.ivc_set_t_bath_power)
-        self.layout().addWidget(self.t_bath_set_pushbutton, 0, 4, 1, 1)
+        self.layout().addWidget(self.t_bath_get_pushbutton, 0, 9, 1, 1)
 
+        self.t_bath_set_temp_lineedit = self.gb_make_labeled_lineedit(label_text='T_bath Set Temp (mK)', lineedit_text='100')
+        self.t_bath_set_temp_lineedit.setValidator(QtGui.QDoubleValidator(0, 1e5, 4, self.t_bath_set_temp_lineedit))
+        self.layout().addWidget(self.t_bath_set_temp_lineedit, 0, 10, 1, 1)
+        self.t_bath_set_pushbutton = QtWidgets.QPushButton(text='Set T_bath Temp')
+        self.t_bath_set_pushbutton.clicked.connect(self.ivc_set_t_bath_temp)
+        self.t_bath_set_temp_lineedit.returnPressed.connect(self.ivc_set_t_bath_temp)
+        self.layout().addWidget(self.t_bath_set_pushbutton, 0, 11, 1, 1)
+
+        self.heater_range_combobox = self.gb_make_labeled_combobox(label_text='Heater Range')
+        for range_index, range_value in self.ls_372_widget.temp_control.ls372_heater_range_dict.items():
+            range_value_in_mw = 1e3 * self.heater_resistance * range_value ** 2
+            self.heater_range_combobox.addItem('{0:.4f}'.format(range_value_in_mw))
+        self.layout().addWidget(self.heater_range_combobox, 1, 8, 1, 1)
+        self.set_heater_range_pushbutton = QtWidgets.QPushButton('Set Heater')
+        self.layout().addWidget(self.set_heater_range_pushbutton, 1, 9, 1, 1)
+        self.set_heater_range_pushbutton.clicked.connect(self.ivc_set_heater_range)
+
+
+        self.heater_range_label = QtWidgets.QLabel()
+        self.layout().addWidget(self.heater_range_label, 1, 11, 1, 1)
+        self.get_heater_range_pushbutton = QtWidgets.QPushButton('Get Heater')
+        self.layout().addWidget(self.get_heater_range_pushbutton, 1, 10, 1, 1)
+        self.get_heater_range_pushbutton.clicked.connect(self.ivc_get_heater_range_and_value)
+        self.ivc_get_heater_range_and_value()
+
+
+        # T Load Control
+        self.t_bath_set_power_lineedit = self.gb_make_labeled_lineedit(label_text='T_bath Power (mW)', lineedit_text='0.002')
+        self.select_t_load_lakeshore_channel_combobox = self.gb_make_labeled_combobox(label_text='T_load LS ch')
+        for i in range(1, 17):
+            self.select_t_load_lakeshore_channel_combobox.addItem(str(i))
+        self.select_t_load_lakeshore_channel_combobox.setCurrentIndex(4)
+        self.layout().addWidget(self.select_t_load_lakeshore_channel_combobox, 2, 7, 1, 1)
         self.t_load_lineedit.setText('300')
-        self.layout().addWidget(self.t_load_lineedit, 1, 7, 1, 1)
-        self.t_load_set_lineedit = self.gb_make_labeled_lineedit(label_text='T_load set, (K)', lineedit_text='10')
-        self.t_load_set_lineedit.setValidator(QtGui.QDoubleValidator(0, 1e5, 2, self.t_load_set_lineedit))
-        self.layout().addWidget(self.t_load_set_lineedit, 1, 5, 1, 1)
+        self.layout().addWidget(self.t_load_lineedit, 2, 8, 1, 1)
         self.t_load_get_pushbutton = QtWidgets.QPushButton(text='Monitor T_load')
-        self.t_load_get_pushbutton.clicked.connect(self.ivc_get_t_load)
-        self.layout().addWidget(self.t_load_get_pushbutton, 1, 6, 1, 1)
-        self.t_load_set_pushbutton = QtWidgets.QPushButton(text='Set T_load')
-        self.t_load_set_lineedit.returnPressed.connect(self.ivc_set_t_load)
-        self.t_load_set_pushbutton.clicked.connect(self.ivc_set_t_load)
-        self.layout().addWidget(self.t_load_set_pushbutton, 1, 4, 1, 1)
+        self.t_load_get_pushbutton.clicked.connect(self.ivc_monitor_t_load)
+        self.layout().addWidget(self.t_load_get_pushbutton, 2, 9, 1, 1)
+        self.t_load_set_temp_lineedit = self.gb_make_labeled_lineedit(label_text='T_load set Temp (K)', lineedit_text='1.0')
+        self.t_load_set_temp_lineedit.setValidator(QtGui.QDoubleValidator(0, 1e5, 5, self.t_load_set_temp_lineedit))
+        self.layout().addWidget(self.t_load_set_temp_lineedit, 2, 10, 1, 1)
+        self.t_load_set_temp_pushbutton = QtWidgets.QPushButton(text='Set T_load Temp')
+        self.t_load_set_temp_lineedit.returnPressed.connect(self.ivc_set_t_load_temp)
+        self.t_load_set_temp_pushbutton.clicked.connect(self.ivc_set_t_load_temp)
+        self.layout().addWidget(self.t_load_set_temp_pushbutton, 2, 11, 1, 1)
+
+        self.t_load_set_open_loop_heater_power_lineedit = self.gb_make_labeled_lineedit(label_text='T_load set Power (mW)', lineedit_text='0.0')
+        self.layout().addWidget(self.t_load_set_open_loop_heater_power_lineedit, 3, 10, 1, 1)
+        self.t_load_set_open_loop_heater_power_pushbutton = QtWidgets.QPushButton(text='Set T_load Power')
+        self.layout().addWidget(self.t_load_set_open_loop_heater_power_pushbutton, 3, 11, 1, 1)
+        self.t_load_set_open_loop_heater_power_pushbutton.clicked.connect(self.ivc_set_t_load_power)
 
         # General Meta Data and Information
         self.absorber_type_lineedit = self.gb_make_labeled_lineedit(label_text='Absorber Type:')
@@ -274,7 +314,7 @@ class IVCollector(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTransformSpe
         self.notes_lineedit = self.gb_make_labeled_lineedit(label_text='Notes:')
         self.layout().addWidget(self.notes_lineedit, 9, 2, 1, 1)
         self.meta_data_warning_checkbox = QtWidgets.QCheckBox('Meta Data Warn?')
-        self.meta_data_warning_checkbox.setChecked(False)
+        self.meta_data_warning_checkbox.setChecked(True)
         self.layout().addWidget(self.meta_data_warning_checkbox, 9, 3, 1, 1)
 
         #Connect to function
@@ -291,14 +331,14 @@ class IVCollector(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTransformSpe
         '''
         '''
         # X
-        self.layout().addWidget(self.x_mplc, 17, 4, 4, 4)
+        self.layout().addWidget(self.x_mplc, 14, 4, 4, 8)
 
         #self.x_data_label = QtWidgets.QLabel('X Data: X STD:', self)
         #self.x_data_label.setAlignment(QtCore.Qt.AlignCenter)
         #self.layout().addWidget(self.x_data_label, 5, 0, 1, 4)
 
         # Y
-        self.layout().addWidget(self.y_mplc, 21, 4, 4, 4)
+        self.layout().addWidget(self.y_mplc, 19, 4, 4, 8)
 
         #self.y_data_label = QtWidgets.QLabel('Y Data: Y STD:', self)
         #self.y_data_label.setAlignment(QtCore.Qt.AlignCenter)
@@ -316,7 +356,7 @@ class IVCollector(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTransformSpe
         self.layout().addWidget(self.save_pushbutton, 22, 0, 1, 4)
 
         # XY
-        self.layout().addWidget(self.xy_mplc, 2, 4, 15, 4)
+        self.layout().addWidget(self.xy_mplc, 4, 4, 10, 8)
 
         # Data Clip
         self.data_clip_lo_lineedit = self.gb_make_labeled_lineedit(label_text='Data Clip Lo (uV)', lineedit_text='0.0')
@@ -381,8 +421,12 @@ class IVCollector(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTransformSpe
         '''
         '''
         t_baths = []
+        thermometer_index = self.select_t_bath_lakeshore_channel_combobox.currentText()
+        channel_readout_info = self.ls_372_widget.channels.ls372_get_channel_value(thermometer_index, reading='kelvin') # 6 is MXC
+        self.ls_372_widget.ls372_scan_channel(index=thermometer_index)
+        self.ls_372_widget.analog_outputs.ls372_monitor_channel_aux_analog(thermometer_index, self.ls_372_widget.analog_outputs.analog_output_aux)
         for i in range(n_trials):
-            channel_readout_info = self.ls_372_widget.channels.ls372_get_channel_value(6, reading='kelvin') # 6 is MXC
+            channel_readout_info = self.ls_372_widget.channels.ls372_get_channel_value(thermometer_index, reading='kelvin') # 6 is MXC
             if self.gb_is_float(channel_readout_info):
                 temp_std = np.std(t_baths)
                 t_baths.append(float(channel_readout_info))
@@ -390,10 +434,30 @@ class IVCollector(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTransformSpe
                 self.t_bath_lineedit.setText(temperature_str)
                 time.sleep(0.25)
                 QtWidgets.QApplication.processEvents()
-            print(channel_readout_info)
         if len(t_baths) > 0:
             self.t_bath_label.setText('{0:.1f}'.format(float(t_baths[-1]) * 1e3).replace('.', 'p'))
+        self.ivc_get_heater_range_and_value()
 
+    def ivc_monitor_t_load(self, clicked=True, n_trials=20):
+        '''
+        '''
+        t_baths = []
+        thermometer_index = self.select_t_load_lakeshore_channel_combobox.currentText()
+        channel_readout_info = self.ls_372_widget.channels.ls372_get_channel_value(thermometer_index, reading='kelvin') # 6 is MXC
+        self.ls_372_widget.ls372_scan_channel(index=thermometer_index)
+        self.ls_372_widget.analog_outputs.ls372_monitor_channel_aux_analog(thermometer_index, self.ls_372_widget.analog_outputs.analog_output_aux)
+        for i in range(n_trials):
+            channel_readout_info = self.ls_372_widget.channels.ls372_get_channel_value(thermometer_index, reading='kelvin') # 6 is MXC
+            if self.gb_is_float(channel_readout_info):
+                temp_std = np.std(t_baths)
+                t_baths.append(float(channel_readout_info))
+                temperature_str = 'Avg:{0:.3f} (mK) Std: {1:.3f} (uK) N:{2}'.format(float(channel_readout_info) * 1e3, temp_std * 1e3, len(t_baths)) # mK
+                self.t_load_lineedit.setText(temperature_str)
+                time.sleep(0.25)
+                QtWidgets.QApplication.processEvents()
+        if len(t_baths) > 0:
+            self.t_bath_label.setText('{0:.1f}'.format(float(t_baths[-1]) * 1e3).replace('.', 'p'))
+        self.ivc_get_heater_range_and_value()
 
 
     def ivc_get_t_bath(self):
@@ -401,24 +465,71 @@ class IVCollector(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTransformSpe
         '''
         if not hasattr(self.ls_372_widget, 'channels'):
             return None
-        channel_readout_info = self.ls_372_widget.channels.ls372_get_channel_value(6, reading='kelvin') # 6 is MXC
+        thermometer_index = self.select_t_bath_lakeshore_channel_combobox.currentText()
+        channel_readout_info = self.ls_372_widget.channels.ls372_get_channel_value(thermometer_index, reading='kelvin') # 6 is MXC
         if self.gb_is_float(channel_readout_info):
             temperature = '{0:.3f}'.format(float(channel_readout_info) * 1e3) # mK
         else:
             temperature = '300'
         self.t_bath_lineedit.setText(temperature)
 
-    def ivc_set_t_bath_power(self):
+    def ivc_get_heater_range_and_value(self):
         '''
         '''
-        power = float(self.t_bath_set_lineedit.text()) * 1e-3 #mW
-        self.status_bar.showMessage('Setting T_bath power to  {0:.2f} mK'.format(power))
+        heater_value = self.ls_372_widget.temp_control.ls372_get_heater_value()
+
+        current_range_index, current_range_value = self.ls_372_widget.temp_control.ls372_get_heater_range()
+        heater_range = self.heater_resistance * current_range_value ** 2 # in mW
+        heater_status_str = '{0:.2f} of {1:.2f} mW'.format(heater_value * 1e3, heater_range * 1e3)
+        self.heater_range_label.setText(heater_status_str)
+
+    def ivc_set_heater_range(self):
+        '''
+        '''
+        # Heater Range
+        new_range_index = self.heater_range_combobox.currentIndex()
+        self.ls_372_widget.temp_control.ls372_set_heater_range(new_range_index)
+        self.status_bar.showMessage('Lakeshore Heater Ranges Set to {0}'.format(new_range_index))
+
+    def ivc_set_t_bath_temp(self):
+        '''
+        '''
+        thermometer_index = self.select_t_bath_lakeshore_channel_combobox.currentText()
+        channel_readout_info = self.ls_372_widget.channels.ls372_get_channel_value(thermometer_index, reading='kelvin') # 6 is MXC
+        msg = "You are regulating temp using the sample/aux heater pins on the Lakeshore, make sure the correct physical heater is attached to regulate T_Bath"
+        self.gb_quick_message(msg , msg_type='Warning')
+        thermometer_index = self.select_t_bath_lakeshore_channel_combobox.currentText()
+        self.ls_372_widget.channels.ls372_scan_channel(index=thermometer_index) # 6 is the MXC thermometer 
+        self.ls_372_widget.analog_outputs.ls372_monitor_channel_aux_analog(thermometer_index, self.ls_372_widget.analog_outputs.analog_output_aux)
+        temperature = float(self.t_bath_set_temp_lineedit.text()) * 1e-3
+        self.ls_372_widget.temp_control.ls372_set_temp_set_point(temperature)
+
+    def ivc_set_t_load_temp(self):
+        '''
+        '''
+        thermometer_index = self.select_t_load_lakeshore_channel_combobox.currentText()
+        channel_readout_info = self.ls_372_widget.channels.ls372_get_channel_value(thermometer_index, reading='kelvin') # 6 is MXC
+        self.ls_372_widget.ls372_scan_channel(index=thermometer_index)
+        msg = "You are regulating temp using the sample/aux heater pins on the Lakeshore, make sure the correct physical heater is attached to regulate T_Load"
+        self.gb_quick_message(msg, msg_type='Warning')
+        thermometer_index = self.select_t_load_lakeshore_channel_combobox.currentText()
+        self.ls_372_widget.analog_outputs.ls372_monitor_channel_aux_analog(thermometer_index, self.ls_372_widget.analog_outputs.analog_output_aux)
+        #self.ls_372_widget.channels.ls372_scan_channel(index=thermometer_index) # 6 is the MXC thermometer 
+        temperature = float(self.t_load_set_temp_lineedit.text()) # K
+        self.ls_372_widget.temp_control.ls372_set_temp_set_point(temperature)
+
+    def ivc_set_t_load_power(self):
+        '''
+        '''
+        power = float(self.t_load_set_open_loop_heater_power_lineedit.text()) * 1e-3 #mW
+        self.status_bar.showMessage('Setting T_bath power to {0:.2f} mW'.format(power))
         new_settings = {
                 'power': power,
                 'polarity': 0,
                 'analog_mode': 2,
                 'input_channel': 6,
                 'source': 1,
+                'heater_range': 4,
                 'high_value': 0.5,
                 'powerup_enable': 0,
                 'filter_on': 1,
@@ -437,13 +548,6 @@ class IVCollector(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTransformSpe
         channel_readout_info = self.ls_372_widget.channels.ls372_get_channel_value(5, reading='kelvin') # 5 is 50K
         temperature = '{0:.3f}'.format(float(channel_readout_info) * 1e3) # mK
         self.t_load_lineedit.setText(temperature)
-
-    def ivc_set_t_load(self):
-        '''
-        '''
-        temp = float(self.t_load_set_lineedit.text())
-        self.ls_372_widget.temp_control.ls372_set_temp_set_point(temp)
-        self.status_bar.showMessage('Setting T_load to {0:.2f}'.format(temp))
 
     def ivc_update_ls_372_widget(self, ls_372_widget):
         '''
@@ -520,7 +624,7 @@ class IVCollector(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTransformSpe
             self.x_stds.append(x_std)
             self.y_data.append(y_mean)
             self.y_stds.append(y_std)
-            self.ivc_plot_running()
+            self.ivc_plot_running(running=True)
             self.current_x_mean = x_mean
             self.current_x_std = x_std
             self.current_y_mean = y_mean
@@ -637,12 +741,12 @@ class IVCollector(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTransformSpe
         else:
             self.gb_quick_message('Warning Data Not Written to File!', msg_type='Warning')
 
-    def ivc_plot_running(self):
+    def ivc_plot_running(self, running=False):
         '''
         '''
         self.ivc_plot_x()
         self.ivc_plot_y()
-        self.ivc_plot_xy(running=True)
+        self.ivc_plot_xy(running=running)
 
     def ivc_plot_x(self):
         '''
@@ -685,8 +789,8 @@ class IVCollector(QtWidgets.QWidget, GuiBuilder, IVCurveLib, FourierTransformSpe
         #####################################
         # Screen for bad input
         #####################################
-        if not self.started:
-            return None
+        #if not self.started:
+            #return None
         start_plot_time = time.time()
         if len(self.x_data) == 0:
             return None

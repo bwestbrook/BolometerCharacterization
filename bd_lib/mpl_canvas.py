@@ -58,12 +58,14 @@ class MplCanvas(FigureCanvasQTAgg):
             frac_screen_width=0.5,
             frac_screen_height=0.5,
             wspace=None,
-            hspace=None):
+            hspace=None,
+            fig_name=None):
         '''
         '''
         fig = self.mplc_create_blank_fig(
             frac_screen_width=frac_screen_width,
-            frac_screen_height=frac_screen_height)
+            frac_screen_height=frac_screen_height,
+            fig_name=fig_name)
         fig.canvas = FigureCanvas(fig)
         ax = fig.add_subplot(111)
         fig = self.mplc_adjust_subplots(
@@ -74,8 +76,8 @@ class MplCanvas(FigureCanvasQTAgg):
             bottom=bottom,
             wspace=wspace,
             hspace=hspace)
-        self.fig = fig
-        self.ax = ax
+        #self.fig = fig
+        #self.ax = ax
         return fig, ax
 
     def mplc_create_fig_with_legend_axes(self,
@@ -136,7 +138,7 @@ class MplCanvas(FigureCanvasQTAgg):
             bottom=bottom,
             wspace=wspace,
             hspace=hspace)
-        self.fig = fig
+        #self.fig = fig
         return fig
 
     def mplc_create_cr_paneled_plot(self,
